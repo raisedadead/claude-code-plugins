@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "dossier",
+  "version": "0.1.0",
+  "description": "Phase-scoped engineering workflow with single-file DOSSIER.md, resumable builds, drift detection, evidence log, cross-repo state, and an opt-in scout subagent.",
+  "author": {
+    "name": "Mrugesh Mohapatra",
+    "email": "noreply@mrugesh.dev",
+    "url": "https://github.com/raisedadead"
+  },
+  "homepage": "https://github.com/raisedadead/claude-code-plugins/tree/main/plugins/dossier",
+  "repository": "https://github.com/raisedadead/claude-code-plugins",
+  "license": "ISC",
+  "keywords": [
+    "dossier",
+    "spec-driven",
+    "tdd",
+    "workflow",
+    "scratchpad",
+    "phase"
+  ],
+  "hooks": "./hooks/hooks.json"
+}

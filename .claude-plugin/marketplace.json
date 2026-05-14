@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "raisedadead-plugins",
+  "description": "Claude Code plugins by @raisedadead. Personal toolbox: dossier workflow, scratchpad management, and friends.",
+  "owner": {
+    "name": "Mrugesh Mohapatra",
+    "email": "noreply@mrugesh.dev"
+  },
+  "metadata": {
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "dossier",
+      "source": "./plugins/dossier",
+      "description": "Phase-scoped engineering workflow: single-file DOSSIER.md, cross-repo state, drift detection, resumable builds, evidence log. Replaces the legacy 4-file dossier/sprints split.",
+      "category": "workflow",
+      "keywords": ["dossier", "spec-driven", "tdd", "workflow", "scratchpad"],
+      "license": "ISC",
+      "homepage": "https://github.com/raisedadead/claude-code-plugins/tree/main/plugins/dossier",
+      "repository": "https://github.com/raisedadead/claude-code-plugins"
+    }
+  ]
+}
