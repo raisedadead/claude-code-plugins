@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin.json",
   "name": "dossier",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Phase-scoped engineering workflow with single-file DOSSIER.md, resumable builds, drift detection, evidence log, cross-repo state, and an opt-in scout subagent.",
   "author": {
     "name": "Mrugesh Mohapatra",
