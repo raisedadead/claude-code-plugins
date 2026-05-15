@@ -44,7 +44,7 @@ Read §S grep `ds:backprop <target>`:
 
 ### 4. CLAIM + scope
 
-Append §S:
+Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; applies to every §S append in this skill):
 
 ```
 <YYYY-MM-DD HH:MM> ds:backprop <B-or-pending> START

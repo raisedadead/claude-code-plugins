@@ -62,7 +62,7 @@ Pre-flight gates:
 | §B all-fixed | every row has non-empty `fix cite` | refuse OR allow w/ `--accept-open-bugs` (operator override) |
 | §X pushed    | every repo `pushed=yes`            | warn, allow operator decision (push or close anyway)        |
 
-Append §S:
+Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; applies to every §S append in this skill):
 
 ```
 <YYYY-MM-DD HH:MM> ds:close — START successor=<slug-or-—> complete=<bool>
@@ -70,7 +70,7 @@ Append §S:
 
 ### 6. WRITE §Z
 
-Atomic write DOSSIER.md with §Z section populated:
+Atomic write DOSSIER.md with §Z section populated. Each metadata line is its own paragraph (blank line between) — per FORMAT.md §12, prevents formatter-induced prose merge that breaks `lib-regen-index.sh` §Z parsing.
 
 If `--complete`:
 
@@ -78,8 +78,11 @@ If `--complete`:
 ## §Z — Closeout
 
 <YYYY-MM-DD HH:MM> — closed
+
 complete: true
+
 summary: <operator-provided one-line summary>
+
 key cites: <list of T-row cites, comma-separated>
 ```
 
@@ -89,8 +92,11 @@ If `--successor <slug>`:
 ## §Z — Closeout
 
 <YYYY-MM-DD HH:MM> — closed
+
 successor: <slug>
+
 summary: <operator-provided one-line summary>
+
 key cites: <list of T-row cites>
 ```
 

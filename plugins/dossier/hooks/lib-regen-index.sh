@@ -24,17 +24,18 @@ parse_dossier() {
 	local slug="${dir:11}"
 
 	# Parse §T: count rows, count x-state rows.
+	# Tolerate prettier-padded tables: `| T1  |` (multi-space) and `| T10 |`.
 	local t_total t_done
 	t_total=$(awk '
     /^## §T/ { in_t=1; next }
     /^## §[^T]/ { in_t=0 }
-    in_t && /^\| T[0-9]+ \|/ { n++ }
+    in_t && /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/ { n++ }
     END { print n+0 }
   ' "${file}")
 	t_done=$(awk '
     /^## §T/ { in_t=1; next }
     /^## §[^T]/ { in_t=0 }
-    in_t && /^\| T[0-9]+ \|/ {
+    in_t && /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/ {
       n_fields = split($0, f, "|")
       gsub(/^[ \t]+|[ \t]+$/, "", f[4])
       if (f[4] == "x") n++
@@ -47,23 +48,31 @@ parse_dossier() {
 	b_total=$(awk '
     /^## §B/ { in_b=1; next }
     /^## §[^B]/ { in_b=0 }
-    in_b && /^\| B[0-9]+ \|/ { n++ }
+    in_b && /^\|[[:space:]]*B[0-9]+[[:space:]]*\|/ { n++ }
     END { print n+0 }
   ' "${file}")
 
-	# Phase count: max P<N> seen in §T column.
+	# Phase count: max P<N> seen in §T column. Tolerate padded cells.
+	# Use split (BSD-awk-compatible) instead of match-with-array (gawk-only).
 	local p_max p_current
 	p_max=$(awk '
     /^## §T/ { in_t=1; next }
     /^## §[^T]/ { in_t=0 }
-    in_t && match($0, /\| P([0-9]+) \|/, m) { if (m[1]+0 > max) max = m[1]+0 }
+    in_t && /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/ {
+      n_fields = split($0, f, "|")
+      gsub(/^[ \t]+|[ \t]+$/, "", f[3])
+      if (f[3] ~ /^P[0-9]+$/) {
+        p = substr(f[3], 2) + 0
+        if (p > max) max = p
+      }
+    }
     END { print (max ? max : 1) }
   ' "${file}")
-	# Current phase = max P with at least one non-x row, or p_max if all done.
+	# Current phase = lowest P with at least one non-x row, or p_max if all done.
 	p_current=$(awk -v pmax="${p_max}" '
     /^## §T/ { in_t=1; next }
     /^## §[^T]/ { in_t=0 }
-    in_t && /^\| T[0-9]+ \|/ {
+    in_t && /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/ {
       n_fields = split($0, f, "|")
       gsub(/^[ \t]+|[ \t]+$/, "", f[3])
       gsub(/^[ \t]+|[ \t]+$/, "", f[4])
@@ -79,13 +88,16 @@ parse_dossier() {
 	local mtime
 	mtime=$(date -r "${file}" "+%Y-%m-%d %H:%M" 2>/dev/null || stat -f "%Sm" -t "%Y-%m-%d %H:%M" "${file}" 2>/dev/null || echo "—")
 
-	# §Z column: extract successor / complete.
-	local z_state
-	if grep -q "^complete: true" "${file}" 2>/dev/null; then
+	# §Z column: extract successor / complete. Scan only the §Z section.
+	# Tolerate prose-joined formatter output (prettier merges multi-line
+	# paragraphs into one) — match substring, not just line-anchored.
+	local z_section z_state
+	z_section=$(awk '/^## §Z/,EOF { print }' "${file}" 2>/dev/null || true)
+	if echo "${z_section}" | grep -qE '(^|[[:space:]])complete:[[:space:]]+true([[:space:]]|$)'; then
 		z_state="complete"
-	elif grep -q "^successor:" "${file}" 2>/dev/null; then
+	elif echo "${z_section}" | grep -qE '(^|[[:space:]])successor:[[:space:]]+[^[:space:]]'; then
 		local succ
-		succ=$(grep "^successor:" "${file}" | head -1 | sed 's/^successor:[[:space:]]*//')
+		succ=$(echo "${z_section}" | grep -oE 'successor:[[:space:]]+[^[:space:]]+' | head -1 | sed 's/successor:[[:space:]]*//')
 		z_state="→${succ}"
 	else
 		z_state="—"

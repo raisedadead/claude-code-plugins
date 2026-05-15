@@ -212,19 +212,29 @@ Append-only timeline. Every skill op emits one or more lines. Format:
 <YYYY-MM-DD HH:MM> <skill> <target> <event> [<detail>]
 ```
 
-Examples:
+**Formatter-resistant rule (critical):** every §S entry MUST be its own paragraph (blank line before AND after). Without this, markdown formatters like prettier will merge consecutive lines into a single paragraph, breaking the per-line append/parse semantics and rendering §S unparseable by `lib-regen-index.sh` and `session-start.sh`. The parser tolerates joined entries (substring matching) but skill writers MUST emit blank-line-separated entries.
+
+Examples (note the blank lines between entries):
 
 ```markdown
 ## §S — Rolling status log
 
 2026-05-14 14:32 ds:new — created slug=auth-1 phase=P1
+
 2026-05-14 14:35 ds:build T1 START
+
 2026-05-14 14:41 ds:build T1 commit=a96987b
+
 2026-05-14 14:41 ds:build T1 §X=refreshed artemis ahead=2
+
 2026-05-14 14:41 ds:build T1 DONE → x
+
 2026-05-14 14:42 ds:build T2 START
+
 2026-05-14 14:50 ds:build T2 commit=b7c8d12
+
 2026-05-14 14:50 ds:build T2 DONE → x
+
 2026-05-14 15:01 ds:check — drift report: 0 violations, §X clean
 ```
 
@@ -244,12 +254,17 @@ Vm.2: every §S line MUST begin with valid ISO timestamp.
 
 Written only at `ds:close`. Either `complete: true` OR `successor: <slug>`. Refuse close otherwise.
 
+**Formatter-resistant rule:** same as §S — each line of §Z metadata (closed/complete/successor/summary/key cites) is its own paragraph (blank line between). Prevents prettier from joining the structured fields into a single prose paragraph and breaking the parser.
+
 ```markdown
 ## §Z — Closeout
 
 2026-05-14 17:30 — closed
+
 successor: auth-2-rollout
+
 summary: P1 shipped (T1-T3 x), P2 deferred to next dossier per ops review.
+
 key cites: [a96987b], [b7c8d12]
 ```
 
@@ -259,12 +274,17 @@ If `complete: true`:
 ## §Z — Closeout
 
 2026-05-14 17:30 — closed
+
 complete: true
+
 summary: All phases shipped. No follow-on dossier needed.
+
 key cites: [a96987b], [b7c8d12], [c2d3e45]
 ```
 
 Vm.4: closed dossier MUST live under `.scratchpad/dossier/_archive/`.
+
+Parser tolerance: `lib-regen-index.sh` matches `complete: true` / `successor: <slug>` as substring anywhere within §Z (not line-anchored) so dossiers that get joined by a formatter still parse. But writers MUST emit blank-line separation to keep §Z human-readable.
 
 ## 13. INDEX.md
 

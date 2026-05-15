@@ -56,7 +56,7 @@ Read §S grep `ds:build <T-id>`. Identify last event:
 
 ### 5. CLAIM
 
-If state still `.`: flip to `~`. Atomic write. Append §S:
+If state still `.`: flip to `~`. Atomic write. Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; applies to every §S append in this skill):
 
 ```
 <YYYY-MM-DD HH:MM> ds:build <T-id> START

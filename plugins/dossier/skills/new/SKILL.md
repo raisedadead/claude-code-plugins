@@ -97,6 +97,8 @@ _(empty — populate when first contract lands)_
 
 ## §S — Rolling status log
 
+<!-- Each entry is its own paragraph (blank lines before AND after). Per FORMAT.md §11. -->
+
 <YYYY-MM-DD HH:MM> ds:new — created slug=<slug> phase=P1
 
 ## §Z — Closeout
@@ -117,6 +119,8 @@ If a repo path doesn't exist or isn't a git tree: leave placeholders, append not
 Run `$CLAUDE_PLUGIN_ROOT/hooks/lib-regen-index.sh` to append the new dossier to `.scratchpad/INDEX.md`.
 
 ### 6. Append §S DONE
+
+Append as own paragraph (blank line before AND after — per FORMAT.md §11):
 
 ```
 <YYYY-MM-DD HH:MM> ds:new — DONE slug=<slug> dir=<dir>
