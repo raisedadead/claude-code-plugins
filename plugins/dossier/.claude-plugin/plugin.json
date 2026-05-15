@@ -18,6 +18,5 @@
     "workflow",
     "scratchpad",
     "phase"
-  ],
-  "hooks": "./hooks/hooks.json"
+  ]
 }
