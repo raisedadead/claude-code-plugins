@@ -76,24 +76,32 @@ Plugin ships `dossier-scout` — a read-only investigator. Used by `/dossier:che
 
 ## Verify-layer
 
-PreToolUse hook on `Edit | Write | MultiEdit` scans content against `hooks/verify_patterns.py` and emits stderr reminders + `additionalContext` when a freshness claim doesn't match the authority. Non-blocking. Per-session dedup. Cache at `<cwd>/.scratchpad/.verify-cache/` (24h TTL).
+Empirical defense against knowledge-cutoff hallucination. PreToolUse hook on every `Edit | Write | MultiEdit` scans content against an **authority registry** (140 EOL aliases, 34 Docker images, 31 sunset AI models) and emits stderr reminders + `additionalContext` when a freshness claim doesn't match the primary source. Non-blocking. Per-session dedup. Cache at `<cwd>/.scratchpad/.verify-cache/` (24h TTL on registries, 30d on resolved SHAs).
 
-Built-in patterns:
+Coverage (11 broad patterns, generic dispatcher):
 
-| Rule                     | Scope                     | Authority                                                      |
-| ------------------------ | ------------------------- | -------------------------------------------------------------- |
-| `node_lts_version`       | all files                 | `endoflife.date/api/v1/products/nodejs` (`isLts && not isEol`) |
-| `github_action_unpinned` | `.github/workflows/*.yml` | `gh api repos/<repo>/git/refs/tags/<tag>`                      |
-| `k8s_deprecated_api`     | `*.yml/yaml`              | k8s deprecation guide (static map)                             |
-| `npm_outdated`           | `package.json`            | `registry.npmjs.org/<pkg>/latest` (≥2 majors behind)           |
+| Class                       | Authority                            | Examples caught                                                           |
+| --------------------------- | ------------------------------------ | ------------------------------------------------------------------------- |
+| Free-text language / OS EOL | endoflife.date                       | `Node 18`, `Python 3.8`, `Ubuntu 18.04`, `Ruby 2.7`, `PHP 7.4`, `Go 1.18` |
+| Docker image EOL            | endoflife.date via image alias       | `FROM node:18-alpine`, `image: postgres:11`, `redis:5`                    |
+| GitHub Action unpinned      | `gh api repos/.../git/refs/tags/...` | `uses: actions/checkout@v4` → resolved SHA                                |
+| k8s deprecated apiVersion   | k8s deprecation guide (15-entry map) | `apiVersion: extensions/v1beta1` → networking.k8s.io/v1                   |
+| npm package outdated        | npmjs registry                       | `package.json` `"react": "16.0.0"` (≥2 majors behind)                     |
+| PyPI outdated               | pypi.org JSON                        | `requirements.txt` / `pyproject.toml` `django==2.2.0`                     |
+| crates.io outdated          | crates.io API                        | `Cargo.toml` `serde = "0.9.0"`                                            |
+| RubyGems outdated           | rubygems.org API                     | `Gemfile` `gem 'rails', '5.0'`                                            |
+| Go module outdated          | proxy.golang.org                     | `go.mod` `require foo v0.1.0`                                             |
+| AI model deprecated         | OpenAI / Anthropic / Google docs     | `model="gpt-3.5-turbo-0613"`, `claude-2.1`, `gemini-1.0-pro`              |
 
-Operator escape: add `# verify-skip: <ruleName>` on or near the line to suppress.
+**Adding a product is pure data** — append a row to `hooks/verify_authorities.py`. No code change.
 
-Manual invoke: `/dossier:verify [<topic>]` — fact-checks the previous response (or topic), prints `| Claim | Verdict | Source |` table.
+Operator escape: `# verify-skip: <ruleName>` on or near the line.
 
-`ds:check` also runs a one-shot sweep on touched files via `hooks/verify_sweep.py`. Findings fold into 🟡 warnings.
+Manual invoke: `/dossier:verify [<topic>]` — model-driven generic fact-check. Classifies arbitrary claims, queries the right authority via raw JSON / `gh api` / WebSearch, prints `| Claim | Verdict | Source |` table.
 
-Network-fault-tolerant. Cache poisoned / offline / 5xx = silent skip + `verify offline: <url>` to stderr. Never blocks a write.
+`ds:check` runs a one-shot sweep on touched files via `hooks/verify_sweep.py`. Findings fold into 🟡 warnings.
+
+Network-fault-tolerant. Offline / 5xx / cache-poison = silent skip + `verify offline: <url>` to stderr. Never blocks a write.
 
 ## Host-env adapters
 
