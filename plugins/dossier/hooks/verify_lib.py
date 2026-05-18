@@ -2,17 +2,21 @@
 
 Stdlib-only. Python 3.10+. No external deps.
 
-Surface:
-    cache_dir()           -> Path           # per-project HTTP cache root
-    state_file()          -> Path           # per-session dedup ledger
-    load_state()          -> set[str]       # fingerprints fired this session
-    save_state(set)       -> None
-    http_cached(url, ttl) -> dict|list|None # JSON GET, cached, network-fault-tolerant
-    check_node_lts(major) -> tuple|None     # Node LTS check vs endoflife.date
-    check_action_sha(repo, ref) -> tuple|None
-    check_k8s_api(matched)      -> tuple|None
+Generic surface (v2):
+    cache_dir()             -> Path
+    state_file()            -> Path
+    load_state()            -> set[str]
+    save_state(set)         -> None
+    http_cached(url, ttl)   -> dict|list|None
 
-Each check_*() returns (claim, truth, source_url) on finding, else None.
+Check functions (each returns (claim, truth, source_url) or None):
+    check_eol(slug, version_str)             # endoflife.date
+    check_freetext(alias, version_str)        # free-text prose; alias→slug via authorities
+    check_pkg_outdated(ecosystem, pkg, ver)   # any package registry
+    check_image_tag(image, tag)               # Dockerfile FROM, k8s image:, compose image:
+    check_action_sha(repo, ref)               # GitHub Action `uses:` unpinned
+    check_k8s_apiversion(matched)             # k8s deprecated apiVersion (static map)
+    check_ai_model(model_name)                # AI model deprecation (static map)
 """
 from __future__ import annotations
 
@@ -26,17 +30,24 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-CACHE_TTL_DEFAULT = 86400  # 24h for registry/release endpoints
+from verify_authorities import (
+    AI_MODEL_DEPRECATED,
+    DOCKER_IMAGE_TO_SLUG,
+    EOL_ALIAS_TO_SLUG,
+    PKG_REGISTRY,
+)
+
+CACHE_TTL_DEFAULT = 86400  # 24h for registries / release endpoints
 CACHE_TTL_IMMUTABLE = 86400 * 30  # 30d for resolved-tag SHAs
-USER_AGENT = "dossier-verify/0.1 (+https://github.com/raisedadead/claude-code-plugins)"
+USER_AGENT = "dossier-verify/0.2 (+https://github.com/raisedadead/claude-code-plugins)"
 HTTP_TIMEOUT_S = 5
 
 
-def cache_dir() -> Path:
-    """Per-project HTTP cache root: <cwd>/.scratchpad/.verify-cache/.
+# ─── Infra ─────────────────────────────────────────────────────────────
 
-    Falls back to $TMPDIR if .scratchpad unwritable.
-    """
+
+def cache_dir() -> Path:
+    """Per-project HTTP cache root: <cwd>/.scratchpad/.verify-cache/. Falls back to $TMPDIR."""
     root = Path.cwd() / ".scratchpad" / ".verify-cache"
     try:
         root.mkdir(parents=True, exist_ok=True)
@@ -48,7 +59,6 @@ def cache_dir() -> Path:
 
 
 def state_file() -> Path:
-    """Per-session dedup ledger. Keyed by $CLAUDE_SESSION_ID or PPID."""
     sid = os.environ.get("CLAUDE_SESSION_ID") or f"pid-{os.getppid()}"
     sid_safe = re.sub(r"[^A-Za-z0-9_.-]", "_", sid)
     return cache_dir() / f"state-{sid_safe}.json"
@@ -72,10 +82,7 @@ def save_state(fired: set[str]) -> None:
 
 
 def http_cached(url: str, ttl_s: int = CACHE_TTL_DEFAULT):
-    """JSON GET with TTL cache. Returns None on network / parse error.
-
-    Cache key = sha1(url). Atomic tmp+rename writes.
-    """
+    """JSON GET with TTL cache. Returns None on network / parse error."""
     key = hashlib.sha1(url.encode()).hexdigest()
     cache_path = cache_dir() / f"{key}.json"
 
@@ -85,7 +92,7 @@ def http_cached(url: str, ttl_s: int = CACHE_TTL_DEFAULT):
             if time.time() - entry["fetched_at"] < ttl_s:
                 return entry["data"]
         except (json.JSONDecodeError, KeyError, OSError):
-            pass  # cache poisoned, refetch
+            pass
 
     try:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
@@ -101,7 +108,7 @@ def http_cached(url: str, ttl_s: int = CACHE_TTL_DEFAULT):
     return data
 
 
-# ─── Authority checks ─────────────────────────────────────────────────────
+# ─── Generic helpers ───────────────────────────────────────────────────
 
 
 def _eol_releases(slug: str):
@@ -116,46 +123,166 @@ def _eol_releases(slug: str):
     return []
 
 
-def check_node_lts(major_str: str):
-    """Claimed Node major vs endoflife.date current LTS list.
+def _strip_image_tag(tag: str) -> str:
+    """`1.20-alpine` → `1.20`, `22-slim-bullseye` → `22`, `lts` → `lts`."""
+    # Split off common suffixes
+    for sep in ("-alpine", "-slim", "-bullseye", "-bookworm", "-buster", "-jammy", "-noble", "-focal", "-trusty"):
+        if tag.endswith(sep):
+            tag = tag[: -len(sep)]
+            break
+    # If still has '-', take part before first '-'
+    if "-" in tag and not tag.startswith("v"):
+        tag = tag.split("-", 1)[0]
+    return tag
 
-    Returns (claim, truth, src) if claim is not in the LTS-and-maintained set, else None.
-    """
-    try:
-        major = int(major_str)
-    except (ValueError, TypeError):
-        return None
-    releases = _eol_releases("nodejs")
+
+def _dot_get(data, path):
+    cur = data
+    for k in path:
+        if isinstance(k, str) and isinstance(cur, dict):
+            cur = cur.get(k)
+        elif isinstance(k, int) and isinstance(cur, list) and -len(cur) <= k < len(cur):
+            cur = cur[k]
+        else:
+            return None
+        if cur is None:
+            return None
+    return cur
+
+
+def _normalize_alias(s: str) -> str:
+    return s.lower().replace(".", "").replace(" ", "").replace("_", "")
+
+
+def _alias_to_slug(alias: str) -> str | None:
+    direct = EOL_ALIAS_TO_SLUG.get(alias.lower())
+    if direct:
+        return direct
+    return EOL_ALIAS_TO_SLUG.get(_normalize_alias(alias))
+
+
+# ─── Generic check functions ───────────────────────────────────────────
+
+
+def check_eol(slug: str, version_str: str):
+    """Flag if `slug v<version>` lands on an EOL release."""
+    releases = _eol_releases(slug)
     if not releases:
         return None
-    # Filter: LTS AND not EOL. `isMaintained` alone is too broad (true on EOL'd lines too).
-    lts = [r.get("name", "") for r in releases if r.get("isLts") and not r.get("isEol")]
-    if not lts:
+    parts = version_str.lstrip("vV").split(".")
+    if not parts or not parts[0].isdigit():
         return None
-    if str(major) in lts:
+    major = parts[0]
+    minor = parts[1] if len(parts) > 1 and parts[1].isdigit() else None
+
+    # Find best-match release (most-specific prefix match).
+    candidates = [r for r in releases if str(r.get("name", "")).startswith(major)]
+    if minor:
+        narrowed = [r for r in candidates if str(r.get("name", "")).startswith(f"{major}.{minor}")]
+        if narrowed:
+            candidates = narrowed
+    if not candidates:
+        return None
+    rel = candidates[0]
+    if not rel.get("isEol"):
+        return None
+
+    # Find a current (non-EOL) latest for the replacement suggestion.
+    current = next((r.get("name") for r in releases if not r.get("isEol")), "?")
+    eol_date = rel.get("eolFrom") or rel.get("eol") or "?"
+    return (
+        f"{slug} {version_str}",
+        f"current: {slug} {current}. v{rel.get('name')} EOL {eol_date}.",
+        f"https://endoflife.date/api/v1/products/{slug}",
+    )
+
+
+def check_freetext(alias: str, version_str: str):
+    """Free-text claim like 'Node 18' / 'Python 3.8'. Alias → slug → check_eol."""
+    slug = _alias_to_slug(alias)
+    if not slug:
+        return None
+    finding = check_eol(slug, version_str)
+    if not finding:
+        return None
+    # Replace claim string with caller's exact phrasing.
+    _, truth, src = finding
+    return (f"{alias} {version_str}", truth, src)
+
+
+def check_pkg_outdated(ecosystem: str, pkg: str, version_str: str):
+    """Pinned package version vs registry latest. Flags only if ≥2 majors behind."""
+    eco = PKG_REGISTRY.get(ecosystem)
+    if not eco:
+        return None
+    v = version_str.lstrip().strip('"\'')
+    if v.startswith(("^", "~", ">", "<", "*")) or v in {"latest", "next", "main", "master", "edge"}:
+        return None
+    pinned_major = _semver_major(v)
+    if pinned_major is None:
+        return None
+
+    url = eco["url"].format(pkg=pkg)
+    if eco["path"] == ["__lookup_packagist_first__"]:
+        # Packagist: data.packages.<pkg>[0].version
+        data = http_cached(url)
+        if not isinstance(data, dict):
+            return None
+        packages = data.get("packages") or {}
+        rels = packages.get(pkg) or []
+        latest = rels[0].get("version") if rels else None
+    else:
+        data = http_cached(url)
+        latest = _dot_get(data, eco["path"])
+    if not latest or not isinstance(latest, str):
+        return None
+    latest_major = _semver_major(latest)
+    if latest_major is None or pinned_major >= latest_major - 1:
         return None
     return (
-        f"Node v{major}",
-        f"current LTS: {', '.join('v' + v for v in lts)}",
-        "https://endoflife.date/api/v1/products/nodejs",
+        f"{ecosystem}:{pkg}@{version_str}",
+        f"{pkg}@{latest} (latest)",
+        url,
+    )
+
+
+def _semver_major(v: str) -> int | None:
+    s = v.strip().lstrip("v").lstrip("^~>=<*")
+    if not s or s in {"latest", "next", "*"}:
+        return None
+    head = s.split(".", 1)[0]
+    if not head.isdigit():
+        return None
+    return int(head)
+
+
+def check_image_tag(image: str, tag: str):
+    """Container image FROM `<image>:<tag>` — flag if tag's release is EOL."""
+    if not tag or tag in {"latest", "stable", "main", "edge"}:
+        return None  # symbolic tags = operator-opted-in to drift
+    slug = DOCKER_IMAGE_TO_SLUG.get(image.lower())
+    if not slug:
+        return None
+    stripped = _strip_image_tag(tag)
+    finding = check_eol(slug, stripped)
+    if not finding:
+        return None
+    _, truth, src = finding
+    return (
+        f"FROM {image}:{tag}",
+        truth,
+        src,
     )
 
 
 def check_action_sha(repo: str, ref: str):
-    """GitHub Action `uses: <repo>@<ref>` — flag unless ref is SHA-pinned (7+ hex).
-
-    Returns (claim, suggested-pin, src). Always fires for tag/branch refs;
-    resolves SHA on a best-effort basis.
-    """
+    """GitHub Action `uses: <repo>@<ref>` — flag unless ref is SHA-pinned (7+ hex)."""
     if re.fullmatch(r"[0-9a-f]{7,40}", ref):
         return None
     api = f"https://api.github.com/repos/{repo}/git/refs/tags/{ref}"
     data = http_cached(api, ttl_s=CACHE_TTL_IMMUTABLE)
-    if isinstance(data, dict):
-        sha = data.get("object", {}).get("sha", "")
-    else:
-        sha = ""
-    suggestion = f"uses: {repo}@{sha}  # {ref}" if sha else f"resolve via: gh api repos/{repo}/git/refs/tags/{ref}"
+    sha = data.get("object", {}).get("sha", "") if isinstance(data, dict) else ""
+    suggestion = f"uses: {repo}@{sha}  # {ref}" if sha else f"resolve: gh api repos/{repo}/git/refs/tags/{ref}"
     return (
         f"uses: {repo}@{ref}",
         suggestion,
@@ -171,11 +298,18 @@ _K8S_DEPRECATED = {
     "policy/v1beta1": "policy/v1",
     "rbac.authorization.k8s.io/v1beta1": "rbac.authorization.k8s.io/v1",
     "networking.k8s.io/v1beta1": "networking.k8s.io/v1",
+    "autoscaling/v2beta1": "autoscaling/v2",
+    "autoscaling/v2beta2": "autoscaling/v2",
+    "storage.k8s.io/v1beta1": "storage.k8s.io/v1",
+    "node.k8s.io/v1beta1": "node.k8s.io/v1",
+    "scheduling.k8s.io/v1beta1": "scheduling.k8s.io/v1",
+    "certificates.k8s.io/v1beta1": "certificates.k8s.io/v1",
+    "events.k8s.io/v1beta1": "events.k8s.io/v1",
+    "coordination.k8s.io/v1beta1": "coordination.k8s.io/v1",
 }
 
 
-def check_k8s_api(matched: str):
-    """Static map of deprecated k8s apiVersion → current GA equivalent."""
+def check_k8s_apiversion(matched: str):
     if matched not in _K8S_DEPRECATED:
         return None
     return (
@@ -185,37 +319,42 @@ def check_k8s_api(matched: str):
     )
 
 
-def _semver_major(v: str) -> int | None:
-    """Extract integer major from a version string. Returns None for ranges/symbolic."""
-    s = v.strip().lstrip("v").lstrip("^~>=<*")
-    if not s or s in {"latest", "next", "*"}:
+def check_ai_model(model_name: str):
+    """AI model identifier vs vendor deprecation list."""
+    if not model_name:
         return None
-    head = s.split(".", 1)[0]
-    try:
-        return int(head)
-    except ValueError:
+    norm = model_name.strip().strip("'\"")
+    entry = AI_MODEL_DEPRECATED.get(norm) or AI_MODEL_DEPRECATED.get(norm.lower())
+    if not entry:
         return None
+    status, when, replacement, src = entry
+    return (
+        f"model: {model_name}",
+        f"{status} ({when}). use: {replacement}",
+        src,
+    )
+
+
+# ─── Legacy shims for older imports ────────────────────────────────────
+
+
+def check_node_lts(major_str: str):
+    """Backward-compat shim — delegates to check_eol('nodejs', ...).
+
+    Kept so older verify_patterns.py imports still work during migration.
+    """
+    finding = check_eol("nodejs", major_str)
+    if finding:
+        _, truth, src = finding
+        return (f"Node v{major_str}", truth, src)
+    return None
+
+
+def check_k8s_api(matched: str):
+    """Backward-compat shim → check_k8s_apiversion."""
+    return check_k8s_apiversion(matched)
 
 
 def check_npm_outdated(pkg: str, version: str):
-    """npm `<pkg>": "<version>"` — flag only if pinned major is ≥2 behind latest.
-
-    Skip exact `latest` / `next` / `*` / range operators (range = operator opt-in to drift).
-    """
-    if version.lstrip().startswith(("^", "~", ">", "<", "*")) or version in {"latest", "next"}:
-        return None
-    pinned = _semver_major(version)
-    if pinned is None:
-        return None
-    data = http_cached(f"https://registry.npmjs.org/{pkg}/latest")
-    if not data or not isinstance(data, dict):
-        return None
-    latest = data.get("version", "")
-    latest_major = _semver_major(latest)
-    if latest_major is None or pinned >= latest_major - 1:
-        return None
-    return (
-        f"{pkg}@{version}",
-        f"{pkg}@{latest} (latest)",
-        f"https://registry.npmjs.org/{pkg}",
-    )
+    """Backward-compat shim → check_pkg_outdated('npm', ...)."""
+    return check_pkg_outdated("npm", pkg, version)

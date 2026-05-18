@@ -1,70 +1,239 @@
-"""Verify-layer pattern registry.
+"""Verify-layer pattern registry (v2).
 
-Patterns-as-data. One dict per rule. No DSL. No regex compiler.
+Broad coverage. Patterns dispatch to generic check functions in verify_lib.py.
+Adding a product: add an alias row to verify_authorities.EOL_ALIAS_TO_SLUG.
+No code change needed.
 
-Shape:
+Pattern dict shape:
     {
-      "ruleName":   str    # stable id; appears in `# verify-skip: <name>` inline comment
-      "scope":      "all" | "yaml" | "json" | "md"
-      "path_check": callable(path: str) -> bool   # optional; None = always-on for scope
-      "regex":      str    # compiled inside hook
-      "check":      callable  # returns (claim, truth, source_url) or None
-      "check_args": list[int]  # 1-based regex group indices passed positionally to check()
+      "ruleName":   str
+      "scope":      "all"|"yaml"|"json"|"toml"|"py-req"|"go-mod"|"ruby-gemfile"|"dockerfile"|"md"
+      "path_check": callable(path: str) -> bool | None     # None = scope-only
+      "regex":      str                                     # compiled at load time
+      "check":      callable(...args) -> tuple|None        # from verify_lib
+      "check_args": list[int]                               # 1-based regex group indices
+      "extra_args": list                                     # constants prepended before regex args
       "icon":       str
     }
-
-Importer expects verify_lib to be on sys.path (hook prepends its own dir).
 """
 from __future__ import annotations
 
-from verify_lib import check_action_sha, check_k8s_api, check_node_lts, check_npm_outdated
+import re
+
+from verify_authorities import EOL_ALIAS_TO_SLUG
+from verify_lib import (
+    check_action_sha,
+    check_ai_model,
+    check_freetext,
+    check_image_tag,
+    check_k8s_apiversion,
+    check_pkg_outdated,
+)
 
 
-def _path_is_workflow(p: str) -> bool:
+# Build the free-text language regex from the alias map. Longest first.
+_ALIASES_SORTED = sorted(EOL_ALIAS_TO_SLUG.keys(), key=lambda s: (-len(s), s))
+_ALIAS_ALTERNATION = "|".join(re.escape(a) for a in _ALIASES_SORTED)
+# `<alias> v?<digits>[.<digits>[.<digits>]]` — case-insensitive at use site.
+_FREETEXT_RE = rf"(?<![A-Za-z0-9._-])({_ALIAS_ALTERNATION})\s*[vV]?(\d+(?:\.\d+){{0,3}})\b"
+
+
+def _p_workflow(p: str) -> bool:
     return ".github/workflows/" in p and p.endswith((".yml", ".yaml"))
 
 
-def _path_is_yaml(p: str) -> bool:
+def _p_yaml(p: str) -> bool:
     return p.endswith((".yml", ".yaml"))
 
 
+def _p_pkg_json(p: str) -> bool:
+    return p.endswith("package.json")
+
+
+def _p_requirements(p: str) -> bool:
+    name = p.rsplit("/", 1)[-1]
+    return name == "requirements.txt" or name.startswith("requirements-") and name.endswith(".txt")
+
+
+def _p_pyproject(p: str) -> bool:
+    return p.endswith("pyproject.toml") or p.endswith("Pipfile")
+
+
+def _p_cargo(p: str) -> bool:
+    return p.endswith("Cargo.toml")
+
+
+def _p_gomod(p: str) -> bool:
+    return p.endswith("go.mod")
+
+
+def _p_gemfile(p: str) -> bool:
+    name = p.rsplit("/", 1)[-1]
+    return name in {"Gemfile", "Gemfile.lock"}
+
+
+def _p_dockerfile(p: str) -> bool:
+    name = p.rsplit("/", 1)[-1]
+    return name == "Dockerfile" or name.startswith("Dockerfile.") or name.endswith(".dockerfile") or name.endswith(".Dockerfile")
+
+
+def _p_compose(p: str) -> bool:
+    name = p.rsplit("/", 1)[-1]
+    return name in {"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"}
+
+
+# Wrappers to bind ecosystem string into check_pkg_outdated (which expects ecosystem as first arg).
+def _check_npm(pkg, ver):
+    return check_pkg_outdated("npm", pkg, ver)
+
+
+def _check_pypi(pkg, ver):
+    return check_pkg_outdated("pypi", pkg, ver)
+
+
+def _check_crates(pkg, ver):
+    return check_pkg_outdated("crates", pkg, ver)
+
+
+def _check_rubygems(pkg, ver):
+    return check_pkg_outdated("rubygems", pkg, ver)
+
+
+def _check_go_module(pkg, ver):
+    return check_pkg_outdated("go", pkg, ver)
+
+
+def _check_hex(pkg, ver):
+    return check_pkg_outdated("hex", pkg, ver)
+
+
 VERIFY_PATTERNS = [
+    # ── Free-text language/runtime/OS/db claims in any file ────────────
+    # "Node 18" / "Python 3.8" / "Ubuntu 20.04" / "Ruby 2.7" / etc.
     {
-        "ruleName": "node_lts_version",
+        "ruleName": "lang_eol_prose",
         "scope": "all",
         "path_check": None,
-        "regex": r"\bnode(?:js)?\s*v?(\d{1,3})\b",
-        "check": check_node_lts,
-        "check_args": [1],
+        "regex": _FREETEXT_RE,
+        "_flags": re.IGNORECASE,
+        "check": check_freetext,
+        "check_args": [1, 2],
         "icon": "⚠",
     },
+
+    # ── Dockerfile / compose / k8s `image:` ─────────────────────────────
+    # `FROM <image>:<tag>` — image is repo path; tag often suffixed (-alpine, -slim).
+    {
+        "ruleName": "docker_image_eol",
+        "scope": "all",
+        "path_check": lambda p: _p_dockerfile(p) or _p_compose(p) or _p_yaml(p),
+        "regex": r"(?:^|\s)(?:FROM|image:)\s+([\w./-]+):([\w.+-]+)",
+        "_flags": re.MULTILINE,
+        "check": check_image_tag,
+        "check_args": [1, 2],
+        "icon": "⚠",
+    },
+
+    # ── GitHub Action unpinned ─────────────────────────────────────────
     {
         "ruleName": "github_action_unpinned",
         "scope": "yaml",
-        "path_check": _path_is_workflow,
+        "path_check": _p_workflow,
         "regex": r"uses:\s+([\w.-]+/[\w.-]+)@([\w.-]+)\b",
         "check": check_action_sha,
         "check_args": [1, 2],
         "icon": "⚠",
     },
+
+    # ── k8s deprecated apiVersion ──────────────────────────────────────
     {
         "ruleName": "k8s_deprecated_api",
         "scope": "yaml",
-        "path_check": _path_is_yaml,
+        "path_check": _p_yaml,
         "regex": r"apiVersion:\s+([\w./-]+)",
-        "check": check_k8s_api,
+        "check": check_k8s_apiversion,
         "check_args": [1],
         "icon": "⚠",
     },
+
+    # ── npm package.json deps (any of dependencies / devDependencies / peerDeps) ─
     {
-        # Conservative npm check: only fires when pinned major is >= 2 behind latest.
-        # Triggers on package.json entries: `"<pkg>": "<version>"` with exact pin.
         "ruleName": "npm_outdated",
         "scope": "json",
-        "path_check": lambda p: p.endswith("package.json"),
+        "path_check": _p_pkg_json,
         "regex": r'"([@\w][\w./-]*)"\s*:\s*"([0-9][\w.+-]*)"',
-        "check": check_npm_outdated,
+        "check": _check_npm,
         "check_args": [1, 2],
         "icon": "ℹ",
+    },
+
+    # ── PyPI requirements.txt: `<pkg>==<ver>` ──────────────────────────
+    {
+        "ruleName": "pypi_outdated_reqs",
+        "scope": "all",
+        "path_check": _p_requirements,
+        "regex": r"^\s*([A-Za-z][A-Za-z0-9._-]*)\s*==\s*([0-9][\w.+-]*)",
+        "_flags": re.MULTILINE,
+        "check": _check_pypi,
+        "check_args": [1, 2],
+        "icon": "ℹ",
+    },
+
+    # ── pyproject.toml [project.dependencies]: `<pkg>==<ver>` or PEP 621 ─
+    {
+        "ruleName": "pypi_outdated_pyproject",
+        "scope": "all",
+        "path_check": _p_pyproject,
+        "regex": r'"([A-Za-z][A-Za-z0-9._-]*)\s*==\s*([0-9][\w.+-]*)"',
+        "check": _check_pypi,
+        "check_args": [1, 2],
+        "icon": "ℹ",
+    },
+
+    # ── Cargo.toml `<pkg> = "<ver>"` (very loose; ignored if version is a range)
+    {
+        "ruleName": "crates_outdated",
+        "scope": "all",
+        "path_check": _p_cargo,
+        "regex": r'^([a-z][a-z0-9_-]*)\s*=\s*"([0-9][\w.+-]*)"',
+        "_flags": re.MULTILINE,
+        "check": _check_crates,
+        "check_args": [1, 2],
+        "icon": "ℹ",
+    },
+
+    # ── Gemfile: `gem 'name', '~> 1.2'` or `gem "name", "1.2"`
+    {
+        "ruleName": "rubygems_outdated",
+        "scope": "all",
+        "path_check": _p_gemfile,
+        "regex": r"""gem\s+['"]([\w.-]+)['"]\s*,\s*['"]([0-9][\w.+-]*)['"]""",
+        "check": _check_rubygems,
+        "check_args": [1, 2],
+        "icon": "ℹ",
+    },
+
+    # ── go.mod: `<module> v<ver>` lines under require()
+    {
+        "ruleName": "go_module_outdated",
+        "scope": "all",
+        "path_check": _p_gomod,
+        "regex": r"^\s*([\w./-]+)\s+v([0-9][\w.+-]*)",
+        "_flags": re.MULTILINE,
+        "check": _check_go_module,
+        "check_args": [1, 2],
+        "icon": "ℹ",
+    },
+
+    # ── AI model identifiers ───────────────────────────────────────────
+    # Matches: model: "X" | model="X" | model_name = "X" | "model": "X"
+    {
+        "ruleName": "ai_model_deprecated",
+        "scope": "all",
+        "path_check": None,
+        "regex": r"""(?:model(?:_name)?|"model")\s*[=:]\s*['"]([\w.:-]+)['"]""",
+        "check": check_ai_model,
+        "check_args": [1],
+        "icon": "⚠",
     },
 ]

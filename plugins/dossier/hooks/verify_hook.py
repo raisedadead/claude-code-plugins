@@ -101,7 +101,7 @@ def main() -> int:
             continue
 
         try:
-            pattern = re.compile(rule["regex"])
+            pattern = re.compile(rule["regex"], rule.get("_flags", 0))
         except re.error:
             continue
 

@@ -71,7 +71,7 @@ def scan(file_path: str) -> list[str]:
         if pc and not pc(file_path):
             continue
         try:
-            pattern = re.compile(rule["regex"])
+            pattern = re.compile(rule["regex"], rule.get("_flags", 0))
         except re.error:
             continue
         for m in pattern.finditer(content):
