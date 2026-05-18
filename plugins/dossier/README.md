@@ -30,15 +30,16 @@ All dossiers chronologically sortable by directory name. INDEX.md at `.scratchpa
 
 ## Verbs
 
-| Skill                                             | Action                                                                         |
-| ------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `/dossier:new <slug>`                             | Scaffold new dossier. Prompts for §G, §C, §X repos.                            |
-| `/dossier:status`                                 | Read-only dashboard. Default session-open verb. Flags incomplete ops.          |
-| `/dossier:build <T-id> \| --next`                 | TDD execute a §T row. Commit + §X refresh + state flip. Resumable.             |
-| `/dossier:check`                                  | Drift detector. Spawns scouts per repo. Reports §V / §T / §X violations.       |
-| `/dossier:backprop <B-id> \| <description>`       | Bug → §V protocol. Test + commit + optional invariant. Resumable.              |
-| `/dossier:close --complete \| --successor <slug>` | Validate, write §Z, archive. Atomic.                                           |
-| `/dossier:migrate`                                | Convert legacy 4-file dossiers to v2 single-file. Operator-confirmed per repo. |
+| Skill                                             | Action                                                                                                                                                  |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dossier:new <slug>`                             | Scaffold new dossier. Prompts for §G, §C, §X repos.                                                                                                     |
+| `/dossier:status`                                 | Read-only dashboard. Default session-open verb. Flags incomplete ops.                                                                                   |
+| `/dossier:build <T-id> \| --next`                 | TDD execute a §T row. Commit + §X refresh + state flip. Resumable.                                                                                      |
+| `/dossier:check`                                  | Drift detector. Spawns scouts per repo. Reports §V / §T / §X violations.                                                                                |
+| `/dossier:backprop <B-id> \| <description>`       | Bug → §V protocol. Test + commit + optional invariant. Resumable.                                                                                       |
+| `/dossier:close --complete \| --successor <slug>` | Validate, write §Z, archive. Atomic.                                                                                                                    |
+| `/dossier:migrate`                                | Convert legacy 4-file dossiers to v2 single-file. Operator-confirmed per repo.                                                                          |
+| `/dossier:verify [<topic>]`                       | Fact-check freshness claims (Node LTS, GH Action pins, k8s apiVersion, npm pkg drift). Auto-fires on every Write/Edit; manual invoke for last response. |
 
 ## Quickstart
 
@@ -72,6 +73,27 @@ Locks at `.scratchpad/dossier/<slug>/.ds-lock` prevent concurrent mutation. Stal
 
 Plugin ships `dossier-scout` — a read-only investigator. Used by `/dossier:check` (parallel drift scans per repo) and `/dossier:migrate` (per-repo inspection). Caveman-compressed output. Refuses all writes (hard deny list on Bash patterns + tool restrictions). Spawn directly via `Agent({subagent_type: "dossier-scout", ...})` if you want a one-off read-only sweep.
 
+## Verify-layer
+
+PreToolUse hook on `Edit | Write | MultiEdit` scans content against `hooks/verify_patterns.py` and emits stderr reminders + `additionalContext` when a freshness claim doesn't match the authority. Non-blocking. Per-session dedup. Cache at `<cwd>/.scratchpad/.verify-cache/` (24h TTL).
+
+Built-in patterns:
+
+| Rule                     | Scope                     | Authority                                                      |
+| ------------------------ | ------------------------- | -------------------------------------------------------------- |
+| `node_lts_version`       | all files                 | `endoflife.date/api/v1/products/nodejs` (`isLts && not isEol`) |
+| `github_action_unpinned` | `.github/workflows/*.yml` | `gh api repos/<repo>/git/refs/tags/<tag>`                      |
+| `k8s_deprecated_api`     | `*.yml/yaml`              | k8s deprecation guide (static map)                             |
+| `npm_outdated`           | `package.json`            | `registry.npmjs.org/<pkg>/latest` (≥2 majors behind)           |
+
+Operator escape: add `# verify-skip: <ruleName>` on or near the line to suppress.
+
+Manual invoke: `/dossier:verify [<topic>]` — fact-checks the previous response (or topic), prints `| Claim | Verdict | Source |` table.
+
+`ds:check` also runs a one-shot sweep on touched files via `hooks/verify_sweep.py`. Findings fold into 🟡 warnings.
+
+Network-fault-tolerant. Cache poisoned / offline / 5xx = silent skip + `verify offline: <url>` to stderr. Never blocks a write.
+
 ## Host-env adapters
 
 Plugin auto-detects + uses (graceful fallback if absent):
@@ -95,7 +117,11 @@ plugins/dossier/
 │   ├── hooks.json
 │   ├── session-start.sh           # INDEX regen + §S tail injection
 │   ├── lib-regen-index.sh         # derived INDEX from DOSSIER walk
-│   └── lib-clear-stale-locks.sh   # 30min / dead-pid auto-clear
+│   ├── lib-clear-stale-locks.sh   # 30min / dead-pid auto-clear
+│   ├── verify_hook.py             # PreToolUse Edit|Write|MultiEdit freshness scan
+│   ├── verify_sweep.py            # scan existing files (used by ds:check)
+│   ├── verify_lib.py              # cache + state + authority probes
+│   └── verify_patterns.py         # pattern registry (Node LTS, GH Action, k8s, npm)
 ├── agents/
 │   └── dossier-scout.md           # read-only investigator
 ├── skills/
@@ -105,7 +131,8 @@ plugins/dossier/
 │   ├── check/SKILL.md
 │   ├── backprop/SKILL.md
 │   ├── close/SKILL.md
-│   └── migrate/SKILL.md
+│   ├── migrate/SKILL.md
+│   └── verify/SKILL.md            # /dossier:verify on-demand fact-check
 ├── FORMAT.md                      # caveman pipe-table encoding spec
 ├── ADAPTERS.md                    # host-env detection + routing
 └── README.md                      # you are here
