@@ -42,6 +42,18 @@ Output: caveman pipe-table. One row per finding.
 
 Spawn one `dossier-scout` per repo, in parallel. Use Agent tool with `subagent_type: dossier-scout`.
 
+### 2a. Verify-layer sweep (existing content)
+
+PreToolUse `verify_hook.py` only catches new writes. Existing files may carry pre-hook claims. Scan them:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/verify_sweep.py <touched-files...>
+```
+
+Touched-files = union of files cited by any §T `x`-row commit + files in `git status -sb` (changed but uncommitted). Findings folded into 🟡 warnings (verify is advisory, never critical).
+
+Skip if `verify_sweep.py` missing (older plugin install) — sweep is opt-in.
+
 ### 3. Local checks (main thread)
 
 Independent of scouts. Run concurrently with dispatch:
