@@ -183,3 +183,39 @@ def check_k8s_api(matched: str):
         f"apiVersion: {_K8S_DEPRECATED[matched]}",
         "https://kubernetes.io/docs/reference/using-api/deprecation-guide/",
     )
+
+
+def _semver_major(v: str) -> int | None:
+    """Extract integer major from a version string. Returns None for ranges/symbolic."""
+    s = v.strip().lstrip("v").lstrip("^~>=<*")
+    if not s or s in {"latest", "next", "*"}:
+        return None
+    head = s.split(".", 1)[0]
+    try:
+        return int(head)
+    except ValueError:
+        return None
+
+
+def check_npm_outdated(pkg: str, version: str):
+    """npm `<pkg>": "<version>"` — flag only if pinned major is ≥2 behind latest.
+
+    Skip exact `latest` / `next` / `*` / range operators (range = operator opt-in to drift).
+    """
+    if version.lstrip().startswith(("^", "~", ">", "<", "*")) or version in {"latest", "next"}:
+        return None
+    pinned = _semver_major(version)
+    if pinned is None:
+        return None
+    data = http_cached(f"https://registry.npmjs.org/{pkg}/latest")
+    if not data or not isinstance(data, dict):
+        return None
+    latest = data.get("version", "")
+    latest_major = _semver_major(latest)
+    if latest_major is None or pinned >= latest_major - 1:
+        return None
+    return (
+        f"{pkg}@{version}",
+        f"{pkg}@{latest} (latest)",
+        f"https://registry.npmjs.org/{pkg}",
+    )

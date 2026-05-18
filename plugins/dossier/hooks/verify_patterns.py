@@ -17,7 +17,7 @@ Importer expects verify_lib to be on sys.path (hook prepends its own dir).
 """
 from __future__ import annotations
 
-from verify_lib import check_action_sha, check_k8s_api, check_node_lts
+from verify_lib import check_action_sha, check_k8s_api, check_node_lts, check_npm_outdated
 
 
 def _path_is_workflow(p: str) -> bool:
@@ -55,5 +55,16 @@ VERIFY_PATTERNS = [
         "check": check_k8s_api,
         "check_args": [1],
         "icon": "⚠",
+    },
+    {
+        # Conservative npm check: only fires when pinned major is >= 2 behind latest.
+        # Triggers on package.json entries: `"<pkg>": "<version>"` with exact pin.
+        "ruleName": "npm_outdated",
+        "scope": "json",
+        "path_check": lambda p: p.endswith("package.json"),
+        "regex": r'"([@\w][\w./-]*)"\s*:\s*"([0-9][\w.+-]*)"',
+        "check": check_npm_outdated,
+        "check_args": [1, 2],
+        "icon": "ℹ",
     },
 ]
