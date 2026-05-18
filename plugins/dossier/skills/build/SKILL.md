@@ -112,6 +112,19 @@ Atomic write DOSSIER.md. Append §S:
 <YYYY-MM-DD HH:MM> ds:build <T-id> §X=refreshed
 ```
 
+### 8a. Vm.X STALE GUARD
+
+Before flip: check §X mtime (last `§X=refreshed` line in §S, or DOSSIER.md mtime if never refreshed). If >30min stale **after** step 8 attempted (refresh failed / partial):
+
+```
+⚠ §X stale (>30min, last refresh: <ts>). Proceed with flip? (y/N)
+```
+
+- `n` / default: refuse flip, release lock, exit. §S: `§X=stale-refused`.
+- `y`: proceed. §S: `§X=stale-confirmed`.
+
+Skip guard entirely if refresh succeeded in step 8.
+
 ### 9. FLIP
 
 State `~` → `x`. Update `cite` column with commit SHA. Atomic write. Append §S:
@@ -142,7 +155,7 @@ next: ds:build --next [or remaining T-ids]
 - Lock active: refuse, suggest `--resume` or wait.
 - Test fail + can't fix: leave row `~`, release lock, write §S w/ `BLOCKED: <reason>`. Operator decides.
 - Commit fail: leave row `~`, release lock. Operator investigates.
-- §X refresh fail (network / repo missing): row updates partial, flag in §S. Skill still proceeds to flip (work is done; §X is bookkeeping).
+- §X refresh fail (network / repo missing): row updates partial, flag in §S. Triggers Vm.X stale guard (§8a) — operator confirms before flip.
 
 ## Cite
 

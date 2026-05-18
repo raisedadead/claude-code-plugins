@@ -202,7 +202,7 @@ Format rules:
 - `pushed` = `yes` if `ahead=0` on the upstream tracking ref, else `no`.
 - `notes` = free-text, ≤80 chars.
 
-Vm.X: stale §X blocks `ds:build` task-flip. Refresh required.
+Vm.X: stale §X (last refresh >30min ago) **warns** before `ds:build` task-flip. Operator confirms `y/N`. Default: refuse flip. §S records `§X=stale-confirmed` on yes.
 
 ## 11. §S — Rolling status log
 
@@ -243,7 +243,7 @@ Format rules:
 - Timestamp = minute-granular `YYYY-MM-DD HH:MM`. Override to seconds via env `DS_TS_SECONDS=1` (concurrent-write disambiguation).
 - `<skill>` = `ds:<verb>`.
 - `<target>` = `T<N>`, `B<N>`, `V<N>`, or `—` for non-targeted ops.
-- `<event>` ∈ `{START, DONE, commit=<sha>, §<X>=<status>, drift=<n>, lock=<acquired|released>}`.
+- `<event>` ∈ `{START, DONE, commit=<sha>, §<X>=<status>, §X=stale-confirmed, drift=<n>, lock=<acquired|released>}`.
 - `<detail>` free-text, ≤120 chars.
 
 Vm.6: every multi-step op MUST emit `START` line before mutation, `DONE` line after final mutation. Missing `DONE` = incomplete = resume needed.
@@ -349,6 +349,6 @@ Auto-detect default. `--resume` flag is explicit override.
 | Vm.9  | active lock blocks mutation; stale lock auto-clears             |
 | Vm.10 | migrator per-repo marker `.scratchpad/.migrate-v2-done`         |
 | Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit     |
-| Vm.X  | stale §X blocks §T task-flip; refresh required                  |
+| Vm.X  | stale §X (>30min) warns + requires operator confirm on flip     |
 
 `ds:check` validates all Vm rules on read.
