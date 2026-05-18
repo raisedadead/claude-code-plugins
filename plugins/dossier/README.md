@@ -30,16 +30,17 @@ All dossiers chronologically sortable by directory name. INDEX.md at `.scratchpa
 
 ## Verbs
 
-| Skill                                             | Action                                                                                                                                                  |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/dossier:new <slug>`                             | Scaffold new dossier. Prompts for §G, §C, §X repos.                                                                                                     |
-| `/dossier:status`                                 | Read-only dashboard. Default session-open verb. Flags incomplete ops.                                                                                   |
-| `/dossier:build <T-id> \| --next`                 | TDD execute a §T row. Commit + §X refresh + state flip. Resumable.                                                                                      |
-| `/dossier:check`                                  | Drift detector. Spawns scouts per repo. Reports §V / §T / §X violations.                                                                                |
-| `/dossier:backprop <B-id> \| <description>`       | Bug → §V protocol. Test + commit + optional invariant. Resumable.                                                                                       |
-| `/dossier:close --complete \| --successor <slug>` | Validate, write §Z, archive. Atomic.                                                                                                                    |
-| `/dossier:migrate`                                | Convert legacy 4-file dossiers to v2 single-file. Operator-confirmed per repo.                                                                          |
-| `/dossier:verify [<topic>]`                       | Fact-check freshness claims (Node LTS, GH Action pins, k8s apiVersion, npm pkg drift). Auto-fires on every Write/Edit; manual invoke for last response. |
+| Skill                                             | Action                                                                                                                                                                                                                                                     |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dossier:new <slug>`                             | Scaffold new dossier. Prompts for §G, §C, §X repos.                                                                                                                                                                                                        |
+| `/dossier:status`                                 | Read-only dashboard. Default session-open verb. Flags incomplete ops.                                                                                                                                                                                      |
+| `/dossier:build <T-id> \| --next`                 | TDD execute a §T row. Commit + §X refresh + state flip. Resumable.                                                                                                                                                                                         |
+| `/dossier:check`                                  | Drift detector. Spawns scouts per repo. Reports §V / §T / §X violations.                                                                                                                                                                                   |
+| `/dossier:backprop <B-id> \| <description>`       | Bug → §V protocol. Test + commit + optional invariant. Resumable.                                                                                                                                                                                          |
+| `/dossier:close --complete \| --successor <slug>` | Validate, write §Z, archive. Atomic.                                                                                                                                                                                                                       |
+| `/dossier:migrate`                                | Convert legacy 4-file dossiers to v2 single-file. Operator-confirmed per repo.                                                                                                                                                                             |
+| `/dossier:verify [<topic>]`                       | Empirical fact-check vs primary sources. Auto-fires PreToolUse on every Write/Edit (140 EOL aliases + 34 Docker images + 31 AI models + GH Actions + k8s + 6 package ecosystems). Manual invoke = model-driven generic fact-check for any freshness claim. |
+| `/dossier:roll {dump\|restore\|list}`             | Persist Claude Code TaskList across session boundaries via compact `.tlr` pipe-table. PreCompact hook auto-dumps before context shrinks.                                                                                                                   |
 
 ## Quickstart
 
@@ -120,8 +121,11 @@ plugins/dossier/
 │   ├── lib-clear-stale-locks.sh   # 30min / dead-pid auto-clear
 │   ├── verify_hook.py             # PreToolUse Edit|Write|MultiEdit freshness scan
 │   ├── verify_sweep.py            # scan existing files (used by ds:check)
-│   ├── verify_lib.py              # cache + state + authority probes
-│   └── verify_patterns.py         # pattern registry (Node LTS, GH Action, k8s, npm)
+│   ├── verify_lib.py              # generic check functions + HTTP cache
+│   ├── verify_patterns.py         # 11 broad patterns dispatching to authorities
+│   ├── verify_authorities.py      # registry: 140 EOL aliases + 31 AI models + Docker map
+│   ├── roll_lib.py                # transcript parser + .tlr writer/reader
+│   └── precompact-roll.py         # PreCompact auto-dump TaskList → .tlr
 ├── agents/
 │   └── dossier-scout.md           # read-only investigator
 ├── skills/
@@ -132,7 +136,8 @@ plugins/dossier/
 │   ├── backprop/SKILL.md
 │   ├── close/SKILL.md
 │   ├── migrate/SKILL.md
-│   └── verify/SKILL.md            # /dossier:verify on-demand fact-check
+│   ├── verify/SKILL.md            # /dossier:verify model-driven fact-check
+│   └── roll/SKILL.md              # /dossier:roll {dump|restore|list}
 ├── FORMAT.md                      # caveman pipe-table encoding spec
 ├── ADAPTERS.md                    # host-env detection + routing
 └── README.md                      # you are here
