@@ -132,8 +132,9 @@ parse_dossier() {
 		done
 	fi
 
-	# Sort rows: by date desc (col 2 = "| <date> | …"), live before done within same date.
-	printf '%s\n' "${rows[@]}" | sort -t'|' -k2,2r -k4,4
+	# Sort rows: date desc (col 2), then state_label reverse-alpha (col 4) so "live" > "done".
+	# Col layout after leading "|": f[2]=date, f[3]=slug, f[4]=state_label.
+	printf '%s\n' "${rows[@]}" | sort -t'|' -k2,2r -k4,4r
 } >"${TMP_FILE}"
 
 mv "${TMP_FILE}" "${INDEX_FILE}"
