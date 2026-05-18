@@ -22,6 +22,18 @@
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/precompact-roll.py",
+            "timeout": 15
+          }
+        ]
+      }
     ]
   }
 }
