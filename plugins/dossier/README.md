@@ -76,7 +76,7 @@ Plugin ships `dossier-scout` — a read-only investigator. Used by `/dossier:che
 
 ## Verify-layer
 
-Empirical defense against knowledge-cutoff hallucination. PreToolUse hook on every `Edit | Write | MultiEdit` scans content against an **authority registry** (140 EOL aliases, 34 Docker images, 31 sunset AI models) and emits stderr reminders + `additionalContext` when a freshness claim doesn't match the primary source. Non-blocking. Per-session dedup. Cache at `<cwd>/.scratchpad/.verify-cache/` (24h TTL on registries, 30d on resolved SHAs).
+Empirical defense against knowledge-cutoff hallucination. PreToolUse hook on every `Edit | Write | MultiEdit` scans content against an **authority registry** (140 EOL aliases, 34 Docker images, 31 sunset AI models) and emits stderr reminders + `additionalContext` when a freshness claim doesn't match the primary source. **Non-blocking by design** — every match exits 0; freshness violations surface as nags, not refusals. Compare to `marker_guard.py` (see below), which exits 2 and hard-blocks. Per-session dedup. Cache at `<cwd>/.scratchpad/.verify-cache/` (24h TTL on registries, 30d on resolved SHAs).
 
 Coverage (11 broad patterns, generic dispatcher):
 
@@ -103,6 +103,19 @@ Manual invoke: `/dossier:verify [<topic>]` — model-driven generic fact-check. 
 
 Network-fault-tolerant. Offline / 5xx / cache-poison = silent skip + `verify offline: <url>` to stderr. Never blocks a write.
 
+## Marker guard
+
+PreToolUse hook on `Edit | Write | MultiEdit` that **blocks** edits leaking phase / stage / audit-id markers (`// Phase 1:`, `// Step N:`, `// V11 (Phase 3 / A7):`, `// PH3-B7`) into non-dossier source. Exit 2 + stderr feeds Claude. Source must stay phase-agnostic — phase tracking belongs in `DOSSIER.md §B` and `§S`.
+
+Pass-through:
+
+- File path under `.scratchpad/dossier/` or `.scratchpad/`.
+- File named `DOSSIER.md`, `PLAN.md`, `SPEC.md`, `AUDIT.md`, `LENS.md`.
+- Phase token inside a string literal (regex anchors on comment prefixes: `//`, `#`, `--`, `/*`, `*`, `<!--`, `;`).
+- Non-Edit tools.
+
+Emergency bypass: `DOSSIER_MARKER_GUARD=off`, with rationale logged in the live dossier's `§S`. Smoke test: `bash hooks/test_marker_guard.sh`.
+
 ## Host-env adapters
 
 Plugin auto-detects + uses (graceful fallback if absent):
@@ -127,7 +140,9 @@ plugins/dossier/
 │   ├── session-start.sh           # INDEX regen + §S tail injection
 │   ├── lib-regen-index.sh         # derived INDEX from DOSSIER walk
 │   ├── lib-clear-stale-locks.sh   # 30min / dead-pid auto-clear
-│   ├── verify_hook.py             # PreToolUse Edit|Write|MultiEdit freshness scan
+│   ├── marker_guard.py            # PreToolUse Edit|Write|MultiEdit phase-marker blocker (exit 2)
+│   ├── test_marker_guard.sh       # marker_guard smoke test
+│   ├── verify_hook.py             # PreToolUse Edit|Write|MultiEdit freshness scan (non-blocking)
 │   ├── verify_sweep.py            # scan existing files (used by ds:check)
 │   ├── verify_lib.py              # generic check functions + HTTP cache
 │   ├── verify_patterns.py         # 11 broad patterns dispatching to authorities
