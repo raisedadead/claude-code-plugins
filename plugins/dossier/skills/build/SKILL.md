@@ -76,6 +76,8 @@ If `verify` is shell predicate: run after work, must exit 0. If `verify` is `—
 
 Use `fastedit` if `HAS_FASTEDIT=1` for surgical code edits. Else Edit tool.
 
+**Source comments stay phase-agnostic.** Never write `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)`, or `// PH<n>-B<k>` in source or test files. Phase / audit tracking lives in DOSSIER.md §B and §S. Comments in source answer _why_ (workaround refs, non-obvious invariants, upstream-bug links), not _which phase_. The `marker_guard.py` PreToolUse hook enforces this — Edit/Write/MultiEdit calls carrying phase markers exit 2.
+
 If tests fail and root cause unclear: **spawn `dossier-scout` subagent** with mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>". Use report to guide fix. Scout output is caveman-compressed; main thread aggregates.
 
 If failure suggests a missing invariant: trigger `ds:backprop` flow (don't just patch the symptom).
