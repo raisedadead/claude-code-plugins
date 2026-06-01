@@ -20,6 +20,8 @@ Six steps. Append-only on §B + §V. Resumable.
 
 Per ADAPTERS.md. Note `HAS_CAVEMEM` (recurrence research benefits).
 
+DOSSIER.md writes use the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` flips §T/§B state cells, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` appends §S. The §S code-fence examples below show the full line — pass only the text **after** the timestamp (the script prepends it).
+
 ### 1. Locate live dossier
 
 Per `ds:status` step 1. Refuse if none.

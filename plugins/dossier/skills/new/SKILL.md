@@ -25,6 +25,8 @@ Run once. Cache for invocation.
 
 See `plugins/dossier/ADAPTERS.md` for routing rules. Never error if absent.
 
+The §S DONE line (step 6) appends via `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` (FORMAT.md §15) — pass the text **after** the timestamp; the script prepends it. Initial scaffold is a full Write (new file).
+
 ### 1. Validate slug + path
 
 - Slug must match `^[a-z0-9][a-z0-9-]{0,29}$`. Refuse otherwise w/ explanation.

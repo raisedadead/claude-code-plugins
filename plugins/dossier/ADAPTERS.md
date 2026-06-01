@@ -8,13 +8,13 @@ ______________________________________________________________________
 
 ## Adapter matrix
 
-| Adapter            | Detection                                                   | If present                                      | If absent            |
-| ------------------ | ----------------------------------------------------------- | ----------------------------------------------- | -------------------- |
-| `rtk` CLI          | `command -v rtk`                                            | see §rtk below                                  | emit raw commands    |
-| `context-mode` MCP | tool namespace has `mcp__context-mode__ctx_execute`         | use `ctx_batch_execute` for multi-repo scans    | parallel Bash + Read |
-| `cavemem` MCP      | tool namespace has `mcp__cavemem__search`                   | augment §S tail with cross-session observations | §S only              |
-| `caveman` skill    | available-skills list has `caveman:caveman` or `ck:caveman` | encourage caveman encoding in writes            | plain markdown       |
-| `fastedit` MCP     | tool namespace has `mcp__fastedit__fast_edit`               | prefer for surgical DOSSIER.md edits            | Edit tool            |
+| Adapter            | Detection                                                   | If present                                                | If absent            |
+| ------------------ | ----------------------------------------------------------- | --------------------------------------------------------- | -------------------- |
+| `rtk` CLI          | `command -v rtk`                                            | see §rtk below                                            | emit raw commands    |
+| `context-mode` MCP | tool namespace has `mcp__context-mode__ctx_execute`         | use `ctx_batch_execute` for multi-repo scans              | parallel Bash + Read |
+| `cavemem` MCP      | tool namespace has `mcp__cavemem__search`                   | augment §S tail with cross-session observations           | §S only              |
+| `caveman` skill    | available-skills list has `caveman:caveman` or `ck:caveman` | encourage caveman encoding in writes                      | plain markdown       |
+| `fastedit` MCP     | tool namespace has `mcp__fastedit__fast_edit`               | surgical edits to SOURCE task files; read via fast_search | Edit tool            |
 
 ## §rtk — token-compression wrapper
 
@@ -94,15 +94,15 @@ If present: writers (ds:new, ds:build, ds:backprop) prefer caveman encoding in �
 
 If absent: plain markdown. Pipe-tables still apply.
 
-## §fastedit — surgical AST edits
+## §fastedit — surgical AST edits (SOURCE files only)
 
 MCP server providing tree-sitter AST splice edits. Detection: presence of `mcp__fastedit__fast_edit`.
 
-If present: prefer for in-place DOSSIER.md mutations (e.g. flip §T row state, append §S line). Cuts token cost vs full Edit/Write.
+Scope: SOURCE task files in supported languages (`.py .js .ts .tsx .rs .go .java .c .cpp .rb .swift .kt .cs .php .ex` …). `ds:build` step 6 (WORK) may use it for surgical code edits. The read tools (`fast_search` / `fast_read` / `fast_diff`) shell out to ripgrep/git and work on any file, DOSSIER.md included.
 
-If absent: use Edit tool with atomic tmp+rename pattern.
+**NOT for DOSSIER.md writes.** fastedit rejects `.md` — no markdown grammar, so `detect_language` returns `None` and every `fast_edit` / `fast_batch_edit` / `fast_multi_edit` call returns `unsupported file type '.md'`. DOSSIER.md mutations go through the bundled helpers instead (FORMAT.md §15): `lib-row-flip.sh` (§T/§B state flips) and `lib-s-append.sh` (§S appends). Those are deterministic, atomic, and always present — no detection, no fallback gymnastics.
 
-Important: fastedit on DOSSIER.md must still respect atomic write rule (Vm.8). Fastedit writes in-place by default; wrap in tmp+rename if not atomic on the host.
+If fastedit absent: use the Edit tool for source files.
 
 ## Detection scaffold (skill body preamble)
 

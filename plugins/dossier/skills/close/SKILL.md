@@ -20,6 +20,8 @@ Refuses to close without `--complete` OR `--successor <slug>`. Refuses if §T ha
 
 Per ADAPTERS.md.
 
+DOSSIER.md writes use the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` appends §S (the §S code-fence examples below show the full line — pass only the text **after** the timestamp; the script prepends it). §Z is written via the Edit tool (multi-line structured block, not a single row/line).
+
 ### 1. Locate live dossier
 
 Per `ds:status` step 1. Refuse if none.

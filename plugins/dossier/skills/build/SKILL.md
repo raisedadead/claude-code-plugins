@@ -20,6 +20,8 @@ TDD covenant: RED → GREEN → refactor. One commit per `x`-flip. Resumable.
 
 Per ADAPTERS.md. Note `HAS_RTK`, `HAS_CTX`, `HAS_FASTEDIT`.
 
+DOSSIER.md writes use the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` for §T flips, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` for §S appends. Always present, no detection. The §S code-fence examples below show the full line — pass only the text **after** the timestamp (`lib-s-append.sh` prepends it). `HAS_FASTEDIT` governs SOURCE code edits in step 6 only, never DOSSIER.md.
+
 ### 1. Locate live dossier
 
 Per `ds:status` step 1. If none: refuse w/ "no live dossier. ds:new first."

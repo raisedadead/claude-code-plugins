@@ -324,6 +324,20 @@ Crash mid-write = `.tmp` orphan + untouched real file. Skills clean `.tmp` orpha
 
 Vm.8: no skill writes a real file directly. Always tmp + rename.
 
+### Bundled mutation helpers
+
+Two scripts under `$CLAUDE_PLUGIN_ROOT/hooks/` own the common DOSSIER.md mutations. Both are atomic (tmp + rename) and ship with the plugin — always available, no adapter detection, no fastedit dependency (fastedit cannot edit `.md`; see ADAPTERS.md §fastedit).
+
+| helper            | mutates                                                 | usage                                                       |
+| ----------------- | ------------------------------------------------------- | ----------------------------------------------------------- |
+| `lib-row-flip.sh` | §T / §B row `state` cell (+ optional `cite`)            | `lib-row-flip.sh <dossier-dir> <row-id> <new-state> [cite]` |
+| `lib-s-append.sh` | §S — appends one blank-wrapped paragraph before `## §Z` | `lib-s-append.sh <dossier-dir> "<event text>"`              |
+
+- `lib-s-append.sh` **prepends the timestamp itself** (honors `DS_TS_SECONDS`) and guarantees the §11 blank-line rule. Pass only the text *after* the timestamp — `ds:build T3 START`, never `2026-… ds:build T3 START`.
+- `lib-row-flip.sh` matches the row by trimmed `id` cell, rewrites only the `state` (and optional `cite`) cells, exits non-zero if the id is absent or the state is not one of `. ~ x ! ?`.
+
+Skills prefer these over the Edit tool for §S / §T / §B mutations. Edit-tool fallback only if a helper is somehow missing.
+
 ## 16. Resume protocol
 
 For multi-step ops (`ds:build`, `ds:backprop`, `ds:close`, `ds:migrate`):
