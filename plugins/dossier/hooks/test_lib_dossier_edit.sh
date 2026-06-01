@@ -33,6 +33,13 @@ make_fixture() {
 | id  | bug | root cause | invariant added | fix cite |
 | --- | --- | ---------- | --------------- | -------- |
 
+## §X — Cross-repo state
+
+| repo       | branch | ahead | tag | pushed | notes          |
+| ---------- | ------ | ----- | --- | ------ | -------------- |
+| myorg/demo | stale  | ?     | —   | ?      | keep-this-note |
+| myorg/two  | stale  | ?     | —   | ?      | second note    |
+
 ## §S — Rolling status log
 
 2026-06-01 10:00 ds:new — created slug=demo phase=P1
@@ -116,5 +123,48 @@ printf '## §S — Rolling status log\n\n2026-06-01 10:00 ds:new — x\n' >"$D3/
 grep -q 'ds:check — drift=0' "$D3/DOSSIER.md" || fail "append-EOF fallback failed"
 
 [[ -z "$(find "$D2" -name '*.tmp' 2>/dev/null)" ]] || fail "append left .tmp orphan"
+
+command -v git >/dev/null || {
+	printf 'ok (git absent, §X refresh skipped)\n'
+	exit 0
+}
+
+XREFRESH="$SCRIPT_DIR/lib-x-refresh.sh"
+DX="$TMP/xref"
+make_fixture "$DX"
+DFX="$DX/DOSSIER.md"
+
+REPO="$TMP/repo"
+REMOTE="$TMP/remote.git"
+git init -q -b main "$REPO"
+git -C "$REPO" -c user.email=t@t -c user.name=t commit -q --allow-empty -m c1
+git -C "$REPO" tag v0.1
+git init -q --bare "$REMOTE"
+git -C "$REPO" remote add origin "$REMOTE"
+git -C "$REPO" push -q -u origin main
+git -C "$REPO" -c user.email=t@t -c user.name=t commit -q --allow-empty -m c2
+
+"$XREFRESH" "$DX" "myorg/demo" "$REPO"
+demo_row=$(grep -E '^\| +myorg/demo ' "$DFX" | head -1)
+[[ -n "$demo_row" ]] || fail "x-refresh demo row vanished"
+echo "$demo_row" | grep -q 'main' || fail "x-refresh did not set branch=main"
+echo "$demo_row" | grep -q 'stale' && fail "x-refresh kept stale branch"
+echo "$demo_row" | grep -qE '\| 1 \|' || fail "x-refresh ahead != 1"
+echo "$demo_row" | grep -q 'v0.1' || fail "x-refresh tag missing"
+echo "$demo_row" | grep -qE '\| no \|' || fail "x-refresh pushed != no"
+echo "$demo_row" | grep -q 'keep-this-note' || fail "x-refresh clobbered notes"
+
+grep -E '^\| +myorg/two ' "$DFX" | grep -q 'second note' || fail "x-refresh mutated other row"
+grep -E '^\| +myorg/two ' "$DFX" | grep -q 'stale' || fail "x-refresh touched non-target row"
+
+REPO2="$TMP/repo2"
+git init -q -b main "$REPO2"
+git -C "$REPO2" -c user.email=t@t -c user.name=t commit -q --allow-empty -m c1
+"$XREFRESH" "$DX" "myorg/two" "$REPO2"
+grep -E '^\| +myorg/two ' "$DFX" | grep -q 'no-upstream' || fail "x-refresh no-upstream not set"
+
+if "$XREFRESH" "$DX" "myorg/absent" "$REPO" 2>/dev/null; then fail "x-refresh missing label should error"; fi
+
+[[ -z "$(find "$DX" -name '*.tmp' 2>/dev/null)" ]] || fail "x-refresh left .tmp orphan"
 
 printf 'ok\n'
