@@ -106,11 +106,13 @@ If commit hooks fail: investigate root cause (do NOT `--no-verify`). Fix, retry 
 
 ### 8. §X REFRESH
 
-For each repo in §X: run `git status -sb` + `git rev-list --count origin/<branch>..HEAD` + `git describe --tags --abbrev=0`. Update row.
+For each repo in §X, refresh the row via `$CLAUDE_PLUGIN_ROOT/hooks/lib-x-refresh.sh <dir> "<repo-label>" <repo-path>` — it runs the git probes (current branch, `origin/<branch>..HEAD` ahead-count, nearest tag, push state), rewrites branch/ahead/tag/pushed, preserves the `notes` cell, and writes atomically. Supply each repo's on-disk path (you already know it from the task work). `ahead=no-upstream` + `pushed=no` when the branch has no `origin/` tracking ref.
 
-Use `mcp__context-mode__ctx_batch_execute` if `HAS_CTX=1` (parallel multi-repo). Else parallel Bash.
+The `notes` cell is operator free-text — `lib-x-refresh.sh` never touches it. Edit notes manually if they've gone stale.
 
-Atomic write DOSSIER.md. Append §S:
+For a fast multi-repo path-resolution sweep before the loop, use `mcp__context-mode__ctx_batch_execute` if `HAS_CTX=1`. The per-row write itself stays with `lib-x-refresh.sh`.
+
+Append §S (one entry summarising the sweep):
 
 ```
 <YYYY-MM-DD HH:MM> ds:build <T-id> §X=refreshed
