@@ -1,6 +1,6 @@
 ---
 name: migrate
-description: Convert legacy 4-file dossiers (PLAN+SPEC+AUDIT+closeout/) to single-file DOSSIER.md format. Claude-driven per-repo (handles arbitrary shapes). Spawns dossier-scout subagents in parallel for inspection. Idempotent via per-repo marker. Operator confirms each repo before mutation. Invoke when the user says "ds:migrate", "migrate dossiers", "convert legacy dossier", or after installing the plugin to upgrade existing repos.
+description: Convert legacy 4-file dossiers (PLAN+SPEC+AUDIT+closeout/) to single-file DOSSIER.md format. Claude-driven per-repo (handles arbitrary shapes). Spawns dossier-scout subagents in parallel for inspection. Idempotent via per-repo marker. Operator confirms each repo before mutation. Invoke when the user says "ds:migrate", "migrate dossiers", "convert legacy dossier", "migrate from ck/cavekit/SPEC.md", or after installing the plugin to upgrade existing repos.
 argument-hint: [<repo-path> | --all | --gc]
 ---
 
@@ -12,7 +12,22 @@ Walks repos that have a legacy `.scratchpad/dossier/` (PLAN+SPEC+AUDIT layout). 
 
 - `<repo-path>`: single repo override.
 - `--all`: walk a known/configured list of repos (operator provides at first run).
+- `--from-ck [<repo-path>]`: convert a cavekit (`ck`) root `SPEC.md` into a DOSSIER.md — see **From cavekit** below. ck shares the §G/§C/§I/§V/§T/§B schema, so it's a near-1:1 lift.
 - `--gc`: cleanup pass — move orphan legacy files to `_archive/_legacy-pre-v2/` for already-migrated repos.
+
+## From cavekit (ck)
+
+`--from-ck` lifts a `SPEC.md` (cavekit's single-file spec at repo root) into a dossier. ck and dossier share the section schema, so the map is near-1:1:
+
+| ck `SPEC.md`                | dossier `DOSSIER.md`                                  |
+| --------------------------- | ----------------------------------------------------- |
+| §G / §C / §I / §V / §T / §B | same sections, copied verbatim                        |
+| (no header state line)      | add `` `<date>` · `live` · `P1/<n>` `` from §T phases |
+| (no §X)                     | seed §X from repos the spec touches (ask operator)    |
+| (no §S)                     | seed one line: `ds:migrate — from-ck SPEC.md`         |
+| (no §Z)                     | empty (written by `ds:close`)                         |
+
+Flow: scout reads `SPEC.md` → propose DOSSIER.md at `.scratchpad/dossier/<date>-<slug>/` (slug from the spec title or operator) → operator greenlights → atomic Write → regen INDEX → drop the `.migrate-v2-done` marker. Leave the original `SPEC.md` in place (operator deletes when satisfied). Idempotent via the same marker.
 
 ## Steps
 

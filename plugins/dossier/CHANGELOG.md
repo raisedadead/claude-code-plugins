@@ -28,6 +28,8 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 - TaskList now auto-dumps on `SessionEnd` as well as `PreCompact`.
 - Read-only verbs (`status`, `check`) declare `disallowed-tools: Edit, Write, NotebookEdit` (defense-in-depth; mutations route through Bash helpers).
 - README reframed around 4 primary verbs + autonomy; `build`/`backprop`/`roll`/`verify` documented as auto/internal/power-user.
+- `ds:new` gained a clarify gate (resolve underspecified §G/§C before §T is authored); `ds:build` gained a baseline-green check before RED and dependency-aware `--next`/`--auto` selection (phase prerequisites must be `x`).
+- `ds:migrate --from-ck` converts a cavekit (`ck`) root `SPEC.md` into a DOSSIER.md — near-1:1 given the shared §G/§C/§I/§V/§T/§B schema.
 
 ### Fixed
 

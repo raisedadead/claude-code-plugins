@@ -42,6 +42,8 @@ Ask, one block at a time (caveman, no preamble):
 1. **§X repos** — list each repo this dossier touches. Format: `<org>/<name>` or absolute path. Operator-provided. No git-remote magic.
 1. **Initial §T tasks** (optional) — operator may provide T1..Tn now or add later via `ds:build`.
 
+**Clarify before freezing (the highest-value lever):** if §G or a §C decision is underspecified — ambiguous scope, an unstated choice, >1 plausible approach — ask the resolving question NOW, before §T is authored. A vague goal yields vague tasks. One or two sharp questions here beats a wrong build. If the operator says "just go", record the assumption as a §C bullet so it's auditable.
+
 Do NOT auto-populate §I, §V, §B, §S, §Z. Those grow during build.
 
 ### 2.5. Resolve pins (proactive verify)

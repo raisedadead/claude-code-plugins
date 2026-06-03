@@ -30,7 +30,7 @@ Per `ds:status` step 1. If none: refuse w/ "no live dossier. ds:new first."
 ### 2. Resolve target
 
 - `<T-id>` provided: locate row in §T. Refuse if missing or already `x`.
-- `--next`: pick first `state=.` row. Refuse if none.
+- `--next`: pick the first **actionable** `state=.` row — phase prerequisites satisfied (every row in a lower `P<n>` is `x`). Skip `!`/`?`. Refuse if none actionable (suggest resolving a blocked row).
 - Read row: `id`, `P`, `state`, `task`, `cite`, `verify`.
 
 ### 3. Acquire lock
@@ -78,6 +78,8 @@ Before writing any test or code, ensure the libraries this task introduces are p
 Runs OUTSIDE the RED→GREEN→refactor cycle — a dossier-bookkeeping write (like §X refresh), never a source commit. The model then writes source using the §I version, so the reactive verify hook fires on a warm-cache HIT and stays silent.
 
 ### 6. WORK (TDD)
+
+**Baseline check (before RED):** confirm the existing suite for the touched package is green (or note known-failing). A new RED must be attributable to THIS task — never build atop already-broken ground. Under `--auto`, an unexpected red baseline is a PAUSE (`ambiguous`).
 
 If `verify` column references `V<N>`:
 
