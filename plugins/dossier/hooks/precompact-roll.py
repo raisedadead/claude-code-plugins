@@ -72,4 +72,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if sys.version_info < (3, 10):
+        sys.exit(0)
     sys.exit(main())

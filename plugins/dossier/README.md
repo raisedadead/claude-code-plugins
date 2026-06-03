@@ -11,6 +11,8 @@ Replaces the legacy 4-file pattern (`PLAN.md` + `SPEC.md` + `AUDIT.md` + `closeo
 /plugin install dossier@raisedadead-plugins
 ```
 
+Requires `python3` ≥ 3.10 on `PATH` for the marker-guard, verify, and roll hooks. Without it those three hooks no-op gracefully — no crash, but source-marker protection and freshness checks won't run. The bash helpers and SessionStart dashboard work without python.
+
 Verify: open a project, start a new Claude Code session. If `.scratchpad/dossier/` exists, the SessionStart hook injects an INDEX + live-dossier dashboard. If not, it's silent.
 
 ## Mental model

@@ -13,7 +13,6 @@ Operator escape: `# verify-skip: <ruleName>` on a line suppresses that rule
 from __future__ import annotations
 
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -121,18 +120,16 @@ def main() -> int:
             if fingerprint in fired:
                 continue
             new_fps.add(fingerprint)
-            reminders.append(
-                f"{rule['icon']} verify[{name}] {claim} → {truth}\n   src: {src}\n"
-                f"   skip: `# verify-skip: {name}`"
-            )
+            reminders.append(f"{rule['icon']} verify[{name}] {claim} → {truth} · src: {src}")
 
     if reminders:
-        sys.stderr.write("\n".join(reminders) + "\n")
         save_state(fired | new_fps)
+        body = "\n".join(reminders) + "\nskip a rule: `# verify-skip: <ruleName>` near the line."
+        sys.stderr.write(f"verify: {len(reminders)} freshness finding(s); see context.\n")
         out = {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
-                "additionalContext": "\n".join(reminders),
+                "additionalContext": body,
             }
         }
         sys.stdout.write(json.dumps(out))
@@ -141,4 +138,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if sys.version_info < (3, 10):
+        sys.exit(0)
     sys.exit(main())

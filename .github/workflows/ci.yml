@@ -1,0 +1,36 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dossier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.10"
+
+      - name: python hook tests
+        run: python3 plugins/dossier/hooks/test_python.py
+
+      - name: shell helper + marker-guard tests
+        run: |
+          bash plugins/dossier/hooks/test_marker_guard.sh
+          bash plugins/dossier/hooks/test_lib_dossier_edit.sh
+
+      - name: ruff
+        run: |
+          pip install ruff
+          ruff check plugins/dossier/hooks
+
+      - name: shellcheck (advisory)
+        continue-on-error: true
+        run: shellcheck plugins/dossier/hooks/*.sh
