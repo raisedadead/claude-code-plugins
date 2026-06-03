@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
-# Dossier SessionStart hook.
-# Emits compact additionalContext: INDEX head + live DOSSIER §S/§T/§X + incomplete-op flag.
-# Idempotent: regenerates INDEX, clears stale locks, never blocks.
-# Output: JSON to stdout per Claude Code hook spec.
-
 set -euo pipefail
 
 SCRATCHPAD=".scratchpad"
 DOSSIER_DIR="${SCRATCHPAD}/dossier"
 INDEX_FILE="${SCRATCHPAD}/INDEX.md"
 
-# Exit silently if no dossier tree in cwd. Plugin is opt-in per project.
 [[ -d "${DOSSIER_DIR}" ]] || {
 	echo '{"continue": true}'
 	exit 0
@@ -18,23 +12,18 @@ INDEX_FILE="${SCRATCHPAD}/INDEX.md"
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 
-# Regenerate INDEX (derived from DOSSIER.md walk).
 "${PLUGIN_ROOT}/hooks/lib-regen-index.sh" "${SCRATCHPAD}" 2>/dev/null || true
-
-# Clear stale locks (pid dead OR started >30min ago).
 "${PLUGIN_ROOT}/hooks/lib-clear-stale-locks.sh" "${DOSSIER_DIR}" 2>/dev/null || true
 
-# Build context string.
 ctx_lines=()
 
 if [[ -f "${INDEX_FILE}" ]]; then
 	ctx_lines+=("## .scratchpad/INDEX.md (head)")
 	while IFS= read -r line; do
 		ctx_lines+=("${line}")
-	done < <(head -20 "${INDEX_FILE}")
+	done < <(head -6 "${INDEX_FILE}")
 fi
 
-# Find newest live dossier from INDEX (first row with state=live).
 live_slug=""
 if [[ -f "${INDEX_FILE}" ]]; then
 	live_slug=$(awk -F'|' '
@@ -50,53 +39,72 @@ fi
 if [[ -n "${live_slug}" && -d "${DOSSIER_DIR}/${live_slug}" ]]; then
 	doss="${DOSSIER_DIR}/${live_slug}/DOSSIER.md"
 	if [[ -f "${doss}" ]]; then
-		ctx_lines+=("")
-		ctx_lines+=("## Live: ${DOSSIER_DIR}/${live_slug}")
-
-		# §S tail (last 30)
-		ctx_lines+=("")
-		ctx_lines+=("### §S tail")
-		while IFS= read -r line; do
-			ctx_lines+=("${line}")
-		done < <(awk '/^## §S/,/^## §[^S]/' "${doss}" | grep -v '^## §' | tail -30)
-
-		# §T full
-		ctx_lines+=("")
-		ctx_lines+=("### §T")
-		while IFS= read -r line; do
-			ctx_lines+=("${line}")
-		done < <(awk '/^## §T/,/^## §[^T]/' "${doss}" | grep -v '^## §')
-
-		# §X full
-		ctx_lines+=("")
-		ctx_lines+=("### §X")
-		while IFS= read -r line; do
-			ctx_lines+=("${line}")
-		done < <(awk '/^## §X/,/^## §[^X]/' "${doss}" | grep -v '^## §')
-
-		# Incomplete op detection: last §S START without matching DONE for same target.
 		incomplete=$(awk '
-      / START$/ {
-        target = $3
-        op_start[target] = $0
-      }
-      / DONE/ {
-        target = $3
-        delete op_start[target]
+      / START$/ { op_start[$3] = $0 }
+      / DONE/   { delete op_start[$3] }
+      END { for (t in op_start) print "⚠ resume needed: " op_start[t] }
+    ' "${doss}" 2>/dev/null || true)
+
+		ctx_lines+=("")
+		ctx_lines+=("## dossier live: ${live_slug}")
+
+		while IFS= read -r line; do
+			ctx_lines+=("${line}")
+		done < <(awk -F'|' '
+      /^\| *T[0-9]+ *\|/ {
+        st=$4; task=$5; ph=$3
+        gsub(/^[ \t]+|[ \t]+$/,"",st); gsub(/^[ \t]+|[ \t]+$/,"",task); gsub(/^[ \t]+|[ \t]+$/,"",ph)
+        total++
+        if(st=="x") done++
+        else if(st=="~") prog++
+        else if(st=="!"){ blk++; blocker[blk]=ph" "task }
+        else if(st=="?"){ q++; research[q]=ph" "task }
       }
       END {
-        for (t in op_start) print "⚠ Incomplete: " op_start[t]
+        if(!total) exit
+        ln=sprintf("§T: %d/%d done", done+0, total)
+        if(prog) ln=ln sprintf(", %d in-progress", prog)
+        if(blk)  ln=ln sprintf(", %d blocked", blk)
+        if(q)    ln=ln sprintf(", %d need-research", q)
+        print ln
+        for(i=1;i<=blk;i++) print "  ‼ blocked: " blocker[i]
+        for(i=1;i<=q;i++)   print "  ? research: " research[i]
       }
-    ' "${doss}" 2>/dev/null || true)
+    ' "${doss}")
+
+		while IFS= read -r line; do
+			ctx_lines+=("${line}")
+		done < <(awk -F'|' '
+      /^## §X/{x=1; next} /^## §[^X]/{x=0}
+      x && /^\|/ {
+        if ($0 ~ /^\|[ :|-]+$/) next
+        if (!hdr) { hdr=1; next }
+        n++; p=$6; gsub(/^[ \t]+|[ \t]+$/,"",p); if(p=="no") unp++
+      }
+      END { if(n) printf "§X: %d repos, %d unpushed\n", n, unp+0 }
+    ' "${doss}")
+
+		while IFS= read -r line; do
+			ctx_lines+=("just did: ${line}")
+		done < <(awk '/^## §S/,/^## §[^S]/' "${doss}" | grep -v '^## §' | grep -v '^[[:space:]]*$' | tail -2)
 
 		if [[ -n "${incomplete}" ]]; then
 			ctx_lines+=("")
 			ctx_lines+=("${incomplete}")
+			ctx_lines+=("### §T (full — resume context)")
+			while IFS= read -r line; do
+				ctx_lines+=("${line}")
+			done < <(awk '/^## §T/,/^## §[^T]/' "${doss}" | grep -v '^## §' | grep -v '^[[:space:]]*$')
+			ctx_lines+=("### §X (full)")
+			while IFS= read -r line; do
+				ctx_lines+=("${line}")
+			done < <(awk '/^## §X/,/^## §[^X]/' "${doss}" | grep -v '^## §' | grep -v '^[[:space:]]*$')
 		fi
+
+		ctx_lines+=("(ds:status for full dashboard)")
 	fi
 fi
 
-# Emit spec-compliant JSON via jq if available, else minimal manual escape.
 ctx_str=$(printf '%s\n' "${ctx_lines[@]}")
 
 if command -v jq &>/dev/null; then
@@ -108,7 +116,6 @@ if command -v jq &>/dev/null; then
     }
   }'
 else
-	# Fallback: manual JSON escape (newline + backslash + quote only).
 	esc=$(printf '%s' "${ctx_str}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '%s' "${ctx_str}" | sed 's/\\/\\\\/g; s/"/\\"/g' | awk 'BEGIN{ORS="\\n"}{print}')
 	printf '{"continue": true, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s}}\n' "${esc}"
 fi

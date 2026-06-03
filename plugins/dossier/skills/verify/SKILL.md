@@ -10,20 +10,7 @@ Two surfaces, same hard rule: **trust primary sources, never paraphrase JSON.**
 
 ## Surface 1 — PreToolUse hook (auto)
 
-Wired in `hooks/hooks.json`. Fires on every `Edit | Write | MultiEdit`. Scans content against the broad pattern registry in `hooks/verify_patterns.py` and the authority catalog in `hooks/verify_authorities.py`. Coverage (140+ aliases, 34 Docker images, 31 AI models):
-
-| Class                     | Authority                                    | Examples caught                                                |
-| ------------------------- | -------------------------------------------- | -------------------------------------------------------------- |
-| Language / runtime EOL    | endoflife.date                               | `Node 18`, `Python 3.8`, `Ruby 2.7`, `Go 1.18`, `PHP 7.4`      |
-| OS / distro EOL           | endoflife.date                               | `Ubuntu 18.04`, `Debian 9`, `CentOS 7`, `Alpine 3.10`          |
-| Database EOL              | endoflife.date                               | `Postgres 11`, `MySQL 5.7`, `Redis 5`, `MongoDB 4`             |
-| Container image EOL       | endoflife.date via image alias               | `FROM node:18-alpine`, `image: postgres:11`, `nginx:1.18-slim` |
-| GitHub Action pinning     | GitHub git refs API                          | `uses: actions/checkout@v4` → flag + resolved SHA              |
-| k8s deprecated apiVersion | k8s deprecation guide (15-entry static map)  | `apiVersion: extensions/v1beta1` → networking.k8s.io/v1        |
-| npm package outdated      | npmjs registry                               | `"react": "16.0.0"` (≥2 majors behind)                         |
-| PyPI / pyproject outdated | pypi.org JSON                                | `django==2.2.0`                                                |
-| Cargo / RubyGems / Go mod | crates.io / rubygems / go proxy              | `serde = "0.1.0"`, `gem 'rails', '5.0'`, `require foo v0.1.0`  |
-| AI model deprecation      | OpenAI / Anthropic / Google deprecation docs | `model="gpt-3.5-turbo-0613"`, `claude-2.1`, `gemini-1.0-pro`   |
+Wired in `hooks/hooks.json`. Fires on every `Edit | Write | MultiEdit`. Scans content against the broad pattern registry in `hooks/verify_patterns.py` and the authority catalog in `hooks/verify_authorities.py` (140+ aliases, 34 Docker images, 31 AI models). Covers language/runtime/OS/distro/database EOL, container-image EOL, GitHub Action SHA pinning, k8s deprecated apiVersions, npm/PyPI/Cargo/RubyGems/Go-mod outdated packages, and AI-model deprecation. Full coverage matrix + per-source cheatsheet → [`references/authorities.md`](references/authorities.md).
 
 Non-blocking by design — emits stderr reminder + `additionalContext`. Per-session dedup. Operator escape: `# verify-skip: <ruleName>` on or near the line.
 
@@ -92,39 +79,9 @@ wrong: Node 20 LTS · right: current LTS = v24 (Krypton) + v22 (Jod). v20 EOL 20
 - **Never bump copyright years proactively** — see operator MEMORY.md.
 - **Resist the "looks fine" instinct.** If you didn't pull the answer from a primary source, mark `Unverifiable`.
 
-## Authority cheatsheet
+## Authority cheatsheet + extending the catalog
 
-| Need                      | Command (raw JSON path)                                                                                              |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Language / OS / DB EOL    | `curl -s https://endoflife.date/api/v1/products/<slug>` then read `result.releases[]`                                |
-| npm latest                | `curl -s https://registry.npmjs.org/<pkg>/latest` → `.version`                                                       |
-| PyPI latest               | `curl -s https://pypi.org/pypi/<pkg>/json` → `.info.version`                                                         |
-| crates.io latest          | `curl -s https://crates.io/api/v1/crates/<pkg>` → `.crate.newest_version`                                            |
-| Go module latest          | `curl -s https://proxy.golang.org/<module>/@latest` → `.Version`                                                     |
-| RubyGems latest           | `curl -s https://rubygems.org/api/v1/gems/<name>.json` → `.version`                                                  |
-| Hex (Elixir)              | `curl -s https://hex.pm/api/packages/<name>` → `.releases[0].version`                                                |
-| Packagist (PHP)           | `curl -s https://repo.packagist.org/p2/<vendor>/<pkg>.json`                                                          |
-| Homebrew formula          | `curl -s https://formulae.brew.sh/api/formula/<name>.json` → `.versions.stable`                                      |
-| GitHub latest release     | `gh api repos/<owner>/<repo>/releases/latest` → `.tag_name`                                                          |
-| GitHub tag → SHA          | `gh api repos/<owner>/<repo>/git/refs/tags/<tag>` → `.object.sha`                                                    |
-| GitHub Actions security   | https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions |
-| k8s deprecation           | https://kubernetes.io/docs/reference/using-api/deprecation-guide/                                                    |
-| OpenAI deprecations       | https://platform.openai.com/docs/deprecations                                                                        |
-| Anthropic deprecations    | https://docs.anthropic.com/en/docs/about-claude/model-deprecations                                                   |
-| Google AI model lifecycle | https://ai.google.dev/gemini-api/docs/models                                                                         |
-| SPDX licenses             | https://spdx.org/licenses/                                                                                           |
-| Docker Hub image tag      | `curl -s "https://registry.hub.docker.com/v2/repositories/library/<image>/tags/?page_size=10"`                       |
-
-## Adding a new authority / alias
-
-Append a row to:
-
-- `hooks/verify_authorities.EOL_ALIAS_TO_SLUG` for a new endoflife.date product.
-- `hooks/verify_authorities.PKG_REGISTRY` for a new package ecosystem.
-- `hooks/verify_authorities.DOCKER_IMAGE_TO_SLUG` for a new official Docker image.
-- `hooks/verify_authorities.AI_MODEL_DEPRECATED` for a new sunset model.
-
-No code change. Adding aliases is pure data.
+Per-source raw-JSON `curl` / `gh api` paths, and how to add a new authority (pure data, no code change) → [`references/authorities.md`](references/authorities.md).
 
 ## Composition
 
