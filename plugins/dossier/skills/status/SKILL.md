@@ -16,9 +16,28 @@ Per ADAPTERS.md. Cache for invocation.
 ### 1. Locate
 
 - `.scratchpad/INDEX.md` — if missing, run `lib-regen-index.sh` to build.
-- Live dossier = first INDEX row with `state=live`. Path: `.scratchpad/dossier/<date>-<slug>/DOSSIER.md`.
+- Enumerate ALL rows with `state=live`. Current dossier = the first (most-recent). Rows with `state=paused` are NOT live — list them separately, never as the current.
 
 If no `.scratchpad/dossier/` exists in cwd: report "no dossier tree in this repo. ds:new to start." Exit.
+
+### 1a. Consolidation check
+
+Warn (never block) when the tree needs tidying:
+
+- **>1 live dossier** (Vm.12): print a CONSOLIDATE block listing each live slug + its §S-tail age, then suggest picking the current one and **pausing** or **closing** the rest.
+- **stale-live** (Vm.13): any live dossier whose last §S entry is older than `${DS_STALE_LIVE_DAYS:-14}` days → suggest pause or `ds:close --abandon`.
+
+ds:status only SUGGESTS — it never flips state itself. The operator (or the model on explicit request) performs an action below.
+
+**Pause / resume / abandon (operator actions, atomic):**
+
+| Action           | Mechanism                                                                                                                                            |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| pause `<slug>`   | `lib-header-state.sh <dir> paused` + `lib-s-append.sh <dir> "ds:pause — paused reason=<r>"` + regen INDEX                                            |
+| resume `<slug>`  | `lib-header-state.sh <dir> live` + `lib-s-append.sh <dir> "ds:resume — resumed"` + regen INDEX, then re-run step 3 so any mid-build START resurfaces |
+| abandon `<slug>` | `ds:close --abandon "<reason>"`                                                                                                                      |
+
+Pause/resume each write ONE atomic §S line (no START/DONE pairing — FORMAT.md §16). Pausing is allowed mid-build; it does not touch §T.
 
 ### 2. Read
 

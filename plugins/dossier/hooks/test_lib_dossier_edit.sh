@@ -124,6 +124,29 @@ grep -q 'ds:check — drift=0' "$D3/DOSSIER.md" || fail "append-EOF fallback fai
 
 [[ -z "$(find "$D2" -name '*.tmp' 2>/dev/null)" ]] || fail "append left .tmp orphan"
 
+HSTATE="$SCRIPT_DIR/lib-header-state.sh"
+hdr_state() {
+	awk '/^`.*` · `.*` · / { n = split($0, p, "`"); gsub(/^[ \t]+|[ \t]+$/, "", p[4]); print p[4]; exit }' "$1"
+}
+D4="$TMP/hstate"
+make_fixture "$D4"
+DF4="$D4/DOSSIER.md"
+
+"$HSTATE" "$D4" paused
+[[ "$(hdr_state "$DF4")" == "paused" ]] || fail "header-state ->paused failed"
+"$HSTATE" "$D4" live
+[[ "$(hdr_state "$DF4")" == "live" ]] || fail "header-state ->live failed"
+grep -q "wire client" "$DF4" || fail "header-state clobbered body"
+
+if "$HSTATE" "$D4" bogus 2>/dev/null; then fail "header-state bad value should error"; fi
+
+D4b="$TMP/hstate-nometa"
+mkdir -p "$D4b"
+printf '# x\n\nno meta line here\n' >"$D4b/DOSSIER.md"
+if "$HSTATE" "$D4b" paused 2>/dev/null; then fail "header-state no-meta should error"; fi
+
+[[ -z "$(find "$D4" -name '*.tmp' 2>/dev/null)" ]] || fail "header-state left .tmp orphan"
+
 command -v git >/dev/null || {
 	printf 'ok (git absent, §X refresh skipped)\n'
 	exit 0

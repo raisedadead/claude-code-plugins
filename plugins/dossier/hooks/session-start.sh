@@ -36,6 +36,20 @@ if [[ -f "${INDEX_FILE}" ]]; then
   ' "${INDEX_FILE}" 2>/dev/null || true)
 fi
 
+live_count=0
+live_all=""
+if [[ -f "${INDEX_FILE}" ]]; then
+	live_count=$(awk -F'|' 'NR>2 && $4 ~ /live/ {n++} END{print n+0}' "${INDEX_FILE}" 2>/dev/null || echo 0)
+	live_all=$(awk -F'|' 'NR>2 && $4 ~ /live/ {gsub(/^[ \t]+|[ \t]+$/,"",$2); gsub(/^[ \t]+|[ \t]+$/,"",$3); printf "%s-%s ", $2, $3}' "${INDEX_FILE}" 2>/dev/null || true)
+fi
+
+sys_msg=""
+if [[ "${live_count}" -gt 1 ]]; then
+	sys_msg="⚠ dossier: ${live_count} live (${live_all}) — run /dossier:status to consolidate (pause or close the stale ones)."
+	ctx_lines+=("")
+	ctx_lines+=("⚠ ${live_count} live dossiers: ${live_all}— pick one, pause/close the rest (ds:status)")
+fi
+
 if [[ -n "${live_slug}" && -d "${DOSSIER_DIR}/${live_slug}" ]]; then
 	doss="${DOSSIER_DIR}/${live_slug}/DOSSIER.md"
 	if [[ -f "${doss}" ]]; then
@@ -108,14 +122,16 @@ fi
 ctx_str=$(printf '%s\n' "${ctx_lines[@]}")
 
 if command -v jq &>/dev/null; then
-	jq -n --arg ctx "${ctx_str}" '{
-    continue: true,
-    hookSpecificOutput: {
-      hookEventName: "SessionStart",
-      additionalContext: $ctx
-    }
-  }'
+	jq -n --arg ctx "${ctx_str}" --arg sys "${sys_msg}" '
+    {continue: true, hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}
+    + (if $sys != "" then {systemMessage: $sys} else {} end)
+  '
 else
 	esc=$(printf '%s' "${ctx_str}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '%s' "${ctx_str}" | sed 's/\\/\\\\/g; s/"/\\"/g' | awk 'BEGIN{ORS="\\n"}{print}')
-	printf '{"continue": true, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s}}\n' "${esc}"
+	if [[ -n "${sys_msg}" ]]; then
+		sys_esc=$(printf '%s' "${sys_msg}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "${sys_msg}")
+		printf '{"continue": true, "systemMessage": %s, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s}}\n' "${sys_esc}" "${esc}"
+	else
+		printf '{"continue": true, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s}}\n' "${esc}"
+	fi
 fi

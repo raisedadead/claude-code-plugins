@@ -44,7 +44,7 @@ Headings are fixed. Order is fixed. Skills parse positionally.
 ## §Z — Closeout
 ```
 
-State values: `live` | `done` | `paused`. Default at `ds:new` = `live`.
+State values: `live` | `done` | `paused`. Default at `ds:new` = `live`. The header state token is flipped atomically by `lib-header-state.sh` (§15): `ds:close` sets `done`; the `ds:status` pause/resume actions toggle `live` ↔ `paused`. A `paused` dossier stays a direct child of `dossier/` (not archived — pause is reversible) and is excluded from the live-count + the SessionStart "current live" pick.
 
 ## 3. Caveman encoding
 
@@ -243,7 +243,8 @@ Format rules:
 - Timestamp = minute-granular `YYYY-MM-DD HH:MM`. Override to seconds via env `DS_TS_SECONDS=1` (concurrent-write disambiguation).
 - `<skill>` = `ds:<verb>`.
 - `<target>` = `T<N>`, `B<N>`, `V<N>`, or `—` for non-targeted ops.
-- `<event>` ∈ `{START, DONE, commit=<sha>, §<X>=<status>, §X=stale-confirmed, drift=<n>, lock=<acquired|released>}`.
+- `<event>` ∈ `{START, DONE, commit=<sha>, §<X>=<status>, §X=stale-confirmed, drift=<n>, lock=<acquired|released>, paused reason=<text>, resumed, abandoned reason=<text>}`.
+- `paused` / `resumed` / `abandoned` are **atomic single-line** events — they emit NO `START`/`DONE` pair (pause/resume are non-resumable one-shot ops). A bare `START` for them would trip the incomplete-op detector.
 - `<detail>` free-text, ≤120 chars.
 
 Vm.6: every multi-step op MUST emit `START` line before mutation, `DONE` line after final mutation. Missing `DONE` = incomplete = resume needed.
@@ -282,6 +283,24 @@ summary: All phases shipped. No follow-on dossier needed.
 key cites: [a96987b], [b7c8d12], [c2d3e45]
 ```
 
+If `abandoned: true` (via `ds:close --abandon "<reason>"`):
+
+```markdown
+## §Z — Closeout
+
+2026-05-14 17:30 — closed
+
+abandoned: true
+
+reason: superseded by valkey-native approach
+
+summary: P1 shipped (T1–T2), P2 dropped.
+
+key cites: [a96987b]
+```
+
+`reason:` is mandatory. An abandoned dossier archives like any closed one.
+
 Vm.4: closed dossier MUST live under `.scratchpad/dossier/_archive/`.
 
 Parser tolerance: `lib-regen-index.sh` matches `complete: true` / `successor: <slug>` as substring anywhere within §Z (not line-anchored) so dossiers that get joined by a formatter still parse. But writers MUST emit blank-line separation to keep §Z human-readable.
@@ -301,6 +320,8 @@ Auto-maintained by hook + every `ds:*` skill. Never source-of-truth; regenerable
 ```
 
 Sort: date desc. Live dossiers first.
+
+`state` ∈ `live | paused | done` — derived from directory location (`_archive/` ⇒ `done`) plus the header state token (a live-located dossier whose header reads `paused` renders `paused`, sorts after live).
 
 Vm.5: INDEX counts match DOSSIER.md §T/§B actual row counts.
 
@@ -328,15 +349,17 @@ Vm.8: no skill writes a real file directly. Always tmp + rename.
 
 Three scripts under `$CLAUDE_PLUGIN_ROOT/hooks/` own the common DOSSIER.md mutations. All atomic (tmp + rename), all ship with the plugin — always available, no adapter detection, no fastedit dependency (fastedit cannot edit `.md`; see ADAPTERS.md §fastedit).
 
-| helper             | mutates                                                 | usage                                                       |
-| ------------------ | ------------------------------------------------------- | ----------------------------------------------------------- |
-| `lib-row-flip.sh`  | §T / §B row `state` cell (+ optional `cite`)            | `lib-row-flip.sh <dossier-dir> <row-id> <new-state> [cite]` |
-| `lib-s-append.sh`  | §S — appends one blank-wrapped paragraph before `## §Z` | `lib-s-append.sh <dossier-dir> "<event text>"`              |
-| `lib-x-refresh.sh` | §X row `branch`/`ahead`/`tag`/`pushed` (keeps `notes`)  | `lib-x-refresh.sh <dossier-dir> "<repo-label>" <repo-path>` |
+| helper                | mutates                                                 | usage                                                       |
+| --------------------- | ------------------------------------------------------- | ----------------------------------------------------------- |
+| `lib-row-flip.sh`     | §T / §B row `state` cell (+ optional `cite`)            | `lib-row-flip.sh <dossier-dir> <row-id> <new-state> [cite]` |
+| `lib-s-append.sh`     | §S — appends one blank-wrapped paragraph before `## §Z` | `lib-s-append.sh <dossier-dir> "<event text>"`              |
+| `lib-x-refresh.sh`    | §X row `branch`/`ahead`/`tag`/`pushed` (keeps `notes`)  | `lib-x-refresh.sh <dossier-dir> "<repo-label>" <repo-path>` |
+| `lib-header-state.sh` | header `<state>` token (`live`/`done`/`paused`)         | `lib-header-state.sh <dossier-dir> <live\|done\|paused>`    |
 
 - `lib-s-append.sh` **prepends the timestamp itself** (honors `DS_TS_SECONDS`) and guarantees the §11 blank-line rule. Pass only the text *after* the timestamp — `ds:build T3 START`, never `2026-… ds:build T3 START`.
 - `lib-row-flip.sh` matches the row by trimmed `id` cell, rewrites only the `state` (and optional `cite`) cells, exits non-zero if the id is absent or the state is not one of `. ~ x ! ?`.
 - `lib-x-refresh.sh` matches the §X row by trimmed `repo` cell, runs the git probes against `<repo-path>`, rewrites `branch`/`ahead`/`tag`/`pushed`, leaves the operator-owned `notes` cell untouched, exits non-zero if the repo label is absent or the path is not a git repo. `ahead=no-upstream` + `pushed=no` when the branch has no `origin/` tracking ref.
+- `lib-header-state.sh` rewrites only the `<state>` token on the header metadata line (the 2nd backtick-wrapped field), validates `<state>` ∈ `live|done|paused`, exits non-zero if the metadata line is absent. The sole writer of the header state — `ds:close` and the `ds:status` pause/resume actions both route through it.
 
 Skills prefer these over the Edit tool for §S / §T / §B mutations. Edit-tool fallback only if a helper is somehow missing.
 
@@ -350,21 +373,25 @@ For multi-step ops (`ds:build`, `ds:backprop`, `ds:close`, `ds:migrate`):
 
 Auto-detect default. `--resume` flag is explicit override.
 
+Pause/resume are NOT multi-step ops: they write a single atomic §S line (`paused reason=…` / `resumed`) and are exempt from this START/DONE protocol. Resuming a paused dossier (the `ds:status` resume action) un-pauses the header, then re-runs the incomplete-op scan so any mid-build `T<N> START` surfaces and resumes via the task-level protocol above.
+
 ## 17. Meta-invariants (enforced by skills)
 
-| id    | rule                                                            |
-| ----- | --------------------------------------------------------------- |
-| Vm.1  | every live dossier has state=live in INDEX; ≤1 dossier per slug |
-| Vm.2  | every §S entry starts with valid ISO timestamp                  |
-| Vm.3  | every §T `x` row has non-empty `cite` (commit SHA / PR)         |
-| Vm.4  | every closed dossier has §Z written + lives under `_archive/`   |
-| Vm.5  | INDEX counts match DOSSIER §T/§B actual rows                    |
-| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete |
-| Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks      |
-| Vm.8  | all file mutations atomic (tmp + rename)                        |
-| Vm.9  | active lock blocks mutation; stale lock auto-clears             |
-| Vm.10 | migrator per-repo marker `.scratchpad/.migrate-v2-done`         |
-| Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit     |
-| Vm.X  | stale §X (>30min) warns + requires operator confirm on flip     |
+| id    | rule                                                                                                          |
+| ----- | ------------------------------------------------------------------------------------------------------------- |
+| Vm.1  | every live dossier has state=live in INDEX; ≤1 dossier per slug                                               |
+| Vm.2  | every §S entry starts with valid ISO timestamp                                                                |
+| Vm.3  | every §T `x` row has non-empty `cite` (commit SHA / PR)                                                       |
+| Vm.4  | every closed dossier has §Z written + lives under `_archive/`                                                 |
+| Vm.5  | INDEX counts match DOSSIER §T/§B actual rows                                                                  |
+| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                               |
+| Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                    |
+| Vm.8  | all file mutations atomic (tmp + rename)                                                                      |
+| Vm.9  | active lock blocks mutation; stale lock auto-clears                                                           |
+| Vm.10 | migrator per-repo marker `.scratchpad/.migrate-v2-done`                                                       |
+| Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                   |
+| Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                   |
+| Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt |
+| Vm.X  | stale §X (>30min) warns + requires operator confirm on flip                                                   |
 
 `ds:check` validates all Vm rules on read.

@@ -70,6 +70,8 @@ Independent of scouts. Run concurrently with dispatch:
 | Vm.8  | no `.tmp` orphans                                                | find `.scratchpad/dossier/**/*.tmp`                   |
 | Vm.9  | locks not stale                                                  | run lib-clear-stale-locks.sh in dry mode              |
 | Vm.10 | migrate markers consistent (if migration in progress)            | n/a unless ds:migrate active                          |
+| Vm.12 | ≤1 live dossier (excl. paused)                                   | count INDEX rows state=live; >1 → 🟡 warn             |
+| Vm.13 | no stale-live (no §S in >N days)                                 | newest §S ts per live vs `DS_STALE_LIVE_DAYS` (14)    |
 
 ### 4. Aggregate
 

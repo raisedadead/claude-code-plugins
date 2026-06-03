@@ -23,6 +23,12 @@ parse_dossier() {
 	local date="${dir:0:10}"
 	local slug="${dir:11}"
 
+	if [[ "${state_label}" == "live" ]]; then
+		local hdr_state
+		hdr_state=$(awk '/^`.*` · `.*` · / { n=split($0,p,"`"); gsub(/^[ \t]+|[ \t]+$/,"",p[4]); print p[4]; exit }' "${file}")
+		[[ "${hdr_state}" == "paused" ]] && state_label="paused"
+	fi
+
 	# Parse §T: count rows, count x-state rows.
 	# Tolerate prettier-padded tables: `| T1  |` (multi-space) and `| T10 |`.
 	local t_total t_done

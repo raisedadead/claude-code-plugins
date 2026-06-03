@@ -1,17 +1,18 @@
 ---
 name: close
 description: Close a live dossier. Validates §T all-x, §X clean, §B all-fixed, writes §Z postscript (requires --complete or --successor <slug>), moves dir to _archive/. Atomic. Resumable. Invoke when the user says "ds:close", "close dossier", "wrap dossier", "archive this phase", "ds:close --complete", or "ds:close --successor <slug>".
-argument-hint: --complete | --successor <slug> | --resume
+argument-hint: --complete | --successor <slug> | --abandon "<reason>" | --resume
 ---
 
 # ds:close — close + archive a dossier
 
-Refuses to close without `--complete` OR `--successor <slug>`. Refuses if §T has non-`x` rows or §B has unfixed rows.
+Refuses to close without `--complete`, `--successor <slug>`, OR `--abandon "<reason>"`. `--complete`/`--successor` refuse if §T has non-`x` rows or §B has unfixed rows; `--abandon` is the escape hatch for a deprioritized / superseded / dead-end wave (skips the §T-all-x gate, still archives with an audit trail).
 
 ## Inputs
 
 - `--complete`: project done, no follow-on dossier.
 - `--successor <slug>`: next phase continues in dossier `<slug>` (validated against INDEX).
+- `--abandon "<reason>"`: close an incomplete wave without finishing §T. Reason is mandatory (written to §Z + §S). Use when the wave is dropped, not done.
 - `--resume`: re-enter incomplete close op.
 
 ## Steps
@@ -28,11 +29,11 @@ Per `ds:status` step 1. Refuse if none.
 
 ### 2. Validate flags
 
-Exactly one of `--complete` or `--successor <slug>` required. Refuse otherwise:
+Exactly one of `--complete`, `--successor <slug>`, or `--abandon "<reason>"` required. Refuse otherwise:
 
 ```
-ds:close requires --complete OR --successor <slug>.
-Closing without either orphans the handoff.
+ds:close requires --complete OR --successor <slug> OR --abandon "<reason>".
+Closing without one orphans the handoff.
 ```
 
 If `--successor <slug>`: validate the successor exists in `.scratchpad/dossier/<...>-<slug>/DOSSIER.md` OR offer to scaffold via `ds:new <slug>` first.
@@ -55,7 +56,7 @@ Read §S grep `ds:close`:
 
 ### 5. VALIDATE
 
-Pre-flight gates:
+Pre-flight gates (`--abandon` skips the §T all-x, §T cites, and §B all-fixed gates — only the §X pushed warning still runs):
 
 | Gate         | Rule                               | On fail                                                     |
 | ------------ | ---------------------------------- | ----------------------------------------------------------- |
@@ -67,7 +68,7 @@ Pre-flight gates:
 Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; applies to every §S append in this skill):
 
 ```
-<YYYY-MM-DD HH:MM> ds:close — START successor=<slug-or-—> complete=<bool>
+<YYYY-MM-DD HH:MM> ds:close — START successor=<slug-or-—> complete=<bool> abandon=<bool>
 ```
 
 ### 6. WRITE §Z
@@ -108,7 +109,23 @@ Append §S:
 <YYYY-MM-DD HH:MM> ds:close — §Z=written
 ```
 
-Update header line at top of DOSSIER.md: state `live` → `done`.
+If `--abandon "<reason>"`:
+
+```markdown
+## §Z — Closeout
+
+<YYYY-MM-DD HH:MM> — closed
+
+abandoned: true
+
+reason: <operator reason>
+
+summary: <state at abandonment — what shipped, what was dropped>
+
+key cites: <any T-row cites, or —>
+```
+
+Flip the header state atomically via the bundled helper: `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-header-state.sh <dir> done` (replaces the old Edit-tool header mutation; FORMAT.md §15).
 
 ### 7. MOVE TO \_archive/
 
