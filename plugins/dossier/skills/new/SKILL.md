@@ -44,6 +44,21 @@ Ask, one block at a time (caveman, no preamble):
 
 Do NOT auto-populate §I, §V, §B, §S, §Z. Those grow during build.
 
+### 2.5. Resolve pins (proactive verify)
+
+From the stack named in §C + repos in §X, derive a pin-spec list and resolve current versions once (shared 24h cache, offline-safe):
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/resolve_pins.py eol:<slug>... <ecosystem>:<pkg>...
+```
+
+- `eol:` results → §C bullets (current stable / EOL note).
+- package results → the §I "Pinned deps" table (FORMAT.md §6).
+- Map the libs actually named to specs (e.g. "Go backend + React UI" → `eol:go npm:react npm:react-dom go:<module>`). The model maps stack→specs; do not blind-parse.
+- `{"offline": true}` / `latest: null` → record the pin as `offline` and proceed. Never blocks scaffold.
+
+These fold into the single atomic step-3 Write — no extra commit, no TDD cycle.
+
 ### 3. Scaffold DOSSIER.md
 
 Compute fields:

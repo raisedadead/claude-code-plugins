@@ -11,6 +11,8 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 - Python hook test suite `hooks/test_python.py` (tlr round-trip, transcript reconstruction, verify-layer offline-safety, pattern-regex compile) — stdlib-only, runnable directly or under pytest.
 - GitHub Actions CI (`.github/workflows/ci.yml`) running the python + shell test scripts, `ruff`, and `shellcheck` on push/PR. Actions are SHA-pinned (dogfooding the verify-layer's own rule).
 - On-demand `skills/verify/references/authorities.md` holding the coverage matrix, per-source raw-JSON cheatsheet, and catalog-extension guide.
+- `hooks/lib-header-state.sh` — atomic header `<state>` flip (`live`/`done`/`paused`); the sole writer of the dossier header state.
+- `hooks/resolve_pins.py` — proactive latest-version + EOL resolver (reuses the verify registry + shared 24h cache); seeds §C/§I pins before coding so the model writes the right version the first time.
 
 ### Changed
 
@@ -18,6 +20,9 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 - verify-layer reminders emit on a single channel (`additionalContext`) with two-line findings and one shared skip footer; stderr carries only a one-line finding count.
 - `dossier-scout` Bash allow/deny tables collapsed into a single deny-by-default principle (harness-level `disallowedTools` remains the hard guard).
 - Slimmed `skills/verify/SKILL.md` by moving the coverage matrix + cheatsheet into the on-demand reference file.
+- Lifecycle gained pause/resume (atomic `ds:status` actions) + `ds:close --abandon "<reason>"` for dropped waves; `paused` is now a reachable, INDEX-rendered state.
+- SessionStart surfaces multiple live dossiers loudly via a user-visible `systemMessage`; `ds:status` / `ds:check` warn on >1 live (Vm.12) and stale-live (Vm.13).
+- `ds:new` (Step 2.5) and `ds:build` (Step 5.5 PIN CHECK) resolve + pin current versions / API docs before coding (proactive companion to the reactive verify hook); new `§context7` adapter for API-shape grounding.
 
 ### Fixed
 

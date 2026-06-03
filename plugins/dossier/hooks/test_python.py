@@ -74,6 +74,19 @@ def test_verify_patterns_compile() -> None:
         re.compile(rule["regex"], rule.get("_flags", 0))
 
 
+def test_resolve_pins_offline() -> None:
+    import resolve_pins
+
+    original = verify_lib.http_cached
+    verify_lib.http_cached = lambda *a, **k: None  # type: ignore[assignment]
+    try:
+        assert resolve_pins.resolve("npm:react").get("offline") is True
+        assert resolve_pins.resolve("eol:go").get("offline") is True
+        assert "error" in resolve_pins.resolve("nocolonspec")
+    finally:
+        verify_lib.http_cached = original  # type: ignore[assignment]
+
+
 def _run() -> int:
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     failed = 0

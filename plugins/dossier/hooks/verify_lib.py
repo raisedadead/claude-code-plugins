@@ -123,6 +123,28 @@ def _eol_releases(slug: str):
     return []
 
 
+def latest_eol(slug: str):
+    """Current (non-EOL) release series + exact latest for an endoflife.date product.
+
+    Returns (series, exact_latest, source_url) or None on offline / unknown.
+    """
+    releases = _eol_releases(slug)
+    if not releases:
+        return None
+    cur = next((r for r in releases if not r.get("isEol")), None)
+    if not cur:
+        return None
+    series = str(cur.get("name", "?"))
+    latest = cur.get("latest")
+    if isinstance(latest, dict):
+        exact = str(latest.get("name", series))
+    elif isinstance(latest, str):
+        exact = latest
+    else:
+        exact = series
+    return series, exact, f"https://endoflife.date/api/v1/products/{slug}"
+
+
 def _strip_image_tag(tag: str) -> str:
     """`1.20-alpine` → `1.20`, `22-slim-bullseye` → `22`, `lts` → `lts`."""
     # Split off common suffixes
@@ -210,32 +232,41 @@ def check_freetext(alias: str, version_str: str):
     return (f"{alias} {version_str}", truth, src)
 
 
-def check_pkg_outdated(ecosystem: str, pkg: str, version_str: str):
-    """Pinned package version vs registry latest. Flags only if ≥2 majors behind."""
+def latest_version(ecosystem: str, pkg: str):
+    """Registry's current latest version + source URL. Returns (version, url) or None.
+
+    Shared by check_pkg_outdated (reactive) and resolve_pins.py (proactive); both
+    hit the same http_cached store, so a version resolved once warms the other.
+    """
     eco = PKG_REGISTRY.get(ecosystem)
     if not eco:
         return None
+    url = eco["url"].format(pkg=pkg)
+    if eco["path"] == ["__lookup_packagist_first__"]:
+        data = http_cached(url)
+        if not isinstance(data, dict):
+            return None
+        rels = (data.get("packages") or {}).get(pkg) or []
+        latest = rels[0].get("version") if rels else None
+    else:
+        latest = _dot_get(http_cached(url), eco["path"])
+    if not latest or not isinstance(latest, str):
+        return None
+    return latest, url
+
+
+def check_pkg_outdated(ecosystem: str, pkg: str, version_str: str):
+    """Pinned package version vs registry latest. Flags only if ≥2 majors behind."""
     v = version_str.lstrip().strip('"\'')
     if v.startswith(("^", "~", ">", "<", "*")) or v in {"latest", "next", "main", "master", "edge"}:
         return None
     pinned_major = _semver_major(v)
     if pinned_major is None:
         return None
-
-    url = eco["url"].format(pkg=pkg)
-    if eco["path"] == ["__lookup_packagist_first__"]:
-        # Packagist: data.packages.<pkg>[0].version
-        data = http_cached(url)
-        if not isinstance(data, dict):
-            return None
-        packages = data.get("packages") or {}
-        rels = packages.get(pkg) or []
-        latest = rels[0].get("version") if rels else None
-    else:
-        data = http_cached(url)
-        latest = _dot_get(data, eco["path"])
-    if not latest or not isinstance(latest, str):
+    res = latest_version(ecosystem, pkg)
+    if not res:
         return None
+    latest, url = res
     latest_major = _semver_major(latest)
     if latest_major is None or pinned_major >= latest_major - 1:
         return None

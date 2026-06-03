@@ -8,13 +8,14 @@ ______________________________________________________________________
 
 ## Adapter matrix
 
-| Adapter            | Detection                                                   | If present                                                | If absent            |
-| ------------------ | ----------------------------------------------------------- | --------------------------------------------------------- | -------------------- |
-| `rtk` CLI          | `command -v rtk`                                            | see §rtk below                                            | emit raw commands    |
-| `context-mode` MCP | tool namespace has `mcp__context-mode__ctx_execute`         | use `ctx_batch_execute` for multi-repo scans              | parallel Bash + Read |
-| `cavemem` MCP      | tool namespace has `mcp__cavemem__search`                   | augment §S tail with cross-session observations           | §S only              |
-| `caveman` skill    | available-skills list has `caveman:caveman` or `ck:caveman` | encourage caveman encoding in writes                      | plain markdown       |
-| `fastedit` MCP     | tool namespace has `mcp__fastedit__fast_edit`               | surgical edits to SOURCE task files; read via fast_search | Edit tool            |
+| Adapter            | Detection                                                        | If present                                                    | If absent              |
+| ------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------- |
+| `rtk` CLI          | `command -v rtk`                                                 | see §rtk below                                                | emit raw commands      |
+| `context-mode` MCP | tool namespace has `mcp__context-mode__ctx_execute`              | use `ctx_batch_execute` for multi-repo scans                  | parallel Bash + Read   |
+| `cavemem` MCP      | tool namespace has `mcp__cavemem__search`                        | augment §S tail with cross-session observations               | §S only                |
+| `caveman` skill    | available-skills list has `caveman:caveman` or `ck:caveman`      | encourage caveman encoding in writes                          | plain markdown         |
+| `fastedit` MCP     | tool namespace has `mcp__fastedit__fast_edit`                    | surgical edits to SOURCE task files; read via fast_search     | Edit tool              |
+| `context7` MCP     | tool namespace has `mcp__claude_ai_Context7__resolve-library-id` | ground CURRENT library API docs before coding (see §context7) | WebFetch official docs |
 
 ## §rtk — token-compression wrapper
 
@@ -103,6 +104,16 @@ Scope: SOURCE task files in supported languages (`.py .js .ts .tsx .rs .go .java
 **NOT for DOSSIER.md writes.** fastedit rejects `.md` — no markdown grammar, so `detect_language` returns `None` and every `fast_edit` / `fast_batch_edit` / `fast_multi_edit` call returns `unsupported file type '.md'`. DOSSIER.md mutations go through the bundled helpers instead (FORMAT.md §15): `lib-row-flip.sh` (§T/§B state flips) and `lib-s-append.sh` (§S appends). Those are deterministic, atomic, and always present — no detection, no fallback gymnastics.
 
 If fastedit absent: use the Edit tool for source files.
+
+## §context7 — current library API docs
+
+MCP server (Upstash) serving version-current API docs. Detection: tool namespace has `mcp__claude_ai_Context7__resolve-library-id` (+ `__query-docs`).
+
+If present: `ds:build` PIN CHECK (step 5.5) grounds the API SHAPE for a pinned lib — `resolve-library-id{libraryName:<pkg>}` then `query-docs{libraryId, query:<specific API question>}` before coding, so the model writes the current API, not a remembered one.
+
+If absent: `WebFetch` the library's official docs URL (the `ds:verify` convention). Never required.
+
+Do NOT use the context7 HTTP API as the default path — it requires a paid `ctx7sk-` key (no-new-secret rule). Opt-in only if the operator has exported `CONTEXT7_API_KEY`.
 
 ## Detection scaffold (skill body preamble)
 

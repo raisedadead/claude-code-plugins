@@ -64,6 +64,16 @@ If state still `.`: flip to `~`. Atomic write. Append §S as its own paragraph (
 <YYYY-MM-DD HH:MM> ds:build <T-id> START
 ```
 
+### 5.5. PIN CHECK (before RED — read-mostly)
+
+Before writing any test or code, ensure the libraries this task introduces are pinned:
+
+- For each package/version the task will add: confirm §I "Pinned deps" already has a resolved entry.
+- If a needed lib is missing: `python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/resolve_pins.py <ecosystem>:<pkg>`, append the row to §I via the Edit tool (DOSSIER.md is `.md` → not fastedit), and append §S `ds:build <T-id> pin=<pkg>@<ver>` (or `pin=offline` if unreachable).
+- Optionally ground the API SHAPE via the `§context7` adapter (ADAPTERS.md): `resolve-library-id` then `query-docs`; WebFetch the official docs as fallback.
+
+Runs OUTSIDE the RED→GREEN→refactor cycle — a dossier-bookkeeping write (like §X refresh), never a source commit. The model then writes source using the §I version, so the reactive verify hook fires on a warm-cache HIT and stays silent.
+
 ### 6. WORK (TDD)
 
 If `verify` column references `V<N>`:

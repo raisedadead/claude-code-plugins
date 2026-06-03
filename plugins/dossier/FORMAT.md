@@ -96,6 +96,8 @@ Format: bullets, one decision per line. Cite RFC / discussion where relevant.
 - Host-env adapters (auto-detect, see §11): rtk, context-mode, cavemem.
 ```
 
+**Pinned toolchain (proactive verify):** `ds:new` / `ds:build` resolve current EOL/LTS via `hooks/resolve_pins.py eol:<slug>` and record the result here as a bullet, e.g. `Go 1.26 (latest stable — endoflife.date/go)`. Write the resolved version, not a remembered one — these bullets are the model's ground truth.
+
 ## 6. §I — Interfaces
 
 API surface. Tables for endpoints, function signatures, config schemas. Drop prose.
@@ -114,6 +116,18 @@ Config:
 | AUTH_CACHE_TTL_S | int    | 60                      | clamped [10, 3600] |
 | VALKEY_ENDPOINT  | string | valkey.artemis.svc:6379 | k8s svc DNS        |
 ```
+
+**Pinned deps (proactive verify):** when a task introduces a library, record the resolved latest from `hooks/resolve_pins.py <ecosystem>:<pkg>` here so the model and `ds:check` share one source of truth:
+
+```markdown
+Pinned deps:
+| ecosystem | package                  | version | resolved   | src                             |
+| --------- | ------------------------ | ------- | ---------- | ------------------------------- |
+| go        | github.com/gin-gonic/gin | v1.12.0 | 2026-06-03 | proxy.golang.org/.../@latest    |
+| npm       | react                    | 19.2.7  | 2026-06-03 | registry.npmjs.org/react/latest |
+```
+
+`version` keeps ecosystem-native form (go.mod needs the leading `v`; npm/PyPI/crates drop it).
 
 ## 7. §V — Invariants
 
