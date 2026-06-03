@@ -103,16 +103,16 @@ API surface. Tables for endpoints, function signatures, config schemas. Drop pro
 ```markdown
 ## §I — Interfaces
 
-| Verb | Path | Body | Returns |
-|------|------|------|---------|
-| GET  | /api/auth/token/{id} | — | `{token, ttl}` 200 / 404 |
-| POST | /api/auth/token | `{id, token, ttl?}` | 201 / 409 |
+| Verb | Path                 | Body                | Returns                  |
+| ---- | -------------------- | ------------------- | ------------------------ |
+| GET  | /api/auth/token/{id} | —                   | `{token, ttl}` 200 / 404 |
+| POST | /api/auth/token      | `{id, token, ttl?}` | 201 / 409                |
 
 Config:
-| Key | Type | Default | Notes |
-|-----|------|---------|-------|
-| AUTH_CACHE_TTL_S | int | 60 | clamped [10, 3600] |
-| VALKEY_ENDPOINT | string | valkey.artemis.svc:6379 | k8s svc DNS |
+| Key              | Type   | Default                 | Notes              |
+| ---------------- | ------ | ----------------------- | ------------------ |
+| AUTH_CACHE_TTL_S | int    | 60                      | clamped [10, 3600] |
+| VALKEY_ENDPOINT  | string | valkey.artemis.svc:6379 | k8s svc DNS        |
 ```
 
 ## 7. §V — Invariants
@@ -122,11 +122,11 @@ Testable rules. Each row gets ID `V<N>`. Append-only via `ds:backprop`.
 ```markdown
 ## §V — Invariants
 
-| id | invariant | check |
-|----|-----------|-------|
-| V1 | token-cache miss falls through to redis, never 500 | `TestAuthCacheFallback` |
-| V2 | Valkey AUTH read from sops envelope, never plaintext literal | `grep -r 'VALKEY_PASS=' --include='*.go'` returns 0 |
-| V3 | TTL clamped [10, 3600] before write | `TestTTLClamp` |
+| id  | invariant                                                    | check                                               |
+| --- | ------------------------------------------------------------ | --------------------------------------------------- |
+| V1  | token-cache miss falls through to redis, never 500           | `TestAuthCacheFallback`                             |
+| V2  | Valkey AUTH read from sops envelope, never plaintext literal | `grep -r 'VALKEY_PASS=' --include='*.go'` returns 0 |
+| V3  | TTL clamped [10, 3600] before write                          | `TestTTLClamp`                                      |
 ```
 
 Format rules:
@@ -142,13 +142,13 @@ Multi-phase tasks in one pipe-table. Phase column tags which `P<N>` each task be
 ```markdown
 ## §T — Task ledger
 
-| id | P | state | task | cite | verify |
-|----|---|-------|------|------|--------|
-| T1 | P1 | x | scaffold auth/cache pkg | [a96987b] | `go test ./auth/cache` |
-| T2 | P1 | x | wire Valkey client | [b7c8d12] | V1 |
-| T3 | P1 | ~ | TTL clamp logic | — | V3 |
-| T4 | P2 | . | rollout to gxy-management | — | smoke test |
-| T5 | P2 | ! | rolling restart strategy | — | needs ops review |
+| id  | P   | state | task                      | cite      | verify                 |
+| --- | --- | ----- | ------------------------- | --------- | ---------------------- |
+| T1  | P1  | x     | scaffold auth/cache pkg   | [a96987b] | `go test ./auth/cache` |
+| T2  | P1  | x     | wire Valkey client        | [b7c8d12] | V1                     |
+| T3  | P1  | ~     | TTL clamp logic           | —         | V3                     |
+| T4  | P2  | .     | rollout to gxy-management | —         | smoke test             |
+| T5  | P2  | !     | rolling restart strategy  | —         | needs ops review       |
 ```
 
 Format rules:
@@ -169,10 +169,10 @@ Caught bugs. Each row triggers §V amendment if recurrence-worthy. Append-only.
 ```markdown
 ## §B — Bug ledger
 
-| id | bug | root cause | invariant added | fix cite |
-|----|-----|------------|-----------------|----------|
-| B1 | TTL=0 panicked client | no clamp on input | V3 | [a96987b] |
-| B2 | Valkey timeout cascaded to 500 | no fallback path | V1 | [b7c8d12] |
+| id  | bug                            | root cause        | invariant added | fix cite  |
+| --- | ------------------------------ | ----------------- | --------------- | --------- |
+| B1  | TTL=0 panicked client          | no clamp on input | V3              | [a96987b] |
+| B2  | Valkey timeout cascaded to 500 | no fallback path  | V1              | [b7c8d12] |
 ```
 
 Format rules:
@@ -187,11 +187,11 @@ Live table of every repo this dossier touches. Refreshed by `ds:build` + `ds:che
 ```markdown
 ## §X — Cross-repo state
 
-| repo | branch | ahead | tag | pushed | notes |
-|------|--------|-------|-----|--------|-------|
-| fCC/artemis | main | 2 | v0.3.0-pre | no | f87d138, dfdedb4 unpushed |
-| fCC/infra | feat/auth-cache | 5 | — | yes | deployment helm pending |
-| fCC-U/universe-cli | main | 0 | v0.6.1 | yes | clean |
+| repo               | branch          | ahead | tag        | pushed | notes                     |
+| ------------------ | --------------- | ----- | ---------- | ------ | ------------------------- |
+| fCC/artemis        | main            | 2     | v0.3.0-pre | no     | f87d138, dfdedb4 unpushed |
+| fCC/infra          | feat/auth-cache | 5     | —          | yes    | deployment helm pending   |
+| fCC-U/universe-cli | main            | 0     | v0.6.1     | yes    | clean                     |
 ```
 
 Format rules:
@@ -293,11 +293,11 @@ Auto-maintained by hook + every `ds:*` skill. Never source-of-truth; regenerable
 ```markdown
 # .scratchpad index
 
-| date | slug | state | P | T | B | mtime | §Z |
-|------|------|-------|---|---|---|-------|----|
-| 2026-05-14 | auth-1 | live | P1/2 | 2/5 | 2 | 2026-05-14 14:50 | — |
-| 2026-05-12 | artemis-staleness | done | P3/3 | 12/12 | 4 | 2026-05-13 21:38 | →auth-1 |
-| 2026-04-28 | k3s-bootstrap | done | P1/1 | 8/8 | 1 | 2026-04-29 09:12 | complete |
+| date       | slug              | state | P    | T     | B   | mtime            | §Z       |
+| ---------- | ----------------- | ----- | ---- | ----- | --- | ---------------- | -------- |
+| 2026-05-14 | auth-1            | live  | P1/2 | 2/5   | 2   | 2026-05-14 14:50 | —        |
+| 2026-05-12 | artemis-staleness | done  | P3/3 | 12/12 | 4   | 2026-05-13 21:38 | →auth-1  |
+| 2026-04-28 | k3s-bootstrap     | done  | P1/1 | 8/8   | 1   | 2026-04-29 09:12 | complete |
 ```
 
 Sort: date desc. Live dossiers first.
