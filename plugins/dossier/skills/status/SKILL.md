@@ -1,11 +1,12 @@
 ---
 name: status
-description: Read-only dossier dashboard. Default session-open action. Shows INDEX head, live dossier §S tail, §T progress, §X cross-repo state, plus any incomplete ops flagged for resume. Invoke when the user says "ds:status", "dossier status", "what's the dossier state", "where are we", "check dossier", or session-start before any other ds:* verb.
+description: The dossier driver + read-only sit-rep. Default session-open action. Hydrates the Claude Code TaskList from §T, then prints a decision-first summary (next decision, blockers, just-did, next-auto); full tables on --full. Surfaces multi-live consolidation. Invoke when the user says "ds:status", "ds", "dossier status", "where are we", "sit-rep", "what's next", "check dossier", or session-start before any other ds:* verb.
+disallowed-tools: Edit, Write, NotebookEdit
 ---
 
-# ds:status — read-only dashboard
+# ds:status — the dossier driver (sit-rep)
 
-Read-only. Writes nothing except INDEX regen (derived, idempotent).
+Read-only on files — mutations route through Bash helpers. Writes nothing except INDEX regen (derived, idempotent) + TaskList hydration (projects §T into the session TaskList; §T stays source of truth).
 
 ## Steps
 
@@ -48,6 +49,18 @@ Parse from DOSSIER.md:
 - §X — full table.
 - §B — count + open rows (no `fix cite`).
 
+### 2a. Hydrate TaskList (§T → TaskList projection)
+
+§T is source of truth; the Claude Code TaskList is a derived steering surface the operator watches. Idempotent — safe every invocation.
+
+1. `TaskList` first. Parse the leading `T<id>` token of each existing task's subject (the join key).
+1. For each §T row in `{., ~}` whose `T<id>` is NOT already present: `TaskCreate` subject=`"<T-id> <task>"`, description = task + `verify` cell, activeForm derived from the task.
+1. `TaskUpdate` each to its glyph: `.`→pending, `~`→in_progress. Skip already-`x` rows (no steering value; clutter).
+1. **Exclude `!` and `?` rows** — TaskList has no "blocked-on-human" status. Surface them as BLOCKERS in the report (the autonomous loop must not pick them up).
+1. Dependencies: derive `blockedBy` from phase order (every `P<k+1>` task blocked by the last `P<k>` task). Do NOT add a `dep` column to §T (breaks `lib-row-flip.sh` positional awk).
+
+**Reverse direction is advisory only:** if a TaskList task is `completed` but its §T row is not `x`, WARN (`run ds:build <T-id> --resume to finalize cite+flip`) — never auto-flip §T (Vm.3 requires a commit cite, which only `ds:build` produces).
+
 ### 3. Detect incomplete ops (resume hint)
 
 Scan §S for `START` lines without matching `DONE` for same `<target>`. Each = incomplete op.
@@ -68,32 +81,28 @@ If diff: flag as `§X stale (refresh via ds:build or ds:check)`. Do NOT auto-ref
 
 If `mcp__cavemem__timeline` available: query for observations tagged with current dossier slug in last 14 days. Surface top 3 as `## Recent (cavemem)` block. Skip silently if absent.
 
-### 6. Report
+### 6. Report (decision-first)
 
-Print:
+Lead with the ONE decision. Full §T/§X tables only on `--full`.
 
 ```
-INDEX: <live-count> live, <done-count> archived (regen <mtime>)
-
-Live: <date>-<slug> (P<cur>/<total>, T <done>/<total>, B <count>, §Z <state>)
-
-§S tail (last <N>):
-  <lines>
-
-§T:
-  <table>
-
-§X:
-  <table>
-
-[⚠ Incomplete: <op>]
-  → <resume-command>
-
-[⚠ §X stale: <repo> ahead=<actual>, dossier says <stored>]
-  → refresh via ds:build or ds:check
-
+DECISION: <the one thing the operator must decide, or "NONE → proceeding">
+  └ <why a human is needed / what unblocks if NONE>
+BLOCKERS (§T !/?):
+  T5 rolling-restart — needs ops review        # state=!/? rows; verify/task cell = the "why"
+  (none) if empty
+JUST DID: <last 1–2 §S cite-bearing entries>
+NOW: <slug> P<cur>/<tot> · T <done>/<tot> · TaskList <active>/<blocked>
+NEXT (auto): ds:build --auto   (or a specific ds:build <T-id>, or "BLOCKED → decision above")
+  ⚠ §X stale <Nm> → confirm before flip          # only if flagged (step 4)
+[CONSOLIDATE: <N> live — pause/close the stale ones]   # only if >1 live (step 1a)
+[⚠ resume: ds:build T<N> --resume]                     # only if incomplete op (step 3)
 Locks: <none | <slug>: <skill> pid <pid> since <time>>
+
+[--full for §T / §X tables]
 ```
+
+On `--full`: also print the complete §T + §X tables + the §S tail (the deep-inspection dump). Default omits them.
 
 ### 7. No mutations
 

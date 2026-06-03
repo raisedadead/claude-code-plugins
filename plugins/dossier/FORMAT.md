@@ -176,6 +176,15 @@ Format rules:
 
 Vm.3: every row with `state=x` MUST have non-empty `cite`.
 
+### §T ↔ TaskList projection
+
+§T is source of truth; the Claude Code TaskList is a derived, in-session steering surface (hydrated by `ds:status`). Contract:
+
+- **Join key** = task subject `"<T-id> <task>"`. Glyph map: `.`=pending, `~`=in_progress, `x`=completed.
+- Hydrate projects rows in `{., ~}`; `!`/`?` rows are excluded (TaskList has no "blocked-on-human" status) and surface as BLOCKERS in the sit-rep.
+- `blockedBy` derived from phase order (`P<k+1>` after `P<k>`). The §T schema gains NO `dep` column — that would shift `lib-row-flip.sh`'s positional `state`/`cite` cells and break the helper.
+- **§T → TaskList is eager** (`ds:build` mirrors at CLAIM→in_progress, FLIP→completed). **TaskList → §T is advisory only** — `ds:status` warns if a TaskList task is `completed` but its §T row lacks `x`+cite; it never auto-flips (Vm.3 needs a commit cite).
+
 ## 9. §B — Bug ledger
 
 Caught bugs. Each row triggers §V amendment if recurrence-worthy. Append-only.
@@ -257,8 +266,9 @@ Format rules:
 - Timestamp = minute-granular `YYYY-MM-DD HH:MM`. Override to seconds via env `DS_TS_SECONDS=1` (concurrent-write disambiguation).
 - `<skill>` = `ds:<verb>`.
 - `<target>` = `T<N>`, `B<N>`, `V<N>`, or `—` for non-targeted ops.
-- `<event>` ∈ `{START, DONE, commit=<sha>, §<X>=<status>, §X=stale-confirmed, drift=<n>, lock=<acquired|released>, paused reason=<text>, resumed, abandoned reason=<text>}`.
+- `<event>` ∈ `{START, DONE, commit=<sha>, §<X>=<status>, §X=stale-confirmed, drift=<n>, lock=<acquired|released>, paused reason=<text>, resumed, abandoned reason=<text>, PAUSE reason=<class>:<detail>, auto-stop=<reason>}`.
 - `paused` / `resumed` / `abandoned` are **atomic single-line** events — they emit NO `START`/`DONE` pair (pause/resume are non-resumable one-shot ops). A bare `START` for them would trip the incomplete-op detector.
+- `PAUSE` (from `ds:build --auto`) carries a reason class ∈ `{blocked, ambiguous, destructive, push, retries-exhausted, x-stale, budget}`; if it follows a task `START` with no `DONE`, that task correctly shows as incomplete (resume needed). `auto-stop=<reason>` is a run-terminal line with target `—` (clean exhaustion / budget), not a `START`/`DONE`.
 - `<detail>` free-text, ≤120 chars.
 
 Vm.6: every multi-step op MUST emit `START` line before mutation, `DONE` line after final mutation. Missing `DONE` = incomplete = resume needed.
@@ -391,21 +401,22 @@ Pause/resume are NOT multi-step ops: they write a single atomic §S line (`pause
 
 ## 17. Meta-invariants (enforced by skills)
 
-| id    | rule                                                                                                          |
-| ----- | ------------------------------------------------------------------------------------------------------------- |
-| Vm.1  | every live dossier has state=live in INDEX; ≤1 dossier per slug                                               |
-| Vm.2  | every §S entry starts with valid ISO timestamp                                                                |
-| Vm.3  | every §T `x` row has non-empty `cite` (commit SHA / PR)                                                       |
-| Vm.4  | every closed dossier has §Z written + lives under `_archive/`                                                 |
-| Vm.5  | INDEX counts match DOSSIER §T/§B actual rows                                                                  |
-| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                               |
-| Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                    |
-| Vm.8  | all file mutations atomic (tmp + rename)                                                                      |
-| Vm.9  | active lock blocks mutation; stale lock auto-clears                                                           |
-| Vm.10 | migrator per-repo marker `.scratchpad/.migrate-v2-done`                                                       |
-| Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                   |
-| Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                   |
-| Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt |
-| Vm.X  | stale §X (>30min) warns + requires operator confirm on flip                                                   |
+| id    | rule                                                                                                              |
+| ----- | ----------------------------------------------------------------------------------------------------------------- |
+| Vm.1  | every live dossier has state=live in INDEX; ≤1 dossier per slug                                                   |
+| Vm.2  | every §S entry starts with valid ISO timestamp                                                                    |
+| Vm.3  | every §T `x` row has non-empty `cite` (commit SHA / PR)                                                           |
+| Vm.4  | every closed dossier has §Z written + lives under `_archive/`                                                     |
+| Vm.5  | INDEX counts match DOSSIER §T/§B actual rows                                                                      |
+| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                                   |
+| Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                        |
+| Vm.8  | all file mutations atomic (tmp + rename)                                                                          |
+| Vm.9  | active lock blocks mutation; stale lock auto-clears                                                               |
+| Vm.10 | migrator per-repo marker `.scratchpad/.migrate-v2-done`                                                           |
+| Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                       |
+| Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                       |
+| Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt     |
+| Vm.14 | every `ds:build --auto` PAUSE carries a reason class; the autonomous loop never auto-pushes and never auto-closes |
+| Vm.X  | stale §X (>30min) warns + requires operator confirm on flip                                                       |
 
 `ds:check` validates all Vm rules on read.

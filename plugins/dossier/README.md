@@ -32,39 +32,52 @@ All dossiers chronologically sortable by directory name. INDEX.md at `.scratchpa
 
 ## Verbs
 
-| Skill                                                          | Action                                                                                                                                                                                                                                                     |
-| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/dossier:new <slug>`                                          | Scaffold new dossier. Prompts for §G, §C, §X repos.                                                                                                                                                                                                        |
-| `/dossier:status`                                              | Read-only dashboard. Default session-open verb. Flags incomplete ops.                                                                                                                                                                                      |
-| `/dossier:build <T-id> \| --next`                              | TDD execute a §T row. Commit + §X refresh + state flip. Resumable.                                                                                                                                                                                         |
-| `/dossier:check`                                               | Drift detector. Spawns scouts per repo. Reports §V / §T / §X violations.                                                                                                                                                                                   |
-| `/dossier:backprop <B-id> \| <description>`                    | Bug → §V protocol. Test + commit + optional invariant. Resumable.                                                                                                                                                                                          |
-| `/dossier:close --complete \| --successor <slug> \| --abandon` | Validate, write §Z, archive. Atomic.                                                                                                                                                                                                                       |
-| `/dossier:migrate`                                             | Convert legacy 4-file dossiers to v2 single-file. Operator-confirmed per repo.                                                                                                                                                                             |
-| `/dossier:verify [<topic>]`                                    | Empirical fact-check vs primary sources. Auto-fires PreToolUse on every Write/Edit (140 EOL aliases + 34 Docker images + 31 AI models + GH Actions + k8s + 6 package ecosystems). Manual invoke = model-driven generic fact-check for any freshness claim. |
-| `/dossier:roll {dump\|restore\|list}`                          | Persist Claude Code TaskList across session boundaries via compact `.tlr` pipe-table. PreCompact hook auto-dumps before context shrinks.                                                                                                                   |
+Four you actually type. The rest are auto / internal / power-user.
+
+**Primary:**
+
+| Skill                                                                     | Action                                                                                                                                                                                                                |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dossier:status` — the **driver** ("ds" / "sit-rep" / "what's next")     | Session-open default. Hydrates the TaskList from §T, then a **decision-first** sit-rep: next decision · blockers · just-did · next-auto. `--full` for §T/§X tables. Surfaces multi-live consolidation + resume hints. |
+| `/dossier:new <slug>`                                                     | Scaffold a wave. Prompts §G/§C/§X; resolves + pins current lib versions into §C/§I.                                                                                                                                   |
+| `/dossier:close --complete \| --successor <slug> \| --abandon "<reason>"` | Validate, write §Z, archive. `--abandon` drops an unfinished wave. Atomic.                                                                                                                                            |
+| `/dossier:check`                                                          | Deep read-only drift audit. Scouts per repo. Reports §V/§T/§X + Vm violations.                                                                                                                                        |
+
+**Autonomy** — drive the ledger hands-off; steer by watching the TaskList:
+
+| Invocation                                 | Action                                                                                                                                                                                                          |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/dossier:build --auto` wrapped in `/goal` | Loop over actionable §T rows to completion. Pauses only on a real decision (blocked / ambiguous / destructive / push / retries / stale-§X / budget), reason logged to §S. Never auto-pushes, never auto-closes. |
+
+**Auto / internal / power-user** (rarely typed directly):
+
+| Skill                                 | When                                                                                                       |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `/dossier:build <T-id> \| --next`     | The TDD engine. `--auto` drives it; invoke directly for one task. Mirrors §T ↔ TaskList.                   |
+| `/dossier:backprop <B-id> \| <desc>`  | Bug → §V protocol. Auto-fires from `build` on failure; invoke for a standalone bug.                        |
+| `/dossier:verify [<topic>]`           | Auto-fires as a PreToolUse hook on every write. Invoke for an ad-hoc fact-check.                           |
+| `/dossier:roll {dump\|restore\|list}` | TaskList persistence. Auto-dumps on PreCompact **and** SessionEnd; invoke `restore` after a fresh session. |
+| `/dossier:migrate`                    | One-time legacy 4-file → single-file conversion.                                                           |
 
 ## Quickstart
 
 ```
-# Open new wave
+# Open a wave (scaffolds + pins current lib versions)
 /dossier:new auth-cache
+# ... fill §G / §C / §X repos, add T1..Tn ...
 
-# Operator fills §G, §C, §X repos when prompted.
+# Drive it hands-off — watch the TaskList; it stops only on a real decision
+/goal Keep running ds:build --auto until it prints DONE or PAUSE. Stop on PAUSE.
 
-# Build tasks one by one
-/dossier:build T1
-/dossier:build T2
+# Anytime: decision-first sit-rep — what's the next decision?
+/dossier:status            # "ds" / "where are we" / "what's next"
 
-# Bug surfaces during build → backprop kicks in
-/dossier:backprop "Valkey timeout cascaded to 500"
-
-# Audit before close
+# Audit, then close (or pause / abandon from the sit-rep)
 /dossier:check
-
-# Close the wave
 /dossier:close --successor auth-rollout
 ```
+
+One task at a time? `/dossier:build T1` or `--next`. Several live dossiers piled up? `/dossier:status` flags them and offers pause / close.
 
 ## Resumability
 
@@ -185,6 +198,7 @@ plugins/dossier/
 - `Vm.11` resume auto-detect default
 - `Vm.12` recommended ≤1 live dossier (excl. paused); >1 warns
 - `Vm.13` stale-live (no §S in >14d) prompts consolidate
+- `Vm.14` `--auto` PAUSE carries a reason; never auto-push/close
 
 ## Migration from legacy 4-file dossier
 

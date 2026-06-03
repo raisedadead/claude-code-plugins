@@ -1,7 +1,7 @@
 ---
 name: build
 description: Execute a §T task with TDD covenant. Claims row (. → ~), runs tests/edits, commits, refreshes §X, flips row to x with commit cite. Resumable on crash via §S step-log. Invoke when the user says "ds:build T<N>", "build next task", "ds:build --next", "implement T<N>", or "work on <task-description>".
-argument-hint: <T-id> | --next | --resume
+argument-hint: <T-id> | --next | --auto | --resume
 ---
 
 # ds:build — execute a §T task
@@ -12,6 +12,7 @@ TDD covenant: RED → GREEN → refactor. One commit per `x`-flip. Resumable.
 
 - `<T-id>` (e.g. `T3`): explicit target.
 - `--next`: pick first `state=.` row in §T.
+- `--auto`: autonomous mode — loop over actionable §T rows to completion, pausing only on a real decision. See **Autonomous mode** below. Best driven by native `/goal`.
 - `--resume`: re-enter incomplete op for the same target (auto-detected from §S; flag is explicit override).
 
 ## Steps
@@ -63,6 +64,8 @@ If state still `.`: flip to `~`. Atomic write. Append §S as its own paragraph (
 ```
 <YYYY-MM-DD HH:MM> ds:build <T-id> START
 ```
+
+**TaskList mirror:** if a TaskList task exists whose subject starts with `<T-id>` (hydrated by `ds:status`), `TaskUpdate` it to `in_progress`. Keeps the operator's watch surface live. Skip silently if absent.
 
 ### 5.5. PIN CHECK (before RED — read-mostly)
 
@@ -149,6 +152,8 @@ State `~` → `x`. Update `cite` column with commit SHA. Atomic write. Append §
 <YYYY-MM-DD HH:MM> ds:build <T-id> DONE → x cite=<sha>
 ```
 
+**TaskList mirror:** `TaskUpdate` the `<T-id>` task to `completed`.
+
 ### 10. Regen INDEX
 
 Run `lib-regen-index.sh`. INDEX now reflects updated `T <done>/<total>`.
@@ -165,6 +170,39 @@ commit=<sha>
 §X: <repo> ahead=<n> [+ refreshes]
 next: ds:build --next [or remaining T-ids]
 ```
+
+## Autonomous mode (`--auto`)
+
+Drives the §T ledger to completion without per-task operator approval. The operator steers by watching the TaskList + transcript, not by approving each step.
+
+**Loop — one iteration = one task** (each its own commit + §S DONE, so a crash resumes cleanly):
+
+1. SELECT next actionable row: first `state=.` whose phase prerequisites are satisfied (every row in lower `P<n>` is `x`). Resume any crashed `~` first (step 4). Skip `!` and `?`.
+1. No actionable row → §S `ds:build — auto-stop=no-unblocked`, print `DONE`, stop.
+1. A PAUSE condition (below) holds → §S `ds:build <id> PAUSE reason=<class>:<detail>`, print `PAUSE: <reason>`, release lock, stop.
+1. Else run steps 5–12 verbatim (full covenant + TaskList mirror), then print `CONTINUE` (more `.` remain) or `DONE`.
+
+**Driver — wrap with native `/goal`** so a fresh evaluator keeps the turn going until done:
+
+```
+/goal Keep running ds:build --auto until it prints DONE or PAUSE. Stop on PAUSE.
+```
+
+`/goal clear` (or Esc) ends the run cleanly. Do NOT use Workflows or `/loop` (background / no mid-run steer / not dependency-ordered).
+
+**Decision boundary — MUST PAUSE (never auto-resolve):**
+
+| class               | trigger                                                                          |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `blocked`           | row state `!` or `?`                                                             |
+| `ambiguous`         | `verify=—` on a behaviour-bearing task, or >1 reasonable implementation          |
+| `destructive`       | task implies delete/drop/migrate/force, schema change, or files outside §X repos |
+| `push`              | any `git push` / network-mutating op (never auto-push)                           |
+| `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                     |
+| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — do NOT auto-confirm                 |
+| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget` |
+
+**Rails:** never auto-push · never auto-close (stop at the last `x`-flip; `ds:close` stays an explicit operator step) · per-task lock · atomic writes · `marker_guard` + `verify` hooks stay active during WORK. Every PAUSE writes its reason to §S so `ds:status` shows WHY on return (Vm.14).
 
 ## Failure handling
 

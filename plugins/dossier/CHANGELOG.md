@@ -23,6 +23,11 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 - Lifecycle gained pause/resume (atomic `ds:status` actions) + `ds:close --abandon "<reason>"` for dropped waves; `paused` is now a reachable, INDEX-rendered state.
 - SessionStart surfaces multiple live dossiers loudly via a user-visible `systemMessage`; `ds:status` / `ds:check` warn on >1 live (Vm.12) and stale-live (Vm.13).
 - `ds:new` (Step 2.5) and `ds:build` (Step 5.5 PIN CHECK) resolve + pin current versions / API docs before coding (proactive companion to the reactive verify hook); new `§context7` adapter for API-shape grounding.
+- `ds:status` is now the **driver**: hydrates the Claude Code TaskList from §T (a projection — §T stays source of truth, `!`/`?` rows surface as blockers) and leads with a decision-first sit-rep (`--full` for the §T/§X tables).
+- `ds:build --auto`: autonomous mode loops actionable §T rows under native `/goal`, pausing only on a real decision (Vm.14 reason classes); mirrors §T ↔ TaskList at claim/flip; never auto-pushes or auto-closes.
+- TaskList now auto-dumps on `SessionEnd` as well as `PreCompact`.
+- Read-only verbs (`status`, `check`) declare `disallowed-tools: Edit, Write, NotebookEdit` (defense-in-depth; mutations route through Bash helpers).
+- README reframed around 4 primary verbs + autonomy; `build`/`backprop`/`roll`/`verify` documented as auto/internal/power-user.
 
 ### Fixed
 

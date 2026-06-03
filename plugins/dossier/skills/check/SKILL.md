@@ -1,6 +1,7 @@
 ---
 name: check
 description: Drift detector. Read-only. Diffs DOSSIER.md against code, git state, and Vm meta-invariants. Spawns dossier-scout subagents in parallel for multi-repo §V scans. Reports violations grouped by severity. Writes nothing. Invoke when the user says "ds:check", "check drift", "audit dossier", "does code still match spec", "verify invariants", or before opening a PR.
+disallowed-tools: Edit, Write, NotebookEdit
 ---
 
 # ds:check — drift detector
@@ -72,6 +73,7 @@ Independent of scouts. Run concurrently with dispatch:
 | Vm.10 | migrate markers consistent (if migration in progress)            | n/a unless ds:migrate active                          |
 | Vm.12 | ≤1 live dossier (excl. paused)                                   | count INDEX rows state=live; >1 → 🟡 warn             |
 | Vm.13 | no stale-live (no §S in >N days)                                 | newest §S ts per live vs `DS_STALE_LIVE_DAYS` (14)    |
+| Vm.14 | every `--auto` PAUSE carries a reason class                      | grep §S `PAUSE reason=`; flag any bare PAUSE          |
 
 ### 4. Aggregate
 

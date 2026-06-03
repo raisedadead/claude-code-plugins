@@ -1,6 +1,6 @@
 ---
 name: roll
-description: Persist Claude Code TaskList across session boundaries. Dumps current TaskList to a compact `.tlr` pipe-table file under .scratchpad/.tasklist-roll/, restorable in a fresh session via TaskCreate. PreCompact hook auto-dumps. Invoke when user says "/dossier:roll", "roll the session", "save tasks before compact", "restore tasks", "dump tasklist".
+description: Persist Claude Code TaskList across session boundaries. Dumps current TaskList to a compact `.tlr` pipe-table file under .scratchpad/.tasklist-roll/, restorable in a fresh session via TaskCreate. PreCompact + SessionEnd hooks auto-dump. Invoke when user says "/dossier:roll", "roll the session", "save tasks before compact", "restore tasks", "dump tasklist".
 argument-hint: dump | restore [<file>] | list
 ---
 
@@ -16,7 +16,7 @@ Format (compact pipe-table v1):
 # tlr v1
 sid: <session-id>
 ts: <ISO-timestamp>
-trig: explicit | precompact
+trig: explicit | precompact | sessionend
 
 | i | st | subject | desc | actv | dep |
 |---|----|---------|------|------|-----|

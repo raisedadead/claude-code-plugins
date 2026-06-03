@@ -40,8 +40,10 @@ def main() -> int:
     if not tasks:
         return 0
 
+    event_name = payload.get("hook_event_name") or "PreCompact"
+    trig = "sessionend" if event_name == "SessionEnd" else "precompact"
     sid = sid or parsed_sid or "unknown"
-    body = render_tlr(tasks, sid, "precompact")
+    body = render_tlr(tasks, sid, trig)
     out_path = new_roll_path()
     try:
         tmp = out_path.with_suffix(out_path.suffix + ".tmp")
@@ -63,7 +65,7 @@ def main() -> int:
     )
     out = {
         "hookSpecificOutput": {
-            "hookEventName": "PreCompact",
+            "hookEventName": event_name,
             "additionalContext": breadcrumb,
         }
     }
