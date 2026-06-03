@@ -3,16 +3,17 @@
 
 Matcher: Edit | Write | MultiEdit.
 
-Reads hook JSON on stdin. Blocks edits that would land phase/stage/audit
-markers (`// Phase 1:`, `// Step N:`, `// V11 (Phase 3 / A7):`, `// PH3-B7`)
-inside non-dossier source files. Source must stay phase-agnostic. Phase
-tracking belongs in `.scratchpad/dossier/PLAN.md` / `DOSSIER.md §B`.
+Reads hook JSON on stdin. Flags edits that would land a dossier audit-id
+marker (`// PH3-B7`, `# PH12-A1`) inside non-dossier source files — phase
+tracking belongs in `DOSSIER.md §B`, not source. Advisory only: never
+blocks. Emits a PreToolUse `additionalContext` nudge and exits 0 so the
+write proceeds. Bare `Phase|Stage|Step N` words are deliberately NOT
+flagged — they collide with legitimate infra/CI/shell comments
+(`# Step 1: dump`).
 
-Exit 0: allow. Exit 2: block + stderr feeds Claude.
-
-Bypass: `DOSSIER_MARKER_GUARD=off`. Use only with written rationale in the
-live dossier's §S timeline.
+Always exits 0. Bypass: `DOSSIER_MARKER_GUARD=off`.
 """
+
 from __future__ import annotations
 
 import json
@@ -27,9 +28,6 @@ from pathlib import Path
 COMMENT_PREFIX = r"^\s*(?://+|#+|--|/\*+|\*(?!/)|<!--|;)\s*"
 
 MARKER_PATTERNS: tuple[re.Pattern[str], ...] = (
-    # `Phase 1:`, `PHASE 3`, `V11 (Phase 3 / A7)`, etc.
-    re.compile(COMMENT_PREFIX + r".*\b(Phase|Stage|Step)\s+\d+\b", re.IGNORECASE),
-    # `PH3-B7`, `PH12-A1` audit-id form.
     re.compile(COMMENT_PREFIX + r".*\bPH\d+-[A-Z]\d+\b"),
 )
 
@@ -95,29 +93,25 @@ def find_marker(chunks: list[str]) -> tuple[str, str] | None:
     return None
 
 
-def block(path: str, line: str) -> int:
-    print(
-        "\n".join(
-            [
-                f"dossier marker guard: blocked edit to '{path}'.",
-                "",
-                f"  offending line: {line}",
-                "",
-                "Phase / stage / audit-id markers belong in DOSSIER.md §B",
-                "(or `.scratchpad/dossier/PLAN.md` if escalated), not in",
-                "source files. Source must be phase-agnostic.",
-                "",
-                "Drop the marker prefix; keep the why-tail (workaround ref,",
-                "non-obvious invariant, upstream-bug link) if useful. Move",
-                "the phase or audit reference into DOSSIER.md §B as a row.",
-                "",
-                "Emergency bypass: DOSSIER_MARKER_GUARD=off, with rationale",
-                "logged in the live dossier's §S timeline.",
-            ]
-        ),
-        file=sys.stderr,
+def advise(path: str, line: str) -> int:
+    reason = "\n".join(
+        [
+            f"dossier marker guard: '{path}' carries a dossier audit-id marker.",
+            f"  offending line: {line}",
+            "",
+            "Audit-id markers (`PH3-B7`) belong in DOSSIER.md §B as a row, not",
+            "in source. Drop the marker; keep any why-tail (workaround ref,",
+            "invariant, upstream-bug link). Advisory only — the write proceeds.",
+        ]
     )
-    return 2
+    out = {
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "additionalContext": reason,
+        }
+    }
+    print(json.dumps(out))
+    return 0
 
 
 def main() -> int:
@@ -140,7 +134,7 @@ def main() -> int:
     if hit is None:
         return 0
 
-    return block(file_path, hit[0])
+    return advise(file_path, hit[0])
 
 
 if __name__ == "__main__":

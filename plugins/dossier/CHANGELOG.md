@@ -33,6 +33,8 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 
 ### Fixed
 
+- `precompact-roll.py` no longer emits `hookSpecificOutput.additionalContext` on `SessionEnd`/`PreCompact` — neither is a member of the CC hook output union, so the emit failed validation (`Hook JSON output validation failed — (root): Invalid input`) on every session end and compaction. It now surfaces a top-level `systemMessage` breadcrumb; the `.tlr` write (the restore source) was always unaffected.
+- `marker_guard.py` downgraded from an exit-2 hard block to a non-blocking PreToolUse advisory, and narrowed to the unambiguous `PH<n>-<A><n>` audit-id form. Bare `Phase|Stage|Step N` comments no longer block legitimate infra/CI/shell writes (e.g. `# Step 1: dump` in a backup CronJob) across non-dossier repos.
 - The three python hooks (`marker_guard`, `verify_hook`, `precompact-roll`) now no-op cleanly on Python < 3.10 instead of raising.
 - Removed a dead `os` import in `verify_hook.py`.
 - Documented the `python3` ≥ 3.10 runtime prerequisite in the README install section.

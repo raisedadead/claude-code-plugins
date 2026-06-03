@@ -65,16 +65,16 @@ Show all `.tlr` files under `<cwd>/.scratchpad/.tasklist-roll/`, newest first. F
 
 Read each file's header + count pipe rows. No TaskList calls.
 
-## PreCompact safety net
+## PreCompact / SessionEnd safety net
 
-Plugin registers a `PreCompact` hook (`hooks/precompact-roll.py`) that auto-dumps the TaskList just before context compresses. Reads the session transcript, reconstructs final state, writes a `.tlr` with `trig: precompact`, emits a breadcrumb in `additionalContext`:
+Plugin registers `PreCompact` and `SessionEnd` hooks (`hooks/precompact-roll.py`) that auto-dump the TaskList just before context is lost. Reads the session transcript, reconstructs final state, writes a `.tlr` with `trig: precompact` / `sessionend`, and surfaces a top-level `systemMessage` breadcrumb:
 
 ```
 TaskList auto-rolled to .scratchpad/.tasklist-roll/<file> (<N> tasks, <P> pending).
-Run /dossier:roll restore to resume on the post-compact side.
+Run /dossier:roll restore to resume.
 ```
 
-Best-effort. Any failure = silent skip; the compaction proceeds.
+SessionEnd and PreCompact have no `hookSpecificOutput` branch in the CC hook schema, so they cannot inject model context — restore reads the newest `.tlr` from disk, or `session-start.sh` surfaces it on the next session. Best-effort: any failure = silent skip; the compaction proceeds.
 
 ## Conventions
 

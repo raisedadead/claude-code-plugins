@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""PreCompact hook — auto-dump TaskList before context compaction.
+"""PreCompact / SessionEnd hook — auto-dump TaskList before context loss.
 
-Reads PreCompact stdin JSON, locates transcript_path, reconstructs current
-TaskList state, writes `<cwd>/.scratchpad/.tasklist-roll/<ts>.tlr`, emits
-additionalContext with breadcrumb. Non-blocking — always exits 0.
+Reads stdin JSON, locates transcript_path, reconstructs current TaskList
+state, writes `<cwd>/.scratchpad/.tasklist-roll/<ts>.tlr`, emits a top-level
+`systemMessage` breadcrumb. SessionEnd and PreCompact have no
+`hookSpecificOutput` output branch in the CC hook schema, so context cannot
+be injected from here — restore reads the newest .tlr from disk. Always
+exits 0.
 """
+
 from __future__ import annotations
 
 import json
@@ -34,7 +38,9 @@ def main() -> int:
     try:
         tasks, parsed_sid = parse_transcript(Path(transcript))
     except Exception as exc:  # noqa: BLE001
-        print(f"roll-precompact parse error: {type(exc).__name__}: {exc}", file=sys.stderr)
+        print(
+            f"roll-precompact parse error: {type(exc).__name__}: {exc}", file=sys.stderr
+        )
         return 0
 
     if not tasks:
@@ -59,17 +65,11 @@ def main() -> int:
     except ValueError:
         pass
     pending = sum(1 for t in tasks if t["status"] == "pending")
-    breadcrumb = (
+    note = (
         f"TaskList auto-rolled to {rel} ({len(tasks)} tasks, {pending} pending). "
-        f"Run /dossier:roll restore to resume on the post-compact side."
+        f"Run /dossier:roll restore to resume."
     )
-    out = {
-        "hookSpecificOutput": {
-            "hookEventName": event_name,
-            "additionalContext": breadcrumb,
-        }
-    }
-    sys.stdout.write(json.dumps(out))
+    sys.stdout.write(json.dumps({"systemMessage": note}))
     return 0
 
 

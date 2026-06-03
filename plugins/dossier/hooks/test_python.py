@@ -5,42 +5,144 @@ Run directly (`python3 test_python.py`) or under pytest. No third-party deps.
 Covers the catastrophic-failure invariants of the roll + verify subsystem:
 round-trip fidelity, transcript reconstruction, offline-safety, regex compile.
 """
+
 from __future__ import annotations
 
+import contextlib
+import importlib.util
+import io
 import json
+import os
 import sys
 import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import marker_guard
 import roll_lib
 import verify_lib
 
 
 def test_tlr_round_trip() -> None:
     tasks = [
-        {"id": "1", "subject": "Fix |sort| bug", "description": "INDEX regen\nsort flag wrong", "activeForm": "Fixing sort", "status": "completed", "blockedBy": []},
-        {"id": "2", "subject": "Wire client", "description": "Wire client", "activeForm": "Wire client", "status": "in_progress", "blockedBy": ["1"]},
-        {"id": "3", "subject": "Rollout", "description": "Rollout", "activeForm": "Rollout", "status": "pending", "blockedBy": []},
+        {
+            "id": "1",
+            "subject": "Fix |sort| bug",
+            "description": "INDEX regen\nsort flag wrong",
+            "activeForm": "Fixing sort",
+            "status": "completed",
+            "blockedBy": [],
+        },
+        {
+            "id": "2",
+            "subject": "Wire client",
+            "description": "Wire client",
+            "activeForm": "Wire client",
+            "status": "in_progress",
+            "blockedBy": ["1"],
+        },
+        {
+            "id": "3",
+            "subject": "Rollout",
+            "description": "Rollout",
+            "activeForm": "Rollout",
+            "status": "pending",
+            "blockedBy": [],
+        },
     ]
     parsed = roll_lib.parse_tlr(roll_lib.render_tlr(tasks, "sess-1", "explicit"))
     assert len(parsed) == 3, f"expected 3 rows, got {len(parsed)}"
     assert parsed[0]["subject"] == "Fix |sort| bug", parsed[0]["subject"]
     assert parsed[0]["status"] == "completed", parsed[0]["status"]
-    assert parsed[1]["status"] == "in_progress" and parsed[1]["blockedBy"] == ["1"], parsed[1]
+    assert parsed[1]["status"] == "in_progress" and parsed[1]["blockedBy"] == ["1"], (
+        parsed[1]
+    )
     assert parsed[2]["status"] == "pending", parsed[2]
     assert parsed[1]["description"] == "Wire client", parsed[1]["description"]
 
 
 def test_parse_transcript() -> None:
     events = [
-        {"sessionId": "s1", "message": {"content": [{"type": "tool_use", "name": "TaskCreate", "id": "tu1", "input": {"subject": "A", "description": "A", "activeForm": "Doing A"}}]}},
-        {"message": {"content": [{"type": "tool_result", "tool_use_id": "tu1", "content": "Task #1 created successfully: A"}]}},
-        {"message": {"content": [{"type": "tool_use", "name": "TaskCreate", "id": "tu2", "input": {"subject": "B", "description": "B", "activeForm": "Doing B"}}]}},
-        {"message": {"content": [{"type": "tool_result", "tool_use_id": "tu2", "content": "Task #2 created successfully: B"}]}},
-        {"message": {"content": [{"type": "tool_use", "name": "TaskUpdate", "id": "tu3", "input": {"taskId": "1", "status": "completed"}}]}},
-        {"message": {"content": [{"type": "tool_use", "name": "TaskUpdate", "id": "tu4", "input": {"taskId": "2", "status": "deleted"}}]}},
+        {
+            "sessionId": "s1",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "TaskCreate",
+                        "id": "tu1",
+                        "input": {
+                            "subject": "A",
+                            "description": "A",
+                            "activeForm": "Doing A",
+                        },
+                    }
+                ]
+            },
+        },
+        {
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "tu1",
+                        "content": "Task #1 created successfully: A",
+                    }
+                ]
+            }
+        },
+        {
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "TaskCreate",
+                        "id": "tu2",
+                        "input": {
+                            "subject": "B",
+                            "description": "B",
+                            "activeForm": "Doing B",
+                        },
+                    }
+                ]
+            }
+        },
+        {
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "tu2",
+                        "content": "Task #2 created successfully: B",
+                    }
+                ]
+            }
+        },
+        {
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "TaskUpdate",
+                        "id": "tu3",
+                        "input": {"taskId": "1", "status": "completed"},
+                    }
+                ]
+            }
+        },
+        {
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "TaskUpdate",
+                        "id": "tu4",
+                        "input": {"taskId": "2", "status": "deleted"},
+                    }
+                ]
+            }
+        },
     ]
     with tempfile.TemporaryDirectory() as d:
         p = Path(d) / "transcript.jsonl"
@@ -87,8 +189,129 @@ def test_resolve_pins_offline() -> None:
         verify_lib.http_cached = original  # type: ignore[assignment]
 
 
+def _drive(mod: object, payload: dict) -> tuple[int, str]:
+    buf = io.StringIO()
+    saved = sys.stdin
+    sys.stdin = io.StringIO(json.dumps(payload))
+    try:
+        with contextlib.redirect_stdout(buf):
+            rc = mod.main()  # type: ignore[attr-defined]
+    finally:
+        sys.stdin = saved
+    return rc, buf.getvalue()
+
+
+def _load_hyphen(modname: str, filename: str) -> object:
+    path = Path(__file__).resolve().parent / filename
+    spec = importlib.util.spec_from_file_location(modname, path)
+    assert spec and spec.loader, filename
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
+def test_marker_guard_narrowed_to_audit_ids() -> None:
+    assert marker_guard.find_marker(["# Step 1: dump the database"]) is None
+    assert marker_guard.find_marker(["// Phase 1: validate"]) is None
+    assert marker_guard.find_marker(["# Stage 3: integration"]) is None
+    assert marker_guard.find_marker(["// V11 (Phase 3 / A7): note"]) is None
+    assert marker_guard.find_marker(["// PH3-B7: known-bug guard"]) is not None
+
+
+def test_marker_guard_advises_never_blocks() -> None:
+    rc, out = _drive(
+        marker_guard,
+        {
+            "tool_name": "Write",
+            "tool_input": {"file_path": "src/foo.ts", "content": "// PH3-B7: guard"},
+        },
+    )
+    assert rc == 0, rc
+    hso = json.loads(out)["hookSpecificOutput"]
+    assert hso["hookEventName"] == "PreToolUse", hso
+    assert isinstance(hso["additionalContext"], str) and hso["additionalContext"]
+    rc2, out2 = _drive(
+        marker_guard,
+        {
+            "tool_name": "Write",
+            "tool_input": {
+                "file_path": "k8s/backup-cronjob.yaml",
+                "content": "          # Step 1: dump",
+            },
+        },
+    )
+    assert rc2 == 0 and out2.strip() == "", out2
+
+
+def test_precompact_output_schema_safe() -> None:
+    """SessionEnd/PreCompact emit no hookSpecificOutput (absent from the CC 2.1.x output union)."""
+    pr = _load_hyphen("precompact_roll", "precompact-roll.py")
+    events = [
+        {
+            "sessionId": "s9",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "TaskCreate",
+                        "id": "x1",
+                        "input": {
+                            "subject": "A",
+                            "description": "A",
+                            "activeForm": "Doing A",
+                        },
+                    }
+                ]
+            },
+        },
+        {
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "x1",
+                        "content": "Task #1 created successfully: A",
+                    }
+                ]
+            }
+        },
+    ]
+    with tempfile.TemporaryDirectory() as d:
+        dp = Path(d)
+        tpath = dp / "t.jsonl"
+        tpath.write_text("\n".join(json.dumps(e) for e in events) + "\n")
+        payload = {
+            "transcript_path": str(tpath),
+            "session_id": "s9",
+            "hook_event_name": "SessionEnd",
+        }
+        cwd = Path.cwd()
+        os.chdir(dp)
+        try:
+            rc, out = _drive(pr, payload)
+        finally:
+            os.chdir(cwd)
+        rolls = list((dp / ".scratchpad" / ".tasklist-roll").glob("*.tlr"))
+    assert rc == 0, rc
+    assert rolls, "tlr side-effect must be written"
+    obj = json.loads(out)
+    assert "hookSpecificOutput" not in obj, obj
+    assert set(obj) <= {
+        "systemMessage",
+        "continue",
+        "suppressOutput",
+        "stopReason",
+        "decision",
+        "reason",
+        "terminalSequence",
+    }, obj
+    assert "systemMessage" in obj, obj
+
+
 def _run() -> int:
-    tests = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
+    tests = [
+        v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)
+    ]
     failed = 0
     for t in tests:
         try:
