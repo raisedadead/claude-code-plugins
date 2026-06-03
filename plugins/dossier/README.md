@@ -141,7 +141,8 @@ Plugin auto-detects + uses (graceful fallback if absent):
 | `context-mode` MCP | Batch reads for multi-repo scans                                  |
 | `cavemem` MCP      | Cross-session memory augmentation for `ds:status` + `ds:backprop` |
 | `caveman` skill    | Compressed encoding in §S + DOSSIER.md prose                      |
-| `fastedit` MCP     | Surgical DOSSIER.md mutations                                     |
+| `fastedit` MCP     | Surgical edits to SOURCE task files (`ds:build` step 6)           |
+| `context7` MCP     | Current library API docs before coding (`ds:build` PIN CHECK)     |
 
 None required. See `ADAPTERS.md` for routing rules.
 
@@ -150,34 +151,42 @@ None required. See `ADAPTERS.md` for routing rules.
 ```
 plugins/dossier/
 ├── .claude-plugin/plugin.json
+├── CHANGELOG.md                   # dated change log (commit-SHA versioning mode)
 ├── hooks/
-│   ├── hooks.json
-│   ├── session-start.sh           # INDEX regen + §S tail injection
-│   ├── lib-regen-index.sh         # derived INDEX from DOSSIER walk
+│   ├── hooks.json                 # SessionStart, PreToolUse, PreCompact, SessionEnd
+│   ├── session-start.sh           # decision-first INDEX/§T/§X injection + multi-live systemMessage
+│   ├── lib-regen-index.sh         # derived INDEX from DOSSIER walk (renders paused)
+│   ├── lib-header-state.sh        # atomic header state flip (live/done/paused)
+│   ├── lib-row-flip.sh            # §T/§B row state (+ cite) flip
+│   ├── lib-s-append.sh            # §S append (timestamped, blank-wrapped)
+│   ├── lib-x-refresh.sh           # §X repo state refresh
 │   ├── lib-clear-stale-locks.sh   # 30min / dead-pid auto-clear
-│   ├── marker_guard.py            # PreToolUse Edit|Write|MultiEdit phase-marker blocker (exit 2)
-│   ├── test_marker_guard.sh       # marker_guard smoke test
-│   ├── verify_hook.py             # PreToolUse Edit|Write|MultiEdit freshness scan (non-blocking)
+│   ├── marker_guard.py            # PreToolUse phase-marker blocker (exit 2)
+│   ├── verify_hook.py             # PreToolUse freshness scan (non-blocking)
 │   ├── verify_sweep.py            # scan existing files (used by ds:check)
-│   ├── verify_lib.py              # generic check functions + HTTP cache
-│   ├── verify_patterns.py         # 11 broad patterns dispatching to authorities
-│   ├── verify_authorities.py      # registry: 140 EOL aliases + 31 AI models + Docker map
+│   ├── verify_lib.py              # check fns + latest_version/latest_eol + HTTP cache
+│   ├── verify_patterns.py         # broad patterns dispatching to authorities
+│   ├── verify_authorities.py      # registry: 140 EOL aliases + 34 Docker images + 31 AI models
+│   ├── resolve_pins.py            # proactive latest-version + EOL resolver (ds:new / ds:build)
 │   ├── roll_lib.py                # transcript parser + .tlr writer/reader
-│   └── precompact-roll.py         # PreCompact auto-dump TaskList → .tlr
+│   ├── precompact-roll.py         # PreCompact + SessionEnd auto-dump TaskList → .tlr
+│   ├── test_python.py             # stdlib tests: roll round-trip, transcript, verify offline, pins
+│   ├── test_marker_guard.sh       # marker_guard smoke test
+│   └── test_lib_dossier_edit.sh   # lib-*.sh helper tests (incl lib-header-state)
 ├── agents/
 │   └── dossier-scout.md           # read-only investigator
 ├── skills/
-│   ├── new/SKILL.md
-│   ├── status/SKILL.md
-│   ├── build/SKILL.md
+│   ├── new/SKILL.md               # scaffold + clarify gate + pin-seed
+│   ├── status/SKILL.md            # the driver: TaskList hydrate + decision-first sit-rep
+│   ├── build/SKILL.md             # TDD engine + --auto autonomous loop
 │   ├── check/SKILL.md
 │   ├── backprop/SKILL.md
-│   ├── close/SKILL.md
-│   ├── migrate/SKILL.md
-│   ├── verify/SKILL.md            # /dossier:verify model-driven fact-check
+│   ├── close/SKILL.md             # --complete | --successor | --abandon
+│   ├── migrate/SKILL.md           # legacy 4-file + --from-ck
+│   ├── verify/SKILL.md            # /dossier:verify + references/authorities.md
 │   └── roll/SKILL.md              # /dossier:roll {dump|restore|list}
 ├── FORMAT.md                      # caveman pipe-table encoding spec
-├── ADAPTERS.md                    # host-env detection + routing
+├── ADAPTERS.md                    # host-env detection + routing (rtk/cavemem/caveman/fastedit/context7)
 └── README.md                      # you are here
 ```
 
