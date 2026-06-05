@@ -20,7 +20,7 @@ Creates `.scratchpad/dossier/<YYYY-MM-DD>-<slug>/DOSSIER.md` per `FORMAT.md`. Th
 Run once. Cache for invocation.
 
 - `command -v rtk &>/dev/null && echo HAS_RTK`
-- check tool namespace for `mcp__context-mode__*`, `mcp__cavemem__*`, `mcp__fastedit__*`
+- check tool namespace for `mcp__cavemem__*`, `mcp__fastedit__*`
 - check available skills for `caveman:*`, `ck:*`
 
 See `plugins/dossier/ADAPTERS.md` for routing rules. Never error if absent.

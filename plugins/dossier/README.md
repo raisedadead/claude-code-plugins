@@ -135,14 +135,14 @@ Emergency bypass: `DOSSIER_MARKER_GUARD=off`, with rationale logged in the live 
 
 Plugin auto-detects + uses (graceful fallback if absent):
 
-| Adapter            | Use                                                               |
-| ------------------ | ----------------------------------------------------------------- |
-| `rtk` CLI          | Token compression on verbose Bash output                          |
-| `context-mode` MCP | Batch reads for multi-repo scans                                  |
-| `cavemem` MCP      | Cross-session memory augmentation for `ds:status` + `ds:backprop` |
-| `caveman` skill    | Compressed encoding in §S + DOSSIER.md prose                      |
-| `fastedit` MCP     | Surgical edits to SOURCE task files (`ds:build` step 6)           |
-| `context7` MCP     | Current library API docs before coding (`ds:build` PIN CHECK)     |
+| Adapter         | Use                                                               |
+| --------------- | ----------------------------------------------------------------- |
+| `rtk` CLI       | Token compression on verbose Bash output                          |
+| `Workflow` tool | Deterministic scout fan-out for >2-repo scans (native harness)    |
+| `cavemem` MCP   | Cross-session memory augmentation for `ds:status` + `ds:backprop` |
+| `caveman` skill | Compressed encoding in §S + DOSSIER.md prose                      |
+| `fastedit` MCP  | Surgical edits to SOURCE task files (`ds:build` step 6)           |
+| `context7` MCP  | Current library API docs before coding (`ds:build` PIN CHECK)     |
 
 None required. See `ADAPTERS.md` for routing rules.
 

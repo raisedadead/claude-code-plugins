@@ -8,14 +8,14 @@ ______________________________________________________________________
 
 ## Adapter matrix
 
-| Adapter            | Detection                                                        | If present                                                    | If absent              |
-| ------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------- |
-| `rtk` CLI          | `command -v rtk`                                                 | see §rtk below                                                | emit raw commands      |
-| `context-mode` MCP | tool namespace has `mcp__context-mode__ctx_execute`              | use `ctx_batch_execute` for multi-repo scans                  | parallel Bash + Read   |
-| `cavemem` MCP      | tool namespace has `mcp__cavemem__search`                        | augment §S tail with cross-session observations               | §S only                |
-| `caveman` skill    | available-skills list has `caveman:caveman` or `ck:caveman`      | encourage caveman encoding in writes                          | plain markdown         |
-| `fastedit` MCP     | tool namespace has `mcp__fastedit__fast_edit`                    | surgical edits to SOURCE task files; read via fast_search     | Edit tool              |
-| `context7` MCP     | tool namespace has `mcp__claude_ai_Context7__resolve-library-id` | ground CURRENT library API docs before coding (see §context7) | WebFetch official docs |
+| Adapter         | Detection                                                        | If present                                                    | If absent              |
+| --------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------- |
+| `rtk` CLI       | `command -v rtk`                                                 | see §rtk below                                                | emit raw commands      |
+| `cavemem` MCP   | tool namespace has `mcp__cavemem__search`                        | augment §S tail with cross-session observations               | §S only                |
+| `caveman` skill | available-skills list has `caveman:caveman` or `ck:caveman`      | encourage caveman encoding in writes                          | plain markdown         |
+| `fastedit` MCP  | tool namespace has `mcp__fastedit__fast_edit`                    | surgical edits to SOURCE task files; read via fast_search     | Edit tool              |
+| `context7` MCP  | tool namespace has `mcp__claude_ai_Context7__resolve-library-id` | ground CURRENT library API docs before coding (see §context7) | WebFetch official docs |
+| `Workflow` tool | tool namespace has `Workflow` (native harness)                   | scout fan-out when targets > 2 (see §workflow)                | parallel Agent spawns  |
 
 ## §rtk — token-compression wrapper
 
@@ -55,24 +55,6 @@ Routing examples:
 ```
 
 If `HAS_RTK=0`: emit raw. Accept verbose output.
-
-## §context-mode — batch read primitive
-
-MCP server providing `ctx_execute` / `ctx_search` / `ctx_batch_execute` / `ctx_fetch_and_index` tools. Cuts tool-call overhead when scanning many files / running many commands.
-
-Detection: presence of `mcp__context-mode__*` in available tools.
-
-If present, prefer:
-
-| Use case                     | Without ctx           | With ctx                   |
-| ---------------------------- | --------------------- | -------------------------- |
-| Multi-repo `git status` scan | parallel Bash N calls | `ctx_batch_execute` 1 call |
-| Multi-file Read sweep        | parallel Read N calls | `ctx_search` 1 call        |
-| Index project tree           | `find` + Read         | `ctx_fetch_and_index`      |
-
-`ds:check` + `ds:migrate` benefit most (multi-repo scans). Other skills use raw Bash.
-
-If absent: parallel Bash / Read calls.
 
 ## §cavemem — cross-session memory
 
@@ -115,6 +97,37 @@ If absent: `WebFetch` the library's official docs URL (the `ds:verify` conventio
 
 Do NOT use the context7 HTTP API as the default path — it requires a paid `ctx7sk-` key (no-new-secret rule). Opt-in only if the operator has exported `CONTEXT7_API_KEY`.
 
+## §workflow — deterministic scout fan-out
+
+Native harness tool (not MCP). Detection: tool namespace has `Workflow`.
+
+Scope: **research fan-out ONLY** — `ds:check` step 2 (§V/§T/§X scan), `ds:migrate` step 3 (repo inspection), `ds:backprop` root-cause research. NEVER the `ds:build` loop: Workflows run in background with no mid-run steer and no orchestrator FS/shell — breaks TDD-commit-per-flip + §S resume.
+
+Route:
+
+- targets ≤ 2 OR tool absent → parallel Agent spawns (`subagent_type: dossier-scout`). Workflow setup overhead not worth it.
+- targets > 2 → one Workflow run. Skill-instructed invocation = explicit operator opt-in per the Workflow tool contract.
+
+Script template — skill prepares `args.missions` = `[{repo, mission}]` (mission text per skill, DOSSIER.md pasted in where the skill's template says so):
+
+```js
+export const meta = {name: 'ds-scout-fanout', description: 'parallel dossier-scout missions', phases: [{title: 'Scan'}]}
+const ROW = {type: 'object', properties: {
+  repo: {type: 'string'}, kind: {type: 'string'}, id: {type: 'string'},
+  status: {type: 'string'}, detail: {type: 'string'}},
+  required: ['repo', 'kind', 'id', 'status']}
+const FINDINGS = {type: 'object', properties: {findings: {type: 'array', items: ROW}}, required: ['findings']}
+const width = budget.total ? Math.max(2, Math.floor(budget.remaining() / 80_000)) : args.missions.length
+if (width < args.missions.length) log(`budget cap: ${width}/${args.missions.length} repos — dropped: ${args.missions.slice(width).map(m => m.repo).join(' ')}`)
+const out = await pipeline(args.missions.slice(0, width), m =>
+  agent(m.mission, {label: `scout:${m.repo}`, phase: 'Scan', agentType: 'dossier-scout', schema: FINDINGS}))
+return out.filter(Boolean).flatMap(o => o.findings)
+```
+
+Wins vs raw Agent spawns: schema-validated rows (no prose parsing), `pipeline()` (no barrier idle), budget-gated width with logged drops (no silent caps), `resumeFromRunId` (crashed sweep resumes — finished scouts return cached).
+
+If absent: parallel Agent calls, one per repo, identical missions.
+
 ## Detection scaffold (skill body preamble)
 
 Each `ds:*` skill begins with:
@@ -124,7 +137,7 @@ Each `ds:*` skill begins with:
 
 Run:
 - `command -v rtk &>/dev/null && echo HAS_RTK=1`
-- Check tool namespace for: `mcp__context-mode__ctx_execute`, `mcp__cavemem__search`, `mcp__fastedit__fast_edit`
+- Check tool namespace for: `mcp__cavemem__search`, `mcp__fastedit__fast_edit`, `Workflow`
 - Check available skills for: `caveman:caveman`, `ck:caveman`
 
 Cache results for this invocation. Route commands per ADAPTERS.md tables.
