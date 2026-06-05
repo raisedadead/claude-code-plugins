@@ -93,7 +93,7 @@ Format: bullets, one decision per line. Cite RFC / discussion where relevant.
 - Valkey AUTH via sops envelope `infra-secrets/artemis/valkey-creds.enc`.
 - TTL = 60s default, override via `AUTH_CACHE_TTL_S` env.
 - Backward-compat: if Valkey unreachable, fall through to redis. No hard dep.
-- Host-env adapters (auto-detect, see §11): rtk, context-mode, cavemem.
+- Host-env adapters (auto-detect, see §11): rtk, cavemem.
 ```
 
 **Pinned toolchain (proactive verify):** `ds:new` / `ds:build` resolve current EOL/LTS via `hooks/resolve_pins.py eol:<slug>` and record the result here as a bullet, e.g. `Go 1.26 (latest stable — endoflife.date/go)`. Write the resolved version, not a remembered one — these bullets are the model's ground truth.

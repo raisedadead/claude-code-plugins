@@ -19,7 +19,7 @@ TDD covenant: RED → GREEN → refactor. One commit per `x`-flip. Resumable.
 
 ### 0. Detect host env
 
-Per ADAPTERS.md. Note `HAS_RTK`, `HAS_CTX`, `HAS_FASTEDIT`.
+Per ADAPTERS.md. Note `HAS_RTK`, `HAS_FASTEDIT`.
 
 DOSSIER.md writes use the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` for §T flips, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` for §S appends. Always present, no detection. The §S code-fence examples below show the full line — pass only the text **after** the timestamp (`lib-s-append.sh` prepends it). `HAS_FASTEDIT` governs SOURCE code edits in step 6 only, never DOSSIER.md.
 
@@ -125,7 +125,7 @@ For each repo in §X, refresh the row via `$CLAUDE_PLUGIN_ROOT/hooks/lib-x-refre
 
 The `notes` cell is operator free-text — `lib-x-refresh.sh` never touches it. Edit notes manually if they've gone stale.
 
-For a fast multi-repo path-resolution sweep before the loop, use `mcp__context-mode__ctx_batch_execute` if `HAS_CTX=1`. The per-row write itself stays with `lib-x-refresh.sh`.
+Multi-repo path-resolution sweep before the loop: parallel Bash calls. The per-row write itself stays with `lib-x-refresh.sh`.
 
 Append §S (one entry summarising the sweep):
 
@@ -216,4 +216,4 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 ## Cite
 
 - FORMAT.md §8 (§T format), §10 (§X format), §11 (§S format), §14 (locks), §15 (atomic writes), §16 (resume)
-- ADAPTERS.md §rtk, §context-mode, §fastedit
+- ADAPTERS.md §rtk, §fastedit

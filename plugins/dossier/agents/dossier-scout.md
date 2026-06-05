@@ -40,7 +40,6 @@ If the mission **requires** a denied op (rare), or you are unsure whether a comm
 Detect on entry (see `plugins/dossier/ADAPTERS.md`):
 
 - `rtk` CLI: if present + verbose Bash op, prefix `rtk summary` or pipe `| rtk err`.
-- `context-mode` MCP (`mcp__context-mode__ctx_execute` etc.): prefer `ctx_batch_execute` for multi-repo scans.
 - `cavemem` MCP (`mcp__cavemem__search`): augment historical context only if mission asks for it.
 
 Never require any adapter. Silent fallback if absent.

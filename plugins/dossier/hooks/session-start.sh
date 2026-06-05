@@ -12,6 +12,26 @@ INDEX_FILE="${SCRATCHPAD}/INDEX.md"
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 
+HOOK_INPUT=""
+[[ -t 0 ]] || HOOK_INPUT=$(cat 2>/dev/null || true)
+hook_src=""
+hook_cur_title=""
+if [[ -n "${HOOK_INPUT}" ]]; then
+	if command -v jq &>/dev/null; then
+		hook_src=$(jq -r '.source // ""' <<<"${HOOK_INPUT}" 2>/dev/null || true)
+		hook_cur_title=$(jq -r '.session_title // ""' <<<"${HOOK_INPUT}" 2>/dev/null || true)
+	elif command -v python3 &>/dev/null; then
+		IFS=$'\t' read -r hook_src hook_cur_title < <(printf '%s' "${HOOK_INPUT}" | python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    d = {}
+print(str(d.get("source") or ""), str(d.get("session_title") or ""), sep="\t")
+' 2>/dev/null) || true
+	fi
+fi
+
 "${PLUGIN_ROOT}/hooks/lib-regen-index.sh" "${SCRATCHPAD}" 2>/dev/null || true
 "${PLUGIN_ROOT}/hooks/lib-clear-stale-locks.sh" "${DOSSIER_DIR}" 2>/dev/null || true
 
@@ -42,6 +62,15 @@ if [[ -f "${INDEX_FILE}" ]]; then
 	live_count=$(awk -F'|' 'NR>2 && $4 ~ /live/ {n++} END{print n+0}' "${INDEX_FILE}" 2>/dev/null || echo 0)
 	live_all=$(awk -F'|' 'NR>2 && $4 ~ /live/ {gsub(/^[ \t]+|[ \t]+$/,"",$2); gsub(/^[ \t]+|[ \t]+$/,"",$3); printf "%s-%s ", $2, $3}' "${INDEX_FILE}" 2>/dev/null || true)
 fi
+
+session_title_out=""
+case "${hook_src}" in
+startup | resume)
+	if [[ -z "${hook_cur_title}" && -n "${live_slug}" ]]; then
+		session_title_out="${live_slug}"
+	fi
+	;;
+esac
 
 sys_msg=""
 if [[ "${live_count}" -gt 1 ]]; then
@@ -122,16 +151,22 @@ fi
 ctx_str=$(printf '%s\n' "${ctx_lines[@]}")
 
 if command -v jq &>/dev/null; then
-	jq -n --arg ctx "${ctx_str}" --arg sys "${sys_msg}" '
-    {continue: true, hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}
+	jq -n --arg ctx "${ctx_str}" --arg sys "${sys_msg}" --arg title "${session_title_out}" '
+    {continue: true, hookSpecificOutput: ({hookEventName: "SessionStart", additionalContext: $ctx}
+      + (if $title != "" then {sessionTitle: $title} else {} end))}
     + (if $sys != "" then {systemMessage: $sys} else {} end)
   '
 else
 	esc=$(printf '%s' "${ctx_str}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '%s' "${ctx_str}" | sed 's/\\/\\\\/g; s/"/\\"/g' | awk 'BEGIN{ORS="\\n"}{print}')
+	title_frag=""
+	if [[ -n "${session_title_out}" ]]; then
+		title_esc=$(printf '%s' "${session_title_out}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "${session_title_out}")
+		title_frag=", \"sessionTitle\": ${title_esc}"
+	fi
 	if [[ -n "${sys_msg}" ]]; then
 		sys_esc=$(printf '%s' "${sys_msg}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "${sys_msg}")
-		printf '{"continue": true, "systemMessage": %s, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s}}\n' "${sys_esc}" "${esc}"
+		printf '{"continue": true, "systemMessage": %s, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s%s}}\n' "${sys_esc}" "${esc}" "${title_frag}"
 	else
-		printf '{"continue": true, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s}}\n' "${esc}"
+		printf '{"continue": true, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s%s}}\n' "${esc}" "${title_frag}"
 	fi
 fi

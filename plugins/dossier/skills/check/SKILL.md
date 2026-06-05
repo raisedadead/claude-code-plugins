@@ -12,7 +12,7 @@ Read-only. Validates DOSSIER.md against reality. Returns severity-tagged violati
 
 ### 0. Detect host env
 
-Per ADAPTERS.md. Note `HAS_CTX` (parallel scout dispatch benefits).
+Per ADAPTERS.md. Note `Workflow` tool presence (scout fan-out routing, §workflow).
 
 ### 1. Locate
 
@@ -41,7 +41,9 @@ Output: caveman pipe-table. One row per finding.
 <paste DOSSIER.md here>
 ```
 
-Spawn one `dossier-scout` per repo, in parallel. Use Agent tool with `subagent_type: dossier-scout`.
+Spawn one `dossier-scout` per repo, in parallel. Use Agent tool with `subagent_type: dossier:dossier-scout`.
+
+§X repos > 2 AND `Workflow` tool present → route the same missions through the §workflow fan-out (ADAPTERS.md): schema-validated rows, budget-gated width, crash-resumable. Else: Agent spawns above.
 
 ### 2a. Verify-layer sweep (existing content)
 
@@ -131,5 +133,5 @@ Exception: if `lib-regen-index.sh` is run as part of Vm.7 dry-check, that's a de
 ## Cite
 
 - FORMAT.md §17 (Vm rules)
-- ADAPTERS.md §context-mode
+- ADAPTERS.md §workflow
 - agents/dossier-scout.md (subagent contract)

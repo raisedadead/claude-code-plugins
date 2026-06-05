@@ -2,6 +2,7 @@
 name: migrate
 description: Convert legacy 4-file dossiers (PLAN+SPEC+AUDIT+closeout/) to single-file DOSSIER.md format. Claude-driven per-repo (handles arbitrary shapes). Spawns dossier-scout subagents in parallel for inspection. Idempotent via per-repo marker. Operator confirms each repo before mutation. Invoke when the user says "ds:migrate", "migrate dossiers", "convert legacy dossier", "migrate from ck/cavekit/SPEC.md", or after installing the plugin to upgrade existing repos.
 argument-hint: [<repo-path> | --all | --gc]
+disable-model-invocation: true
 ---
 
 # ds:migrate — legacy → v2 dossier conversion
@@ -33,7 +34,7 @@ Flow: scout reads `SPEC.md` → propose DOSSIER.md at `.scratchpad/dossier/<date
 
 ### 0. Detect host env
 
-Per ADAPTERS.md. `HAS_CTX=1` is high-leverage here (parallel scout dispatch).
+Per ADAPTERS.md. `Workflow` tool is high-leverage here (parallel scout dispatch, §workflow).
 
 ### 1. Gather targets
 
@@ -85,7 +86,7 @@ Output: caveman pipe-table report.
 DO NOT MODIFY any files. Read-only.
 ```
 
-Use `mcp__context-mode__ctx_batch_execute` for scout dispatch if `HAS_CTX=1`. Else parallel Agent tool calls (one per repo).
+Dispatch routing: repos > 2 AND `Workflow` tool present → §workflow fan-out (ADAPTERS.md). Else parallel Agent tool calls (one per repo).
 
 ### 4. Aggregate + propose
 
@@ -179,5 +180,5 @@ Plugin does NOT auto-uninstall. After all targets show `done`:
 ## Cite
 
 - FORMAT.md §1 (file location), §2 (section order), §15 (atomic writes)
-- ADAPTERS.md §context-mode
+- ADAPTERS.md §workflow
 - agents/dossier-scout.md

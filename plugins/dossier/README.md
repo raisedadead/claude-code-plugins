@@ -87,7 +87,7 @@ Locks at `.scratchpad/dossier/<slug>/.ds-lock` prevent concurrent mutation. Stal
 
 ## Subagent
 
-Plugin ships `dossier-scout` — a read-only investigator. Used by `/dossier:check` (parallel drift scans per repo) and `/dossier:migrate` (per-repo inspection). Caveman-compressed output. Refuses all writes (hard deny list on Bash patterns + tool restrictions). Spawn directly via `Agent({subagent_type: "dossier-scout", ...})` if you want a one-off read-only sweep.
+Plugin ships `dossier-scout` — a read-only investigator. Used by `/dossier:check` (parallel drift scans per repo) and `/dossier:migrate` (per-repo inspection). Caveman-compressed output. Refuses all writes (hard deny list on Bash patterns + tool restrictions). Spawn directly via `Agent({subagent_type: "dossier:dossier-scout", ...})` if you want a one-off read-only sweep.
 
 ## Verify-layer
 
@@ -135,14 +135,14 @@ Emergency bypass: `DOSSIER_MARKER_GUARD=off`, with rationale logged in the live 
 
 Plugin auto-detects + uses (graceful fallback if absent):
 
-| Adapter            | Use                                                               |
-| ------------------ | ----------------------------------------------------------------- |
-| `rtk` CLI          | Token compression on verbose Bash output                          |
-| `context-mode` MCP | Batch reads for multi-repo scans                                  |
-| `cavemem` MCP      | Cross-session memory augmentation for `ds:status` + `ds:backprop` |
-| `caveman` skill    | Compressed encoding in §S + DOSSIER.md prose                      |
-| `fastedit` MCP     | Surgical edits to SOURCE task files (`ds:build` step 6)           |
-| `context7` MCP     | Current library API docs before coding (`ds:build` PIN CHECK)     |
+| Adapter         | Use                                                               |
+| --------------- | ----------------------------------------------------------------- |
+| `rtk` CLI       | Token compression on verbose Bash output                          |
+| `Workflow` tool | Deterministic scout fan-out for >2-repo scans (native harness)    |
+| `cavemem` MCP   | Cross-session memory augmentation for `ds:status` + `ds:backprop` |
+| `caveman` skill | Compressed encoding in §S + DOSSIER.md prose                      |
+| `fastedit` MCP  | Surgical edits to SOURCE task files (`ds:build` step 6)           |
+| `context7` MCP  | Current library API docs before coding (`ds:build` PIN CHECK)     |
 
 None required. See `ADAPTERS.md` for routing rules.
 
