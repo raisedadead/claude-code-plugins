@@ -12,7 +12,8 @@ INDEX_FILE="${SCRATCHPAD}/INDEX.md"
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
 
-HOOK_INPUT=$(cat 2>/dev/null || true)
+HOOK_INPUT=""
+[[ -t 0 ]] || HOOK_INPUT=$(cat 2>/dev/null || true)
 hook_src=""
 hook_cur_title=""
 if [[ -n "${HOOK_INPUT}" ]]; then
