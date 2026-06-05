@@ -11,6 +11,10 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 - SessionStart hook emits `sessionTitle` set to the live dossier slug — only on `startup`/`resume` sources, and only when no title is already set (never clobbers `--name`/`/rename` or other title-emitting hooks); fails open on malformed input or missing jq/python3. New `hooks/test_session_start.sh` covers source gating, title precedence, and fail-open paths.
 - `§workflow` adapter (ADAPTERS.md): `ds:check`/`ds:migrate` route scout missions through the native Workflow tool when scanning >2 repos — schema-validated findings, pipelined dispatch, budget-gated width, crash-resumable. Parallel Agent spawns remain the default at ≤2 repos and on installs without the tool. `ds:build` stays Workflow-free by design.
 
+### Changed
+
+- `ds:close` and `ds:migrate` are now manual-only (`disable-model-invocation: true`): the model can never auto-fire archive/convert mutations; invoke via `/dossier:close` and `/dossier:migrate`.
+
 ### Removed
 
 - `context-mode` adapter purged from ADAPTERS.md, README, FORMAT.md, the scout agent, and all skills — phantom dependency; its uses were already covered by the documented native fallbacks (parallel Bash/Read, Agent/Workflow fan-out). Standing rule: adapters only where no native harness equivalent exists.
