@@ -41,7 +41,7 @@ Output: caveman pipe-table. One row per finding.
 <paste DOSSIER.md here>
 ```
 
-Spawn one `dossier-scout` per repo, in parallel. Use Agent tool with `subagent_type: dossier-scout`.
+Spawn one `dossier-scout` per repo, in parallel. Use Agent tool with `subagent_type: dossier:dossier-scout`.
 
 §X repos > 2 AND `Workflow` tool present → route the same missions through the §workflow fan-out (ADAPTERS.md): schema-validated rows, budget-gated width, crash-resumable. Else: Agent spawns above.
 

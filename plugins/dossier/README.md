@@ -87,7 +87,7 @@ Locks at `.scratchpad/dossier/<slug>/.ds-lock` prevent concurrent mutation. Stal
 
 ## Subagent
 
-Plugin ships `dossier-scout` — a read-only investigator. Used by `/dossier:check` (parallel drift scans per repo) and `/dossier:migrate` (per-repo inspection). Caveman-compressed output. Refuses all writes (hard deny list on Bash patterns + tool restrictions). Spawn directly via `Agent({subagent_type: "dossier-scout", ...})` if you want a one-off read-only sweep.
+Plugin ships `dossier-scout` — a read-only investigator. Used by `/dossier:check` (parallel drift scans per repo) and `/dossier:migrate` (per-repo inspection). Caveman-compressed output. Refuses all writes (hard deny list on Bash patterns + tool restrictions). Spawn directly via `Agent({subagent_type: "dossier:dossier-scout", ...})` if you want a one-off read-only sweep.
 
 ## Verify-layer
 

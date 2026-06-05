@@ -105,7 +105,7 @@ Scope: **research fan-out ONLY** — `ds:check` step 2 (§V/§T/§X scan), `ds:m
 
 Route:
 
-- targets ≤ 2 OR tool absent → parallel Agent spawns (`subagent_type: dossier-scout`). Workflow setup overhead not worth it.
+- targets ≤ 2 OR tool absent → parallel Agent spawns (`subagent_type: dossier:dossier-scout`). Workflow setup overhead not worth it.
 - targets > 2 → one Workflow run. Skill-instructed invocation = explicit operator opt-in per the Workflow tool contract.
 
 Script template — skill prepares `args.missions` = `[{repo, mission}]` (mission text per skill, DOSSIER.md pasted in where the skill's template says so):
@@ -117,10 +117,10 @@ const ROW = {type: 'object', properties: {
   status: {type: 'string'}, detail: {type: 'string'}},
   required: ['repo', 'kind', 'id', 'status']}
 const FINDINGS = {type: 'object', properties: {findings: {type: 'array', items: ROW}}, required: ['findings']}
-const width = budget.total ? Math.max(2, Math.floor(budget.remaining() / 80_000)) : args.missions.length
+const width = budget.total ? Math.max(1, Math.floor(budget.remaining() / 80_000)) : args.missions.length
 if (width < args.missions.length) log(`budget cap: ${width}/${args.missions.length} repos — dropped: ${args.missions.slice(width).map(m => m.repo).join(' ')}`)
 const out = await pipeline(args.missions.slice(0, width), m =>
-  agent(m.mission, {label: `scout:${m.repo}`, phase: 'Scan', agentType: 'dossier-scout', schema: FINDINGS}))
+  agent(m.mission, {label: `scout:${m.repo}`, phase: 'Scan', agentType: 'dossier:dossier-scout', schema: FINDINGS}))
 return out.filter(Boolean).flatMap(o => o.findings)
 ```
 
