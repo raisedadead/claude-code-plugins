@@ -39,7 +39,7 @@ else
 fi
 TAG="$(git -C "$RP" describe --tags --abbrev=0 2>/dev/null || echo '—')"
 
-TMP="${FILE}.tmp"
+TMP="$(mktemp "${FILE}.XXXXXX")"
 cleanup() { rm -f "$TMP"; }
 trap cleanup EXIT
 

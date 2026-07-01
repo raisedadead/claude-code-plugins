@@ -65,4 +65,15 @@ grep -q 'ds:reconcile' "$ARC/2026-06-05-zombie/DOSSIER.md" || fail "auto-archive
 "$RECON" "$SP"
 [[ -f "$ARC/2026-06-05-zombie/DOSSIER.md" ]] || fail "second reconcile must be idempotent"
 
+mkdir -p "$ARC/2026-05-01-inverse"
+cat >"$ARC/2026-05-01-inverse/DOSSIER.md" <<'EOF'
+`2026-05-01` · `live` · `P1/1`
+
+## §Z — Closeout
+
+complete: true
+EOF
+"$RECON" "$SP"
+[[ "$(hdr_of "$ARC/2026-05-01-inverse/DOSSIER.md")" == "done" ]] || fail "archived dir with a non-done header must be healed to done (inverse drift)"
+
 printf 'ok\n'

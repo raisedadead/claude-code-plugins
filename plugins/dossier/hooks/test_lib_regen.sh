@@ -112,4 +112,18 @@ EOF
 (cd "$WS2" && "$REGEN" .scratchpad)
 grep -qE '<!-- drift:' "$INDEX" && fail "clean tree must not emit a drift trailer"
 
+WS3="$TMP/ws3"
+SP3="$WS3/.scratchpad"
+mkdir -p "$SP3/dossier/2026-06-01-punct"
+INDEX="$SP3/INDEX.md"
+cat >"$SP3/dossier/2026-06-01-punct/DOSSIER.md" <<'EOF'
+`2026-06-01` · `live` · `P1/1`
+
+## §Z — Closeout
+
+complete: true.
+EOF
+(cd "$WS3" && "$REGEN" .scratchpad)
+[[ "$(state_of punct)" == "drift!" ]] || fail "§Z 'complete: true.' (trailing punctuation) must read closed → drift! (regen/reconcile predicate parity)"
+
 printf 'ok\n'

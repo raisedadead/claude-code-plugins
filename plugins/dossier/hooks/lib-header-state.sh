@@ -18,7 +18,7 @@ live | done | paused) ;;
 	;;
 esac
 
-TMP="${FILE}.tmp"
+TMP="$(mktemp "${FILE}.XXXXXX")"
 cleanup() { rm -f "$TMP"; }
 trap cleanup EXIT
 

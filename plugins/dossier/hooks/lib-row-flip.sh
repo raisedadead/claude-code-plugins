@@ -59,7 +59,7 @@ if [[ "$STATE" == "x" ]]; then
 	fi
 fi
 
-TMP="${FILE}.tmp"
+TMP="$(mktemp "${FILE}.XXXXXX")"
 cleanup() { rm -f "$TMP"; }
 trap cleanup EXIT
 

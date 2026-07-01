@@ -98,7 +98,7 @@ parse_dossier() {
 	# paragraphs into one) — match substring, not just line-anchored.
 	local z_section z_state z_closed=0
 	z_section=$(awk '/^## §Z/,EOF { print }' "${file}" 2>/dev/null || true)
-	if echo "${z_section}" | grep -qE '(^|[[:space:]])complete:[[:space:]]+true([[:space:]]|$)'; then
+	if echo "${z_section}" | grep -qE '(^|[[:space:]])complete:[[:space:]]+true'; then
 		z_state="complete"
 		z_closed=1
 	elif echo "${z_section}" | grep -qE '(^|[[:space:]])successor:[[:space:]]+[^[:space:]]'; then
@@ -106,7 +106,7 @@ parse_dossier() {
 		succ=$(echo "${z_section}" | grep -oE 'successor:[[:space:]]+[^[:space:]]+' | head -1 | sed 's/successor:[[:space:]]*//')
 		z_state="→${succ}"
 		z_closed=1
-	elif echo "${z_section}" | grep -qE '(^|[[:space:]])abandoned:[[:space:]]+true([[:space:]]|$)'; then
+	elif echo "${z_section}" | grep -qE '(^|[[:space:]])abandoned:[[:space:]]+true'; then
 		z_state="abandoned"
 		z_closed=1
 	else

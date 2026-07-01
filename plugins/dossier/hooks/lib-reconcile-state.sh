@@ -31,3 +31,15 @@ for d in "${DOSSIER_DIR}"/*/; do
 		"${HERE}/lib-s-append.sh" "${ARCHIVE}/${base}" "ds:reconcile — auto-archived closed dossier (§Z-backed, was not under _archive)" 2>/dev/null || true
 	fi
 done
+
+if [[ -d "${ARCHIVE}" ]]; then
+	for a in "${ARCHIVE}"/*/; do
+		[[ -d "${a}" ]] || continue
+		adoss="${a}DOSSIER.md"
+		[[ -f "${adoss}" ]] || continue
+		ahdr=$(awk '/^`.*` · `.*` · / { n = split($0, p, "`"); gsub(/^[ \t]+|[ \t]+$/, "", p[4]); print p[4]; exit }' "${adoss}")
+		if [[ "${ahdr}" != "done" ]]; then
+			"${HERE}/lib-header-state.sh" "${a%/}" "done" 2>/dev/null || true
+		fi
+	done
+fi

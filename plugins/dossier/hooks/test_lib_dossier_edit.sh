@@ -92,7 +92,7 @@ if "$FLIP" "$D" T99 x 2>/dev/null; then fail "missing id should error"; fi
 
 if "$FLIP" "$D" T1 z 2>/dev/null; then fail "bad state should error"; fi
 
-[[ -z "$(find "$D" -name '*.tmp' 2>/dev/null)" ]] || fail "flip left .tmp orphan"
+[[ -z "$(find "$D" -name 'DOSSIER.md.*' 2>/dev/null)" ]] || fail "flip left .tmp orphan"
 
 if "$FLIP" "$D" B1 x '[abc]' 2>/dev/null; then fail "flip must refuse §B ids (data-loss guard)"; fi
 
@@ -139,7 +139,7 @@ printf '## §S — Rolling status log\n\n2026-06-01 10:00 ds:new — x\n' >"$D3/
 "$APPEND" "$D3" "ds:check — drift=0"
 grep -q 'ds:check — drift=0' "$D3/DOSSIER.md" || fail "append-EOF fallback failed"
 
-[[ -z "$(find "$D2" -name '*.tmp' 2>/dev/null)" ]] || fail "append left .tmp orphan"
+[[ -z "$(find "$D2" -name 'DOSSIER.md.*' 2>/dev/null)" ]] || fail "append left .tmp orphan"
 
 HSTATE="$SCRIPT_DIR/lib-header-state.sh"
 hdr_state() {
@@ -162,7 +162,7 @@ mkdir -p "$D4b"
 printf '# x\n\nno meta line here\n' >"$D4b/DOSSIER.md"
 if "$HSTATE" "$D4b" paused 2>/dev/null; then fail "header-state no-meta should error"; fi
 
-[[ -z "$(find "$D4" -name '*.tmp' 2>/dev/null)" ]] || fail "header-state left .tmp orphan"
+[[ -z "$(find "$D4" -name 'DOSSIER.md.*' 2>/dev/null)" ]] || fail "header-state left .tmp orphan"
 
 command -v git >/dev/null || {
 	printf 'ok (git absent, §X refresh skipped)\n'
@@ -205,6 +205,6 @@ grep -E '^\| +myorg/two ' "$DFX" | grep -q 'no-upstream' || fail "x-refresh no-u
 
 if "$XREFRESH" "$DX" "myorg/absent" "$REPO" 2>/dev/null; then fail "x-refresh missing label should error"; fi
 
-[[ -z "$(find "$DX" -name '*.tmp' 2>/dev/null)" ]] || fail "x-refresh left .tmp orphan"
+[[ -z "$(find "$DX" -name 'DOSSIER.md.*' 2>/dev/null)" ]] || fail "x-refresh left .tmp orphan"
 
 printf 'ok\n'
