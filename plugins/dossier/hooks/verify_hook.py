@@ -13,6 +13,7 @@ Operator escape: `# verify-skip: <ruleName>` on a line suppresses that rule
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -52,7 +53,12 @@ def _scope_ok(scope: str, path: str) -> bool:
         return path.endswith(".json")
     if scope == "md":
         return path.endswith(".md")
-    return True
+    return False
+
+
+def _is_dossier_path(path: str) -> bool:
+    posix = Path(path).as_posix()
+    return ".scratchpad/" in posix or Path(path).name in {"DOSSIER.md", "PLAN.md", "SPEC.md"}
 
 
 _SKIP_LINE = re.compile(r"#\s*verify-skip:\s*([\w,-]+)")
@@ -70,9 +76,14 @@ def _skip_set(content: str) -> set[str]:
 
 
 def main() -> int:
+    os.environ["DOSSIER_VERIFY_CACHE_ONLY"] = "1"
+
     try:
         payload = json.loads(sys.stdin.read())
     except json.JSONDecodeError:
+        return 0
+
+    if not isinstance(payload, dict):
         return 0
 
     tool_name = payload.get("tool_name", "")
@@ -82,6 +93,9 @@ def main() -> int:
     tool_input = payload.get("tool_input", {}) or {}
     path, content = _extract(tool_input, tool_name)
     if not content:
+        return 0
+
+    if _is_dossier_path(path):
         return 0
 
     skipped = _skip_set(content)

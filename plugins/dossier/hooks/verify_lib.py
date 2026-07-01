@@ -76,7 +76,7 @@ def load_state() -> set[str]:
 
 def save_state(fired: set[str]) -> None:
     p = state_file()
-    tmp = p.with_suffix(p.suffix + ".tmp")
+    tmp = p.with_name(f"{p.name}.{os.getpid()}.tmp")
     tmp.write_text(json.dumps({"fired": sorted(fired)}))
     tmp.replace(p)
 
@@ -93,6 +93,9 @@ def http_cached(url: str, ttl_s: int = CACHE_TTL_DEFAULT):
                 return entry["data"]
         except (json.JSONDecodeError, KeyError, OSError):
             pass
+
+    if os.environ.get("DOSSIER_VERIFY_CACHE_ONLY"):
+        return None
 
     try:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})

@@ -190,6 +190,28 @@ def test_verify_offline_safe() -> None:
         verify_lib.http_cached = original  # type: ignore[assignment]
 
 
+def test_verify_cache_only_no_network() -> None:
+    import os
+    import urllib.request
+
+    orig_urlopen = urllib.request.urlopen
+    orig_cwd = os.getcwd()
+
+    def _boom(*_a, **_k):
+        raise AssertionError("cache-only mode must not hit the network")
+
+    with tempfile.TemporaryDirectory() as d:
+        os.chdir(d)
+        os.environ["DOSSIER_VERIFY_CACHE_ONLY"] = "1"
+        urllib.request.urlopen = _boom  # type: ignore[assignment]
+        try:
+            assert verify_lib.http_cached("https://example.invalid/cold") is None
+        finally:
+            urllib.request.urlopen = orig_urlopen  # type: ignore[assignment]
+            os.environ.pop("DOSSIER_VERIFY_CACHE_ONLY", None)
+            os.chdir(orig_cwd)
+
+
 def test_verify_patterns_compile() -> None:
     import re
 
