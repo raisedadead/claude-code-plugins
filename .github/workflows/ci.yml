@@ -29,6 +29,7 @@ jobs:
           bash plugins/dossier/hooks/test_session_start.sh
           bash plugins/dossier/hooks/test_lib_archive_move.sh
           bash plugins/dossier/hooks/test_lib_reconcile.sh
+          bash plugins/dossier/hooks/test_lib_clear_locks.sh
 
       - name: ruff
         run: |

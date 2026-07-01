@@ -33,13 +33,21 @@ find "${DOSSIER_DIR}" -name ".ds-lock" -type f 2>/dev/null | while read -r lock;
 	# Check age (only if pid is alive — we already cleared if dead).
 	if [[ -z "${reason}" && -n "${started}" ]]; then
 		# ISO 8601 → epoch. macOS date wants `-j -f` form.
-		started_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "${started}" "+%s" 2>/dev/null ||
-			date -d "${started}" "+%s" 2>/dev/null ||
-			echo "0")
-		age=$((NOW - started_epoch))
-		if [[ "${age}" -gt "${STALE_THRESHOLD}" ]]; then
-			reason="stale-${age}s"
+		started_epoch=$(TZ=UTC date -j -f "%Y-%m-%dT%H:%M:%SZ" "${started}" "+%s" 2>/dev/null ||
+			date -u -d "${started}" "+%s" 2>/dev/null ||
+			echo "")
+		if [[ -z "${started_epoch}" ]]; then
+			reason="unparseable-started"
+		else
+			age=$((NOW - started_epoch))
+			if [[ "${age}" -gt "${STALE_THRESHOLD}" ]]; then
+				reason="stale-${age}s"
+			fi
 		fi
+	fi
+
+	if [[ -z "${reason}" && -z "${pid}" && -z "${started}" ]]; then
+		reason="malformed-lock"
 	fi
 
 	if [[ -n "${reason}" ]]; then
