@@ -48,6 +48,9 @@ DOSSIER_ALLOW_NAMES = {
 
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit"}
 
+CANONICAL_STATES = frozenset({"live", "done", "paused"})
+HEADER_RE = re.compile(r"^`[^`]*`\s+\S+\s+`([^`]*)`")
+
 
 def hook_payload(event: dict) -> tuple[str | None, list[str]]:
     """Return (file_path, [content_chunks]) for the incoming tool call."""
@@ -81,6 +84,20 @@ def is_dossier_path(file_path: str) -> bool:
     if any(prefix in posix for prefix in DOSSIER_ALLOW_PREFIXES):
         return True
     return Path(file_path).name in DOSSIER_ALLOW_NAMES
+
+
+def check_header_token(file_path: str, chunks: list[str]) -> str | None:
+    """Return a non-canonical header state token a chunk would write, else None."""
+    if Path(file_path).name != "DOSSIER.md":
+        return None
+    for chunk in chunks:
+        for line in chunk.splitlines():
+            m = HEADER_RE.match(line)
+            if m:
+                token = m.group(1).strip()
+                if token and token not in CANONICAL_STATES:
+                    return token
+    return None
 
 
 def find_marker(chunks: list[str]) -> tuple[str, str] | None:
@@ -123,9 +140,22 @@ def main() -> int:
     except json.JSONDecodeError:
         return 0
 
+    if not isinstance(event, dict):
+        return 0
+
     file_path, chunks = hook_payload(event)
     if not file_path or not chunks:
         return 0
+
+    bad_token = check_header_token(file_path, chunks)
+    if bad_token is not None:
+        sys.stderr.write(
+            f"dossier: refusing to write non-canonical header state '{bad_token}'.\n"
+            "  canonical header states: live | done | paused.\n"
+            "  route header changes through lib-header-state.sh "
+            "(ds:close flips done; ds:status pause/resume) — not a raw Edit/Write.\n"
+        )
+        return 2
 
     if is_dossier_path(file_path):
         return 0

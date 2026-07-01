@@ -80,4 +80,21 @@ printf '{"tool_name":"Bash","tool_input":{"command":"echo PH3-B7"}}\n' |
 	CLAUDE_PROJECT_DIR="$TMP" python3 "$GUARD" >"$TMP/out" 2>"$TMP/err" || fail "non-Edit tool must exit 0"
 ! grep -q "additionalContext" "$TMP/out" || fail "non-Edit tool must be ignored"
 
+DOSS=".scratchpad/dossier/2026-01-01-foo/DOSSIER.md"
+guard Write "$DOSS" '`2026-01-01` · `sealed` · `P1/1`'
+[ "$rc" -eq 2 ] || fail "non-canonical header token 'sealed' must block (exit 2, got $rc)"
+grep -q 'non-canonical header' "$TMP/err" || fail "header block must explain on stderr"
+
+guard Write "$DOSS" '`2026-01-01` · `live` · `P1/1`'
+[ "$rc" -eq 0 ] || fail "canonical header token 'live' must pass (got $rc)"
+
+guard Edit "$DOSS" '2026-01-01 10:00 ds:build T1 START'
+[ "$rc" -eq 0 ] || fail "a normal §S edit (no header line) must not block"
+
+guard Edit "src/app.ts" '`const` · `x` · `y`'
+[ "$rc" -eq 0 ] || fail "header-shaped line in a non-DOSSIER file must not block"
+
+printf '["not","a","dict"]\n' |
+	CLAUDE_PROJECT_DIR="$TMP" python3 "$GUARD" >"$TMP/out" 2>"$TMP/err" || fail "JSON array stdin must exit 0 (dict guard)"
+
 printf 'ok\n'
