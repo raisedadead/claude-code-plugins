@@ -94,6 +94,23 @@ if "$FLIP" "$D" T1 z 2>/dev/null; then fail "bad state should error"; fi
 
 [[ -z "$(find "$D" -name '*.tmp' 2>/dev/null)" ]] || fail "flip left .tmp orphan"
 
+if "$FLIP" "$D" B1 x '[abc]' 2>/dev/null; then fail "flip must refuse §B ids (data-loss guard)"; fi
+
+D5="$TMP/citex"
+make_fixture "$D5"
+DF5="$D5/DOSSIER.md"
+if "$FLIP" "$D5" T3 x 2>/dev/null; then fail "flip .->x with empty cite must refuse (Vm.3)"; fi
+[[ "$(state_of "$DF5" T3)" == "." ]] || fail "refused cite-for-x must not mutate state"
+"$FLIP" "$D5" T3 x '[c0ffee]'
+[[ "$(state_of "$DF5" T3)" == "x" ]] || fail "cite-for-x with cite must succeed"
+
+D6="$TMP/scope"
+make_fixture "$D6"
+DF6="$D6/DOSSIER.md"
+printf '\n| T2 | decoy | fabricated-root-cause | — | — |\n' >>"$DF6"
+"$FLIP" "$D6" T2 x '[beef]'
+grep -q 'fabricated-root-cause' "$DF6" || fail "flip must not touch a T-row outside §T (section scope)"
+
 D2="$TMP/append"
 make_fixture "$D2"
 DF2="$D2/DOSSIER.md"
