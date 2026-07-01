@@ -31,6 +31,7 @@ jobs:
           bash plugins/dossier/hooks/test_lib_reconcile.sh
           bash plugins/dossier/hooks/test_lib_clear_locks.sh
           bash plugins/dossier/hooks/test_lib_ds_check.sh
+          bash plugins/dossier/hooks/test_lib_z_write.sh
 
       - name: ruff
         run: |

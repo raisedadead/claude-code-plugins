@@ -380,6 +380,7 @@ Three scripts under `$CLAUDE_PLUGIN_ROOT/hooks/` own the common DOSSIER.md mutat
 | `lib-x-refresh.sh`    | §X row `branch`/`ahead`/`tag`/`pushed` (keeps `notes`)     | `lib-x-refresh.sh <dossier-dir> "<repo-label>" <repo-path>` |
 | `lib-header-state.sh` | header `<state>` token (`live`/`done`/`paused`)            | `lib-header-state.sh <dossier-dir> <live\|done\|paused>`    |
 | `lib-archive-move.sh` | dir location (→ `_archive/`) — the `ds:close` commit-point | `lib-archive-move.sh <src-dossier-dir> <archive-parent>`    |
+| `lib-z-write.sh`      | §Z closeout block (`complete`/`successor`/`abandoned`)     | `lib-z-write.sh <dir> <kind> <value> "<summary>" "<cites>"` |
 
 - `lib-s-append.sh` **prepends the timestamp itself** (honors `DS_TS_SECONDS`) and guarantees the §11 blank-line rule. Pass only the text *after* the timestamp — `ds:build T3 START`, never `2026-… ds:build T3 START`.
 - `lib-row-flip.sh` matches the row by trimmed `id` cell **within §T only**, rewrites only the `state` (and optional `cite`) cells, exits non-zero if the id is absent from §T, if it matches more than one §T row, if the state is not one of `. ~ x ! ?`, if the id is a `B<N>` (§B has no state column — use `ds:backprop`), or if a `-> x` flip would leave the row without a `cite` (Vm.3).
@@ -403,22 +404,23 @@ Pause/resume are NOT multi-step ops: they write a single atomic §S line (`pause
 
 ## 17. Meta-invariants (enforced by skills)
 
-| id    | rule                                                                                                              |
-| ----- | ----------------------------------------------------------------------------------------------------------------- |
-| Vm.1  | every live dossier has state=live in INDEX; ≤1 dossier per slug                                                   |
-| Vm.2  | every §S entry starts with valid ISO timestamp                                                                    |
-| Vm.3  | every §T `x` row has non-empty `cite` (commit SHA / PR)                                                           |
-| Vm.4  | every closed dossier has §Z written + lives under `_archive/`                                                     |
-| Vm.5  | INDEX counts match DOSSIER §T/§B actual rows                                                                      |
-| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                                   |
-| Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                        |
-| Vm.8  | all file mutations atomic (tmp + rename)                                                                          |
-| Vm.9  | active lock blocks mutation; stale lock auto-clears                                                               |
-| Vm.10 | migrator per-repo marker `.scratchpad/.migrate-v2-done`                                                           |
-| Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                       |
-| Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                       |
-| Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt     |
-| Vm.14 | every `ds:build --auto` PAUSE carries a reason class; the autonomous loop never auto-pushes and never auto-closes |
-| Vm.X  | stale §X (>30min) warns + requires operator confirm on flip                                                       |
+| id    | rule                                                                                                                              | enforced by                                               |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Vm.1  | every live dossier has state=live in INDEX; ≤1 dossier per slug                                                                   | code — `lib-ds-check.sh` (via regen reconcile)            |
+| Vm.2  | every §S entry starts with valid ISO timestamp                                                                                    | model — `ds:check` regex                                  |
+| Vm.3  | every §T `x` row has non-empty `cite` (commit SHA / PR)                                                                           | code — `lib-row-flip.sh` refuses cite-less `x`            |
+| Vm.4  | every closed dossier has §Z written + lives under `_archive/`                                                                     | code — `lib-ds-check.sh`                                  |
+| Vm.5  | INDEX counts match DOSSIER §T/§B actual rows                                                                                      | code — `lib-regen-index.sh` derives both                  |
+| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                                                   | code — `session-start.sh` resume scan; `ds:check` awk     |
+| Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                                        | code — `lib-regen-index.sh`                               |
+| Vm.8  | all file mutations atomic (tmp + rename)                                                                                          | code — bundled `lib-*.sh` helpers                         |
+| Vm.9  | active lock blocks mutation; stale lock auto-clears                                                                               | code — `lib-clear-stale-locks.sh`                         |
+| Vm.10 | migrator per-repo marker `.scratchpad/.migrate-v2-done`                                                                           | model — `ds:migrate`                                      |
+| Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                                       | model — skill resume tables                               |
+| Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                                       | code — `session-start.sh` live-count                      |
+| Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt                     | model — `ds:status`                                       |
+| Vm.14 | every `ds:build --auto` PAUSE carries a reason class; the autonomous loop never auto-pushes and never auto-closes                 | model — `ds:build --auto`                                 |
+| Vm.15 | header token ⇔ location concordant (`done`⇔`_archive/`; `live`\|`paused`⇔direct child) AND token ∈ {live,done,paused}; else drift | code — `lib-regen-index.sh` reconcile + `lib-ds-check.sh` |
+| Vm.X  | stale §X (>30min) warns + requires operator confirm on flip                                                                       | model — `ds:build` step 8a guard                          |
 
-`ds:check` validates all Vm rules on read.
+`ds:check` runs the **code**-enforced rules deterministically (`lib-ds-check.sh` exits non-zero on any Vm.1/Vm.4/Vm.15 drift) and applies the **model**-enforced rules best-effort on read. The `enforced by` column is the honest map: a `model` row is guidance a skill follows, not a guarantee — do not read "ds:check ran" as "every Vm holds".

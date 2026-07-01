@@ -22,7 +22,7 @@ Refuses to close without `--complete`, `--successor <slug>`, OR `--abandon "<rea
 
 Per ADAPTERS.md.
 
-DOSSIER.md writes use the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` appends §S (the §S code-fence examples below show the full line — pass only the text **after** the timestamp; the script prepends it). §Z is written via the Edit tool (multi-line structured block, not a single row/line).
+DOSSIER.md writes use the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` appends §S (the §S code-fence examples below show the full line — pass only the text **after** the timestamp; the script prepends it). §Z is written via `$CLAUDE_PLUGIN_ROOT/hooks/lib-z-write.sh <dir> <complete|successor|abandoned> <value> "<summary>" "<cites>"` — atomic, and it guarantees the §12 blank-line separation (replaces the old Edit-tool write).
 
 ### 1. Locate live dossier
 
@@ -74,7 +74,13 @@ Append §S as its own paragraph (blank line before AND after — per FORMAT.md �
 
 ### 6. WRITE §Z
 
-Atomic write DOSSIER.md with §Z section populated. Each metadata line is its own paragraph (blank line between) — per FORMAT.md §12, prevents formatter-induced prose merge that breaks `lib-regen-index.sh` §Z parsing.
+Write §Z through the bundled helper (atomic tmp+rename, and it guarantees the §12 blank-line separation so a formatter cannot merge the fields — the markdown blocks below show the resulting shape, not a manual edit):
+
+```
+"$CLAUDE_PLUGIN_ROOT"/hooks/lib-z-write.sh <dir> complete   —        "<summary>" "<key cites>"
+"$CLAUDE_PLUGIN_ROOT"/hooks/lib-z-write.sh <dir> successor  <slug>   "<summary>" "<key cites>"
+"$CLAUDE_PLUGIN_ROOT"/hooks/lib-z-write.sh <dir> abandoned  "<reason>" "<summary>" "<key cites>"
+```
 
 If `--complete`:
 
