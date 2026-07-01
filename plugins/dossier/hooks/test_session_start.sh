@@ -146,6 +146,34 @@ ctx_of | grep -q 'T2' || fail "unpaired build START (T2) must surface as resume"
 ctx_of | grep -qE 'resume[^A-Za-z]*needed.*T3' && fail "paired build (T3 START+DONE) must not surface as resume"
 
 rm -rf "$WS/.scratchpad"
+scaffold "2026-06-08-zprose"
+cat >>"$WS/.scratchpad/dossier/2026-06-08-zprose/DOSSIER.md" <<'EOF'
+
+## §Z — Closeout
+
+discuss the T2 phase START
+EOF
+run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+assert_valid_json "z-prose"
+ctx_of | grep -q 'phase START' && fail "§Z prose with a field-5 START must not trigger a resume hint (scan is §S-scoped)"
+
+cat >"$TMP/nojq-nopy-env" <<'EOF'
+command() {
+	if [[ "${1:-}" == "-v" && ( "${2:-}" == "jq" || "${2:-}" == "python3" ) ]]; then
+		return 1
+	fi
+	builtin command "$@"
+}
+python3() { return 1; }
+EOF
+
+rm -rf "$WS/.scratchpad"
+scaffold "2026-06-05-foo"
+run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}' "$TMP/nojq-nopy-env"
+[ "$rc" -eq 0 ] || fail "no-jq no-python3 must exit 0"
+assert_valid_json "no-jq-no-python3 fallback must be valid JSON"
+
+rm -rf "$WS/.scratchpad"
 scaffold "2026-06-07-current"
 mkdir -p "$WS/.scratchpad/dossier/2026-06-06-closed"
 cat >"$WS/.scratchpad/dossier/2026-06-06-closed/DOSSIER.md" <<'EOF'

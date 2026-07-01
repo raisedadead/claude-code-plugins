@@ -83,9 +83,13 @@ if [[ -d "${DOSSIER_DIR}" ]]; then
 		[[ "${ddbase}" == "_archive" ]] && continue
 		[[ -f "${dd}DOSSIER.md" ]] || continue
 		inc=$(awk -v b="${ddbase}" '
-      { ev = $5 }
-      ev == "START" { op[$3 ":" $4] = $0 }
-      ev == "DONE"  { delete op[$3 ":" $4] }
+      /^## §S/ { in_s = 1; next }
+      /^## §/  { in_s = 0 }
+      in_s {
+        ev = $5
+        if (ev == "START") op[$3 ":" $4] = $0
+        else if (ev == "DONE") delete op[$3 ":" $4]
+      }
       END { for (k in op) print "  ⚠ resume needed [" b "]: " op[k] }
     ' "${dd}DOSSIER.md" 2>/dev/null || true)
 		[[ -n "${inc}" ]] && resume_hints+="${inc}"$'\n'
@@ -189,7 +193,7 @@ if [[ -n "${live_slug}" && -d "${DOSSIER_DIR}/${live_slug}" ]]; then
 	fi
 fi
 
-ctx_str=$(printf '%s\n' "${ctx_lines[@]}")
+ctx_str=$(if ((${#ctx_lines[@]})); then printf '%s\n' "${ctx_lines[@]}"; fi)
 
 if command -v jq &>/dev/null; then
 	jq -n --arg ctx "${ctx_str}" --arg sys "${sys_msg}" --arg title "${session_title_out}" '
@@ -198,7 +202,7 @@ if command -v jq &>/dev/null; then
     + (if $sys != "" then {systemMessage: $sys} else {} end)
   '
 else
-	esc=$(printf '%s' "${ctx_str}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '%s' "${ctx_str}" | sed 's/\\/\\\\/g; s/"/\\"/g' | awk 'BEGIN{ORS="\\n"}{print}')
+	esc=$(printf '%s' "${ctx_str}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '%s' "${ctx_str}" | sed 's/\\/\\\\/g; s/"/\\"/g' | awk 'BEGIN{ORS="\\n"; printf "\""} {print} END{printf "\""}')
 	title_frag=""
 	if [[ -n "${session_title_out}" ]]; then
 		title_esc=$(printf '%s' "${session_title_out}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "${session_title_out}")
