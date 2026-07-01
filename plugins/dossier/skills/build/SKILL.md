@@ -53,8 +53,9 @@ Read §S grep `ds:build <T-id>`. Identify last event:
 | -------------- | ---------------------------------- |
 | (no entries)   | full run from step 5               |
 | `START`        | step 5 (re-run safe)               |
-| `commit=<sha>` | step 7 (skip work + commit)        |
-| `§X=refreshed` | step 8 (flip only)                 |
+| `commit=<sha>` | step 8 (work already committed)    |
+| `§X=partial`   | step 8 (retry §X refresh)          |
+| `§X=refreshed` | step 9 (flip only)                 |
 | `DONE`         | nothing to do; release lock + exit |
 
 ### 5. CLAIM
@@ -127,7 +128,7 @@ The `notes` cell is operator free-text — `lib-x-refresh.sh` never touches it. 
 
 Multi-repo path-resolution sweep before the loop: parallel Bash calls. The per-row write itself stays with `lib-x-refresh.sh`.
 
-Append §S (one entry summarising the sweep):
+Append §S (one entry summarising the sweep). Emit `§X=refreshed` **only if every repo refreshed cleanly**; if any repo was unreachable or only partially refreshed, emit `§X=partial` instead so the stale guard (8a) fires before the flip:
 
 ```
 <YYYY-MM-DD HH:MM> ds:build <T-id> §X=refreshed
@@ -135,7 +136,7 @@ Append §S (one entry summarising the sweep):
 
 ### 8a. Vm.X STALE GUARD
 
-Before flip: check §X mtime (last `§X=refreshed` line in §S, or DOSSIER.md mtime if never refreshed). If >30min stale **after** step 8 attempted (refresh failed / partial):
+Before flip: check §X freshness. Trigger the guard if the last §X event in §S is `§X=partial`, OR the last `§X=refreshed` is >30min stale, OR §X was never refreshed:
 
 ```
 ⚠ §X stale (>30min, last refresh: <ts>). Proceed with flip? (y/N)
@@ -144,7 +145,7 @@ Before flip: check §X mtime (last `§X=refreshed` line in §S, or DOSSIER.md mt
 - `n` / default: refuse flip, release lock, exit. §S: `§X=stale-refused`.
 - `y`: proceed. §S: `§X=stale-confirmed`.
 
-Skip guard entirely if refresh succeeded in step 8.
+Skip guard entirely if step 8 emitted `§X=refreshed` (all repos clean) within the last 30min.
 
 ### 9. FLIP
 
