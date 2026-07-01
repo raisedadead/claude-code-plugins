@@ -94,6 +94,12 @@ guard Edit "$DOSS" '2026-01-01 10:00 ds:build T1 START'
 guard Edit "src/app.ts" '`const` · `x` · `y`'
 [ "$rc" -eq 0 ] || fail "header-shaped line in a non-DOSSIER file must not block"
 
+guard Edit "$DOSS" '`lib-regen-index.sh` emits `drift!` not a live state'
+[ "$rc" -eq 0 ] || fail "inline-code prose naming a state must NOT block (no date/middot header shape)"
+
+guard Edit "$DOSS" '- `drift!` is a derived sentinel · never a header token'
+[ "$rc" -eq 0 ] || fail "prose with a middot but no date-led backtick field must not block"
+
 printf '["not","a","dict"]\n' |
 	CLAUDE_PROJECT_DIR="$TMP" python3 "$GUARD" >"$TMP/out" 2>"$TMP/err" || fail "JSON array stdin must exit 0 (dict guard)"
 

@@ -31,17 +31,22 @@ wait "$deadpid" 2>/dev/null || true
 
 mklock deadpid "{\"pid\": ${deadpid}, \"started\": \"$(iso_ago 60)\", \"skill\": \"ds:build\"}"
 mklock livefresh "{\"pid\": $$, \"started\": \"$(iso_ago 60)\", \"skill\": \"ds:build\"}"
+mklock livebad "{\"pid\": $$, \"started\": \"garbage\", \"skill\": \"ds:build\"}"
 mklock oldstale "{\"started\": \"$(iso_ago 3600)\", \"skill\": \"ds:build\"}"
-mklock unparse "{\"started\": \"not-a-date\", \"skill\": \"ds:build\"}"
-mklock malformed "{\"skill\": \"ds:build\"}"
+mklock unparsefresh "{\"started\": \"not-a-date\", \"skill\": \"ds:build\"}"
+mklock malformedfresh "{\"skill\": \"ds:build\"}"
+mklock oldmalformed "{\"skill\": \"ds:close\"}"
+touch -t 202001010000 "$DD/oldmalformed/.ds-lock"
 
 "$CLEAR" "$DD" 2>/dev/null
 
 [[ ! -e "$DD/deadpid/.ds-lock" ]] || fail "dead-pid lock must be cleared"
 [[ -e "$DD/livefresh/.ds-lock" ]] || fail "live-pid fresh lock must survive"
-[[ ! -e "$DD/oldstale/.ds-lock" ]] || fail ">30min lock must be cleared"
-[[ ! -e "$DD/unparse/.ds-lock" ]] || fail "unparseable-started lock must be cleared"
-[[ ! -e "$DD/malformed/.ds-lock" ]] || fail "malformed lock (no pid, no started) must be cleared"
+[[ -e "$DD/livebad/.ds-lock" ]] || fail "live-pid lock must survive an unparseable started (Vm.9)"
+[[ ! -e "$DD/oldstale/.ds-lock" ]] || fail ">30min lock (parseable started) must be cleared"
+[[ -e "$DD/unparsefresh/.ds-lock" ]] || fail "no-pid unparseable-started with FRESH mtime must survive (age via mtime)"
+[[ -e "$DD/malformedfresh/.ds-lock" ]] || fail "no-pid no-started with FRESH mtime must survive (active terse-form lock)"
+[[ ! -e "$DD/oldmalformed/.ds-lock" ]] || fail "no-pid no-started with OLD mtime must be cleared (mtime fallback)"
 
 mklock tzstale "{\"started\": \"$(iso_ago 2400)\", \"skill\": \"ds:build\"}"
 TZ=Asia/Kolkata "$CLEAR" "$DD" 2>/dev/null

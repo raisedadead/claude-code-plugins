@@ -11,7 +11,13 @@ write proceeds. Bare `Phase|Stage|Step N` words are deliberately NOT
 flagged — they collide with legitimate infra/CI/shell comments
 (`# Step 1: dump`).
 
-Always exits 0. Bypass: `DOSSIER_MARKER_GUARD=off`.
+Additionally BLOCKS (exit 2) an Edit/Write that would set a DOSSIER.md
+header state token outside {live, done, paused} — the canonical writer is
+lib-header-state.sh. Only the header metadata line triggers this; all other
+DOSSIER content (including prose that names states) passes.
+
+Advisory marker path always exits 0. Header block exits 2. Bypass the
+advisory: `DOSSIER_MARKER_GUARD=off` (does not disable the header block).
 """
 
 from __future__ import annotations
@@ -49,7 +55,7 @@ DOSSIER_ALLOW_NAMES = {
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit"}
 
 CANONICAL_STATES = frozenset({"live", "done", "paused"})
-HEADER_RE = re.compile(r"^`[^`]*`\s+\S+\s+`([^`]*)`")
+HEADER_RE = re.compile(r"^`\d[^`]*`\s+·\s+`([^`]*)`\s+·\s+`")
 
 
 def hook_payload(event: dict) -> tuple[str | None, list[str]]:

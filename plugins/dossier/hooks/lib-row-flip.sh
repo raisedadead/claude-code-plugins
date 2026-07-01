@@ -51,9 +51,9 @@ if [[ "$n_found" -gt 1 ]]; then
 fi
 
 if [[ "$STATE" == "x" ]]; then
-	eff_cite="$CITE"
-	[[ -z "$eff_cite" ]] && eff_cite="$cur_cite"
-	if [[ -z "$eff_cite" || "$eff_cite" == "—" ]]; then
+	eff_cite="${CITE:-$cur_cite}"
+	eff_norm=$(printf '%s' "$eff_cite" | tr -d '[:space:]')
+	if [[ -z "$eff_norm" || "$eff_norm" == "—" ]]; then
 		printf 'lib-row-flip: %s -> x requires a cite (Vm.3); pass one or set the row cite first\n' "$ID" >&2
 		exit 1
 	fi

@@ -53,7 +53,7 @@ def _scope_ok(scope: str, path: str) -> bool:
         return path.endswith(".json")
     if scope == "md":
         return path.endswith(".md")
-    return False
+    return True
 
 
 def _is_dossier_path(path: str) -> bool:
