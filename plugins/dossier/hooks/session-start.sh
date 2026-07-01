@@ -204,17 +204,19 @@ if command -v jq &>/dev/null; then
       + (if $title != "" then {sessionTitle: $title} else {} end))}
     + (if $sys != "" then {systemMessage: $sys} else {} end)
   '
-else
-	esc=$(printf '%s' "${ctx_str}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '%s' "${ctx_str}" | sed 's/\\/\\\\/g; s/"/\\"/g' | awk 'BEGIN{ORS="\\n"; printf "\""} {print} END{printf "\""}')
+elif command -v python3 &>/dev/null; then
+	esc=$(printf '%s' "${ctx_str}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))')
 	title_frag=""
 	if [[ -n "${session_title_out}" ]]; then
-		title_esc=$(printf '%s' "${session_title_out}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "${session_title_out}")
+		title_esc=$(printf '%s' "${session_title_out}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))')
 		title_frag=", \"sessionTitle\": ${title_esc}"
 	fi
 	if [[ -n "${sys_msg}" ]]; then
-		sys_esc=$(printf '%s' "${sys_msg}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null || printf '"%s"' "${sys_msg}")
+		sys_esc=$(printf '%s' "${sys_msg}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))')
 		printf '{"continue": true, "systemMessage": %s, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s%s}}\n' "${sys_esc}" "${esc}" "${title_frag}"
 	else
 		printf '{"continue": true, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s%s}}\n' "${esc}" "${title_frag}"
 	fi
+else
+	printf '{"continue": true}\n'
 fi

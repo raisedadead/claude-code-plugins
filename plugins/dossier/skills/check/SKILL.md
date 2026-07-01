@@ -120,7 +120,7 @@ Suggested remediations (do NOT auto-apply):
 
 ### 6. No mutations
 
-`ds:check` does NOT write to DOSSIER.md, INDEX.md, or any repo. Period.
+`ds:check` writes no DOSSIER.md content and touches no repo. The sole exception is the derived, idempotent INDEX.md regen inside `lib-ds-check.sh` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7), never source of truth, so re-deriving it is not a mutation — same carve-out as `ds:status`.
 
 Append §S? No. Read-only verb. Skipping §S keeps the log noise-free.
 
