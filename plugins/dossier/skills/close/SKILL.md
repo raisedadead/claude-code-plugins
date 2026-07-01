@@ -47,13 +47,13 @@ Write `<dir>/.ds-lock` with `skill: "ds:close", target: "—"`.
 
 Read §S grep `ds:close`:
 
-| Last event              | Resume point          |
-| ----------------------- | --------------------- |
-| (none)                  | step 5                |
-| `START`                 | step 5                |
-| `§Z=written`            | step 7 (mv)           |
-| `DONE` + dir still live | step 7 (mv)           |
-| `DONE` + dir archived   | exit (already closed) |
+| Last event                   | Resume point                       |
+| ---------------------------- | ---------------------------------- |
+| (none)                       | step 5                             |
+| `START`                      | step 5                             |
+| `§Z=written` (header=`done`) | step 7 (guarded move — idempotent) |
+| `DONE` + dir still live      | re-flip header `done`, then step 7 |
+| `DONE` + dir archived        | exit (already closed)              |
 
 ### 5. VALIDATE
 
@@ -104,12 +104,6 @@ summary: <operator-provided one-line summary>
 key cites: <list of T-row cites>
 ```
 
-Append §S:
-
-```
-<YYYY-MM-DD HH:MM> ds:close — §Z=written
-```
-
 If `--abandon "<reason>"`:
 
 ```markdown
@@ -126,17 +120,23 @@ summary: <state at abandonment — what shipped, what was dropped>
 key cites: <any T-row cites, or —>
 ```
 
-Flip the header state atomically via the bundled helper: `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-header-state.sh <dir> done` (replaces the old Edit-tool header mutation; FORMAT.md §15).
+Flip the header state atomically via the bundled helper: `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-header-state.sh <dir> done` (replaces the old Edit-tool header mutation; FORMAT.md §15). This flip MUST land **before** the `§Z=written` checkpoint below — a checkpoint may only trail a mutation already performed; otherwise a crash resumes past an unflipped header and archives a dir still reading `live` (inverse drift).
+
+Append §S (checkpoint — §Z written AND header now `done`):
+
+```
+<YYYY-MM-DD HH:MM> ds:close — §Z=written
+```
 
 ### 7. MOVE TO \_archive/
 
-Atomic POSIX rename:
+Guarded, resumable commit-point via the bundled helper — refuses a pre-existing dest (no nested move), asserts the move landed, preserves the source on failure (FORMAT.md §15):
 
 ```
-mv .scratchpad/dossier/<date>-<slug>/ .scratchpad/dossier/_archive/<date>-<slug>/
+"$CLAUDE_PLUGIN_ROOT"/hooks/lib-archive-move.sh .scratchpad/dossier/<date>-<slug> .scratchpad/dossier/_archive
 ```
 
-Ensure `_archive/` exists first (`mkdir -p`).
+Idempotent: re-running after a completed move is a no-op (resume-safe). On non-zero exit the source is intact — do NOT append `DONE`; surface the error and stop.
 
 Append §S (to the moved file):
 
@@ -165,7 +165,7 @@ next: <ds:new <successor> | nothing — project complete>
 
 - §T non-`x` rows present: refuse, list, suggest `ds:build --next`.
 - §B unfixed rows: refuse, list, suggest `ds:backprop B<N>` per row.
-- §Z already written but mv failed (rare crash): `--resume` finishes mv.
+- §Z already written but move failed (rare crash): `--resume` re-runs `lib-archive-move.sh` (idempotent — finishes or no-ops).
 - Successor slug missing: offer `ds:new <successor>` inline scaffold.
 
 ## Cite
