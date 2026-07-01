@@ -31,7 +31,7 @@ The §S DONE line (step 6) appends via `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.s
 
 - Slug must match `^[a-z0-9][a-z0-9-]{0,29}$`. Refuse otherwise w/ explanation.
 - Compute `dir=.scratchpad/dossier/<date>-<slug>/`.
-- Collision check: if `dir` exists, ask operator to bump to `<slug>-2`, `<slug>-3`, etc.
+- Collision check: if `dir` exists **OR `.scratchpad/dossier/_archive/<date>-<slug>/` exists** (a same-day close+reopen), ask operator to bump to `<slug>-2`, `<slug>-3`, etc. Checking `_archive/` too prevents two INDEX rows keyed to one slug (Vm.1).
 
 ### 2. Gather inputs (operator-interactive)
 
@@ -67,8 +67,11 @@ Compute fields:
 
 ```
 title = <slug>
-header_line = `<date>` · `live` · `P1/1`
+P-total = max P<N> across the operator-provided initial §T rows (default 1)
+header_line = `<date>` · `live` · `P1/<P-total>`
 ```
+
+Stamp `P1/<P-total>` (not a hardcoded `P1/1`) so a multi-phase seed matches what `lib-regen-index.sh` derives from §T — otherwise INDEX shows `P1/1` while §T spans `P1..P3`, a self-inflicted Vm.5 drift.
 
 Write file at `<dir>/DOSSIER.md` per FORMAT.md §2 section order:
 
