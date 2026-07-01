@@ -20,7 +20,7 @@ scaffold() {
 	local slug="$1"
 	mkdir -p "$WS/.scratchpad/dossier/$slug"
 	cat >"$WS/.scratchpad/dossier/$slug/DOSSIER.md" <<'EOF'
-`goal` · `repo` · `live`
+`2026-06-05` · `live` · `P1/1`
 
 ## §T
 

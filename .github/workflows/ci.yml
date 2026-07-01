@@ -25,6 +25,8 @@ jobs:
         run: |
           bash plugins/dossier/hooks/test_marker_guard.sh
           bash plugins/dossier/hooks/test_lib_dossier_edit.sh
+          bash plugins/dossier/hooks/test_lib_regen.sh
+          bash plugins/dossier/hooks/test_session_start.sh
 
       - name: ruff
         run: |
