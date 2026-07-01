@@ -9,9 +9,11 @@ set -euo pipefail
 SCRATCHPAD="${1:-.scratchpad}"
 DOSSIER_DIR="${SCRATCHPAD}/dossier"
 INDEX_FILE="${SCRATCHPAD}/INDEX.md"
-TMP_FILE="${INDEX_FILE}.tmp"
 
 [[ -d "${DOSSIER_DIR}" ]] || exit 0
+
+TMP_FILE=$(mktemp "${INDEX_FILE}.XXXXXX")
+trap 'rm -f "${TMP_FILE}"' EXIT
 
 parse_dossier() {
 	local file="$1"
@@ -157,10 +159,12 @@ parse_dossier() {
 		done
 	fi
 
-	# Sort rows: date desc (col 2), then state_label reverse-alpha (col 4) so "live" > "done".
-	# Col layout after leading "|": f[2]=date, f[3]=slug, f[4]=state_label.
 	if ((${#rows[@]})); then
-		printf '%s\n' "${rows[@]}" | sort -t'|' -k2,2r -k4,4r
+		printf '%s\n' "${rows[@]}" | awk -F'|' -v OFS='\t' '
+      { st=$4; gsub(/^[ \t]+|[ \t]+$/,"",st); dt=$2; gsub(/^[ \t]+|[ \t]+$/,"",dt)
+        rank = (st=="drift!"?0:(st=="live"?1:(st=="paused"?2:3)))
+        print dt, rank, $0 }
+    ' | sort -t"$(printf '\t')" -k1,1r -k2,2n | cut -f3-
 	fi
 
 	drift_info=$(

@@ -58,6 +58,7 @@ state_of() {
 }
 
 make_dossier "2026-06-10-alive" "live"
+make_dossier "2026-06-10-samedrift" "done"
 make_dossier "2026-06-09-paused-ok" "paused"
 make_dossier "2026-06-08-zombie" "done"
 make_dossier "2026-06-07-sealed" "sealed"
@@ -81,9 +82,15 @@ make_dossier "_archive/2026-06-04-inverse" "live" "complete: true"
 leaked=$(grep -E '^\|' "$INDEX" | awk -F'|' '{s=$4; gsub(/^[ \t]+|[ \t]+$/,"",s); if(s=="live"){slug=$3; gsub(/^[ \t]+|[ \t]+$/,"",slug); print slug}}' | grep -cE 'zombie|sealed|inverse|closeout-noarch' || true)
 [[ "$leaked" -eq 0 ]] || fail "a drift dir leaked into a live state cell"
 
-grep -qE '<!-- drift:4' "$INDEX" || fail "INDEX missing drift trailer count=4 (got: $(grep -oE '<!-- drift:[0-9]+' "$INDEX" || echo none))"
+[[ "$(state_of samedrift)" == "drift!" ]] || fail "same-date done-header must render drift! (got '$(state_of samedrift)')"
 
-[[ -z "$(find "$SP" -name '*.tmp' 2>/dev/null)" ]] || fail "regen left a .tmp orphan"
+grep -qE '<!-- drift:5' "$INDEX" || fail "INDEX missing drift trailer count=5 (got: $(grep -oE '<!-- drift:[0-9]+' "$INDEX" || echo none))"
+
+ln_drift=$(grep -n '| samedrift ' "$INDEX" | head -1 | cut -d: -f1)
+ln_alive=$(grep -n '| alive ' "$INDEX" | head -1 | cut -d: -f1)
+[[ -n "$ln_drift" && -n "$ln_alive" && "$ln_drift" -lt "$ln_alive" ]] || fail "drift! must sort above live within the same date (drift@$ln_drift alive@$ln_alive)"
+
+[[ -z "$(find "$SP" -name '*.tmp' -o -name 'INDEX.md.??????*' 2>/dev/null)" ]] || fail "regen left a tmp orphan"
 
 WS2="$TMP/ws2"
 SP2="$WS2/.scratchpad"
