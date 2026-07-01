@@ -4,6 +4,31 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-01
+
+Lifecycle-hardening wave: a rolled/fresh session can no longer be surprised by a phantom-live "sealed-zombie". 15 tasks, two adversarial review rounds. `[0e0569f..d00668e]`
+
+### Fixed
+
+- **The "two live dossiers" incident.** A closed-but-not-archived dossier — an interrupted `ds:close`, or a legacy/non-canonical `sealed` header token — was silently re-stamped `live` by INDEX regen on every session, so a fresh session mis-reported it as a second live dossier. Root cause: `lib-regen-index.sh` trusted directory location and only special-cased `paused`, while `ds:close` flipped the header and moved the directory as separate non-atomic steps. Regen is now a level-triggered reconciler over three witnesses (header token × location × §Z closure) rendering a distinct `drift!` state — never phantom-`live` — for any disagreement or non-canonical token.
+
+### Added
+
+- `hooks/lib-reconcile-state.sh` — SessionStart self-heal: a §Z-closed dossier stranded outside `_archive/` (or an archived dossier with a stale header) is auto-repaired under lock with a §S breadcrumb.
+- `hooks/lib-archive-move.sh` — the guarded, idempotent, resume-safe `ds:close` commit-point (refuses a pre-existing dest, asserts the move landed, preserves the source on failure).
+- `hooks/lib-ds-check.sh` — deterministic Vm.1/Vm.4/Vm.15 gate; exits non-zero naming any dossier in drift, replacing the model-discretionary heuristics that missed the zombie.
+- `hooks/lib-z-write.sh` — atomic §Z closeout writer (`complete`/`successor`/`abandoned`) guaranteeing the §12 blank-line separation.
+- **Vm.15** (header ⇔ location ⇔ §Z concordance) plus a §17 `enforced-by` column marking each meta-invariant `code` vs `model` — ending the false "ds:check validates all Vm rules" claim.
+- Six new test suites (`test_lib_regen`, `test_lib_archive_move`, `test_lib_reconcile`, `test_lib_clear_locks`, `test_lib_ds_check`, `test_lib_z_write`), all wired into CI.
+
+### Changed
+
+- `session-start.sh` surfaces drift loudly via `systemMessage`, counts live by exact `state==live` (not substring), scans ALL non-archived dirs for unfinished ops (§S-scoped, `skill:target` keyed), and self-heals before regen.
+- `ds:close` reordered so the header flip precedes the `§Z=written` checkpoint and the move routes through `lib-archive-move.sh` — atomic-or-resumable from every crash point.
+- `marker_guard.py` blocks (exit 2) a non-canonical header-token Edit/Write to DOSSIER.md; `lib-header-state.sh` remains the sole sanctioned writer.
+- Mutation helpers use unique `mktemp` temps for concurrency safety; `lib-row-flip` is §T-scoped and refuses §B rows and cite-less `x`; `lib-clear-stale-locks` is UTC-correct, never reaps a live-pid lock, and falls back to file mtime.
+- `verify_hook.py` is cache-only on the edit hot-path (no blocking network) and exempts dossier paths; `ds:roll` restore dedups by task subject and records the source dossier identity in `.tlr`.
+
 ## 2026-06-05
 
 ### Added
