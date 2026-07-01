@@ -51,13 +51,14 @@ Steps:
 
 1. If `<file>` provided: use it. Else: pick newest `<ts>.tlr` in `<cwd>/.scratchpad/.tasklist-roll/`.
 1. Refuse if no `.tlr` exists; suggest `dump` first.
+1. **Identity check:** read the `doss:` header line. If it is a slug (not `—`) and differs from the current live dossier slug (INDEX first `live` row), WARN `roll is from <doss>, current live is <slug> — restore anyway? (y/N)` and default to no. A cross-dossier restore is usually a mistake.
 1. Parse pipe-table (skip header lines starting with `#` or non-`|`; skip separator rows of `|---|`; ignore unknown trailing columns).
-1. **Pass 1:** for each row, call `TaskCreate` with `subject`, `description`, `activeForm` (defaulting `desc`/`actv` to `subject` when cell is `—`). Record `old_i → new_id` mapping.
-1. **Pass 2:** for each row with `status != "."`, call `TaskUpdate` with the new id + status. (`~ → in_progress`, `x → completed`.)
-1. **Pass 3:** for each row with non-`—` `dep`, call `TaskUpdate` with `addBlockedBy: [<new-ids>]` translated via the pass-1 map.
-1. Report: `restored: <N> tasks from <file>`.
+1. **Pass 1 (dedup by subject):** `TaskList` first; collect existing task subjects. For each row whose `subject` is NOT already present, call `TaskCreate` with `subject`, `description`, `activeForm` (defaulting `desc`/`actv` to `subject` when cell is `—`). For a row whose subject already exists, skip the create and reuse the existing id. Record `old_i → id` mapping either way.
+1. **Pass 2:** for each row with `status != "."`, call `TaskUpdate` with the mapped id + status. (`~ → in_progress`, `x → completed`.)
+1. **Pass 3:** for each row with non-`—` `dep`, call `TaskUpdate` with `addBlockedBy: [<mapped-ids>]` translated via the pass-1 map.
+1. Report: `restored: <N> tasks from <file> (<created> new, <skipped> already present)`.
 
-Restore is **additive** — does not delete existing TaskList entries. If a fresh session has leftover tasks, operator clears them manually (TaskUpdate status=deleted) before restoring.
+Restore is **idempotent by subject** — re-restoring the same roll, or restoring after `ds:status` already hydrated §T, creates no duplicates (the join key is the task subject, matching FORMAT.md §8). It never deletes existing tasks; the old manual "clear leftovers first" step is obsolete.
 
 ### `list`
 

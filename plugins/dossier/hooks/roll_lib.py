@@ -9,6 +9,7 @@ Stdlib-only. Python 3.10+.
 
     # tlr v1
     sid: <session-id>
+    doss: <live-dossier-slug or —>
     ts: <ISO-timestamp>
     trig: precompact | explicit
 
@@ -152,14 +153,15 @@ def parse_transcript(path: Path) -> tuple[list[dict], str]:
     return [tasks[t] for t in order if t in tasks], sid
 
 
-def render_tlr(tasks: list[dict], sid: str, trig: str) -> str:
+def render_tlr(tasks: list[dict], sid: str, trig: str, doss: str = "") -> str:
     """Render task list as compact `.tlr` pipe-table v1.
 
     Tasks list elements must have keys: id, subject, description, activeForm,
-    status, blockedBy.
+    status, blockedBy. `doss` is the live dossier slug at dump time so restore
+    can warn on a cross-dossier mismatch; omitted renders `—`.
     """
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    lines = ["# tlr v1", f"sid: {sid or '?'}", f"ts: {ts}", f"trig: {trig}", "", "| i | st | subject | desc | actv | dep |", "|---|----|---------|------|------|-----|"]
+    lines = ["# tlr v1", f"sid: {sid or '?'}", f"doss: {doss or '—'}", f"ts: {ts}", f"trig: {trig}", "", "| i | st | subject | desc | actv | dep |", "|---|----|---------|------|------|-----|"]
     for t in tasks:
         i = t.get("id", "?")
         st = _STATUS_TO_GLYPH.get(t.get("status", "pending"), ".")
@@ -211,6 +213,38 @@ def parse_tlr(text: str) -> list[dict]:
             "blockedBy": dep,
         })
     return out
+
+
+def parse_tlr_header(text: str) -> dict[str, str]:
+    """Extract sid/doss/ts/trig from a `.tlr` header block (lines before the table)."""
+    hdr: dict[str, str] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line.startswith("|"):
+            break
+        if line.startswith("#") or ":" not in line:
+            continue
+        k, _, v = line.partition(":")
+        hdr[k.strip()] = v.strip()
+    return hdr
+
+
+def live_slug_from_index(cwd: Path | None = None) -> str:
+    """First `live` dossier's `<date>-<slug>` from INDEX.md, or '' if none."""
+    index = (cwd or Path.cwd()) / ".scratchpad" / "INDEX.md"
+    if not index.is_file():
+        return ""
+    try:
+        rows = index.read_text(errors="replace").splitlines()
+    except OSError:
+        return ""
+    for line in rows[2:]:
+        if not line.startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip("|").split("|")]
+        if len(cells) >= 3 and cells[2] == "live":
+            return f"{cells[0]}-{cells[1]}"
+    return ""
 
 
 def roll_dir(cwd: Path | None = None) -> Path:

@@ -51,7 +51,13 @@ def test_tlr_round_trip() -> None:
             "blockedBy": [],
         },
     ]
-    parsed = roll_lib.parse_tlr(roll_lib.render_tlr(tasks, "sess-1", "explicit"))
+    body = roll_lib.render_tlr(tasks, "sess-1", "explicit", "2026-07-01-foo")
+    assert "doss: 2026-07-01-foo" in body, body
+    hdr = roll_lib.parse_tlr_header(body)
+    assert hdr.get("doss") == "2026-07-01-foo", hdr
+    assert hdr.get("sid") == "sess-1", hdr
+    assert "doss: —" in roll_lib.render_tlr(tasks, "s", "explicit"), "omitted doss renders —"
+    parsed = roll_lib.parse_tlr(body)
     assert len(parsed) == 3, f"expected 3 rows, got {len(parsed)}"
     assert parsed[0]["subject"] == "Fix |sort| bug", parsed[0]["subject"]
     assert parsed[0]["status"] == "completed", parsed[0]["status"]
@@ -60,6 +66,24 @@ def test_tlr_round_trip() -> None:
     )
     assert parsed[2]["status"] == "pending", parsed[2]
     assert parsed[1]["description"] == "Wire client", parsed[1]["description"]
+
+
+def test_live_slug_from_index() -> None:
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as d:
+        sp = Path(d) / ".scratchpad"
+        sp.mkdir()
+        (sp / "INDEX.md").write_text(
+            "# .scratchpad index\n\n"
+            "| date | slug | state | P | T | B | mtime | §Z |\n"
+            "|------|------|-------|---|---|---|-------|-----|\n"
+            "| 2026-07-01 | alpha | drift! | P1/1 | 0/0 | 0 | — | — |\n"
+            "| 2026-06-30 | beta | live | P1/1 | 0/0 | 0 | — | — |\n"
+        )
+        assert roll_lib.live_slug_from_index(Path(d)) == "2026-06-30-beta"
+    with tempfile.TemporaryDirectory() as d2:
+        assert roll_lib.live_slug_from_index(Path(d2)) == ""
 
 
 def test_parse_transcript() -> None:

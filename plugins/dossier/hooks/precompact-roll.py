@@ -18,7 +18,12 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 try:
-    from roll_lib import new_roll_path, parse_transcript, render_tlr
+    from roll_lib import (
+        live_slug_from_index,
+        new_roll_path,
+        parse_transcript,
+        render_tlr,
+    )
 except Exception as exc:  # noqa: BLE001
     print(f"roll-precompact load error: {type(exc).__name__}: {exc}", file=sys.stderr)
     sys.exit(0)
@@ -49,7 +54,11 @@ def main() -> int:
     event_name = payload.get("hook_event_name") or "PreCompact"
     trig = "sessionend" if event_name == "SessionEnd" else "precompact"
     sid = sid or parsed_sid or "unknown"
-    body = render_tlr(tasks, sid, trig)
+    try:
+        doss = live_slug_from_index()
+    except Exception:  # noqa: BLE001
+        doss = ""
+    body = render_tlr(tasks, sid, trig, doss)
     out_path = new_roll_path()
     try:
         tmp = out_path.with_suffix(out_path.suffix + ".tmp")
