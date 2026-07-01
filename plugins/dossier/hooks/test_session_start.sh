@@ -146,6 +146,18 @@ ctx_of | grep -q 'T2' || fail "unpaired build START (T2) must surface as resume"
 ctx_of | grep -qE 'resume[^A-Za-z]*needed.*T3' && fail "paired build (T3 START+DONE) must not surface as resume"
 
 rm -rf "$WS/.scratchpad"
+scaffold "2026-06-05-foo"
+cat >>"$WS/.scratchpad/dossier/2026-06-05-foo/DOSSIER.md" <<'EOF'
+
+2026-06-05 11:00 ds:backprop pending START
+
+2026-06-05 11:04 ds:backprop B1 DONE
+EOF
+run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+assert_valid_json "backprop-pairing"
+ctx_of | grep -qiE 'resume needed.*ds:backprop' && fail "a completed new-bug backprop (pending START → B1 DONE) must not phantom-resume"
+
+rm -rf "$WS/.scratchpad"
 scaffold "2026-06-08-zprose"
 cat >>"$WS/.scratchpad/dossier/2026-06-08-zprose/DOSSIER.md" <<'EOF'
 

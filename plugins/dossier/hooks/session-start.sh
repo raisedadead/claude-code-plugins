@@ -87,8 +87,11 @@ if [[ -d "${DOSSIER_DIR}" ]]; then
       /^## §/  { in_s = 0 }
       in_s {
         ev = $5
-        if (ev == "START") op[$3 ":" $4] = $0
-        else if (ev == "DONE") delete op[$3 ":" $4]
+        if (ev == "START") { op[$3 ":" $4] = $0; pend[$3] = $3 ":" $4 }
+        else if (ev == "DONE") {
+          delete op[$3 ":" $4]
+          if (($3 == "ds:close" || $3 == "ds:backprop") && ($3 in pend)) delete op[pend[$3]]
+        }
       }
       END { for (k in op) print "  ⚠ resume needed [" b "]: " op[k] }
     ' "${dd}DOSSIER.md" 2>/dev/null || true)
