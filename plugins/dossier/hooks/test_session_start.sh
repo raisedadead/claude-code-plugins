@@ -105,7 +105,7 @@ rm -rf "$WS/.scratchpad"
 scaffold "2026-06-05-foo"
 mkdir -p "$WS/.scratchpad/dossier/2026-06-04-zombie"
 cat >"$WS/.scratchpad/dossier/2026-06-04-zombie/DOSSIER.md" <<'EOF'
-`2026-06-04` · `done` · `P1/1`
+`2026-06-04` · `sealed` · `P1/1`
 
 ## §T — Task ledger
 
@@ -117,7 +117,7 @@ cat >"$WS/.scratchpad/dossier/2026-06-04-zombie/DOSSIER.md" <<'EOF'
 
 ## §Z — Closeout
 
-complete: true
+_(empty)_
 EOF
 
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
@@ -144,6 +144,31 @@ run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":"
 assert_valid_json "resume-pairing"
 ctx_of | grep -q 'T2' || fail "unpaired build START (T2) must surface as resume"
 ctx_of | grep -qE 'resume[^A-Za-z]*needed.*T3' && fail "paired build (T3 START+DONE) must not surface as resume"
+
+rm -rf "$WS/.scratchpad"
+scaffold "2026-06-07-current"
+mkdir -p "$WS/.scratchpad/dossier/2026-06-06-closed"
+cat >"$WS/.scratchpad/dossier/2026-06-06-closed/DOSSIER.md" <<'EOF'
+`2026-06-06` · `done` · `P1/1`
+
+## §T — Task ledger
+
+| T1 | P1 | x | done | [a1] | — |
+
+## §S — Rolling status log
+
+2026-06-06 09:00 ds:close — §Z=written
+
+## §Z — Closeout
+
+complete: true
+EOF
+run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+assert_valid_json "self-heal"
+[ -f "$WS/.scratchpad/dossier/_archive/2026-06-06-closed/DOSSIER.md" ] || fail "§Z-closed zombie must self-heal into _archive at session-start"
+[ ! -e "$WS/.scratchpad/dossier/2026-06-06-closed" ] || fail "healed zombie must leave the live tree"
+sys_of | grep -qi 'drift' && fail "a fully self-healed tree must not warn drift"
+grep -q 'ds:reconcile' "$WS/.scratchpad/dossier/_archive/2026-06-06-closed/DOSSIER.md" || fail "self-heal must leave a §S breadcrumb"
 
 rm -rf "$WS/.scratchpad"
 mkdir -p "$WS"

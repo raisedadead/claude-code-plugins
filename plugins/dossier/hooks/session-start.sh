@@ -32,8 +32,9 @@ print(str(d.get("source") or ""), str(d.get("session_title") or ""), sep="\t")
 	fi
 fi
 
-"${PLUGIN_ROOT}/hooks/lib-regen-index.sh" "${SCRATCHPAD}" 2>/dev/null || true
 "${PLUGIN_ROOT}/hooks/lib-clear-stale-locks.sh" "${DOSSIER_DIR}" 2>/dev/null || true
+"${PLUGIN_ROOT}/hooks/lib-reconcile-state.sh" "${SCRATCHPAD}" 2>/dev/null || true
+"${PLUGIN_ROOT}/hooks/lib-regen-index.sh" "${SCRATCHPAD}" 2>/dev/null || true
 
 ctx_lines=()
 
