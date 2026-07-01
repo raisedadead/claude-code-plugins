@@ -47,7 +47,8 @@ fi
 live_slug=""
 if [[ -f "${INDEX_FILE}" ]]; then
 	live_slug=$(awk -F'|' '
-    NR > 2 && $4 ~ /live/ {
+    NR > 2 { st = $4; gsub(/^[ \t]+|[ \t]+$/, "", st) }
+    NR > 2 && st == "live" {
       gsub(/^[ \t]+|[ \t]+$/, "", $2)
       gsub(/^[ \t]+|[ \t]+$/, "", $3)
       print $2 "-" $3
@@ -59,8 +60,35 @@ fi
 live_count=0
 live_all=""
 if [[ -f "${INDEX_FILE}" ]]; then
-	live_count=$(awk -F'|' 'NR>2 && $4 ~ /live/ {n++} END{print n+0}' "${INDEX_FILE}" 2>/dev/null || echo 0)
-	live_all=$(awk -F'|' 'NR>2 && $4 ~ /live/ {gsub(/^[ \t]+|[ \t]+$/,"",$2); gsub(/^[ \t]+|[ \t]+$/,"",$3); printf "%s-%s ", $2, $3}' "${INDEX_FILE}" 2>/dev/null || true)
+	live_count=$(awk -F'|' 'NR>2 {st=$4; gsub(/^[ \t]+|[ \t]+$/,"",st); if(st=="live")n++} END{print n+0}' "${INDEX_FILE}" 2>/dev/null || echo 0)
+	live_all=$(awk -F'|' 'NR>2 {st=$4; gsub(/^[ \t]+|[ \t]+$/,"",st); if(st=="live"){gsub(/^[ \t]+|[ \t]+$/,"",$2); gsub(/^[ \t]+|[ \t]+$/,"",$3); printf "%s-%s ", $2, $3}}' "${INDEX_FILE}" 2>/dev/null || true)
+fi
+
+drift_count=0
+drift_slugs=""
+if [[ -f "${INDEX_FILE}" ]]; then
+	drift_line=$(grep -oE '<!-- drift:[0-9]+ slugs:[^>]*-->' "${INDEX_FILE}" 2>/dev/null | head -1 || true)
+	if [[ -n "${drift_line}" ]]; then
+		drift_count=$(printf '%s' "${drift_line}" | grep -oE 'drift:[0-9]+' | grep -oE '[0-9]+')
+		drift_slugs=$(printf '%s' "${drift_line}" | sed -E 's/.*slugs:(.*) -->/\1/')
+	fi
+fi
+
+resume_hints=""
+if [[ -d "${DOSSIER_DIR}" ]]; then
+	for dd in "${DOSSIER_DIR}"/*/; do
+		[[ -d "${dd}" ]] || continue
+		ddbase=$(basename "${dd}")
+		[[ "${ddbase}" == "_archive" ]] && continue
+		[[ -f "${dd}DOSSIER.md" ]] || continue
+		inc=$(awk -v b="${ddbase}" '
+      { ev = $5 }
+      ev == "START" { op[$3 ":" $4] = $0 }
+      ev == "DONE"  { delete op[$3 ":" $4] }
+      END { for (k in op) print "  ⚠ resume needed [" b "]: " op[k] }
+    ' "${dd}DOSSIER.md" 2>/dev/null || true)
+		[[ -n "${inc}" ]] && resume_hints+="${inc}"$'\n'
+	done
 fi
 
 session_title_out=""
@@ -78,15 +106,27 @@ if [[ "${live_count}" -gt 1 ]]; then
 	ctx_lines+=("")
 	ctx_lines+=("⚠ ${live_count} live dossiers: ${live_all}— pick one, pause/close the rest (ds:status)")
 fi
+if [[ "${drift_count}" -gt 0 ]]; then
+	dmsg="⚠ dossier: ${drift_count} in conflicting state (drift) — ${drift_slugs}. Run /dossier:status to reconcile."
+	if [[ -n "${sys_msg}" ]]; then sys_msg="${sys_msg} ${dmsg}"; else sys_msg="${dmsg}"; fi
+	ctx_lines+=("")
+	ctx_lines+=("⚠ drift (${drift_count}): ${drift_slugs} — header⇔location mismatch, reconcile via ds:status")
+fi
+if [[ -n "${resume_hints}" ]]; then
+	ctx_lines+=("")
+	ctx_lines+=("## resume needed")
+	while IFS= read -r rline; do
+		[[ -n "${rline}" ]] && ctx_lines+=("${rline}")
+	done <<<"${resume_hints}"
+fi
 
 if [[ -n "${live_slug}" && -d "${DOSSIER_DIR}/${live_slug}" ]]; then
 	doss="${DOSSIER_DIR}/${live_slug}/DOSSIER.md"
 	if [[ -f "${doss}" ]]; then
-		incomplete=$(awk '
-      / START$/ { op_start[$3] = $0 }
-      / DONE/   { delete op_start[$3] }
-      END { for (t in op_start) print "⚠ resume needed: " op_start[t] }
-    ' "${doss}" 2>/dev/null || true)
+		incomplete=""
+		if printf '%s' "${resume_hints}" | grep -qF "[${live_slug}]"; then
+			incomplete="⚠ current dossier ${live_slug} has an unfinished op — see 'resume needed' above"
+		fi
 
 		ctx_lines+=("")
 		ctx_lines+=("## dossier live: ${live_slug}")

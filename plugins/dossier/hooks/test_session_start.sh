@@ -98,6 +98,53 @@ else
 	printf 'skip: python3 unavailable — no-jq pass skipped\n' >&2
 fi
 
+sys_of() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("systemMessage",""))' "$TMP/out"; }
+ctx_of() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("hookSpecificOutput",{}).get("additionalContext",""))' "$TMP/out"; }
+
+rm -rf "$WS/.scratchpad"
+scaffold "2026-06-05-foo"
+mkdir -p "$WS/.scratchpad/dossier/2026-06-04-zombie"
+cat >"$WS/.scratchpad/dossier/2026-06-04-zombie/DOSSIER.md" <<'EOF'
+`2026-06-04` · `done` · `P1/1`
+
+## §T — Task ledger
+
+| T1 | P1 | x | done thing | [a1] | — |
+
+## §S — Rolling status log
+
+2026-06-04 09:00 ds:close — START successor=— complete=true abandon=false
+
+## §Z — Closeout
+
+complete: true
+EOF
+
+run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+[ "$rc" -eq 0 ] || fail "drift present must still exit 0"
+assert_valid_json "drift"
+[ "$(title_of)" = "2026-06-05-foo" ] || fail "drift dir must not displace true-live slug as title"
+sys_of | grep -qi 'drift' || fail "drift dossier must raise a drift systemMessage"
+sys_of | grep -q 'zombie' || fail "drift systemMessage must name the drift slug"
+sys_of | grep -qE '[0-9]+ live' && fail "drift dir must not be counted as live"
+ctx_of | grep -qi 'resume' || fail "interrupted ds:close on a non-current dir must surface a resume hint"
+ctx_of | grep -q 'ds:close' || fail "resume hint must identify the interrupted close op"
+
+rm -rf "$WS/.scratchpad"
+scaffold "2026-06-05-foo"
+cat >>"$WS/.scratchpad/dossier/2026-06-05-foo/DOSSIER.md" <<'EOF'
+
+2026-06-05 10:00 ds:build T2 START
+
+2026-06-05 10:05 ds:build T3 START
+
+2026-06-05 10:06 ds:build T3 DONE
+EOF
+run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+assert_valid_json "resume-pairing"
+ctx_of | grep -q 'T2' || fail "unpaired build START (T2) must surface as resume"
+ctx_of | grep -qE 'resume[^A-Za-z]*needed.*T3' && fail "paired build (T3 START+DONE) must not surface as resume"
+
 rm -rf "$WS/.scratchpad"
 mkdir -p "$WS"
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
