@@ -43,7 +43,7 @@ grep -q '^## §Z' "$FILE" || {
 }
 
 TS=$(date "+%Y-%m-%d %H:%M")
-TMP="${FILE}.tmp"
+TMP="$(mktemp "${FILE}.XXXXXX")"
 trap 'rm -f "$TMP"' EXIT
 
 {

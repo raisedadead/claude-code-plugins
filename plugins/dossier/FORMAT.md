@@ -363,9 +363,9 @@ Concurrent-session safety. JSON file at `.scratchpad/dossier/<slug>/.ds-lock`:
 
 ## 15. Atomic writes
 
-Every DOSSIER.md / INDEX.md mutation = write `<file>.tmp` + `mv <file>.tmp <file>` (POSIX rename, atomic on same FS).
+Every DOSSIER.md / INDEX.md mutation = write a unique temp beside the target (`mktemp "<file>.XXXXXX"`, so concurrent writers never share a temp) + `mv <temp> <file>` (POSIX rename, atomic on same FS).
 
-Crash mid-write = `.tmp` orphan + untouched real file. Skills clean `.tmp` orphans on next run.
+Crash mid-write = a `<file>.XXXXXX` (or legacy `.tmp`) orphan + untouched real file. Each helper removes its own temp via an `EXIT` trap; a leftover from a hard kill is swept on the next run.
 
 Vm.8: no skill writes a real file directly. Always tmp + rename.
 

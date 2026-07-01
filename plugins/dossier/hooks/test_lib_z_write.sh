@@ -37,7 +37,7 @@ grep -q '^complete: true$' "$D1/DOSSIER.md" || fail "complete kind must write co
 grep -q '^summary: P1 shipped$' "$D1/DOSSIER.md" || fail "summary not written"
 grep -q '^key cites: \[a1\], \[b2\]$' "$D1/DOSSIER.md" || fail "cites not written"
 grep -q 'ds:new — created' "$D1/DOSSIER.md" || fail "content before §Z (the §S log) must be preserved"
-[[ -z "$(find "$D1" -name '*.tmp')" ]] || fail "z-write left a .tmp orphan"
+[[ -z "$(find "$D1" -name 'DOSSIER.md.*')" ]] || fail "z-write left a temp orphan"
 
 D2="$TMP/successor"
 mkdoss "$D2"

@@ -87,10 +87,10 @@ if [[ -d "${DOSSIER_DIR}" ]]; then
       /^## §/  { in_s = 0 }
       in_s {
         ev = $5
-        if (ev == "START") { op[$3 ":" $4] = $0; pend[$3] = $3 ":" $4 }
+        if (ev == "START") { op[$3 ":" $4] = $0; if ($4 == "pending") pend[$3] = $3 ":" $4 }
         else if (ev == "DONE") {
           delete op[$3 ":" $4]
-          if (($3 == "ds:close" || $3 == "ds:backprop") && ($3 in pend)) delete op[pend[$3]]
+          if ($3 in pend) { delete op[pend[$3]]; delete pend[$3] }
         }
       }
       END { for (k in op) print "  ⚠ resume needed [" b "]: " op[k] }
@@ -205,14 +205,14 @@ if command -v jq &>/dev/null; then
     + (if $sys != "" then {systemMessage: $sys} else {} end)
   '
 elif command -v python3 &>/dev/null; then
-	esc=$(printf '%s' "${ctx_str}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))')
+	esc=$(printf '%s' "${ctx_str}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null) || esc='""'
 	title_frag=""
 	if [[ -n "${session_title_out}" ]]; then
-		title_esc=$(printf '%s' "${session_title_out}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))')
+		title_esc=$(printf '%s' "${session_title_out}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null) || title_esc='""'
 		title_frag=", \"sessionTitle\": ${title_esc}"
 	fi
 	if [[ -n "${sys_msg}" ]]; then
-		sys_esc=$(printf '%s' "${sys_msg}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))')
+		sys_esc=$(printf '%s' "${sys_msg}" | python3 -c 'import sys, json; print(json.dumps(sys.stdin.read()))' 2>/dev/null) || sys_esc='""'
 		printf '{"continue": true, "systemMessage": %s, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s%s}}\n' "${sys_esc}" "${esc}" "${title_frag}"
 	else
 		printf '{"continue": true, "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": %s%s}}\n' "${esc}" "${title_frag}"

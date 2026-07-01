@@ -63,21 +63,21 @@ Independent of scouts. Run concurrently with dispatch:
 
 **Deterministic drift gate (Vm.1 + Vm.4, enforced by code — not model discretion):** run `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-ds-check.sh .scratchpad`. It regenerates INDEX (the single source of the header × location × §Z reconcile predicate) and exits non-zero, naming every dossier whose header token, directory location, and §Z closure disagree — the sealed-zombie / done-not-archived class that the old heuristics missed. Non-zero exit = 🔴 critical.
 
-| Vm    | Check                                                            | How                                                   |
-| ----- | ---------------------------------------------------------------- | ----------------------------------------------------- |
-| Vm.1  | live dossier count ≤ 1 per slug; header⇔location concordant      | `lib-ds-check.sh` (deterministic header×location×§Z)  |
-| Vm.2  | every §S line has ISO timestamp                                  | regex `^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}` |
-| Vm.3  | every §T `x` row has non-empty `cite`                            | awk §T table                                          |
-| Vm.4  | closed dossiers under `_archive/`                                | `lib-ds-check.sh` (deterministic)                     |
-| Vm.5  | INDEX counts match DOSSIER §T/§B                                 | parse both, diff                                      |
-| Vm.6  | no §S START without DONE for same target                         | awk pairing                                           |
-| Vm.7  | INDEX regenerable (run lib-regen-index.sh, diff against current) | optional                                              |
-| Vm.8  | no `.tmp` orphans                                                | find `.scratchpad/dossier/**/*.tmp`                   |
-| Vm.9  | locks not stale                                                  | run lib-clear-stale-locks.sh in dry mode              |
-| Vm.10 | migrate markers consistent (if migration in progress)            | n/a unless ds:migrate active                          |
-| Vm.12 | ≤1 live dossier (excl. paused)                                   | count INDEX rows state=live; >1 → 🟡 warn             |
-| Vm.13 | no stale-live (no §S in >N days)                                 | newest §S ts per live vs `DS_STALE_LIVE_DAYS` (14)    |
-| Vm.14 | every `--auto` PAUSE carries a reason class                      | grep §S `PAUSE reason=`; flag any bare PAUSE          |
+| Vm    | Check                                                            | How                                                                                    |
+| ----- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Vm.1  | live dossier count ≤ 1 per slug; header⇔location concordant      | `lib-ds-check.sh` (deterministic header×location×§Z)                                   |
+| Vm.2  | every §S line has ISO timestamp                                  | regex `^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}`                                  |
+| Vm.3  | every §T `x` row has non-empty `cite`                            | awk §T table                                                                           |
+| Vm.4  | closed dossiers under `_archive/`                                | `lib-ds-check.sh` (deterministic)                                                      |
+| Vm.5  | INDEX counts match DOSSIER §T/§B                                 | parse both, diff                                                                       |
+| Vm.6  | no §S START without DONE for same target                         | awk pairing                                                                            |
+| Vm.7  | INDEX regenerable (run lib-regen-index.sh, diff against current) | optional                                                                               |
+| Vm.8  | no write-temp orphans                                            | `find .scratchpad/dossier -name '*.tmp' -o -name 'DOSSIER.md.*' -o -name 'INDEX.md.*'` |
+| Vm.9  | locks not stale                                                  | run lib-clear-stale-locks.sh in dry mode                                               |
+| Vm.10 | migrate markers consistent (if migration in progress)            | n/a unless ds:migrate active                                                           |
+| Vm.12 | ≤1 live dossier (excl. paused)                                   | count INDEX rows state=live; >1 → 🟡 warn                                              |
+| Vm.13 | no stale-live (no §S in >N days)                                 | newest §S ts per live vs `DS_STALE_LIVE_DAYS` (14)                                     |
+| Vm.14 | every `--auto` PAUSE carries a reason class                      | grep §S `PAUSE reason=`; flag any bare PAUSE                                           |
 
 ### 4. Aggregate
 

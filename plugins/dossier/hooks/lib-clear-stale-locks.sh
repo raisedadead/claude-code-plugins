@@ -41,9 +41,9 @@ find "${DOSSIER_DIR}" -name ".ds-lock" -type f 2>/dev/null | while read -r lock;
 				echo "")
 		fi
 		if [[ -z "${started_epoch}" ]]; then
-			started_epoch=$(stat -f %m "${lock}" 2>/dev/null || stat -c %Y "${lock}" 2>/dev/null || echo "")
+			started_epoch=$(stat -c %Y "${lock}" 2>/dev/null) || started_epoch=$(stat -f %m "${lock}" 2>/dev/null) || started_epoch=""
 		fi
-		if [[ -n "${started_epoch}" ]]; then
+		if [[ "${started_epoch}" =~ ^[0-9]+$ ]]; then
 			age=$((NOW - started_epoch))
 			if [[ "${age}" -gt "${STALE_THRESHOLD}" ]]; then
 				reason="stale-${age}s"
