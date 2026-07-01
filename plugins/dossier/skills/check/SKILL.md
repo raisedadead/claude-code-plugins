@@ -61,12 +61,14 @@ Skip if `verify_sweep.py` missing (older plugin install) — sweep is opt-in.
 
 Independent of scouts. Run concurrently with dispatch:
 
+**Deterministic drift gate (Vm.1 + Vm.4, enforced by code — not model discretion):** run `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-ds-check.sh .scratchpad`. It regenerates INDEX (the single source of the header × location × §Z reconcile predicate) and exits non-zero, naming every dossier whose header token, directory location, and §Z closure disagree — the sealed-zombie / done-not-archived class that the old heuristics missed. Non-zero exit = 🔴 critical.
+
 | Vm    | Check                                                            | How                                                   |
 | ----- | ---------------------------------------------------------------- | ----------------------------------------------------- |
-| Vm.1  | live dossier count ≤ 1 per slug                                  | grep INDEX for duplicate slugs                        |
+| Vm.1  | live dossier count ≤ 1 per slug; header⇔location concordant      | `lib-ds-check.sh` (deterministic header×location×§Z)  |
 | Vm.2  | every §S line has ISO timestamp                                  | regex `^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}` |
 | Vm.3  | every §T `x` row has non-empty `cite`                            | awk §T table                                          |
-| Vm.4  | closed dossiers under `_archive/`                                | ls live dirs for §Z presence                          |
+| Vm.4  | closed dossiers under `_archive/`                                | `lib-ds-check.sh` (deterministic)                     |
 | Vm.5  | INDEX counts match DOSSIER §T/§B                                 | parse both, diff                                      |
 | Vm.6  | no §S START without DONE for same target                         | awk pairing                                           |
 | Vm.7  | INDEX regenerable (run lib-regen-index.sh, diff against current) | optional                                              |
