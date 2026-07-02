@@ -118,7 +118,7 @@ if [[ "${drift_count}" -gt 0 ]]; then
 	dmsg="⚠ dossier: ${drift_count} in conflicting state (drift) — ${drift_slugs}. Run /dossier:status to reconcile."
 	if [[ -n "${sys_msg}" ]]; then sys_msg="${sys_msg} ${dmsg}"; else sys_msg="${dmsg}"; fi
 	ctx_lines+=("")
-	ctx_lines+=("⚠ drift (${drift_count}): ${drift_slugs} — header⇔location mismatch, reconcile via ds:status")
+	ctx_lines+=("⚠ drift (${drift_count}): ${drift_slugs} — header/§Z/location disagreement, reconcile via ds:status")
 fi
 if [[ -n "${resume_hints}" ]]; then
 	ctx_lines+=("")

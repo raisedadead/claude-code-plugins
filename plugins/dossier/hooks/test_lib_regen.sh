@@ -65,6 +65,7 @@ make_dossier "2026-06-07-sealed" "sealed"
 make_dossier "2026-06-06-closeout-noarch" "live" "complete: true"
 make_dossier "_archive/2026-06-05-gone" "done" "complete: true"
 make_dossier "_archive/2026-06-04-inverse" "live" "complete: true"
+make_dossier "_archive/2026-06-03-legacy" "done"
 
 (cd "$WS" && "$REGEN" .scratchpad)
 
@@ -73,6 +74,7 @@ make_dossier "_archive/2026-06-04-inverse" "live" "complete: true"
 [[ "$(state_of alive)" == "live" ]] || fail "concordant live must render live (got '$(state_of alive)')"
 [[ "$(state_of paused-ok)" == "paused" ]] || fail "concordant paused must render paused (got '$(state_of paused-ok)')"
 [[ "$(state_of gone)" == "done" ]] || fail "concordant archived must render done (got '$(state_of gone)')"
+[[ "$(state_of legacy)" == "done" ]] || fail "archived done-header w/ prose-only §Z (no machine key) must render done — location+header suffice (got '$(state_of legacy)')"
 
 [[ "$(state_of zombie)" == "drift!" ]] || fail "done-header non-archived must render drift! (got '$(state_of zombie)')"
 [[ "$(state_of sealed)" == "drift!" ]] || fail "non-canonical token must render drift! (got '$(state_of sealed)')"

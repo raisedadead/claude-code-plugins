@@ -115,7 +115,7 @@ parse_dossier() {
 
 	local state_label
 	if [[ "${loc_hint}" == "done" ]]; then
-		if [[ "${hdr_state}" == "done" && "${z_closed}" -eq 1 ]]; then
+		if [[ "${hdr_state}" == "done" ]]; then
 			state_label="done"
 		else
 			state_label="drift!"
