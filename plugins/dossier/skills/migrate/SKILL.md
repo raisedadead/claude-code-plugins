@@ -2,7 +2,6 @@
 name: migrate
 description: Convert legacy 4-file dossiers (PLAN+SPEC+AUDIT+closeout/) to single-file DOSSIER.md format. Claude-driven per-repo (handles arbitrary shapes). Spawns dossier-scout subagents in parallel for inspection. Idempotent via per-repo marker. Operator confirms each repo before mutation. Invoke when the user says "ds:migrate", "migrate dossiers", "convert legacy dossier", "migrate from ck/cavekit/SPEC.md", or after installing the plugin to upgrade existing repos.
 argument-hint: [<repo-path> | --all | --gc]
-disable-model-invocation: true
 ---
 
 # ds:migrate — legacy → v2 dossier conversion
