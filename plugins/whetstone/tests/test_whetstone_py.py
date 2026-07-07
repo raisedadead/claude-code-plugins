@@ -96,6 +96,28 @@ def test_lint_reference_too_deep() -> None:
         assert any("deep" in f or "level" in f for f in findings), findings
 
 
+def test_lint_firstperson_in_quotes_ok() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        p = _write_skill(
+            root,
+            "s",
+            'name: s\ndescription: Correct a slip. Use when the user says "I asked you to X", "you forgot".',
+        )
+        findings = lint_skill.lint(p)
+        assert not any("first-person" in f for f in findings), findings
+
+
+def test_lint_firstperson_narration_warn() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        p = _write_skill(
+            root, "s", "name: s\ndescription: I help you fix things. Use when asked."
+        )
+        findings = lint_skill.lint(p)
+        assert any("first-person" in f for f in findings), findings
+
+
 def test_flakiness_rates() -> None:
     rates = compute_flakiness.compute_rates(
         {

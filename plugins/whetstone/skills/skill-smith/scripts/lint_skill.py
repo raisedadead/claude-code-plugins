@@ -81,7 +81,8 @@ def lint(skill_md: Path) -> list[str]:
             findings.append(
                 f"FAIL {name_hint}: description has no 'Use when' / 'Invoke when' trigger clause"
             )
-        if re.search(r"\bI\b|\bI'", description):
+        narration = re.sub(r'"[^"]*"', "", description)
+        if re.search(r"\bI\b|\bI'", narration):
             findings.append(
                 f"WARN {name_hint}: description reads first-person ('I …'); skills are described in the third person"
             )
