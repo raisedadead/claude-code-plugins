@@ -4,7 +4,15 @@
 
 set -euo pipefail
 
-DOSSIER_DIR="${1:-.scratchpad/dossier}"
+DRY_RUN=0
+DOSSIER_DIR=""
+for arg in "$@"; do
+	case "${arg}" in
+	--dry-run) DRY_RUN=1 ;;
+	*) DOSSIER_DIR="${arg}" ;;
+	esac
+done
+DOSSIER_DIR="${DOSSIER_DIR:-.scratchpad/dossier}"
 
 [[ -d "${DOSSIER_DIR}" ]] || exit 0
 
@@ -52,8 +60,12 @@ find "${DOSSIER_DIR}" -name ".ds-lock" -type f 2>/dev/null | while read -r lock;
 	fi
 
 	if [[ -n "${reason}" ]]; then
-		rm -f "${lock}"
-		# Stderr only; hook script swallows to keep JSON stdout clean.
-		echo "cleared stale lock: ${lock} (${reason})" >&2
+		if [[ "${DRY_RUN}" -eq 1 ]]; then
+			printf 'would clear stale lock: %s (%s)\n' "${lock}" "${reason}"
+		else
+			rm -f "${lock}"
+			# Stderr only; hook script swallows to keep JSON stdout clean.
+			echo "cleared stale lock: ${lock} (${reason})" >&2
+		fi
 	fi
 done
