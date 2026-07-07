@@ -122,6 +122,14 @@ Append §S:
 
 If NO: §B `invariant added` stays `—`. Note in §S `§V=skipped:one-off`.
 
+**Optional — graduate to a write-time guard (recurrence=high only):** if the invariant is a _forbidden code pattern_ (a regex the offending edit would contain), offer to register it so `invariant_guard.py` blocks the bug class at Edit/Write time for every future edit — not merely flags it at the next `ds:check`. Append an entry to `.scratchpad/dossier/.invariant-guards.json` (a JSON list):
+
+```json
+{ "id": "V<N>", "pattern": "<forbidden-regex>", "message": "<why this is blocked>", "paths": ["<glob>"] }
+```
+
+`paths` scopes the guard (omit = every non-dossier source file). Keep the regex **tight** — a loose pattern blocks legitimate edits, the one failure mode of a write-time guard. The guard is fail-open (missing registry / bad regex / out-of-scope path = no block) and bypassable with `DOSSIER_INVARIANT_GUARD=off` (log the rationale in §S). Only offer this for a genuinely mechanical, regex-expressible class; a semantic invariant stays a §V `check` predicate audited by `ds:check`.
+
 ### 8. FIX (GREEN)
 
 Implement fix. Run regression test → GREEN. Run full test suite (or scoped) → no regressions.
@@ -182,3 +190,4 @@ If `ds:build` test fails: invoke `ds:backprop` with bug-description = test failu
 - FORMAT.md §7 (§V format), §9 (§B format), §11 (§S format), §14 (locks), §16 (resume)
 - ADAPTERS.md §cavemem
 - agents/dossier-scout.md
+- hooks/invariant_guard.py (write-time §V guard registry)

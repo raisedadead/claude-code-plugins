@@ -134,6 +134,14 @@ Pass-through:
 
 Emergency bypass: `DOSSIER_MARKER_GUARD=off`, with rationale logged in the live dossier's `§S`. Smoke test: `bash hooks/test_marker_guard.sh`.
 
+## Invariant guard
+
+Opt-in PreToolUse hook on `Edit | Write | MultiEdit` that **blocks** (exit 2) an edit whose content matches a project-registered forbidden pattern — a §V invariant that `ds:backprop` promoted to a write-time guard for a high-recurrence bug class. This closes the loop the article names: don't just flag a recurring bug at the next audit, block the whole class at write time.
+
+**Fail-open by construction** — with no registry, an empty / malformed registry, a bad regex, or an out-of-scope path, it exits 0 and the write proceeds. It does nothing until you register an invariant, so installing the plugin changes no existing behaviour.
+
+Registry: `.scratchpad/dossier/.invariant-guards.json` (a JSON list), each entry `{ "id", "pattern", "message", "paths"? }`. `paths` are fnmatch globs scoping the guard (omit = every non-dossier source file). `ds:backprop` step 7 offers to append an entry for a recurrence=high, regex-expressible invariant. Dossier files (`.scratchpad/`, `DOSSIER.md`) always pass through. Bypass: `DOSSIER_INVARIANT_GUARD=off`, rationale logged in `§S`.
+
 ## Host-env adapters
 
 Plugin auto-detects + uses (graceful fallback if absent):
@@ -168,6 +176,7 @@ plugins/dossier/
 │   ├── lib-assert-scaffold.sh     # ds:new post-scaffold §-section completeness assert
 │   ├── lib-vm-checks.sh           # deterministic Vm.2/3/6/8/9 sweep (ds:check)
 │   ├── marker_guard.py            # PreToolUse phase-marker blocker (exit 2)
+│   ├── invariant_guard.py         # PreToolUse §V write-time guard (opt-in, fail-open, exit 2)
 │   ├── verify_hook.py             # PreToolUse freshness scan (non-blocking)
 │   ├── verify_sweep.py            # scan existing files (used by ds:check)
 │   ├── verify_lib.py              # check fns + latest_version/latest_eol + HTTP cache
