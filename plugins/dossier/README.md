@@ -174,6 +174,7 @@ plugins/dossier/
 │   ├── verify_patterns.py         # broad patterns dispatching to authorities
 │   ├── verify_authorities.py      # registry: 140 EOL aliases + 34 Docker images + 31 AI models
 │   ├── resolve_pins.py            # proactive latest-version + EOL resolver (ds:new / ds:build)
+│   ├── eval_skill_routing.py      # trigger-phrase collision lint (evals layer 1)
 │   ├── roll_lib.py                # transcript parser + .tlr writer/reader
 │   ├── precompact-roll.py         # PreCompact + SessionEnd auto-dump TaskList → .tlr
 │   ├── test_python.py             # stdlib tests: roll round-trip, transcript, verify offline, pins
@@ -192,6 +193,8 @@ plugins/dossier/
 │   ├── migrate/SKILL.md           # legacy 4-file + --from-ck
 │   ├── verify/SKILL.md            # /dossier:verify + references/authorities.md
 │   └── roll/SKILL.md              # /dossier:roll {dump|restore|list}
+├── evals/
+│   └── README.md                  # skill-routing evals (deterministic lint + live-model recipe)
 ├── FORMAT.md                      # caveman pipe-table encoding spec
 ├── ADAPTERS.md                    # host-env detection + routing (rtk/cavemem/caveman/fastedit/context7)
 └── README.md                      # you are here

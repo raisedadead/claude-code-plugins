@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import eval_skill_routing
 import marker_guard
 import roll_lib
 import verify_lib
@@ -352,6 +353,46 @@ def test_precompact_output_schema_safe() -> None:
         "terminalSequence",
     }, obj
     assert "systemMessage" in obj, obj
+
+
+def _write_skill(root: Path, name: str, description: str) -> None:
+    d = root / name
+    d.mkdir(parents=True)
+    (d / "SKILL.md").write_text(
+        f"---\nname: {name}\ndescription: {description}\n---\n\nbody\n",
+        encoding="utf-8",
+    )
+
+
+def test_eval_routing_clean() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        _write_skill(root, "alpha", 'Do alpha. Invoke when the user says "alpha", "a1".')
+        _write_skill(root, "beta", 'Do beta. Invoke when the user says "beta", "b1".')
+        assert eval_skill_routing.lint(root) == [], eval_skill_routing.lint(root)
+
+
+def test_eval_routing_collision() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        _write_skill(root, "alpha", 'Alpha. Invoke when the user says "shared", "a1".')
+        _write_skill(root, "beta", 'Beta. Invoke when the user says "shared", "b1".')
+        findings = eval_skill_routing.lint(root)
+        assert any("collision" in f and "shared" in f for f in findings), findings
+        assert any("alpha" in f and "beta" in f for f in findings), findings
+
+
+def test_eval_routing_missing_clause() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        _write_skill(root, "gamma", "Does gamma things with no trigger clause.")
+        findings = eval_skill_routing.lint(root)
+        assert any("gamma" in f and "trigger clause" in f for f in findings), findings
+
+
+def test_eval_routing_real_skills_clean() -> None:
+    findings = eval_skill_routing.lint(eval_skill_routing.SKILLS_DIR)
+    assert findings == [], f"real skill descriptions must not collide: {findings}"
 
 
 def _run() -> int:
