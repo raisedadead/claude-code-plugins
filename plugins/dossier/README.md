@@ -161,6 +161,7 @@ plugins/dossier/
 │   ├── lib-s-append.sh            # §S append (timestamped, blank-wrapped)
 │   ├── lib-x-refresh.sh           # §X repo state refresh
 │   ├── lib-clear-stale-locks.sh   # 30min / dead-pid auto-clear
+│   ├── lib-ds-check.sh            # deterministic drift gate (Vm.1/Vm.4, CI/pre-push)
 │   ├── marker_guard.py            # PreToolUse phase-marker blocker (exit 2)
 │   ├── verify_hook.py             # PreToolUse freshness scan (non-blocking)
 │   ├── verify_sweep.py            # scan existing files (used by ds:check)
@@ -208,6 +209,24 @@ plugins/dossier/
 - `Vm.12` recommended ≤1 live dossier (excl. paused); >1 warns
 - `Vm.13` stale-live (no §S in >14d) prompts consolidate
 - `Vm.14` `--auto` PAUSE carries a reason; never auto-push/close
+
+## Drift gate (CI / pre-push)
+
+`hooks/lib-ds-check.sh` is the deterministic core of `ds:check` — **zero model turns**. It regenerates `INDEX.md` from a DOSSIER walk (idempotent; the INDEX is derived), then exits non-zero naming any dossier whose header token, directory location, and `§Z`-closure disagree (`Vm.1` / `Vm.4`). Wire it directly as a merge/push gate without paying for the full model-driven `ds:check` skill:
+
+```bash
+# pre-push hook (.git/hooks/pre-push) or CI step
+bash plugins/dossier/hooks/lib-ds-check.sh .scratchpad
+```
+
+Pair it with an INDEX-freshness check to also catch stale INDEX (`Vm.5` / `Vm.7`) — the regen above is idempotent, so any diff means the committed INDEX was stale:
+
+```bash
+bash plugins/dossier/hooks/lib-ds-check.sh .scratchpad
+git diff --exit-code .scratchpad/INDEX.md
+```
+
+CI today unit-tests the script (`test_lib_ds_check.sh`) but does not run it against real `.scratchpad` state — add the step above to gate drift on every push.
 
 ## Migration from legacy 4-file dossier
 

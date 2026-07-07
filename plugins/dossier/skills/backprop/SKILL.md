@@ -162,6 +162,17 @@ test=<sha>, fix=<sha>
 §V<N> added [or skipped: <reason>]
 ```
 
+## Common shortcuts (and why not)
+
+Every rebuttal here is already stated once in the steps above — collected so the skip-temptation and its answer sit together.
+
+| Tempting shortcut                              | Why not                                                                                                    |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Write the fix before a failing test            | §5 — a test that passes pre-fix doesn't characterize the bug. RED first; if it's green, revisit step 4.    |
+| Skip the §V invariant ("it's a one-off")       | §7 — only `low`/one-off skips. `high`/systemic MUST add a §V row, or the whole class recurs.               |
+| Green the regression test, skip the full suite | §8 — a scoped GREEN can mask a fresh regression. Run the full (or scoped) suite before committing the fix. |
+| Tag the test with `// PH<n>-B<k>`              | §5 — test name + `Refs §B B<N>` carry the link. `marker_guard.py` exits 2 on phase markers in source/test. |
+
 ## Auto-trigger from ds:build
 
 If `ds:build` test fails: invoke `ds:backprop` with bug-description = test failure message. Then resume `ds:build` after backprop closes.

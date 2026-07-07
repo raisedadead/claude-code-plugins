@@ -4,6 +4,26 @@ Canonical reference for `DOSSIER.md` shape. Every `ds:*` skill reads this. Every
 
 Design goals: caveman-compressed, pipe-tables for state, append-only logs, atomic writes, resumable.
 
+## Contents
+
+- `1` File location + naming
+- `2` DOSSIER.md section order
+- `3` Caveman encoding
+- `4` §G — Goal
+- `5` §C — Constraints
+- `6` §I — Interfaces
+- `7` §V — Invariants
+- `8` §T — Task ledger
+- `9` §B — Bug ledger
+- `10` §X — Cross-repo state
+- `11` §S — Rolling status log
+- `12` §Z — Closeout
+- `13` INDEX.md
+- `14` Locks
+- `15` Atomic writes
+- `16` Resume protocol
+- `17` Meta-invariants (enforced by skills)
+
 ______________________________________________________________________
 
 ## 1. File location + naming

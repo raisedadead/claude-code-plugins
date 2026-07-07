@@ -174,6 +174,20 @@ commit=<sha>
 next: ds:build --next [or remaining T-ids]
 ```
 
+## Common shortcuts (and why not)
+
+Every rebuttal here is already stated once in the steps above — collected so the skip-temptation and its answer sit together.
+
+| Tempting shortcut                                      | Why not                                                                                                            |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Build on a red baseline ("tests were already failing") | A new RED must trace to THIS task (§6). Under `--auto` a red baseline is a PAUSE (`ambiguous`), not a green light. |
+| Skip PIN CHECK, code against a remembered API          | §5.5 — unpinned libs drift; the verify hook fires on a cache miss. Pin first, then code against the §I version.    |
+| `git commit --no-verify` past a failing hook           | §7 — a hook failure is a root-cause signal, not a speed bump. Fix it, retry the commit.                            |
+| Auto-confirm the §X stale guard                        | §8a / Vm.X — stale §X hides push/ahead drift. Under `--auto` it's a PAUSE (`x-stale`), never an auto-`y`.          |
+| Keep retrying a red test past 2 attempts               | `retries-exhausted` PAUSE (2 fixes + one auto-`ds:backprop`). Looping burns turns — escalate the decision.         |
+| Patch the symptom, skip the invariant                  | §6 — if the failure implies a missing invariant, run `ds:backprop`; don't just green the test.                     |
+| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. `marker_guard.py` exits 2. Source comments answer _why_, never _which phase_.       |
+
 ## Autonomous mode (`--auto`)
 
 Drives the §T ledger to completion without per-task operator approval. The operator steers by watching the TaskList + transcript, not by approving each step.
