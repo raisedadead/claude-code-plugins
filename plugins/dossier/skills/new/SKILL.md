@@ -130,6 +130,16 @@ _(empty — written by ds:close)_
 
 Atomic write: `<dir>/DOSSIER.md.tmp` then `mv`. Per Vm.8.
 
+### 3.5. Assert scaffold completeness
+
+Before touching INDEX or §S, confirm the write landed intact:
+
+```bash
+"$CLAUDE_PLUGIN_ROOT"/hooks/lib-assert-scaffold.sh "<dir>"
+```
+
+Exits non-zero naming any missing `§`-section (or the title line) — deterministic, no model eyeballing of the Write output. On failure: do **not** regen INDEX, do **not** append the §S DONE line (step 6). Report the missing sections, re-run the step-3 Write to repair, then re-assert. Mirrors the post-move assertion `ds:close` runs via `lib-archive-move.sh`.
+
 ### 4. Initial §X refresh
 
 For each repo row added in step 2: run `git status -sb` + `git rev-list --count <upstream>..HEAD` + `git describe --tags --abbrev=0` in that repo. Populate §X row.
