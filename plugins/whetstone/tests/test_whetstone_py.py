@@ -21,6 +21,9 @@ def _load(mod_name: str, rel: str) -> object:
 
 
 lint_skill = _load("lint_skill", "skills/skill-smith/scripts/lint_skill.py")
+compute_flakiness = _load(
+    "compute_flakiness", "skills/flaky-test-audit/scripts/compute_flakiness.py"
+)
 
 
 def _write_skill(root: Path, name: str, frontmatter: str, body: str = "body\n") -> Path:
@@ -91,6 +94,30 @@ def test_lint_reference_too_deep() -> None:
         (deep / "x.md").write_text("x", encoding="utf-8")
         findings = lint_skill.lint(p)
         assert any("deep" in f or "level" in f for f in findings), findings
+
+
+def test_flakiness_rates() -> None:
+    rates = compute_flakiness.compute_rates(
+        {
+            "t_pass": {"runs": 5, "fails": 0},
+            "t_fail": {"runs": 5, "fails": 5},
+            "t_flaky": {"runs": 5, "fails": 2},
+        }
+    )
+    assert rates["t_pass"]["flaky"] is False, rates["t_pass"]
+    assert rates["t_fail"]["flaky"] is False, rates["t_fail"]
+    assert rates["t_flaky"]["flaky"] is True, rates["t_flaky"]
+    assert abs(rates["t_flaky"]["rate"] - 0.4) < 1e-9, rates["t_flaky"]
+
+
+def test_flakiness_quarantine_and_new() -> None:
+    rates = compute_flakiness.compute_rates(
+        {"a": {"runs": 4, "fails": 1}, "b": {"runs": 4, "fails": 0}}
+    )
+    q = compute_flakiness.quarantine(rates)
+    assert set(q) == {"a"}, q
+    assert compute_flakiness.new_flags(q, {}) == ["a"]
+    assert compute_flakiness.new_flags(q, {"a": 0.25}) == []
 
 
 def _run() -> int:
