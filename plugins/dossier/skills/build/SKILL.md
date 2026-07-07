@@ -1,7 +1,7 @@
 ---
 name: build
 description: Execute a §T task with TDD covenant. Claims row (. → ~), runs tests/edits, commits, refreshes §X, flips row to x with commit cite. Resumable on crash via §S step-log. Invoke when the user says "ds:build T<N>", "build next task", "ds:build --next", "implement T<N>", or "work on <task-description>".
-argument-hint: <T-id> | --next | --auto | --resume
+argument-hint: <T-id> | --next | --auto | --resume | --review
 ---
 
 # ds:build — execute a §T task
@@ -14,6 +14,7 @@ TDD covenant: RED → GREEN → refactor. One commit per `x`-flip. Resumable.
 - `--next`: pick first `state=.` row in §T.
 - `--auto`: autonomous mode — loop over actionable §T rows to completion, pausing only on a real decision. See **Autonomous mode** below. Best driven by native `/goal`.
 - `--resume`: re-enter incomplete op for the same target (auto-detected from §S; flag is explicit override).
+- `--review`: spawn a fresh-context `dossier-reviewer` gate before COMMIT (step 6.5). Auto-on for destructive-class tasks.
 
 ## Steps
 
@@ -99,6 +100,26 @@ Use `fastedit` if `HAS_FASTEDIT=1` for surgical code edits. Else Edit tool.
 If tests fail and root cause unclear: **spawn `dossier-scout` subagent** with mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>". Use report to guide fix. Scout output is caveman-compressed; main thread aggregates.
 
 If failure suggests a missing invariant: trigger `ds:backprop` flow (don't just patch the symptom).
+
+### 6.5. REVIEW (fresh-context, optional)
+
+Runs when `--review` is set, or auto for a **destructive-class** task (delete / drop / migrate / force / schema). A pre-commit gate — the context that wrote the fix does not get to be the only judge that GREEN is enough. This is the discipline the plugin's own hardening wave used ("two adversarial review rounds"), encoded for downstream builds.
+
+Spawn one `dossier-reviewer` subagent (`Agent` tool, `subagent_type: dossier:dossier-reviewer`) with an **artifact-only** mission — no parent transcript:
+
+- the §T row (task text) + its §V `check` / `verify` predicate,
+- the staged diff (`git diff --staged` restricted to the files this task touched),
+- the captured test output (the GREEN proof from step 6),
+- the repo path.
+
+Read its verdict line:
+
+- `REVIEW: PASS` → proceed to step 7.
+- `REVIEW: CHANGES` (≥1 `Critical:`) → address the Critical findings (back to step 6 WORK: fix, re-run to GREEN), then re-review **once**. Still `CHANGES` after that one cycle → under `--auto` PAUSE (`review`); interactive, present the findings and let the operator decide. `Warn:` / `Nit:` never block the commit.
+
+One review cycle max — the reviewer does a single pass and the build retries at most once, so a genuine disagreement escalates instead of looping (addyosmani "doubt theater" cap).
+
+Skip entirely if neither `--review` nor destructive-class — keeps the fast path fast.
 
 ### 7. COMMIT
 
@@ -209,15 +230,16 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 
 **Decision boundary — MUST PAUSE (never auto-resolve):**
 
-| class               | trigger                                                                          |
-| ------------------- | -------------------------------------------------------------------------------- |
-| `blocked`           | row state `!` or `?`                                                             |
-| `ambiguous`         | `verify=—` on a behaviour-bearing task, or >1 reasonable implementation          |
-| `destructive`       | task implies delete/drop/migrate/force, schema change, or files outside §X repos |
-| `push`              | any `git push` / network-mutating op (never auto-push)                           |
-| `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                     |
-| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — do NOT auto-confirm                 |
-| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget` |
+| class               | trigger                                                                            |
+| ------------------- | ---------------------------------------------------------------------------------- |
+| `blocked`           | row state `!` or `?`                                                               |
+| `ambiguous`         | `verify=—` on a behaviour-bearing task, or >1 reasonable implementation            |
+| `destructive`       | task implies delete/drop/migrate/force, schema change, or files outside §X repos   |
+| `push`              | any `git push` / network-mutating op (never auto-push)                             |
+| `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                       |
+| `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5) |
+| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — do NOT auto-confirm                   |
+| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`   |
 
 **Rails:** never auto-push · never auto-close (stop at the last `x`-flip; `ds:close` stays an explicit operator step) · per-task lock · atomic writes · `marker_guard` + `verify` hooks stay active during WORK. Every PAUSE writes its reason to §S so `ds:status` shows WHY on return (Vm.14).
 
@@ -232,3 +254,4 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 
 - FORMAT.md §8 (§T format), §10 (§X format), §11 (§S format), §14 (locks), §15 (atomic writes), §16 (resume)
 - ADAPTERS.md §rtk, §fastedit
+- agents/dossier-scout.md (step 6 failure analysis), agents/dossier-reviewer.md (step 6.5 pre-commit gate)

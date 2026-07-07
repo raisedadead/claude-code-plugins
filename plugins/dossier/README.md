@@ -87,7 +87,10 @@ Locks at `.scratchpad/dossier/<slug>/.ds-lock` prevent concurrent mutation. Stal
 
 ## Subagent
 
-Plugin ships `dossier-scout` — a read-only investigator. Used by `/dossier:check` (parallel drift scans per repo) and `/dossier:migrate` (per-repo inspection). Caveman-compressed output. Refuses all writes (hard deny list on Bash patterns + tool restrictions). Spawn directly via `Agent({subagent_type: "dossier:dossier-scout", ...})` if you want a one-off read-only sweep.
+Plugin ships two read-only subagents. Both refuse all writes (hard deny list on Bash patterns + tool restrictions) and emit caveman-compressed output.
+
+- `dossier-scout` — investigator. Used by `/dossier:check` (parallel drift scans per repo) and `/dossier:migrate` (per-repo inspection). Spawn directly via `Agent({subagent_type: "dossier:dossier-scout", ...})` for a one-off read-only sweep.
+- `dossier-reviewer` — fresh-context pre-commit reviewer. Opt in with `/dossier:build --review` (auto for destructive-class tasks): before COMMIT, `ds:build` hands it an **artifact-only** mission (staged diff + test output + §T/§V contract, no parent transcript) and reads its deterministic `REVIEW: PASS | CHANGES` verdict. A second agent with fresh context is less biased than the one that wrote the fix.
 
 ## Verify-layer
 
@@ -177,7 +180,8 @@ plugins/dossier/
 │   ├── test_marker_guard.sh       # marker_guard smoke test
 │   └── test_lib_dossier_edit.sh   # lib-*.sh helper tests (incl lib-header-state)
 ├── agents/
-│   └── dossier-scout.md           # read-only investigator
+│   ├── dossier-scout.md           # read-only investigator
+│   └── dossier-reviewer.md        # fresh-context pre-commit reviewer (ds:build --review)
 ├── skills/
 │   ├── new/SKILL.md               # scaffold + clarify gate + pin-seed
 │   ├── status/SKILL.md            # the driver: TaskList hydrate + decision-first sit-rep
