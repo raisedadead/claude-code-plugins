@@ -19,6 +19,16 @@
       "license": "ISC",
       "homepage": "https://github.com/raisedadead/claude-code-plugins/tree/main/plugins/dossier",
       "repository": "https://github.com/raisedadead/claude-code-plugins"
+    },
+    {
+      "name": "whetstone",
+      "source": "./plugins/whetstone",
+      "description": "Engineering-craft skills that sharpen the edge: red-green TDD, flaky-test audit, pre-decision doubt review, merge-resolve, and skill linting. Each with a deterministic self-verify.",
+      "category": "workflow",
+      "keywords": ["tdd", "testing", "code-review", "git", "skills"],
+      "license": "ISC",
+      "homepage": "https://github.com/raisedadead/claude-code-plugins/tree/main/plugins/whetstone",
+      "repository": "https://github.com/raisedadead/claude-code-plugins"
     }
   ]
 }
