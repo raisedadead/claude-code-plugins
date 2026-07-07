@@ -163,6 +163,7 @@ plugins/dossier/
 │   ├── lib-clear-stale-locks.sh   # 30min / dead-pid auto-clear
 │   ├── lib-ds-check.sh            # deterministic drift gate (Vm.1/Vm.4, CI/pre-push)
 │   ├── lib-assert-scaffold.sh     # ds:new post-scaffold §-section completeness assert
+│   ├── lib-vm-checks.sh           # deterministic Vm.2/3/6/8/9 sweep (ds:check)
 │   ├── marker_guard.py            # PreToolUse phase-marker blocker (exit 2)
 │   ├── verify_hook.py             # PreToolUse freshness scan (non-blocking)
 │   ├── verify_sweep.py            # scan existing files (used by ds:check)

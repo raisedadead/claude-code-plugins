@@ -33,6 +33,7 @@ jobs:
           bash plugins/dossier/hooks/test_lib_ds_check.sh
           bash plugins/dossier/hooks/test_lib_z_write.sh
           bash plugins/dossier/hooks/test_lib_assert_scaffold.sh
+          bash plugins/dossier/hooks/test_lib_vm_checks.sh
 
       - name: ruff
         run: |
