@@ -4,6 +4,26 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-07
+
+Loops-uplift wave: borrowing the "designing loops" article's levers — scripts over reasoning, deterministic exit criteria, a fresh-context reviewer, and encode-the-fix-into-the-system. 9 tasks, TDD. `[e8ddd78..8ad517e]`
+
+### Added
+
+- `hooks/lib-vm-checks.sh` — deterministic Vm.2/3/6/8/9 sweep (§S ISO timestamp, §T `x`-row cite, START/DONE pairing, write-temp orphans, stale locks). Replaces the prose one-liners `ds:check` re-derived from scratch each run; findings are prefixed `CRITICAL` / `WARN` and fold straight into the 🔴 / 🟡 buckets.
+- `hooks/lib-assert-scaffold.sh` — `ds:new` post-scaffold assertion (step 3.5): exits non-zero naming any missing §-section or title before the §S DONE append, instead of eyeballing the Write output.
+- `hooks/invariant_guard.py` — opt-in PreToolUse write-time §V guard. Blocks (exit 2) an edit matching a project-registered forbidden pattern; **fail-open** with a missing / empty / malformed registry, so it changes nothing until `ds:backprop` registers an invariant. Registry at `.scratchpad/dossier/.invariant-guards.json`; bypass `DOSSIER_INVARIANT_GUARD=off`.
+- `hooks/eval_skill_routing.py` + `evals/README.md` — deterministic trigger-phrase collision lint (in CI via `test_python.py`) plus the manual live-model routing-eval recipe it cannot replace.
+- `agents/dossier-reviewer.md` — fresh-context, artifact-only pre-commit reviewer for `ds:build --review` (auto for destructive-class tasks): severity-tagged two-axis findings, deterministic `REVIEW: PASS | CHANGES` verdict.
+- Two new shell suites (`test_lib_assert_scaffold`, `test_lib_vm_checks`) plus invariant-guard and routing-lint cases in `test_python.py`, all wired into CI.
+
+### Changed
+
+- `ds:check` step 3 calls `lib-vm-checks.sh` for Vm.2/3/6/8/9 instead of re-deriving shell one-liners from prose; the §3 Vm table marks them deterministic.
+- `ds:build` gains `--review` (step 6.5 reviewer gate) and a `review` PAUSE class; `ds:new` gains the scaffold-completeness assertion.
+- `lib-clear-stale-locks.sh` gains `--dry-run` (non-mutating list) so the read-only `ds:check` Vm.9 probe never clears a lock.
+- README documents the standalone `lib-ds-check.sh` drift gate for CI / pre-push; FORMAT.md gains a §-section TOC; `ds:build` and `ds:backprop` gain "common shortcuts (and why not)" anti-rationalization tables.
+
 ## 2026-07-01
 
 Lifecycle-hardening wave: a rolled/fresh session can no longer be surprised by a phantom-live "sealed-zombie". 15 tasks, two adversarial review rounds. `[0e0569f..d00668e]`
