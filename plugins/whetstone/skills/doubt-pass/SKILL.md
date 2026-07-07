@@ -20,7 +20,7 @@ Run the five steps in `reference/doubt-protocol.md`:
 
 1. **CLAIM** — state the decision in one paragraph.
 1. **EXTRACT** — strip it to an artifact + contract (inputs, outputs, invariants), no reasoning trail. The reviewer judges the plan, not your defense of it.
-1. **DOUBT** — spawn a fresh-context subagent (`Agent`, `subagent_type: general-purpose`) with **only** the extracted artifact and the prompt in `reference/adversarial-prompt-template.md`: "find where this breaks," not "is this good." Give it a tight word budget.
+1. **DOUBT** — spawn the `whetstone-doubter` agent (`Agent`, `subagent_type: whetstone:whetstone-doubter`) with **only** the extracted artifact and contract. The agent already carries the adversarial method ("find where this breaks," not "is this good") and its word budget; `reference/adversarial-prompt-template.md` is the exact mission text to fill and send. It returns a `DOUBT: FAILURES | NO FAILURE FOUND` verdict.
 1. **RECONCILE** — classify every returned finding `actionable` or `not-actionable`. Don't rubber-stamp; don't dismiss.
 1. **STOP** — end when the cap (3 cycles) is hit, or a cycle returns zero new findings. Fold actionable findings back into the plan between cycles.
 

@@ -33,17 +33,25 @@ Borrowed from the way good engineers already work, and from the "designing loops
 - **Separate the moments.** `doubt-pass` challenges a plan *before* code; `skill-smith` lints *after* authoring; `tdd-cycle` drives *during*. Distinct skills for distinct moments.
 - **Deterministic over discretionary.** A flake is a computed rate; a clean merge is a marker count of zero; a done slice is an exit code. Numbers, not judgement, where a number exists.
 
+## Agent
+
+Ships one read-only subagent, `whetstone-doubter` — a fresh-context adversarial reviewer. `doubt-pass` hands it an **artifact-only** mission (the extracted plan + contract, no conversation or rationale) and reads its deterministic `DOUBT: FAILURES | NO FAILURE FOUND` verdict. Fresh context is the point: an agent that never saw the plan's justification falsifies it instead of rationalizing it. Refuses all writes (`Edit` / `Write` / `NotebookEdit` blocked). Spawn directly via `Agent({subagent_type: "whetstone:whetstone-doubter", ...})` to attack any plan artifact.
+
 ## Files
 
 ```
 plugins/whetstone/
 ├── .claude-plugin/plugin.json
+├── CHANGELOG.md           # dated change log (commit-SHA versioning mode)
+├── agents/
+│   └── whetstone-doubter.md  # fresh-context adversarial reviewer (doubt-pass)
 ├── skills/
 │   ├── tdd-cycle/         # SKILL.md + scripts/run_slice.sh + reference/
 │   ├── flaky-test-audit/  # SKILL.md + scripts/{flake_runner.sh,compute_flakiness.py} + reference/
 │   ├── doubt-pass/        # SKILL.md + reference/
 │   ├── merge-resolve/     # SKILL.md + scripts/verify_clean.sh + reference/
 │   └── skill-smith/       # SKILL.md + scripts/lint_skill.py + reference/
+├── tests/                 # python + shell test suites (wired into CI)
 └── README.md              # you are here
 ```
 
