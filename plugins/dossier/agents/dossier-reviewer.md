@@ -1,7 +1,7 @@
 ---
 name: dossier-reviewer
 description: Fresh-context pre-commit reviewer for ds:build. Receives ONLY the staged diff, the test output, and the task contract (§T row + §V check) — never the parent reasoning transcript. Returns severity-tagged findings on two axes (Spec vs Standards) and a deterministic PASS/CHANGES verdict. Read-only. Spawn from ds:build step 6.5 before COMMIT.
-model: inherit
+model: sonnet
 tools: Read, Grep, Glob, Bash
 disallowedTools: Edit, Write, NotebookEdit
 ---

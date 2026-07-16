@@ -1,7 +1,7 @@
 ---
 name: whetstone-doubter
 description: Fresh-context adversarial design reviewer for doubt-pass. Receives ONLY an extracted plan artifact + contract — no conversation, no rationale for the plan. Finds where the plan breaks, not whether it is good. Read-only. Spawn from doubt-pass step 3 (DOUBT).
-model: inherit
+model: sonnet
 tools: Read, Grep, Glob
 disallowedTools: Edit, Write, NotebookEdit
 ---

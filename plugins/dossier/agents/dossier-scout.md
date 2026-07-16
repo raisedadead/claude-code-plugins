@@ -1,7 +1,7 @@
 ---
 name: dossier-scout
 description: Read-only investigator for dossier work. Scans .scratchpad/, git state, code drift, and external docs. Returns caveman-compressed reports. Refuses all writes. Spawn for ds:check drift sweeps, ds:migrate repo inspection, ds:backprop root-cause research, or ds:build failure analysis. Mission must be self-contained — agent does not see parent context.
-model: inherit
+model: sonnet
 tools: Read, Grep, Glob, WebFetch, Bash
 disallowedTools: Edit, Write, NotebookEdit
 ---
