@@ -18,17 +18,6 @@ import re
 import sys
 from pathlib import Path
 
-# Make sibling modules importable when run as a script.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-try:
-    from verify_lib import load_state, save_state
-    from verify_patterns import VERIFY_PATTERNS
-except Exception as exc:  # noqa: BLE001
-    # Never block a tool call due to verify-layer failure.
-    print(f"verify-layer load error: {type(exc).__name__}: {exc}", file=sys.stderr)
-    sys.exit(0)
-
 
 def _extract(tool_input: dict, tool_name: str) -> tuple[str, str]:
     """Pull (file_path, content) from the tool_input payload across Edit/Write/MultiEdit shapes."""
@@ -76,8 +65,6 @@ def _skip_set(content: str) -> set[str]:
 
 
 def main() -> int:
-    os.environ["DOSSIER_VERIFY_CACHE_ONLY"] = "1"
-
     try:
         payload = json.loads(sys.stdin.read())
     except json.JSONDecodeError:
@@ -85,6 +72,20 @@ def main() -> int:
 
     if not isinstance(payload, dict):
         return 0
+
+    cwd = payload.get("cwd")
+    if isinstance(cwd, str) and cwd and not (Path(cwd) / ".scratchpad" / "dossier").is_dir():
+        return 0
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    try:
+        from verify_lib import load_state, save_state
+        from verify_patterns import VERIFY_PATTERNS
+    except Exception as exc:  # noqa: BLE001
+        print(f"verify-layer load error: {type(exc).__name__}: {exc}", file=sys.stderr)
+        return 0
+
+    os.environ["DOSSIER_VERIFY_CACHE_ONLY"] = "1"
 
     tool_name = payload.get("tool_name", "")
     if tool_name not in {"Edit", "Write", "MultiEdit"}:

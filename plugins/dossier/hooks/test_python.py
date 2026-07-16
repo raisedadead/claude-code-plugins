@@ -23,6 +23,7 @@ import eval_skill_routing
 import invariant_guard
 import marker_guard
 import roll_lib
+import verify_hook
 import verify_lib
 
 
@@ -214,6 +215,22 @@ def test_verify_cache_only_no_network() -> None:
             os.chdir(orig_cwd)
 
 
+def test_verify_hook_skips_non_dossier_repo() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        rc, out = _drive(
+            verify_hook,
+            {
+                "tool_name": "Edit",
+                "cwd": d,
+                "tool_input": {
+                    "file_path": "action.yml",
+                    "new_string": "uses: actions/checkout@v3",
+                },
+            },
+        )
+        assert rc == 0 and out == "", (rc, out)
+
+
 def test_verify_patterns_compile() -> None:
     import re
 
@@ -289,6 +306,19 @@ def test_marker_guard_advises_never_blocks() -> None:
         },
     )
     assert rc2 == 0 and out2.strip() == "", out2
+
+
+def test_marker_guard_skips_non_dossier_repo() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        rc, out = _drive(
+            marker_guard,
+            {
+                "tool_name": "Edit",
+                "cwd": d,
+                "tool_input": {"file_path": "src/foo.ts", "new_string": "// PH3-B7: guard"},
+            },
+        )
+        assert rc == 0 and out == "", (rc, out)
 
 
 def test_precompact_output_schema_safe() -> None:
@@ -481,6 +511,15 @@ def test_invariant_guard_off_env() -> None:
         finally:
             os.environ.pop("DOSSIER_INVARIANT_GUARD", None)
         assert rc == 0, rc
+
+
+def test_invariant_guard_skips_non_dossier_repo() -> None:
+    with tempfile.TemporaryDirectory() as dossier_root, tempfile.TemporaryDirectory() as bare_root:
+        _invariant_registry(Path(dossier_root), [_GUARD_ENTRY])
+        payload = _write_payload("src/app.py", "x = eval(y)")
+        payload["cwd"] = bare_root
+        rc, out = _drive_in(invariant_guard, payload, Path(dossier_root))
+        assert rc == 0 and out == "", (rc, out)
 
 
 def _run() -> int:

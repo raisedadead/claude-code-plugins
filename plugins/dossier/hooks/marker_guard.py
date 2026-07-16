@@ -138,15 +138,19 @@ def advise(path: str, line: str) -> int:
 
 
 def main() -> int:
-    if os.environ.get("DOSSIER_MARKER_GUARD") == "off":
-        return 0
-
     try:
         event = json.load(sys.stdin)
     except json.JSONDecodeError:
         return 0
 
     if not isinstance(event, dict):
+        return 0
+
+    cwd = event.get("cwd")
+    if isinstance(cwd, str) and cwd and not (Path(cwd) / ".scratchpad" / "dossier").is_dir():
+        return 0
+
+    if os.environ.get("DOSSIER_MARKER_GUARD") == "off":
         return 0
 
     file_path, chunks = hook_payload(event)
