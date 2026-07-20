@@ -65,6 +65,8 @@ Pre-flight gates (`--abandon` skips the §T all-x, §T cites, and §B all-fixed 
 | §B all-fixed | every row has non-empty `fix cite` | refuse OR allow w/ `--accept-open-bugs` (operator override) |
 | §X pushed    | every repo `pushed=yes`            | warn, allow operator decision (push or close anyway)        |
 
+Advisory (non-blocking; `--complete`/`--successor` only — never on `--abandon`, whose incomplete §T would make the suggestion a dead end): when §T is all-`x` and no §X repo changelog carries this wave's range-cite section, print `consider ds:ship first`. Prints once, never refuses.
+
 Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; applies to every §S append in this skill):
 
 ```
