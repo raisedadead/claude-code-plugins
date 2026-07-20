@@ -29,6 +29,8 @@ CONSUMED: <dossier-dir-key>          (stamped by ds:new, never by grill)
 
 Footer lines are the machine-checked gate (`hooks/lib-assert-grill.sh`) — `ds:new` refuses a half-grilled slug.
 
+**One entry per paragraph — blank line between every FACT/DECISION/footer line.** Markdown formatters join adjacent bare lines into one paragraph, which un-anchors the `^FRONTIER:`/`^CONFIRMED:` greps and turns a complete artifact into a false "incomplete" (same failure class FORMAT.md §11 solves for §S).
+
 ## Steps
 
 ### 0. Detect host env
