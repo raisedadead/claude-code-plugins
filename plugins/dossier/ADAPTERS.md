@@ -8,14 +8,15 @@ ______________________________________________________________________
 
 ## Adapter matrix
 
-| Adapter         | Detection                                                        | If present                                                    | If absent              |
-| --------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------- |
-| `rtk` CLI       | `command -v rtk`                                                 | see §rtk below                                                | emit raw commands      |
-| `cavemem` MCP   | tool namespace has `mcp__cavemem__search`                        | augment §S tail with cross-session observations               | §S only                |
-| `caveman` skill | available-skills list has `caveman:caveman` or `ck:caveman`      | encourage caveman encoding in writes                          | plain markdown         |
-| `fastedit` MCP  | tool namespace has `mcp__fastedit__fast_edit`                    | surgical edits to SOURCE task files; read via fast_search     | Edit tool              |
-| `context7` MCP  | tool namespace has `mcp__claude_ai_Context7__resolve-library-id` | ground CURRENT library API docs before coding (see §context7) | WebFetch official docs |
-| `Workflow` tool | tool namespace has `Workflow` (native harness)                   | scout fan-out when targets > 2 (see §workflow)                | parallel Agent spawns  |
+| Adapter            | Detection                                                        | If present                                                    | If absent              |
+| ------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------- |
+| `rtk` CLI          | `command -v rtk`                                                 | see §rtk below                                                | emit raw commands      |
+| `cavemem` MCP      | tool namespace has `mcp__cavemem__search`                        | augment §S tail with cross-session observations               | §S only                |
+| `caveman` skill    | available-skills list has `caveman:caveman` or `ck:caveman`      | encourage caveman encoding in writes                          | plain markdown         |
+| `fastedit` MCP     | tool namespace has `mcp__fastedit__fast_edit`                    | surgical edits to SOURCE task files; read via fast_search     | Edit tool              |
+| `context7` MCP     | tool namespace has `mcp__claude_ai_Context7__resolve-library-id` | ground CURRENT library API docs before coding (see §context7) | WebFetch official docs |
+| `Workflow` tool    | tool namespace has `Workflow` (native harness)                   | scout fan-out when targets > 2 (see §workflow)                | parallel Agent spawns  |
+| `whetstone` plugin | available agent types list has `whetstone:whetstone-doubter`     | doubt gate at design-class `ds:build` (see §whetstone)        | graceful skip          |
 
 ## §rtk — token-compression wrapper
 
@@ -128,6 +129,21 @@ Wins vs raw Agent spawns: schema-validated rows (no prose parsing), `pipeline()`
 
 If absent: parallel Agent calls, one per repo, identical missions.
 
+## §whetstone — adversarial doubt gate (cross-plugin agent)
+
+Sibling plugin (`raisedadead/claude-code-plugins`) shipping the `whetstone:whetstone-doubter` fresh-context design reviewer. dossier composes it at phase gates; whetstone stays independently publishable.
+
+Detection is a NEW path — agents, not CLI / MCP-namespace / skill-triggers:
+
+- **Primary:** the session context lists available agent types (the `Agent` tool's registry). Present iff the list contains `whetstone:whetstone-doubter`.
+- **Fallback (suspenders):** if an `Agent` call is made anyway and the type is absent, the harness returns a recoverable tool-result error — `Agent type '<name>' not found. Available agents: ...` — the turn survives and the error enumerates what IS available. On this error: append §S `doubt=skipped-absent`, continue the build. Graceful skip, never block.
+
+Invocation (when present): `Agent` tool, `subagent_type: whetstone:whetstone-doubter`, artifact-only mission per whetstone's doubt-pass protocol (extracted plan + contract, no parent reasoning). Verdict line `DOUBT: FAILURES | NO FAILURE FOUND` — model-judgment parsed, not computed.
+
+Absent-type semantics are UNDOCUMENTED upstream — verified empirically on Claude Code 2.1.205 (2026-07-20; corroborated by anthropics/claude-code#59881, #68945). One unconfirmed contrary report exists (#32975 comment) — hence belt+suspenders: pre-check the agent list AND catch the not-found error. Re-verify on major harness bumps.
+
+If absent: skip the doubt gate silently (§S note only). Never error, never prompt.
+
 ## Detection scaffold (skill body preamble)
 
 Each `ds:*` skill begins with:
@@ -139,6 +155,7 @@ Run:
 - `command -v rtk &>/dev/null && echo HAS_RTK=1`
 - Check tool namespace for: `mcp__cavemem__search`, `mcp__fastedit__fast_edit`, `Workflow`
 - Check available skills for: `caveman:caveman`, `ck:caveman`
+- Check available agent types for: `whetstone:whetstone-doubter`
 
 Cache results for this invocation. Route commands per ADAPTERS.md tables.
 Never error if absent. Never require any adapter.
