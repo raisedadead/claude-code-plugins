@@ -110,6 +110,8 @@ Then implement. Run test → GREEN. Refactor if needed.
 
 If `verify` is shell predicate: run after work, must exit 0. If `verify` is `—`: implement, no test gate. (Discouraged; only for docs / config.)
 
+**run_slice route (whetstone compose, optional):** when whetstone's `run_slice.sh` resolves — this repo's source checkout (`plugins/whetstone/skills/tdd-cycle/scripts/run_slice.sh`) or an operator-set `DOSSIER_RUN_SLICE` path — prove the cycle through it: `run_slice.sh red <test-cmd>` (exits non-zero if the test PASSED), `green <test-cmd>`, `full <suite-cmd>`. Three exit codes replace prose judgment of test output. Unresolvable → raw test commands exactly as above (absent-skip; see ADAPTERS §whetstone for why there is no auto-discovery).
+
 Use `fastedit` if `HAS_FASTEDIT=1` for surgical code edits. Else Edit tool.
 
 **Source comments stay phase-agnostic.** Never write `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)`, or `// PH<n>-B<k>` in source or test files. Phase / audit tracking lives in DOSSIER.md §B and §S. Comments in source answer _why_ (workaround refs, non-obvious invariants, upstream-bug links), not _which phase_. The `marker_guard.py` PreToolUse hook enforces this — Edit/Write/MultiEdit calls carrying phase markers exit 2.

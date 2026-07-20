@@ -15,13 +15,13 @@ Sibling to [`dossier`](../dossier): dossier is the phase-scoped ledger for a who
 
 ## Skills
 
-| Skill              | Loop  | Reach for it when…                                      | Self-verify (deterministic)                                                  |
-| ------------------ | ----- | ------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `tdd-cycle`        | turn  | authoring behaviour test-first, no ledger driving it    | `run_slice.sh`: RED must exit non-zero, GREEN + full suite exit 0            |
-| `flaky-test-audit` | sweep | "is this test flaky", scheduled test-health check       | `compute_flakiness.py`: per-test rate `0<r<1` = flaky, by the number         |
-| `doubt-pass`       | goal  | stress-testing a plan/design **before** any code exists | 3-cycle cap; every finding classified; "doubt theater" flagged               |
-| `merge-resolve`    | turn  | resolving merge/rebase conflicts                        | `verify_clean.sh`: 0 conflict markers AND pass-count ≥ pre-conflict baseline |
-| `skill-smith`      | goal  | writing / reviewing a `SKILL.md`                        | `lint_skill.py`: frontmatter + line-budget + reference-depth checks          |
+| Skill              | Loop  | Reach for it when…                                                                                                   | Self-verify (deterministic)                                                  |
+| ------------------ | ----- | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `tdd-cycle`        | turn  | authoring behaviour test-first (standalone driver; under a dossier covenant, `ds:build` composes its `run_slice.sh`) | `run_slice.sh`: RED must exit non-zero, GREEN + full suite exit 0            |
+| `flaky-test-audit` | sweep | "is this test flaky", scheduled test-health check                                                                    | `compute_flakiness.py`: per-test rate `0<r<1` = flaky, by the number         |
+| `doubt-pass`       | goal  | stress-testing a plan/design **before** any code exists                                                              | 3-cycle cap; every finding classified; "doubt theater" flagged               |
+| `merge-resolve`    | turn  | resolving merge/rebase conflicts                                                                                     | `verify_clean.sh`: 0 conflict markers AND pass-count ≥ pre-conflict baseline |
+| `skill-smith`      | goal  | writing / reviewing a `SKILL.md`                                                                                     | `lint_skill.py`: frontmatter + line-budget + reference-depth checks          |
 
 Each skill's `description` carries its own trigger phrases, so the model reaches for the right one; you can also invoke any by name.
 

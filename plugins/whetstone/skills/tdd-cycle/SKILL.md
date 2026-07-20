@@ -1,6 +1,6 @@
 ---
 name: tdd-cycle
-description: Drive one vertical slice of behaviour red-green-refactor, seam agreed before the first test. Use when the user asks to add a feature, fix a bug, write code test-first, says "TDD this", "red green refactor", or "write a failing test first" — and no dossier or spec-driven task is already driving the work.
+description: Drive one vertical slice of behaviour red-green-refactor, seam agreed before the first test. Use when the user asks to add a feature, fix a bug, write code test-first, says "TDD this", "red green refactor", or "write a failing test first". Inside a live dossier:build covenant, invoke dossier:build instead — it drives the loop and composes this skill's run_slice.sh as its RED/GREEN proof, so the discipline still applies without two ledgers driving one edit.
 ---
 
 # tdd-cycle — one slice, red before green
@@ -10,7 +10,7 @@ Test-first for ad-hoc work that no ledger is driving. The discipline is small an
 ## When to use
 
 - Adding a feature or fixing a bug where you want the test to define "done."
-- Any behaviour-bearing edit not already inside a `dossier:build` / `ck:build` covenant (those have their own TDD gate — don't double-drive).
+- Any behaviour-bearing edit not already inside a `dossier:build` / `ck:build` covenant. Under a covenant, `dossier:build` drives WHEN and WHAT and composes this skill's `run_slice.sh` as its RED/GREEN proof (dossier ADAPTERS §whetstone); the §T row already defines the seam, so the interview is skipped. Two ledgers never both drive one edit.
 
 ## The seam (agree it first)
 
