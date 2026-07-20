@@ -69,6 +69,6 @@ grep -q 'ds:grill' "$SCRIPT_DIR/../skills/new/SKILL.md" || fail "ds:new must poi
 grep -q -- '--consume' "$SCRIPT_DIR/../skills/new/SKILL.md" || fail "ds:new must stamp consumption via the helper"
 [[ -f "$SCRIPT_DIR/../skills/grill/SKILL.md" ]] || fail "grill skill must exist"
 grep -q 'test_lib_assert_grill.sh' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must run this test"
-grep -q 'lint_skill.py plugins/dossier/skills/grill' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must lint the grill skill"
+grep -q 'lint_skill.py plugins/dossier/skills' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must lint dossier skills (grill included)"
 
 printf 'ok\n'

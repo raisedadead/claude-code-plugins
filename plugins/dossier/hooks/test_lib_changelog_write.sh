@@ -59,6 +59,6 @@ grep -q -- '--changelog' "$SHIP" || fail "ship must support explicit --changelog
 [[ -f "$SCRIPT_DIR/../skills/ship/reference/changelog-mapping.md" ]] || fail "mapping reference must exist"
 grep -q 'ds:ship' "$SCRIPT_DIR/../skills/close/SKILL.md" || fail "ds:close must carry the ship advisory"
 grep -q 'test_lib_changelog_write.sh' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must run this test"
-grep -q 'lint_skill.py plugins/dossier/skills/grill/SKILL.md plugins/dossier/skills/ship/SKILL.md' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must lint the ship skill"
+grep -q 'lint_skill.py plugins/dossier/skills' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must lint dossier skills (ship included)"
 
 printf 'ok\n'
