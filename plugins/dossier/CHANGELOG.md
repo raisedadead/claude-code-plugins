@@ -4,6 +4,24 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-20 (cohesion)
+
+Skills-cohesion wave: the pair reads as one system — whetstone composed at every dossier lifecycle gate, both directions, one verdict grammar. 8 tasks, TDD, doubt gates drew 11 actionable findings. `[90cd0cd..1fa3c25]`
+
+### Added
+
+- ADAPTERS §whetstone script/skill routes: `run_slice.sh` RED/GREEN proof (ds:build step 6), `whetstone:merge-resolve` merge-class conflict route, `flake_runner.sh` triage (ds:backprop step 4.5), `lint_skill.py` touched-SKILL gate — all deterministic-resolution (`DOSSIER_RUN_SLICE` / `DOSSIER_FLAKE_RUNNER` / `DOSSIER_LINT_SKILL`), all absent-skip.
+- `skill_gate.py` whetstone branch — reverse breadcrumbs: whetstone skill invocations on any live dossier get a reminder to record ONE §S verdict line (first live row = current; whetstone stays zero-hook).
+- Backprop flake triage: `0<r<1` = flaky → closed §B row + quarantine pointer, no §V invariant minted; resume row keyed on `flake=<rate>`.
+- Loop rails in the build covenant: stall rule (identical failure twice = strategy change), budget clean-landing (WIP commit + §S handoff), reset-don't-patch (fresh context via ds:roll); mirrored in the shortcuts table.
+- Shared `## Verdict grammar` table, byte-identical in both READMEs; doc-contract tests for every route, all CI-wired.
+
+### Changed
+
+- tdd-cycle description recomposed: self-exclusion clause (root cause of 47-day 0-use) inverted into a routing clause — standalone drives; under a covenant `dossier:build` drives and composes `run_slice.sh`.
+- CI lints ALL dossier skills (dir sweep replaces per-file list); ds:build auto-lints any touched SKILL.md (absent-skip).
+- Root README + marketplace.json present the pair as a suite (install-both, either-works-alone).
+
 ## 2026-07-20
 
 Skills-uplift wave: whetstone composes into the dossier lifecycle (doubt gate at design-class builds), Define + Ship coverage gaps closed. 7 tasks, TDD, adversarial doubt + fresh-context review per task. `[d50f755..469b76b]`

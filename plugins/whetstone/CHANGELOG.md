@@ -4,6 +4,16 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-07-20 (cohesion)
+
+Cohesion wave (driven from dossier's skills-cohesion): composed at every dossier gate, zero hooks still. `[90cd0cd..1fa3c25]`
+
+### Changed
+
+- tdd-cycle description recomposed — routing clause replaces the self-exclusion that caused 47 days of 0-use; standalone behavior unchanged.
+- All five skills gain a `## Dossier breadcrumb` section: one §S verdict line into a live dossier, no-op without one (prose only, no hooks, no dossier dependency).
+- README: shared `## Verdict grammar` table (identical to dossier's) + updated tdd-cycle row.
+
 ## 2026-07-20
 
 Composition wave (driven from dossier's skills-uplift): `whetstone-doubter` now auto-fires at dossier's design-class build gate. `[d50f755..469b76b]`
