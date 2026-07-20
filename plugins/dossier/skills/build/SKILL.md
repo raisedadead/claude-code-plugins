@@ -116,6 +116,8 @@ Use `fastedit` if `HAS_FASTEDIT=1` for surgical code edits. Else Edit tool.
 
 **Source comments stay phase-agnostic.** Never write `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)`, or `// PH<n>-B<k>` in source or test files. Phase / audit tracking lives in DOSSIER.md §B and §S. Comments in source answer _why_ (workaround refs, non-obvious invariants, upstream-bug links), not _which phase_. The `marker_guard.py` PreToolUse hook enforces this — Edit/Write/MultiEdit calls carrying phase markers exit 2.
 
+**Conflict route (whetstone compose, merge-class only):** a plain `git merge` conflict during WORK, with `whetstone:merge-resolve` in the available-skills list, resolves per that skill's process — hunk-by-hunk with intent, then the `verify_clean.sh` proof (baseline `-` marker-mode when no pre-conflict count exists; the step-6 full-suite GREEN gate already floors regressions). §S: `ds:build <T-id> conflict=resolved verify_clean=0`. Skill absent → resolve inline as before, §S `conflict=resolved-inline`. Routing is model-judgment (trigger-phrase match); the verify_clean exit code is the code-enforced part. Conflicts from `rebase` / `cherry-pick` are OUT of this route — their `--continue` creates commits outside step 7's task-scoped discipline: under `--auto` PAUSE (`destructive`); interactive, hand to the operator (standalone `whetstone:merge-resolve` already owns that trigger).
+
 If tests fail and root cause unclear: **spawn `dossier-scout` subagent** with mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>". Use report to guide fix. Scout output is caveman-compressed; main thread aggregates.
 
 If failure suggests a missing invariant: trigger `ds:backprop` flow (don't just patch the symptom).
@@ -252,16 +254,16 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 
 **Decision boundary — MUST PAUSE (never auto-resolve):**
 
-| class               | trigger                                                                            |
-| ------------------- | ---------------------------------------------------------------------------------- |
-| `blocked`           | row state `!` or `?`                                                               |
-| `ambiguous`         | `verify=—` on a behaviour-bearing task, or >1 reasonable implementation            |
-| `destructive`       | task implies delete/drop/migrate/force, schema change, or files outside §X repos   |
-| `push`              | any `git push` / network-mutating op (never auto-push)                             |
-| `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                       |
-| `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5) |
-| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — do NOT auto-confirm                   |
-| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`   |
+| class               | trigger                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `blocked`           | row state `!` or `?`                                                                                                                             |
+| `ambiguous`         | `verify=—` on a behaviour-bearing task, or >1 reasonable implementation                                                                          |
+| `destructive`       | task implies delete/drop/migrate/force, schema change, files outside §X repos, or a rebase/cherry-pick conflict hit mid-WORK (§6 conflict route) |
+| `push`              | any `git push` / network-mutating op (never auto-push)                                                                                           |
+| `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                                                                                     |
+| `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                               |
+| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — do NOT auto-confirm                                                                                 |
+| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`                                                                 |
 
 **Excuse table — the rationalization each class invites, and why it never wins.** Prose rails, model-enforced; the PAUSE itself stays the contract:
 
