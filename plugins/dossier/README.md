@@ -160,6 +160,20 @@ Plugin auto-detects + uses (graceful fallback if absent):
 
 None required. See `ADAPTERS.md` for routing rules.
 
+## Verdict grammar
+
+One composition contract across dossier + whetstone — every gate ends in one of these signals; the enforcement column separates computed from judged:
+
+| surface                             | verdict / signal                                  | enforced by                      |
+| ----------------------------------- | ------------------------------------------------- | -------------------------------- |
+| `whetstone-doubter` (doubt gate)    | `DOUBT: FAILURES` \| `NO FAILURE FOUND`           | model-judgment, parsed            |
+| `dossier-reviewer` (ds:build 6.5)   | `REVIEW: PASS` \| `CHANGES`                       | model-judgment, parsed            |
+| `skill-smith` lint                  | `FAIL`/`WARN` lines; exit 1 iff any FAIL          | code — lint_skill.py              |
+| `tdd-cycle` slice                   | `run_slice.sh` red/green/full exit codes          | code — script                     |
+| `merge-resolve`                     | `verify_clean.sh` exit 0 (markers + pass-count)   | code — script                     |
+| `flaky-test-audit`                  | per-test rate; `0<r<1` = flaky                    | code — computed rate              |
+| `ds:ship` bump                      | `recommend: <BUMP>`                               | advisory; model-mapped categories |
+
 ## Files
 
 ```
