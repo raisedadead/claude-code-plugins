@@ -1,7 +1,7 @@
 ---
 name: build
 description: Execute a §T task with TDD covenant. Claims row (. → ~), runs tests/edits, commits, refreshes §X, flips row to x with commit cite. Resumable on crash via §S step-log. Invoke when the user says "ds:build T<N>", "build next task", "ds:build --next", "implement T<N>", or "work on <task-description>".
-argument-hint: <T-id> | --next | --auto | --resume | --review
+argument-hint: <T-id> | --next | --auto | --resume | --review | --doubt
 ---
 
 # ds:build — execute a §T task
@@ -15,6 +15,7 @@ TDD covenant: RED → GREEN → refactor. One commit per `x`-flip. Resumable.
 - `--auto`: autonomous mode — loop over actionable §T rows to completion, pausing only on a real decision. See **Autonomous mode** below. Best driven by native `/goal`.
 - `--resume`: re-enter incomplete op for the same target (auto-detected from §S; flag is explicit override).
 - `--review`: spawn a fresh-context `dossier-reviewer` gate before COMMIT (step 6.5). Auto-on for destructive-class tasks.
+- `--doubt`: spawn a fresh-context `whetstone:whetstone-doubter` gate before WORK (step 5.6). Auto-on for design-class tasks — the flag forces doubt on tasks outside the auto class; it is NOT the activation path.
 
 ## Steps
 
@@ -78,6 +79,22 @@ Before writing any test or code, ensure the libraries this task introduces are p
 - Optionally ground the API SHAPE via the `§context7` adapter (ADAPTERS.md): `resolve-library-id` then `query-docs`; WebFetch the official docs as fallback.
 
 Runs OUTSIDE the RED→GREEN→refactor cycle — a dossier-bookkeeping write (like §X refresh), never a source commit. The model then writes source using the §I version, so the reactive verify hook fires on a warm-cache HIT and stays silent.
+
+### 5.6. DOUBT (design-class gate, pre-WORK)
+
+Runs when `--doubt` is set, or auto for a **design-class** task — no flag required (mirror of `--review` auto-on destructive-class; opt-in alone never activates). design-class = the task implies a design decision (new skill / new agent / new interface or contract / schema / data model / protocol / cross-plugin wiring / architecture choice).
+
+Availability gate per ADAPTERS §whetstone: proceed only if the session agent list has `whetstone:whetstone-doubter`. Absent → append §S `ds:build <T-id> doubt=skipped-absent`, continue to WORK. A spawn that still errors `Agent type ... not found` takes the same skip path. Never block, never prompt.
+
+When present:
+
+1. EXTRACT the intended approach: artifact (what will be built) + contract (§T task text, `verify` predicate, touched §V invariants). No reasoning trail.
+1. Spawn `whetstone:whetstone-doubter` (`Agent` tool, artifact-only mission per whetstone's doubt-pass template).
+1. Parse the verdict line — `DOUBT: FAILURES | NO FAILURE FOUND` (model-judgment parsed, not computed).
+1. FAILURES → classify each finding actionable / not-actionable; fold actionable ones into the approach BEFORE the first RED. A finding that contradicts the §T contract itself: interactive → surface to operator; under `--auto` → PAUSE (`ambiguous`).
+1. Append §S: `ds:build <T-id> doubt=<FAILURES:<n>-actionable | clean>`.
+
+**One doubt cycle max per task** — in-build doubt is a gate, not the full doubt-pass loop; a contested design after one cycle escalates instead of looping. Zero actionable findings = say so plainly (doubt-theater guard), never "design validated".
 
 ### 6. WORK (TDD)
 
@@ -199,15 +216,16 @@ next: ds:build --next [or remaining T-ids]
 
 Every rebuttal here is already stated once in the steps above — collected so the skip-temptation and its answer sit together.
 
-| Tempting shortcut                                      | Why not                                                                                                            |
-| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| Build on a red baseline ("tests were already failing") | A new RED must trace to THIS task (§6). Under `--auto` a red baseline is a PAUSE (`ambiguous`), not a green light. |
-| Skip PIN CHECK, code against a remembered API          | §5.5 — unpinned libs drift; the verify hook fires on a cache miss. Pin first, then code against the §I version.    |
-| `git commit --no-verify` past a failing hook           | §7 — a hook failure is a root-cause signal, not a speed bump. Fix it, retry the commit.                            |
-| Auto-confirm the §X stale guard                        | §8a / Vm.X — stale §X hides push/ahead drift. Under `--auto` it's a PAUSE (`x-stale`), never an auto-`y`.          |
-| Keep retrying a red test past 2 attempts               | `retries-exhausted` PAUSE (2 fixes + one auto-`ds:backprop`). Looping burns turns — escalate the decision.         |
-| Patch the symptom, skip the invariant                  | §6 — if the failure implies a missing invariant, run `ds:backprop`; don't just green the test.                     |
-| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. `marker_guard.py` exits 2. Source comments answer _why_, never _which phase_.       |
+| Tempting shortcut                                      | Why not                                                                                                                                 |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Build on a red baseline ("tests were already failing") | A new RED must trace to THIS task (§6). Under `--auto` a red baseline is a PAUSE (`ambiguous`), not a green light.                      |
+| Skip PIN CHECK, code against a remembered API          | §5.5 — unpinned libs drift; the verify hook fires on a cache miss. Pin first, then code against the §I version.                         |
+| `git commit --no-verify` past a failing hook           | §7 — a hook failure is a root-cause signal, not a speed bump. Fix it, retry the commit.                                                 |
+| Auto-confirm the §X stale guard                        | §8a / Vm.X — stale §X hides push/ahead drift. Under `--auto` it's a PAUSE (`x-stale`), never an auto-`y`.                               |
+| Keep retrying a red test past 2 attempts               | `retries-exhausted` PAUSE (2 fixes + one auto-`ds:backprop`). Looping burns turns — escalate the decision.                              |
+| Patch the symptom, skip the invariant                  | §6 — if the failure implies a missing invariant, run `ds:backprop`; don't just green the test.                                          |
+| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. `marker_guard.py` exits 2. Source comments answer _why_, never _which phase_.                            |
+| Skip the doubt gate on a design-class task             | §5.6 — design flaws are cheapest pre-RED. Auto-fires without a flag; absent whetstone logs `doubt=skipped-absent`, never a silent skip. |
 
 ## Autonomous mode (`--auto`)
 
