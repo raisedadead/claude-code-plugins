@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Non-blocking breadcrumb when a built-in review skill fires mid-build.
+"""Non-blocking breadcrumb when review-family or whetstone skills fire.
 
-PreToolUse (Skill) + UserPromptExpansion hook. When /review, /security-review,
-or /simplify is invoked while a live dossier has a ds:build in flight
-(.ds-lock present), emits additionalContext reminding to fold the verdict into
-the step 6.5 artifact trail and §S. Always exit 0; fail-open on any parse or
-filesystem error. Payload field names are INFERRED by composition — the
+PreToolUse (Skill) + UserPromptExpansion hook, two branches:
+- Built-ins (/review, /security-review, /simplify): fire only while a live
+  dossier has a ds:build in flight (.ds-lock present) — reminder routes the
+  verdict into the step 6.5 artifact trail + §S.
+- Whetstone-namespaced skills: fire on ANY live dossier, lock or not —
+  reminder: record ONE §S line via lib-s-append.sh (first live row = current;
+  main thread writes, never subagents).
+Always exit 0; fail-open on any parse or filesystem error. Payload field names are INFERRED by composition — the
 assistant-side tool_use transcript shape ({"skill", "args"}) plus the
 tool_name/tool_input wrapper convention the sibling Edit/Write hooks receive —
 NOT captured from a live Skill/UserPromptExpansion hook stdin (none observed
@@ -21,6 +24,13 @@ import tempfile
 from pathlib import Path
 
 BUILTINS = {"review", "security-review", "simplify"}
+WHETSTONE = {
+    "whetstone:doubt-pass",
+    "whetstone:flaky-test-audit",
+    "whetstone:merge-resolve",
+    "whetstone:skill-smith",
+    "whetstone:tdd-cycle",
+}
 
 
 def _state_path(session: str) -> Path:
@@ -28,19 +38,19 @@ def _state_path(session: str) -> Path:
     return Path(tempfile.gettempdir()) / f"ds-skill-gate-{safe}"
 
 
-def _flight(cwd: str) -> str | None:
+def _dossier_state(cwd: str) -> tuple[str | None, str | None]:
     root = Path(cwd) / ".scratchpad"
     try:
         index = (root / "INDEX.md").read_text(encoding="utf-8")
     except OSError:
-        return None
-    live: set[str] = set()
+        return None, None
+    live: list[str] = []
     for line in index.splitlines():
         cells = [c.strip() for c in line.split("|")]
         if len(cells) > 3 and cells[3] == "live":
-            live.add(f"{cells[1]}-{cells[2]}")
+            live.append(f"{cells[1]}-{cells[2]}")
     if not live:
-        return None
+        return None, None
     for lock in sorted((root / "dossier").glob("*/.ds-lock")):
         key = lock.parent.name
         if key not in live:
@@ -48,11 +58,11 @@ def _flight(cwd: str) -> str | None:
         try:
             data = json.loads(lock.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
-            return key
+            return live[0], key
         if not isinstance(data, dict):
-            return key
-        return f"{key}: {data.get('skill', '?')} {data.get('target', '?')}"
-    return None
+            return live[0], key
+        return live[0], f"{key}: {data.get('skill', '?')} {data.get('target', '?')}"
+    return live[0], None
 
 
 def main() -> int:
@@ -69,14 +79,16 @@ def main() -> int:
         name = str(tool_input.get("skill") or tool_input.get("name") or "")
     if not name:
         name = str(payload.get("command") or "")
-    if name not in BUILTINS:
+    if name not in BUILTINS and name not in WHETSTONE:
         return 0
 
     cwd = str(payload.get("cwd") or "")
     if not cwd:
         return 0
-    flight = _flight(cwd)
-    if not flight:
+    live_first, flight = _dossier_state(cwd)
+    if name in BUILTINS and not flight:
+        return 0
+    if name in WHETSTONE and not live_first:
         return 0
 
     session = str(payload.get("session_id") or "")
@@ -90,11 +102,18 @@ def main() -> int:
             pass
 
     event = str(payload.get("hook_event_name") or "PreToolUse")
-    body = (
-        f"live dossier build in flight ({flight}) — fold /{name} findings into "
-        "the ds:build step 6.5 artifact trail and record the verdict in §S. "
-        "Reminder only, never blocking."
-    )
+    if name in BUILTINS:
+        body = (
+            f"live dossier build in flight ({flight}) — fold /{name} findings into "
+            "the ds:build step 6.5 artifact trail and record the verdict in §S. "
+            "Reminder only, never blocking."
+        )
+    else:
+        body = (
+            f"live dossier ({live_first}) — after this skill's verdict, record ONE "
+            "§S line via dossier's lib-s-append.sh (first live row = current; "
+            "main thread writes, never subagents). Reminder only, never blocking."
+        )
     sys.stdout.write(
         json.dumps(
             {
@@ -102,7 +121,8 @@ def main() -> int:
                     "hookEventName": event,
                     "additionalContext": body,
                 }
-            }
+            },
+            ensure_ascii=False,
         )
     )
     if state is not None:

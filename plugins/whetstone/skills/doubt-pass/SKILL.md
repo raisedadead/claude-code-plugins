@@ -37,3 +37,7 @@ Cycling a reviewer that never lands anything actionable is motion without progre
 ## Verification
 
 Done = the loop stopped at ≤ 3 cycles, **every** finding carries an `actionable` / `not-actionable` tag, and the outcome is one of: plan amended with the actionable findings, or an explicit `doubt theater` note. The cap and the classification are the gate — an unbounded "let me think about it more" is not a doubt-pass.
+
+## Dossier breadcrumb
+
+In a repo with a live dossier ledger, finish by recording the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip, no-op: this skill ships no hooks and no dossier dependency.

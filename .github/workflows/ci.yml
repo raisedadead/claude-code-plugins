@@ -74,6 +74,7 @@ jobs:
           bash plugins/whetstone/tests/test_flake_runner.sh
           bash plugins/whetstone/tests/test_verify_clean.sh
           bash plugins/whetstone/tests/test_run_slice.sh
+          bash plugins/whetstone/tests/test_dossier_breadcrumb.sh
 
       - name: skill lint (self-hosted)
         run: python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/whetstone/skills

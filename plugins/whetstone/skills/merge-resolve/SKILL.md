@@ -44,3 +44,7 @@ Resolving a conflict is half the job; proving nothing was lost is the other half
 ## Verification
 
 Done = `verify_clean.sh` exits 0: zero markers, and pass-count ≥ the pre-conflict baseline. Both numbers are captured by the script, not asserted by eye.
+
+## Dossier breadcrumb
+
+In a repo with a live dossier ledger, finish by recording the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip, no-op: this skill ships no hooks and no dossier dependency.

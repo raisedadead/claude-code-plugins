@@ -43,3 +43,7 @@ The detection is a script — route the N reruns and the rate computation to a c
 ## Verification
 
 Done = `compute_flakiness.py` written `quarantine.json` and its exit code is the count of newly-flaky tests. The rate is the gate; the quarantine file is the artifact. A test with `rate == 0` or `rate == 1` is never quarantined — deterministic pass or deterministic fail is not flake.
+
+## Dossier breadcrumb
+
+In a repo with a live dossier ledger, finish by recording the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip, no-op: this skill ships no hooks and no dossier dependency.

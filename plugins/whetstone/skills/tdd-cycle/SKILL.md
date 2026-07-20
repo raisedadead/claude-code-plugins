@@ -51,3 +51,7 @@ Once GREEN and the suite passes, the slice is done. Cleanup and design improveme
 ## Verification
 
 Each slice: `run_slice red` exited 0 (the test genuinely failed first), then `run_slice green` and `run_slice full` exited 0. Three exit codes, not a feeling, gate the slice.
+
+## Dossier breadcrumb
+
+In a repo with a live dossier ledger, finish by recording the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip, no-op: this skill ships no hooks and no dossier dependency.

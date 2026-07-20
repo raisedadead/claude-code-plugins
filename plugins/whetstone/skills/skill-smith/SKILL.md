@@ -44,3 +44,7 @@ Two things stay judgement calls. After the lint is clean, read the change agains
 ## Verification
 
 Done = `lint_skill.py <path>` exits 0 **and** you have read the change against both reference checklists. The exit code is the gate; the checklists are the judgement.
+
+## Dossier breadcrumb
+
+In a repo with a live dossier ledger, finish by recording the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip, no-op: this skill ships no hooks and no dossier dependency.
