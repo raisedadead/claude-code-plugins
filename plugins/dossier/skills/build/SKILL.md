@@ -138,6 +138,8 @@ One review cycle max — the reviewer does a single pass and the build retries a
 
 Skip entirely if neither `--review` nor destructive-class — keeps the fast path fast.
 
+Built-in `/review`, `/security-review`, `/simplify` complement (never replace) this artifact-only gate for whole-branch looks — invoke them rather than reimplementing their checks; the `skill_gate.py` hook breadcrumbs their invocation mid-build so the verdict lands in §S instead of evaporating (reminder is non-blocking; honoring it is model-judgment).
+
 ### 7. COMMIT
 
 `git add` only files touched by this task. `git commit` with subject pattern:
@@ -258,6 +260,19 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 | `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5) |
 | `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — do NOT auto-confirm                   |
 | `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`   |
+
+**Excuse table — the rationalization each class invites, and why it never wins.** Prose rails, model-enforced; the PAUSE itself stays the contract:
+
+| class               | tempting excuse                           | rebuttal                                                                                  |
+| ------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `blocked`           | "the `!` row is probably fine to attempt" | `!`/`?` encode a human's unanswered question — attempting it answers FOR the human        |
+| `ambiguous`         | "any reasonable reading will do"          | two readings = two different diffs; the operator picks, or the wrong one ships silently   |
+| `destructive`       | "it's a small migration"                  | small deletes are still irreversible; blast radius is judged before, not after            |
+| `push`              | "pushing saves the operator a step"       | publishing is the operator's irreversible act; nothing network-mutating is ever auto      |
+| `retries-exhausted` | "third time's the charm"                  | two failed fixes = the diagnosis is wrong, not the luck; more turns buy noise, not signal |
+| `review`            | "the reviewer misread it — overrule"      | a second `CHANGES` after a fix cycle is a genuine disagreement; humans arbitrate those    |
+| `x-stale`           | "refresh later, flip now"                 | stale §X hides push/ahead drift; a flip on stale state forges the ledger                  |
+| `budget`            | "one more task won't hurt"                | ceilings exist because 'one more' compounds; land clean (commit + §S) and hand back       |
 
 **Rails:** never auto-push · never auto-close (stop at the last `x`-flip; `ds:close` stays an explicit operator step) · per-task lock · atomic writes · `marker_guard` + `verify` hooks stay active during WORK. Every PAUSE writes its reason to §S so `ds:status` shows WHY on return (Vm.14).
 
