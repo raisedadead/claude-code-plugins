@@ -4,8 +4,9 @@
 Matcher: Edit | Write | MultiEdit.
 
 Reads hook JSON on stdin. Flags edits that would land a dossier audit-id
-marker (`// PH3-B7`, `# PH12-A1`) inside non-dossier source files — phase
-tracking belongs in `DOSSIER.md §B`, not source. Advisory only: never
+marker (`// PH3-B7`, `# PH12-A1`) or a §-cite (`// §V26`, `# §B3`) inside
+non-dossier source files — phase tracking and the §V↔code link belong in
+the `DOSSIER.md` §B/§V ledger (+ commit trailer), not source. Advisory only: never
 blocks. Emits a PreToolUse `additionalContext` nudge and exits 0 so the
 write proceeds. Bare `Phase|Stage|Step N` words are deliberately NOT
 flagged — they collide with legitimate infra/CI/shell comments
@@ -35,6 +36,7 @@ COMMENT_PREFIX = r"^\s*(?://+|#+|--|/\*+|\*(?!/)|<!--|;)\s*"
 
 MARKER_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(COMMENT_PREFIX + r".*\bPH\d+-[A-Z]\d+\b"),
+    re.compile(COMMENT_PREFIX + r".*§[VBTSXGZ]\d+"),
 )
 
 # Paths under these prefixes may carry phase markers freely.
@@ -122,9 +124,10 @@ def advise(path: str, line: str) -> int:
             f"dossier marker guard: '{path}' carries a dossier audit-id marker.",
             f"  offending line: {line}",
             "",
-            "Audit-id markers (`PH3-B7`) belong in DOSSIER.md §B as a row, not",
-            "in source. Drop the marker; keep any why-tail (workaround ref,",
-            "invariant, upstream-bug link). Advisory only — the write proceeds.",
+            "Audit-id markers (`PH3-B7`) and §-cites (`§V26`) belong in the",
+            "DOSSIER.md §B/§V ledger + commit trailer, not source. Drop the",
+            "marker; keep any why-tail (workaround ref, invariant, upstream-bug",
+            "link). Advisory only — the write proceeds.",
         ]
     )
     out = {

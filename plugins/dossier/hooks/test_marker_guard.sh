@@ -61,6 +61,16 @@ guard Edit "src/foo.ts" "// workaround for upstream bug #1234"
 guard Write ".scratchpad/dossier/2026-01-01-foo/DOSSIER.md" "| B1 | bug | PH3-B7 | open |"
 ! advises || fail "DOSSIER.md ledger may carry audit ids without advisory"
 
+guard Edit "src/account.ts" "// §V26: account guard scope check"
+[ "$rc" -eq 0 ] || fail "§V26 cite must exit 0 (advisory, never block)"
+advises || fail "§V26 dossier cite should emit an advisory"
+
+guard Edit "src/foo.py" "# §B3 fix for revoke txn"
+advises || fail "§B3 dossier cite should advise"
+
+guard Edit "src/foo.ts" "// RFC 7519 §4.1.4 exp claim"
+! advises || fail "RFC section §4.1.4 must NOT advise (not a dossier §-cite)"
+
 DOSSIER_MARKER_GUARD=off guard Edit "src/foo.ts" "// PH3-B7: bypass"
 ! advises || fail "DOSSIER_MARKER_GUARD=off should suppress the advisory"
 
