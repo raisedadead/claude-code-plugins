@@ -34,15 +34,16 @@ Write `<dir>/.ds-lock` with `skill: "ds:backprop", target: "B<N-or-pending>"`.
 
 Read §S grep `ds:backprop <target>`:
 
-| Last event   | Resume point                |
-| ------------ | --------------------------- |
-| (none)       | full run from step 4        |
-| `START`      | step 4 (re-scope)           |
-| `test=<sha>` | step 6                      |
-| `§B=B<N>`    | step 7 (invariant decision) |
-| `§V=V<N>`    | step 8 (fix)                |
-| `fix=<sha>`  | step 9 (close)              |
-| `DONE`       | exit                        |
+| Last event     | Resume point                                                                                             |
+| -------------- | -------------------------------------------------------------------------------------------------------- |
+| (none)         | full run from step 4                                                                                     |
+| `START`        | step 4 (re-scope)                                                                                        |
+| `flake=<rate>` | 1.0 → step 5; 0.0 → step 4 (re-scope); 0\<r\<1 → write closed §B row (step 4.5 flaky branch) then step 9 |
+| `test=<sha>`   | step 6                                                                                                   |
+| `§B=B<N>`      | step 7 (invariant decision)                                                                              |
+| `§V=V<N>`      | step 8 (fix)                                                                                             |
+| `fix=<sha>`    | step 9 (close)                                                                                           |
+| `DONE`         | exit                                                                                                     |
 
 ### 4. CLAIM + scope
 
@@ -59,6 +60,24 @@ Define:
 - recurrence likelihood (low / mid / high)
 
 If root cause is fuzzy or class-of-bug research needed: **spawn `dossier-scout` subagent** with mission "research <bug-label>: where does this class manifest? Prior occurrences? Test gaps?". If `HAS_CAVEMEM=1`, also query `mcp__cavemem__search` for prior observations of same class.
+
+### 4.5. FLAKE TRIAGE (failing-test bugs, whetstone compose, optional)
+
+Only when the bug IS a failing test. Resolve whetstone's runner deterministically — source checkout (`plugins/whetstone/skills/flaky-test-audit/scripts/flake_runner.sh`) or operator-set `DOSSIER_FLAKE_RUNNER` (same rule as `DOSSIER_RUN_SLICE`, ADAPTERS §whetstone). Unresolvable → skip silently, §S `flake-triage=skipped`, proceed to step 5.
+
+Run the failing test N times (default 5) before characterizing:
+
+```bash
+"$FLAKE_RUNNER" 5 "$(mktemp -d)/results.json" <test-command...>
+```
+
+Rate = `fails/runs` from the results.json it writes (`{"<name>": {"runs": N, "fails": F}}`). Route:
+
+- `rate=1.0` — always fails across the observed runs: treat as reproducible, proceed to step 5. Label it OBSERVED-deterministic — N=5 can miss low-probability flakes; this is a triage read, not a proof.
+- `rate=0.0` — always passes: bug not reproduced; revisit step 4 scope (the existing "if it passes, it isn't characterized" rule).
+- `0<r<1` — FLAKY, not a bug: do NOT mint a §V invariant (an invariant for nondeterminism is noise). WRITE the closed §B row NOW — atomic write, step 6's template with closed values: `| B<N> | <bug-label> | nondeterminism (rate=<r>, n runs) | — (quarantine via whetstone:flaky-test-audit) | — (flaky, no fix) |` — then jump to step 9 close-out. Point the operator at `whetstone:flaky-test-audit` for the quarantine flow itself; it runs outside backprop, so backprop's ledger stays the only driver.
+
+Append §S: `ds:backprop <B> flake=<rate> runs=<n>` (the resume row above keys on it).
 
 ### 5. WRITE REGRESSION TEST (RED)
 

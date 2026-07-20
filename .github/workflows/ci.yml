@@ -42,6 +42,7 @@ jobs:
           bash plugins/dossier/hooks/test_skill_gate.sh
           bash plugins/dossier/hooks/test_tdd_compose.sh
           bash plugins/dossier/hooks/test_merge_route.sh
+          bash plugins/dossier/hooks/test_flake_triage.sh
 
       - name: skill lint (grill + ship)
         run: python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/dossier/skills/grill/SKILL.md plugins/dossier/skills/ship/SKILL.md

@@ -146,6 +146,8 @@ If absent: skip the doubt gate silently (§S note only). Never error, never prom
 
 **Skill route (`whetstone:merge-resolve`, ds:build step 6):** detection = available-skills list (same class as §caveman). Scope: merge-class only — plain `git merge` conflicts; `rebase`/`cherry-pick` conflicts stay operator-driven (their `--continue` commits escape ds:build's task-scoped commit discipline). No cross-plugin path resolution needed: the skill runs with its own plugin root. Absent → inline resolution, §S-noted.
 
+**Script route (`flake_runner.sh`, ds:backprop step 4.5):** same deterministic resolution as run_slice below (source-checkout relative path or `DOSSIER_FLAKE_RUNNER`); triages failing-test bugs for nondeterminism before an invariant is minted. Unresolvable → triage skipped silently.
+
 **Script route (`run_slice.sh`, ds:build step 6):** resolution is deterministic only — the source-checkout relative path (`plugins/whetstone/skills/tdd-cycle/scripts/run_slice.sh`) or an operator-set `DOSSIER_RUN_SLICE` env path. Glob auto-discovery of the installed plugin cache was rejected by doubt-pass: extraction mtimes are not version signals, stale cache dirs survive reinstalls, and cross-marketplace name collisions can select wrong-provenance scripts. The agent-registry check above governs AGENT composition only; script and agent detection never substitute for each other. Unresolvable script → raw test commands, silently.
 
 ## Detection scaffold (skill body preamble)
