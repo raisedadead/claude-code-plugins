@@ -45,6 +45,7 @@ jobs:
           bash plugins/dossier/hooks/test_flake_triage.sh
           bash plugins/dossier/hooks/test_skill_lint_gate.sh
           bash plugins/dossier/hooks/test_verdict_grammar.sh
+          bash plugins/dossier/hooks/test_bundle_ux.sh
 
       - name: skill lint (all dossier skills)
         run: python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/dossier/skills
