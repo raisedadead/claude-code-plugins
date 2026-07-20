@@ -33,6 +33,23 @@ The §S DONE line (step 6) appends via `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.s
 - Compute `dir=.scratchpad/dossier/<date>-<slug>/`.
 - Collision check: if `dir` exists **OR `.scratchpad/dossier/_archive/<date>-<slug>/` exists** (a same-day close+reopen), ask operator to bump to `<slug>-2`, `<slug>-3`, etc. Checking `_archive/` too prevents two INDEX rows keyed to one slug (Vm.1).
 
+### 1.5. Grill gate (conditional)
+
+Only fires when a grill artifact exists for this slug — trivial `ds:new` runs are untouched. `<slug>` is the RESOLVED slug from step 1 (post-collision-bump; a bumped `<slug>-2` never inherits `<slug>`'s grill):
+
+```bash
+"$CLAUDE_PLUGIN_ROOT"/hooks/lib-assert-grill.sh .scratchpad "<slug>"
+```
+
+The helper discovers the newest `.grill/<date>-<slug>.md` by slug — grill's own date may be days older than today (multi-day `--resume`, pending-external waits); the gate still finds it. Route on exit code, never on a loose "non-zero":
+
+| exit | meaning                           | action                                                                                                                                                                                                                  |
+| ---- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0    | complete (path printed)           | consume its `## Draft` §G/§C in step 2 — do NOT re-ask; after the step-3 Write lands, stamp via `lib-assert-grill.sh --consume .scratchpad "<slug>" "<date>-<slug>"` (atomic tmp+mv per Vm.8; refuses a double-consume) |
+| 1    | no artifact                       | proceed normally — grill is never required; step 2's clarify lever recommends it                                                                                                                                        |
+| 2, 3 | artifact incomplete / unconfirmed | REFUSE scaffold; point at `ds:grill <slug> --resume` (or delete the artifact to abandon)                                                                                                                                |
+| 4    | artifact already consumed         | proceed normally; recommend a fresh `ds:grill <slug>` — a consumed grill never feeds twice                                                                                                                              |
+
 ### 2. Gather inputs (operator-interactive)
 
 Ask, one block at a time (caveman, no preamble):
@@ -42,7 +59,7 @@ Ask, one block at a time (caveman, no preamble):
 1. **§X repos** — list each repo this dossier touches. Format: `<org>/<name>` or absolute path. Operator-provided. No git-remote magic.
 1. **Initial §T tasks** (optional) — operator may provide T1..Tn now or add later via `ds:build`.
 
-**Clarify before freezing (the highest-value lever):** if §G or a §C decision is underspecified — ambiguous scope, an unstated choice, >1 plausible approach — ask the resolving question NOW, before §T is authored. A vague goal yields vague tasks. One or two sharp questions here beats a wrong build. If the operator says "just go", record the assumption as a §C bullet so it's auditable.
+**Clarify before freezing (the highest-value lever):** if §G or a §C decision is underspecified — ambiguous scope, an unstated choice, >1 plausible approach — ask the resolving question NOW, before §T is authored. A vague goal yields vague tasks. One or two sharp questions here beats a wrong build. More than a couple of open questions → recommend `ds:grill <slug>` (full interrogation protocol, artifact-gated). If the operator says "just go", record the assumption as a §C bullet so it's auditable.
 
 Do NOT auto-populate §I, §V, §B, §S, §Z. Those grow during build.
 

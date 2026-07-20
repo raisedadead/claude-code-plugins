@@ -37,6 +37,10 @@ jobs:
           bash plugins/dossier/hooks/test_adapters_whetstone.sh
           bash plugins/dossier/hooks/test_build_doubt_gate.sh
           bash plugins/dossier/hooks/test_whetstone_surfaces.sh
+          bash plugins/dossier/hooks/test_lib_assert_grill.sh
+
+      - name: skill lint (grill)
+        run: python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/dossier/skills/grill/SKILL.md
 
       - name: ruff
         run: |
