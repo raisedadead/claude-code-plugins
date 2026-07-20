@@ -59,9 +59,16 @@ rm "$TMP/.scratchpad/dossier/2026-07-20-wave/.ds-lock"
 out="$(run_gate "$(payload review ${SP}-e)")" || fail "gate must exit 0 without lock"
 [[ -z "$out" ]] || fail "no in-flight build must stay silent"
 
+out="$(run_gate "$(payload whetstone:doubt-pass ${SP}-i)")" || fail "gate must exit 0 on whetstone skill"
+printf '%s' "$out" | grep -q 'additionalContext' || fail "whetstone skill + live dossier must fire breadcrumb reminder without a lock"
+printf '%s' "$out" | grep -q '§S' || fail "breadcrumb reminder must point at §S"
+
 rm "$TMP/.scratchpad/INDEX.md"
 out="$(run_gate "$(payload review ${SP}-f)")" || fail "gate must exit 0 without INDEX"
 [[ -z "$out" ]] || fail "no INDEX must stay silent"
+
+out="$(run_gate "$(payload whetstone:doubt-pass ${SP}-j)")" || fail "gate must exit 0 whetstone no-dossier"
+[[ -z "$out" ]] || fail "whetstone skill without live dossier must stay silent"
 
 out="$(printf 'not json' | python3 "$GATE")" || fail "malformed JSON must exit 0"
 [[ -z "$out" ]] || fail "malformed JSON must stay silent"
