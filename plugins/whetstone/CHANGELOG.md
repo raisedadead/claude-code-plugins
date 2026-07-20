@@ -4,6 +4,14 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-07-20
+
+Composition wave (driven from dossier's skills-uplift): `whetstone-doubter` now auto-fires at dossier's design-class build gate. `[d50f755..469b76b]`
+
+### Changed
+
+- README documents dossier auto-composition: design-class `ds:build` spawns `whetstone:whetstone-doubter` with no trigger phrase (see dossier `ADAPTERS.md` §whetstone for detection + graceful-skip semantics).
+
 ## 2026-07-07
 
 Initial release. Five engineering-craft skills, each with a deterministic self-verify, built from the "designing loops" quality levers (give the model a way to verify its own work; separate the moments; deterministic over discretionary).

@@ -4,6 +4,24 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-20
+
+Skills-uplift wave: whetstone composes into the dossier lifecycle (doubt gate at design-class builds), Define + Ship coverage gaps closed. 7 tasks, TDD, adversarial doubt + fresh-context review per task. `[d50f755..469b76b]`
+
+### Added
+
+- `skills/grill/` — Define-phase interrogation (`ds:grill`): FACT-vs-DECISION tree, serial→frontier-batch questioning, stakeholder questionnaire fork, artifact gated by `hooks/lib-assert-grill.sh` (slug-glob discovery, `CONSUMED:` stamp, `--consume` atomic mode).
+- `skills/ship/` — Ship-stage changelog (`ds:ship`): §T ledger × git log derivation, cite classifier (`cat-file -t`, no pathspec fallback), spec-vs-convention mapping tables in `reference/changelog-mapping.md`, atomic `hooks/lib-changelog-write.sh` keyed on wave range-cite.
+- `hooks/skill_gate.py` — non-blocking breadcrumb when built-in `/review` `/security-review` `/simplify` fires mid-build (PreToolUse `Skill` matcher + `UserPromptExpansion`); live-dossier + `.ds-lock` correlation, session dedup, fail-open; payload shape inferred, disclosed in docstring.
+- ADAPTERS `§whetstone` — agent-availability detection path (session agent list + recoverable `Agent type not found` error contract, SPIKE-verified on 2.1.205).
+- Five new test suites (`test_adapters_whetstone`, `test_build_doubt_gate`, `test_whetstone_surfaces`, `test_lib_assert_grill`, `test_lib_changelog_write`, `test_skill_gate`), all CI-wired; CI now lints grill + ship via whetstone skill-smith.
+
+### Changed
+
+- `ds:build` gains `--doubt` and step 5.6 DOUBT gate — auto-fires `whetstone:whetstone-doubter` on design-class tasks (forcing function, not opt-in); Autonomous mode gains the 8-class excuse-rebuttal table.
+- `ds:new` gains conditional step 1.5 grill gate (exit-code routed, trivial runs untouched); `ds:close` step 5 gains the non-blocking `ds:ship` advisory.
+- READMEs (dossier + whetstone) cross-surface the composition — whetstone discoverable from the dossier flow without typing its trigger.
+
 ## 2026-07-07
 
 Loops-uplift wave: borrowing the "designing loops" article's levers — scripts over reasoning, deterministic exit criteria, a fresh-context reviewer, and encode-the-fix-into-the-system. 9 tasks, TDD. `[e8ddd78..8ad517e]`
