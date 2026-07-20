@@ -37,6 +37,8 @@ Borrowed from the way good engineers already work, and from the "designing loops
 
 Ships one read-only subagent, `whetstone-doubter` — a fresh-context adversarial reviewer. `doubt-pass` hands it an **artifact-only** mission (the extracted plan + contract, no conversation or rationale) and reads its deterministic `DOUBT: FAILURES | NO FAILURE FOUND` verdict. Fresh context is the point: an agent that never saw the plan's justification falsifies it instead of rationalizing it. Refuses all writes (`Edit` / `Write` / `NotebookEdit` blocked). Spawn directly via `Agent({subagent_type: "whetstone:whetstone-doubter", ...})` to attack any plan artifact.
 
+When [`dossier`](../dossier) is installed alongside, its `ds:build` auto-composes this agent on design-class tasks — a pre-WORK doubt gate, no trigger phrase required (see dossier `ADAPTERS.md` §whetstone for detection + graceful-skip semantics).
+
 ## Files
 
 ```

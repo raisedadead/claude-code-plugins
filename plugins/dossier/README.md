@@ -92,6 +92,8 @@ Plugin ships two read-only subagents. Both refuse all writes (hard deny list on 
 - `dossier-scout` — investigator. Used by `/dossier:check` (parallel drift scans per repo) and `/dossier:migrate` (per-repo inspection). Spawn directly via `Agent({subagent_type: "dossier:dossier-scout", ...})` for a one-off read-only sweep.
 - `dossier-reviewer` — fresh-context pre-commit reviewer. Opt in with `/dossier:build --review` (auto for destructive-class tasks): before COMMIT, `ds:build` hands it an **artifact-only** mission (staged diff + test output + §T/§V contract, no parent transcript) and reads its deterministic `REVIEW: PASS | CHANGES` verdict. A second agent with fresh context is less biased than the one that wrote the fix.
 
+When the sibling [`whetstone`](../whetstone) plugin is installed, `ds:build` also composes its `whetstone:whetstone-doubter` agent as a pre-WORK doubt gate — auto-on for design-class tasks (step 5.6), `--doubt` to force it elsewhere. Absent whetstone = graceful skip (`ADAPTERS.md` §whetstone). No trigger phrase needed; the gate fires from the build flow itself.
+
 ## Verify-layer
 
 Empirical defense against knowledge-cutoff hallucination. PreToolUse hook on every `Edit | Write | MultiEdit` scans content against an **authority registry** (140 EOL aliases, 34 Docker images, 31 sunset AI models) and emits stderr reminders + `additionalContext` when a freshness claim doesn't match the primary source. **Non-blocking by design** — every match exits 0; freshness violations surface as nags, not refusals. Compare to `marker_guard.py` (see below), which exits 2 and hard-blocks. Per-session dedup. Cache at `<cwd>/.scratchpad/.verify-cache/` (24h TTL on registries, 30d on resolved SHAs).
@@ -146,14 +148,15 @@ Registry: `.scratchpad/dossier/.invariant-guards.json` (a JSON list), each entry
 
 Plugin auto-detects + uses (graceful fallback if absent):
 
-| Adapter         | Use                                                               |
-| --------------- | ----------------------------------------------------------------- |
-| `rtk` CLI       | Token compression on verbose Bash output                          |
-| `Workflow` tool | Deterministic scout fan-out for >2-repo scans (native harness)    |
-| `cavemem` MCP   | Cross-session memory augmentation for `ds:status` + `ds:backprop` |
-| `caveman` skill | Compressed encoding in §S + DOSSIER.md prose                      |
-| `fastedit` MCP  | Surgical edits to SOURCE task files (`ds:build` step 6)           |
-| `context7` MCP  | Current library API docs before coding (`ds:build` PIN CHECK)     |
+| Adapter            | Use                                                                |
+| ------------------ | ------------------------------------------------------------------ |
+| `rtk` CLI          | Token compression on verbose Bash output                           |
+| `Workflow` tool    | Deterministic scout fan-out for >2-repo scans (native harness)     |
+| `cavemem` MCP      | Cross-session memory augmentation for `ds:status` + `ds:backprop`  |
+| `caveman` skill    | Compressed encoding in §S + DOSSIER.md prose                       |
+| `fastedit` MCP     | Surgical edits to SOURCE task files (`ds:build` step 6)            |
+| `context7` MCP     | Current library API docs before coding (`ds:build` PIN CHECK)      |
+| `whetstone` plugin | Adversarial doubt gate on design-class `ds:build` tasks (step 5.6) |
 
 None required. See `ADAPTERS.md` for routing rules.
 

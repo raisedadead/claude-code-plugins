@@ -36,6 +36,7 @@ jobs:
           bash plugins/dossier/hooks/test_lib_vm_checks.sh
           bash plugins/dossier/hooks/test_adapters_whetstone.sh
           bash plugins/dossier/hooks/test_build_doubt_gate.sh
+          bash plugins/dossier/hooks/test_whetstone_surfaces.sh
 
       - name: ruff
         run: |
