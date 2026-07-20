@@ -120,6 +120,8 @@ Use `fastedit` if `HAS_FASTEDIT=1` for surgical code edits. Else Edit tool.
 
 **Conflict route (whetstone compose, merge-class only):** a plain `git merge` conflict during WORK, with `whetstone:merge-resolve` in the available-skills list, resolves per that skill's process — hunk-by-hunk with intent, then the `verify_clean.sh` proof (baseline `-` marker-mode when no pre-conflict count exists; the step-6 full-suite GREEN gate already floors regressions). §S: `ds:build <T-id> conflict=resolved verify_clean=0`. Skill absent → resolve inline as before, §S `conflict=resolved-inline`. Routing is model-judgment (trigger-phrase match); the verify_clean exit code is the code-enforced part. Conflicts from `rebase` / `cherry-pick` are OUT of this route — their `--continue` creates commits outside step 7's task-scoped discipline: under `--auto` PAUSE (`destructive`); interactive, hand to the operator (standalone `whetstone:merge-resolve` already owns that trigger).
 
+**Stall rule:** the same identical failure twice in a row is a stuck signal, not bad luck — the second occurrence forces a strategy change (different diagnosis, different seam, or scout spawn), never a third identical retry. Retry caps count ATTEMPTS; this rule catches the tighter loop inside them.
+
 If tests fail and root cause unclear: **spawn `dossier-scout` subagent** with mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>". Use report to guide fix. Scout output is caveman-compressed; main thread aggregates.
 
 If failure suggests a missing invariant: trigger `ds:backprop` flow (don't just patch the symptom).
@@ -233,6 +235,9 @@ Every rebuttal here is already stated once in the steps above — collected so t
 | Keep retrying a red test past 2 attempts               | `retries-exhausted` PAUSE (2 fixes + one auto-`ds:backprop`). Looping burns turns — escalate the decision.                              |
 | Patch the symptom, skip the invariant                  | §6 — if the failure implies a missing invariant, run `ds:backprop`; don't just green the test.                                          |
 | Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. `marker_guard.py` exits 2. Source comments answer _why_, never _which phase_.                            |
+| Retry the same fix after an identical failure       | Stall rule (§6) — twice-identical output is a stuck signal; change strategy or spawn a scout, never a third identical run. |
+| Blow past the budget ceiling mid-task               | `budget` PAUSE — land clean: WIP commit, `~` row, §S handoff. An unrecorded tree is the expensive part.                    |
+| Keep correcting the same issue in a stale context   | Failure handling — two failed corrections = contaminated context; reset via `ds:roll` + fresh session, lesson recorded.   |
 | Skip the doubt gate on a design-class task             | §5.6 — design flaws are cheapest pre-RED. Auto-fires without a flag; absent whetstone logs `doubt=skipped-absent`, never a silent skip. |
 
 ## Autonomous mode (`--auto`)
@@ -256,16 +261,16 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 
 **Decision boundary — MUST PAUSE (never auto-resolve):**
 
-| class               | trigger                                                                                                                                          |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `blocked`           | row state `!` or `?`                                                                                                                             |
-| `ambiguous`         | `verify=—` on a behaviour-bearing task, or >1 reasonable implementation                                                                          |
-| `destructive`       | task implies delete/drop/migrate/force, schema change, files outside §X repos, or a rebase/cherry-pick conflict hit mid-WORK (§6 conflict route) |
-| `push`              | any `git push` / network-mutating op (never auto-push)                                                                                           |
-| `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                                                                                     |
-| `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                               |
-| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — do NOT auto-confirm                                                                                 |
-| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`                                                                 |
+| class               | trigger                                                                                                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `blocked`           | row state `!` or `?`                                                                                                                                                                                               |
+| `ambiguous`         | `verify=—` on a behaviour-bearing task, or >1 reasonable implementation                                                                                                                                            |
+| `destructive`       | task implies delete/drop/migrate/force, schema change, files outside §X repos, or a rebase/cherry-pick conflict hit mid-WORK (§6 conflict route)                                                                   |
+| `push`              | any `git push` / network-mutating op (never auto-push)                                                                                                                                                             |
+| `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                                                                                                                                                       |
+| `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                                                                                                 |
+| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — do NOT auto-confirm                                                                                                                                                   |
+| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`. Clean landing: commit WIP work to the task's files (a `~` row never enters the ds:ship pipeline), row stays `~`, §S handoff note — never stop mid-air with an unrecorded tree |
 
 **Excuse table — the rationalization each class invites, and why it never wins.** Prose rails, model-enforced; the PAUSE itself stays the contract:
 
@@ -286,6 +291,7 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 
 - Lock active: refuse, suggest `--resume` or wait.
 - Test fail + can't fix: leave row `~`, release lock, write §S w/ `BLOCKED: <reason>`. Operator decides.
+- Two failed corrections on the SAME issue: stop patching in place — the context is contaminated by its own wrong theory. Interactive: offer the operator a reset — `ds:roll` the TaskList, §S the state, re-enter from a fresh context with the lesson written down (resume protocol picks up mid-task). Under `--auto` this never self-triggers: the `retries-exhausted` PAUSE trips at the same threshold.
 - Commit fail: leave row `~`, release lock. Operator investigates.
 - §X refresh fail (network / repo missing): row updates partial, flag in §S. Triggers Vm.X stale guard (§8a) — operator confirms before flip.
 
