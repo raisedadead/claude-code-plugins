@@ -6,14 +6,19 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 
 ## 2026-07-29 (optional quality gates)
 
-Two default-off, env-gated quality backstops for ad-hoc (non-covenant) work, plus a light-path sit-rep and a recovery mode on `ds:status`. All new hooks are inert until opted in, so they ship safely to every user.
+Two env-gated quality backstops for ad-hoc (non-covenant) work, plus a light-path sit-rep and a recovery mode on `ds:status`. The slop gate is ON by default (opt-out); the fake-impl backstop stays opt-in.
 
 ### Added
 
-- `slop_guard.py` (PreToolUse) — denies placeholder markers (TODO/FIXME/XXX/HACK) and hardcoded weak-secret literals in new edit content. Off unless `DOSSIER_SLOP_GATE` is truthy; markdown skipped. Layers under, never duplicates, dossier-reviewer's judgement.
+- `slop_guard.py` (PreToolUse) — denies placeholder markers (TODO/FIXME/XXX/HACK) and hardcoded weak-secret literals in new edit content. **On by default**; set `DOSSIER_SLOP_GATE=0` (or false/no/off) to disable. Markdown skipped. Layers under, never duplicates, dossier-reviewer's judgement.
 - `fakeimpl_stop.py` (Stop, Layer A) — runs `DOSSIER_FAKEIMPL_CMD` on a dirty tree and blocks completion on a non-zero exit, so an unverified "it works" can't stand. Off unless the var is set; never duplicates the in-covenant `run_slice.sh` proof.
 - `ds:status` light sit-rep — with no `.scratchpad/dossier/` tree in cwd, falls through to `git status` + last-N commits (plus optional `$DS_HEALTH_CMD`) instead of bailing.
 - `ds:status --recover` — reconstruct context after a crash or compaction: cavemem first, session-transcript grep fallback, always names which source fired.
+
+### Changed
+
+- Slop gate flipped to **on by default** (opt-out via `DOSSIER_SLOP_GATE=0`) — placeholder/secret slop is blocked without opt-in.
+- Root marketplace README overhauled: features, the commands a human actually types, and a quality-gates + env-var reference.
 
 ## 2026-07-20 (cohesion)
 

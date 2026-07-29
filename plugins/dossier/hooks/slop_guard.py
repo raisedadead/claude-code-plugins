@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Default-off slop gate (PreToolUse: Edit | Write | MultiEdit).
+"""Slop gate (PreToolUse: Edit | Write | MultiEdit) — ON by default.
 
-Enabled only when DOSSIER_SLOP_GATE is truthy. Denies an edit whose NEW content
-introduces a placeholder marker (TODO / FIXME / XXX / HACK) or a hardcoded weak
-secret literal. Inert (exit 0) when disabled, so it ships safely default-off to
-every dossier user. Markdown targets are skipped (placeholders are legitimate in
-docs). Enforcement layers under, never duplicates, dossier-reviewer's judgement.
+Denies an edit whose NEW content introduces a placeholder marker (TODO / FIXME /
+XXX / HACK) or a hardcoded weak secret literal. Enabled by default; set
+DOSSIER_SLOP_GATE=0 (or false/no/off) to disable. Markdown targets are skipped
+(placeholders are legitimate in docs). Enforcement layers under, never
+duplicates, dossier-reviewer's judgement.
 """
 
 from __future__ import annotations
@@ -23,11 +23,11 @@ _WEAK_SECRET = re.compile(
     ['"][^'"\s]{3,}['"]
     """
 )
-_ENABLED_VALUES = {"1", "true", "yes", "on"}
+_DISABLED_VALUES = {"0", "false", "no", "off"}
 
 
 def _enabled() -> bool:
-    return os.environ.get("DOSSIER_SLOP_GATE", "").strip().lower() in _ENABLED_VALUES
+    return os.environ.get("DOSSIER_SLOP_GATE", "").strip().lower() not in _DISABLED_VALUES
 
 
 def _new_content(tool_name: str, tool_input: dict) -> str:
@@ -77,12 +77,12 @@ def main() -> None:
     if _MARKERS.search(content):
         _deny(
             "slop gate: placeholder marker (TODO/FIXME/XXX/HACK) in new content — "
-            "finish or remove it. Unset DOSSIER_SLOP_GATE to disable."
+            "finish or remove it. Set DOSSIER_SLOP_GATE=0 to disable."
         )
     if _WEAK_SECRET.search(content):
         _deny(
             "slop gate: hardcoded secret literal in new content — use an env var or "
-            "secret store. Unset DOSSIER_SLOP_GATE to disable."
+            "secret store. Set DOSSIER_SLOP_GATE=0 to disable."
         )
     sys.exit(0)
 

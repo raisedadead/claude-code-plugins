@@ -38,13 +38,15 @@ expect_allow() {
 	if is_deny "$out"; then fail "expected allow: $*"; fi
 }
 
-expect_allow "" Write foo.py "leftover TODO but gate disabled"
+expect_deny "" Write foo.py "leftover TODO now blocked by default"
 expect_deny 1 Write foo.py "value = 1
 TODO finish this"
 expect_deny 1 Edit foo.py "raise NotImplementedError FIXME later"
 expect_deny 1 Write conf.py 'password = "hunter2xyz"'
+expect_allow 0 Write foo.py "TODO but gate explicitly disabled"
+expect_allow off Write foo.py "FIXME but gate off"
 expect_allow 1 Write foo.py "clean and complete implementation"
 expect_allow 1 Write notes.md "TODO write the docs later"
 expect_allow 1 Read foo.py "TODO"
 
-printf 'PASS: test_slop_guard (7 cases)\n'
+printf 'PASS: test_slop_guard (9 cases)\n'
