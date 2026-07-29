@@ -55,7 +55,7 @@ jobs:
 
       - name: ruff
         run: |
-          pip install ruff
+          pip install ruff==0.16.0
           ruff check plugins/dossier/hooks
 
       - name: shellcheck (advisory)
@@ -86,7 +86,7 @@ jobs:
 
       - name: ruff
         run: |
-          pip install ruff
+          pip install ruff==0.16.0
           ruff check plugins/whetstone
 
       - name: shellcheck (advisory)
