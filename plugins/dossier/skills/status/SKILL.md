@@ -19,7 +19,13 @@ Per ADAPTERS.md. Cache for invocation.
 - `.scratchpad/INDEX.md` — if missing, run `lib-regen-index.sh` to build.
 - Enumerate ALL rows with `state=live`. Current dossier = the first (most-recent). Rows with `state=paused` are NOT live — list them separately, never as the current.
 
-If no `.scratchpad/dossier/` exists in cwd: report "no dossier tree in this repo. ds:new to start." Exit.
+If no `.scratchpad/dossier/` exists in cwd: no dossier here — fall through to a LIGHT sit-rep (the small-work path, no ceremony) instead of bailing:
+
+- `git status -sb` + `git log --oneline -${DS_LIGHT_LOG:-5}` for working state (skip git cleanly when not in a repo).
+- If `$DS_HEALTH_CMD` is set, run it and fold its output in (operator wires a repo/rig health check; unset = skipped, stays portable).
+- Report one block: `LIGHT (no dossier): <branch> · <ahead/behind> · <N> dirty · last: <subject>`, then suggest `ds:new <slug>` once the work grows into phases.
+
+Exit 0 after the light sit-rep.
 
 ### 1a. Consolidation check
 
@@ -113,6 +119,16 @@ Skill writes nothing except:
 - Stale-lock cleanup (already handled by session-start hook; safe to re-run)
 
 No §S append on `ds:status`. Read-only verb.
+
+### 8. `--recover` mode
+
+`ds:status --recover` reconstructs context after a crash, compaction, or handoff. Try sources IN ORDER and ALWAYS name which fired:
+
+1. **cavemem** — if `mcp__cavemem__search` / `mcp__cavemem__timeline` is available, query recent observations for the cwd project / current slug (last `${DS_RECOVER_DAYS:-3}` days). Header `## Recovered (cavemem)`.
+1. **transcripts (fallback)** — cavemem absent or empty: grep `~/.claude/projects/<project>/*.jsonl` for the most recent non-sidechain user turns + last assistant summary. Header `## Recovered (transcripts — cavemem unavailable)`.
+1. Fold the normal sit-rep (steps 1–6) underneath.
+
+Always end with `recovery source: cavemem | transcripts | none`. Never fails — worst case reports `none`.
 
 ## Exit codes
 

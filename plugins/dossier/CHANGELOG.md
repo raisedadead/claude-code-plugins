@@ -4,6 +4,17 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-29 (optional quality gates)
+
+Two default-off, env-gated quality backstops for ad-hoc (non-covenant) work, plus a light-path sit-rep and a recovery mode on `ds:status`. All new hooks are inert until opted in, so they ship safely to every user.
+
+### Added
+
+- `slop_guard.py` (PreToolUse) — denies placeholder markers (TODO/FIXME/XXX/HACK) and hardcoded weak-secret literals in new edit content. Off unless `DOSSIER_SLOP_GATE` is truthy; markdown skipped. Layers under, never duplicates, dossier-reviewer's judgement.
+- `fakeimpl_stop.py` (Stop, Layer A) — runs `DOSSIER_FAKEIMPL_CMD` on a dirty tree and blocks completion on a non-zero exit, so an unverified "it works" can't stand. Off unless the var is set; never duplicates the in-covenant `run_slice.sh` proof.
+- `ds:status` light sit-rep — with no `.scratchpad/dossier/` tree in cwd, falls through to `git status` + last-N commits (plus optional `$DS_HEALTH_CMD`) instead of bailing.
+- `ds:status --recover` — reconstruct context after a crash or compaction: cavemem first, session-transcript grep fallback, always names which source fired.
+
 ## 2026-07-20 (cohesion)
 
 Skills-cohesion wave: the pair reads as one system — whetstone composed at every dossier lifecycle gate, both directions, one verdict grammar. 8 tasks, TDD, doubt gates drew 11 actionable findings. `[90cd0cd..1fa3c25]`

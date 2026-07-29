@@ -47,6 +47,8 @@ jobs:
           bash plugins/dossier/hooks/test_verdict_grammar.sh
           bash plugins/dossier/hooks/test_bundle_ux.sh
           bash plugins/dossier/hooks/test_loop_rails.sh
+          bash plugins/dossier/hooks/test_slop_guard.sh
+          bash plugins/dossier/hooks/test_fakeimpl_stop.sh
 
       - name: skill lint (all dossier skills)
         run: python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/dossier/skills
