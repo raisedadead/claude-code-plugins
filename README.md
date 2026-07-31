@@ -129,11 +129,12 @@ Empirical defense against knowledge-cutoff hallucination. A hook scans written c
 `lib-ds-check.sh` is the deterministic core of `ds:check` — zero model turns. It regenerates the index from a ledger walk, then exits non-zero naming any dossier whose header, location and closure disagree. Wire it as a push gate without paying for the full skill:
 
 ```bash
-bash plugins/dossier/hooks/lib-ds-check.sh .scratchpad
-git diff --exit-code .scratchpad/INDEX.md
+bash plugins/dossier/hooks/lib-drift-gate.sh .scratchpad
 ```
 
 The regen is idempotent, so any diff means the committed index was stale.
+
+The gate refuses with exit 2 rather than passing when it cannot actually work — outside a git work tree, or when the index is gitignored. A gitignored index makes `git diff --exit-code` succeed on a stale, corrupt or absent file alike, which reads as a green gate that checked nothing. Note that a global ignore file counts: if `.scratchpad` is excluded there, this gate is inert in every repo until the index is tracked.
 
 ## Migration
 
