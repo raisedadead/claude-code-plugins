@@ -4,6 +4,15 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-07-31 (docs consolidation)
+
+Docs moved to the repository root. No skill or script behaviour changed.
+
+### Changed
+
+- `README.md` is now a pointer. Install, the skill table and each skill's self-verify moved to the root README; the verdict-grammar table moved to root `ARCHITECTURE.md`, which is now its only home — it was previously duplicated here with a test enforcing byte-identity.
+- `homepage` in `plugin.json` and `marketplace.json` points at the repo root rather than this directory.
+
 ## 2026-07-20 (cohesion)
 
 Cohesion wave (driven from dossier's skills-cohesion): composed at every dossier gate, zero hooks still. `[90cd0cd..1fa3c25]`

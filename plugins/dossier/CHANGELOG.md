@@ -4,6 +4,25 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-31 (docs consolidation)
+
+Repo-level architecture and decision docs; plugin README gutted to a pointer. No plugin behaviour changed.
+
+### Added
+
+- Root `ARCHITECTURE.md` — declared priority ordering (Honesty > Recoverability > Leverage), the evidence-strength enforcement rule, tenets, testing standard, evolution mechanism, sourced lineage. The verdict-grammar table now lives here and only here.
+- Root `RESEARCH.md` — append-only ledger of decisions with their rejected alternatives, facts with a recheck trigger, and open strides. Records why there is no `version` field, so it stops being re-proposed.
+- Root `CLAUDE.md` — pointer plus the rails cheapest to violate.
+
+### Changed
+
+- `README.md` at this path is now a pointer; install, commands, gates, configuration and the drift-gate recipe moved to the root README. `FORMAT.md` and `ADAPTERS.md` unchanged and still local.
+- `homepage` in `plugin.json` and `marketplace.json` points at the repo root rather than this directory.
+
+### Removed
+
+- `test_verdict_grammar.sh`, `test_whetstone_surfaces.sh` — asserted that two READMEs contained matching prose. `test_bundle_ux.sh` replaced by `test_manifest.sh`, keeping only the `marketplace.json` structural checks.
+
 ## 2026-07-29 (optional quality gates)
 
 Two env-gated quality backstops for ad-hoc (non-covenant) work, plus a light-path sit-rep and a recovery mode on `ds:status`. The slop gate is ON by default (opt-out); the fake-impl backstop stays opt-in.

@@ -36,7 +36,7 @@ jobs:
           bash plugins/dossier/hooks/test_lib_vm_checks.sh
           bash plugins/dossier/hooks/test_adapters_whetstone.sh
           bash plugins/dossier/hooks/test_build_doubt_gate.sh
-          bash plugins/dossier/hooks/test_whetstone_surfaces.sh
+          bash plugins/dossier/hooks/test_manifest.sh
           bash plugins/dossier/hooks/test_lib_assert_grill.sh
           bash plugins/dossier/hooks/test_lib_changelog_write.sh
           bash plugins/dossier/hooks/test_skill_gate.sh
@@ -44,8 +44,6 @@ jobs:
           bash plugins/dossier/hooks/test_merge_route.sh
           bash plugins/dossier/hooks/test_flake_triage.sh
           bash plugins/dossier/hooks/test_skill_lint_gate.sh
-          bash plugins/dossier/hooks/test_verdict_grammar.sh
-          bash plugins/dossier/hooks/test_bundle_ux.sh
           bash plugins/dossier/hooks/test_loop_rails.sh
           bash plugins/dossier/hooks/test_slop_guard.sh
           bash plugins/dossier/hooks/test_fakeimpl_stop.sh

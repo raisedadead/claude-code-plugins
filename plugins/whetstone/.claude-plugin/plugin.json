@@ -7,7 +7,7 @@
     "email": "noreply@mrugesh.dev",
     "url": "https://github.com/raisedadead"
   },
-  "homepage": "https://github.com/raisedadead/claude-code-plugins/tree/main/plugins/whetstone",
+  "homepage": "https://github.com/raisedadead/claude-code-plugins",
   "repository": "https://github.com/raisedadead/claude-code-plugins",
   "license": "ISC",
   "keywords": ["tdd", "testing", "code-review", "git", "skills", "engineering"]

@@ -17,7 +17,7 @@
       "category": "workflow",
       "keywords": ["dossier", "spec-driven", "tdd", "workflow", "scratchpad"],
       "license": "ISC",
-      "homepage": "https://github.com/raisedadead/claude-code-plugins/tree/main/plugins/dossier",
+      "homepage": "https://github.com/raisedadead/claude-code-plugins",
       "repository": "https://github.com/raisedadead/claude-code-plugins"
     },
     {
@@ -27,7 +27,7 @@
       "category": "workflow",
       "keywords": ["tdd", "testing", "code-review", "git", "skills"],
       "license": "ISC",
-      "homepage": "https://github.com/raisedadead/claude-code-plugins/tree/main/plugins/whetstone",
+      "homepage": "https://github.com/raisedadead/claude-code-plugins",
       "repository": "https://github.com/raisedadead/claude-code-plugins"
     }
   ]
