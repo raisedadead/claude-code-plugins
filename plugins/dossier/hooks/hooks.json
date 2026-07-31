@@ -29,11 +29,6 @@
             "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/verify_hook.py",
             "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/slop_guard.py",
-            "timeout": 5
           }
         ]
       },

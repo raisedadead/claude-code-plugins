@@ -4,6 +4,18 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-31 (slop gate leaves the plugin)
+
+### Removed
+
+- **`slop_guard.py` and its test are gone.** Denying `TODO` / `FIXME` / `XXX` / `HACK` and hardcoded credentials is a coding standard, not dossier workflow, and a plugin should not ship one person's style opinion to everyone who installs it. Every sibling PreToolUse hook detects something intrinsically dossier — a ledger header token, a §V citation, a registered invariant. This one detected `TODO`; the live-wave scope added two days ago existed only to justify its address here. It now lives in the operator's own harness, where it applies in every repo and no longer lapses between waves. Consumers who relied on `DOSSIER_SLOP_GATE` should move the rule to their own hook config; nothing in this plugin replaces it.
+
+- **`dossier_header.py` and `test_header_parity.sh` are gone** as a direct consequence. That module existed to stop the marker guard and the slop gate from drifting apart on what a ledger header means. With one consumer left, the two live constants moved back into `marker_guard.py` and the other 98 lines — the on-disk state reader, its bounds and its awk-parity harness — had no caller but their own test.
+
+### Changed
+
+- Tenet 7 in `ARCHITECTURE.md` now names `ds:backprop` as the zero-technical-debt mechanism, which is what it actually was; the marker gate was never the plugin's contribution to that idea.
+
 ## 2026-07-31 (claims match code)
 
 ### Changed

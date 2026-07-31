@@ -56,8 +56,8 @@ DOSSIER_ALLOW_NAMES = {
 
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit"}
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dossier_header import CANONICAL_STATES, HEADER_RE  # noqa: E402
+CANONICAL_STATES = frozenset({"live", "done", "paused"})
+HEADER_RE = re.compile(r"^`\d[^`]*`\s+·\s+`([^`]*)`\s+·\s+`")
 
 
 def hook_payload(event: dict) -> tuple[str | None, list[str]]:
@@ -150,7 +150,11 @@ def main() -> int:
         return 0
 
     cwd = event.get("cwd")
-    if isinstance(cwd, str) and cwd and not (Path(cwd) / ".scratchpad" / "dossier").is_dir():
+    if (
+        isinstance(cwd, str)
+        and cwd
+        and not (Path(cwd) / ".scratchpad" / "dossier").is_dir()
+    ):
         return 0
 
     if os.environ.get("DOSSIER_MARKER_GUARD") == "off":

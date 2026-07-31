@@ -2,7 +2,7 @@
 
 Living document. Read it before changing anything under `plugins/`. Update it when a decision changes — not on a schedule, and not to record activity.
 
-Companion: [`RESEARCH.md`](./RESEARCH.md) holds the append-only record — decisions with their rejected alternatives, facts with a shelf life, open strides. This file holds what we believe now; that one holds how we got here and what is still owed.
+Companion: [`RESEARCH.md`](./RESEARCH.md) holds decisions with their rejected alternatives, facts with a shelf life, and open strides. This file holds what we believe now; that one holds why, and what is still owed. Neither is a history — see its "Collapse, don't stack" rule.
 
 ## What this solves
 
@@ -57,12 +57,11 @@ This ordering is descriptive, not aspirational. Seven of the eight recorded conf
 
 Orthogonal to the ordering above — no priority ranking explains why one hook hard-denies and another never blocks. Signal quality does.
 
-| gate                            | signal                                                                | action       |
-| ------------------------------- | --------------------------------------------------------------------- | ------------ |
-| `slop_guard.py`                 | literal `TODO` / `FIXME` / weak-secret match — no false-positive risk | deny         |
-| `marker_guard.py` header block  | non-canonical state token in a file named `DOSSIER.md`                | exit 2       |
-| `marker_guard.py` advisory path | regex over comment prefixes in arbitrary source                       | exit 0, nag  |
-| `verify_hook.py`                | network-dependent freshness claim                                     | never blocks |
+| gate                            | signal                                                 | action       |
+| ------------------------------- | ------------------------------------------------------ | ------------ |
+| `marker_guard.py` header block  | non-canonical state token in a file named `DOSSIER.md` | exit 2       |
+| `marker_guard.py` advisory path | regex over comment prefixes in arbitrary source        | exit 0, nag  |
+| `verify_hook.py`                | network-dependent freshness claim                      | never blocks |
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.
 
@@ -92,7 +91,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 1. **Wire, don't merge.** Composition routes, never fusion. Absent sibling means graceful skip, never a block and never an error.
 1. **Assert the negative space.** Prove a gate fails when it should, not only that it passes when it should. `run_slice.sh` fails a slice whose test passes on the first run — a test that was never red proves nothing.
 1. **Bound every loop.** Doubt-pass caps at three cycles. `ds:build --auto` has explicit pause classes. Any new loop states its bound.
-1. **Zero technical debt.** The slop gate denies new debt markers at write time, for as long as a wave is live or paused. A problem solved in design costs less than the same problem solved in production.
+1. **Zero technical debt.** A caught bug becomes an enforced invariant, not a comment promising a fix — `ds:backprop` is the mechanism. Denying debt markers at write time is a coding standard, so it lives in the operator's harness rather than here; a plugin should not ship one person's style opinion to everyone who installs it.
 1. **Extend built-ins, don't reinvent.** Claude Code ships `/review`, `/security-review`, `/simplify`. Gate them; do not rebuild them.
 
 ## Testing standard
@@ -125,6 +124,8 @@ The worked example is this repo's own `version` field. It was removed deliberate
 That failure repeats for free. Any future session surveying a versionless manifest will regenerate the same proposal, and the cost is paid again each time.
 
 So the rule: **a rejected alternative is part of the decision, and must be as durable and as visible as the decision itself.** A record of what we chose is documentation. A record of what we chose *and what we turned down and why* is the only form that stops the loop.
+
+**And the counterweight, which matters just as much: durable is not the same as accumulated.** The rule above justifies keeping refusals, not keeping history. A ledger that grows a row every time someone changes their mind stops being read, and an unread ledger prevents no re-proposal at all — the same failure as never writing it down, reached by the opposite route. So a position that reverses is rewritten in place, carrying every alternative still worth refusing and dropping the ones we merely passed through. Changing course twice in a day is ordinary engineering and embarrassing to nobody; making the next session read both attempts to learn one answer is the actual cost. **Optimise these files to be read by someone with no memory of writing them.** Git already holds the route; these files hold the destination and the roads deliberately not taken.
 
 This applies to the ledger format as much as to this repo. Constraints and rejected options currently live in a wave's own file and go quiet when it is archived — readable if you go looking, invisible if you do not, and a new session does not know to look. **The plugins do not yet close this gap.** Stated here as a deliberate commitment, tracked as an open stride in `RESEARCH.md`, and honestly labelled as unimplemented rather than described as though it works.
 
