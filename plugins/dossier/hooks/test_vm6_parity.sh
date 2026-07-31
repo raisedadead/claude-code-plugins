@@ -20,6 +20,7 @@ fixture_with_status_log() {
 	rm -rf "$ws"
 	mkdir -p "$ws/.scratchpad/dossier/$slug"
 	{
+		# shellcheck disable=SC2016
 		printf '`2026-07-31` · `live` · `P1/1`\n\n## §T\n\n| T1 | P1 | . | do thing | — | — |\n\n## §S\n\n'
 		printf '%s\n' "$@"
 	} >"$ws/.scratchpad/dossier/$slug/DOSSIER.md"
