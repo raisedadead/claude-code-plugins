@@ -34,6 +34,7 @@ jobs:
           bash plugins/dossier/hooks/test_lib_z_write.sh
           bash plugins/dossier/hooks/test_lib_assert_scaffold.sh
           bash plugins/dossier/hooks/test_lib_vm_checks.sh
+          bash plugins/dossier/hooks/test_vm6_parity.sh
           bash plugins/dossier/hooks/test_adapters_whetstone.sh
           bash plugins/dossier/hooks/test_build_doubt_gate.sh
           bash plugins/dossier/hooks/test_manifest.sh

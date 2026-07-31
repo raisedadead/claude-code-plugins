@@ -24,8 +24,14 @@ per_file() {
 			if (t=="" || t ~ /^<!--/) next
 			if (t !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]/)
 				printf "WARN Vm.2 %s: §S line missing ISO timestamp: %s\n", f, t
-			if (match(t, /ds:[a-z]+ [A-Za-z0-9_-]+ START/)) { k=substr(t,RSTART,RLENGTH); sub(/ START$/,"",k); started[k]=1 }
-			if (match(t, /ds:[a-z]+ [A-Za-z0-9_-]+ DONE/))  { k=substr(t,RSTART,RLENGTH); sub(/ DONE$/,"",k);  done[k]=1 }
+			if (match(t, /ds:[a-z]+ [A-Za-z0-9_-]+ START/)) {
+				k=substr(t,RSTART,RLENGTH); sub(/ START$/,"",k); started[k]=1
+				split(k, kf, " "); if (kf[2] == "pending") pending_of[kf[1]]=k
+			}
+			if (match(t, /ds:[a-z]+ [A-Za-z0-9_-]+ DONE/)) {
+				k=substr(t,RSTART,RLENGTH); sub(/ DONE$/,"",k); done[k]=1
+				split(k, kf, " "); if (kf[1] in pending_of) { done[pending_of[kf[1]]]=1; delete pending_of[kf[1]] }
+			}
 		}
 		sec=="T" {
 			if ($0 !~ /^\|/) next
