@@ -6,9 +6,16 @@ marker guard (validating a token being written) and the slop gate (asking
 whether a wave is running on disk) need to agree on what that line means, so
 the pattern and the state vocabulary live here rather than in each hook.
 
-Extraction mirrors lib-regen-index.sh, which splits the line on backticks and
-takes field 4. Any change to the header encoding must land in FORMAT.md, this
-module, and lib-regen-index.sh together.
+Two patterns live here and they are not interchangeable. `HEADER_RE` validates
+a state token being written and is deliberately strict. `AWK_HEADER_RE` reads
+what is already on disk and is a transcription of lib-regen-index.sh:29 — the
+authority for what a ledger's state is — down to its looseness, so the slop
+gate and INDEX.md can never disagree about whether a wave is running. They did
+disagree while this module used the strict pattern for both jobs: a header with
+a leading space inside the date span read as live to the shell and as nothing
+to Python. `test_header_parity.sh` runs both extractors over shared fixtures so
+that class stays closed. Any change to the header encoding must land in
+FORMAT.md, this module, and lib-regen-index.sh together.
 """
 
 from __future__ import annotations
@@ -19,6 +26,9 @@ from pathlib import Path
 HEADER_RE = re.compile(r"^`\d[^`]*`\s+·\s+`([^`]*)`\s+·\s+`")
 CANONICAL_STATES = frozenset({"live", "done", "paused"})
 ACTIVE_STATES = frozenset({"live", "paused"})
+
+AWK_HEADER_RE = re.compile(r"^`.*` · `.*` · ")
+AWK_STATE_FIELD = 3
 
 DOSSIER_REL = Path(".scratchpad") / "dossier"
 ARCHIVE_DIRNAME = "_archive"
@@ -34,9 +44,11 @@ def header_state(ledger: Path) -> str:
                 line = handle.readline()
                 if not line:
                     break
-                match = HEADER_RE.match(line.strip())
-                if match:
-                    return match.group(1).strip()
+                if AWK_HEADER_RE.match(line):
+                    fields = line.split("`")
+                    if len(fields) > AWK_STATE_FIELD:
+                        return fields[AWK_STATE_FIELD].strip()
+                    return ""
     except OSError:
         return ""
     return ""
@@ -51,12 +63,17 @@ def has_active_dossier(cwd: str) -> bool:
     An unreadable or unparseable ledger counts as not active. A corrupt header
     means we cannot show a wave is running, and workflow policy should follow
     what is demonstrable rather than assume the stricter reading.
+
+    Scanned newest-first because slugs are date-prefixed and the bound must
+    discard the least likely candidates: closed waves accumulate while the
+    newest is the live one, so an ascending scan would drop exactly the ledger
+    being looked for.
     """
     root = Path(cwd) / DOSSIER_REL
     if not root.is_dir():
         return False
     try:
-        children = sorted(root.iterdir())
+        children = sorted(root.iterdir(), reverse=True)
     except OSError:
         return False
     for child in children[:MAX_DOSSIERS_SCANNED]:

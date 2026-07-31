@@ -110,4 +110,23 @@ expect_gate_silent "$(workspace_raw nohdr 'no header line here at all')" "ledger
 expect_gate_silent "$(workspace_raw badtoken '`2026-06-01` · `wip` · `P1/1`')" "non-canonical state token"
 expect_gate_silent "$(workspace_raw emptytok '`2026-06-01` · `` · `P1/1`')" "empty state token"
 
-printf 'PASS: test_slop_guard (17 cases)\n'
+workspace_many() {
+	local ws="$TMP/many" root
+	root="$ws/.scratchpad/dossier"
+	rm -rf "$ws"
+	mkdir -p "$root"
+	local i
+	for ((i = 1; i <= 200; i++)); do
+		local d
+		d="$(printf '%s/2020-01-01-old%03d' "$root" "$i")"
+		mkdir -p "$d"
+		printf '`2020-01-01` · `done` · `P1/1`\n' >"$d/DOSSIER.md"
+	done
+	mkdir -p "$root/2026-07-31-current"
+	printf '`2026-07-31` · `live` · `P1/1`\n' >"$root/2026-07-31-current/DOSSIER.md"
+	printf '%s' "$ws"
+}
+
+expect_gate_fires "$(workspace_many)" "live wave must be found past the scan bound"
+
+printf 'PASS: test_slop_guard (18 cases)\n'
