@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Ship-stage changelog before ds:close. Derives a CHANGELOG.md section — and, in semver-tagged repos, an advisory version-bump recommendation, never an auto tag — from the §T ledger cross-referenced against each cite's real git log entry. Flags unresolvable or non-conventional cites, never drops rows silently, never pushes. Invoke when the user says "ds:ship", "generate the changelog", "write the changelog for this wave", "what's the version bump", or before ds:close --complete / --successor on a dossier with unreleased §T work. Do NOT use for a single mid-build commit message, and never to actually cut a tag or push.
+description: Ship-stage changelog before ds:close, derived from the §T ledger. Version bump is advisory, never an auto tag. Invoke when the user says "ds:ship", "generate the changelog", "write the changelog for this wave", "what's the version bump", or before ds:close --complete / --successor on a dossier with unreleased §T work. Do NOT use for a single mid-build commit message, and never to actually cut a tag or push.
 argument-hint: [--preview] [--changelog <path>]
 ---
 

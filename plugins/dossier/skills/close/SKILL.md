@@ -1,6 +1,6 @@
 ---
 name: close
-description: Close a live dossier. Validates §T all-x, §X clean, §B all-fixed, writes §Z postscript (requires --complete or --successor <slug>), moves dir to _archive/. Atomic. Resumable. Invoke when the user says "ds:close", "close dossier", "wrap dossier", "archive this phase", "ds:close --complete", or "ds:close --successor <slug>".
+description: Close a live dossier; requires --complete or --successor <slug>. Invoke when the user says "ds:close", "close dossier", "wrap dossier", "archive this phase", "ds:close --complete", or "ds:close --successor <slug>".
 argument-hint: --complete | --successor <slug> | --abandon "<reason>" | --resume
 ---
 

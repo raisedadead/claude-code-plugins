@@ -4,6 +4,19 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-31 (leaner descriptions, precise claims)
+
+Every session injects each skill's full `description` frontmatter, so description length is a per-session context cost paid whether or not the skill is used. This wave cuts that cost without touching the trigger surface.
+
+### Changed
+
+- Skill descriptions trimmed: **4,201 → 2,694 chars across 10 listed dossier skills (35.9%)**. Mechanism prose was cut; every quoted invocation phrase and every firing condition was kept verbatim. A script asserted each replacement 1:1 and re-checked all 59 quoted triggers against the rewritten text, because a skill that stops firing is indistinguishable from a skill that was not needed. Three were deliberately protected: `verify`'s `.scratchpad/dossier/` scope clause, `migrate`'s legacy-artifact shapes (`PLAN+SPEC+AUDIT+closeout/`, `ck/cavekit/SPEC.md`), and `tdd-cycle`'s `dossier:build` composition note.
+
+### Fixed
+
+- `build/SKILL.md` and `backprop/SKILL.md` rebuttal tables claimed `marker_guard.py` "exits 2" on phase markers in source. It does not — that path emits an advisory nudge and exits 0; only a non-canonical DOSSIER.md header token exits 2. The prose in both files was corrected earlier in the same wave; the table rows carrying the identical claim were missed.
+- `fakeimpl_stop.py`'s docstring opened by saying `.scratchpad` is "excluded by pathspec" and then said, four lines later, that exclusion is deliberately *not* a git pathspec. The first sentence was a leftover from the abandoned approach.
+
 ## 2026-07-31 (gate scoping and honest claims)
 
 Behaviour changes a consumer will notice, plus corrections to documentation that overstated what is enforced.

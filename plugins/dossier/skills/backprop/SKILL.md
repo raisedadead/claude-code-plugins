@@ -1,6 +1,6 @@
 ---
 name: backprop
-description: 'Bug → §V protocol. On bug report or failed test, trace root cause, decide whether a new §V invariant prevents recurrence, append §B row + optional §V row + regression test. One commit. Resumable. Invoke when the user says "ds:backprop", "bug: <description>", "backprop B<N>", "root-cause this", "add invariant for <X>", or auto-trigger from ds:build on test failure.'
+description: Bug → §V protocol. Traces root cause, decides whether a new §V invariant prevents recurrence. Invoke when the user says "ds:backprop", "bug: <description>", "backprop B<N>", "root-cause this", "add invariant for <X>", or auto-trigger from ds:build on test failure.
 argument-hint: <B-id> | <bug-description> | --resume
 ---
 
@@ -193,12 +193,12 @@ test=<sha>, fix=<sha>
 
 Every rebuttal here is already stated once in the steps above — collected so the skip-temptation and its answer sit together.
 
-| Tempting shortcut                              | Why not                                                                                                    |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| Write the fix before a failing test            | §5 — a test that passes pre-fix doesn't characterize the bug. RED first; if it's green, revisit step 4.    |
-| Skip the §V invariant ("it's a one-off")       | §7 — only `low`/one-off skips. `high`/systemic MUST add a §V row, or the whole class recurs.               |
-| Green the regression test, skip the full suite | §8 — a scoped GREEN can mask a fresh regression. Run the full (or scoped) suite before committing the fix. |
-| Tag the test with `// PH<n>-B<k>`              | §5 — test name + `Refs §B B<N>` carry the link. `marker_guard.py` exits 2 on phase markers in source/test. |
+| Tempting shortcut                              | Why not                                                                                                           |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Write the fix before a failing test            | §5 — a test that passes pre-fix doesn't characterize the bug. RED first; if it's green, revisit step 4.           |
+| Skip the §V invariant ("it's a one-off")       | §7 — only `low`/one-off skips. `high`/systemic MUST add a §V row, or the whole class recurs.                      |
+| Green the regression test, skip the full suite | §8 — a scoped GREEN can mask a fresh regression. Run the full (or scoped) suite before committing the fix.        |
+| Tag the test with `// PH<n>-B<k>`              | §5 — test name + `Refs §B B<N>` carry the link. `marker_guard.py` nudges advisorily (exit 0) — nothing blocks it. |
 
 ## Auto-trigger from ds:build
 

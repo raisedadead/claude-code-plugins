@@ -1,6 +1,6 @@
 ---
 name: new
-description: Scaffold a new dossier. Creates .scratchpad/dossier/<YYYY-MM-DD>-<slug>/DOSSIER.md with §G..§Z stubs, prompts operator for goal, scope, repos. Sole entrypoint for starting a new phase wave. Invoke when the user says "new dossier", "start dossier", "open dossier", "ds:new", or "scaffold dossier <slug>".
+description: Scaffold a new dossier. Sole entrypoint for starting a phase wave. Invoke when the user says "new dossier", "start dossier", "open dossier", "ds:new", or "scaffold dossier <slug>".
 argument-hint: <slug>
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: build
-description: Execute a §T task with TDD covenant. Claims row (. → ~), runs tests/edits, commits, refreshes §X, flips row to x with commit cite. Resumable on crash via §S step-log. Invoke when the user says "ds:build T<N>", "build next task", "ds:build --next", "implement T<N>", or "work on <task-description>".
+description: Execute a §T task with TDD covenant. Resumable on crash. Invoke when the user says "ds:build T<N>", "build next task", "ds:build --next", "implement T<N>", or "work on <task-description>".
 argument-hint: <T-id> | --next | --auto | --resume | --review | --doubt
 ---
 
@@ -234,7 +234,7 @@ Every rebuttal here is already stated once in the steps above — collected so t
 | Auto-confirm the §X stale guard                        | §8a / Vm.X — stale §X hides push/ahead drift. Under `--auto` it's a PAUSE (`x-stale`), never an auto-`y`.                               |
 | Keep retrying a red test past 2 attempts               | `retries-exhausted` PAUSE (2 fixes + one auto-`ds:backprop`). Looping burns turns — escalate the decision.                              |
 | Patch the symptom, skip the invariant                  | §6 — if the failure implies a missing invariant, run `ds:backprop`; don't just green the test.                                          |
-| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. `marker_guard.py` exits 2. Source comments answer _why_, never _which phase_.                            |
+| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. `marker_guard.py` only nudges (exit 0). Source comments answer _why_, never _which phase_.               |
 | Retry the same fix after an identical failure          | Stall rule (§6) — twice-identical output is a stuck signal; change strategy or spawn a scout, never a third identical run.              |
 | Blow past the budget ceiling mid-task                  | `budget` PAUSE — land clean: WIP commit, `~` row, §S handoff. An unrecorded tree is the expensive part.                                 |
 | Keep correcting the same issue in a stale context      | Failure handling — two failed corrections = contaminated context; reset via `ds:roll` + fresh session, lesson recorded.                 |

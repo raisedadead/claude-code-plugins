@@ -8,7 +8,7 @@ not stand. Dirty is `git status --porcelain`, so a brand-new untracked file
 counts — that is where a fake implementation usually lives, and an earlier
 `git diff HEAD` check silently missed the whole class.
 
-`.scratchpad` is excluded by pathspec. The suite's own hooks write there, and
+`.scratchpad` is excluded. The suite's own hooks write there, and
 in a repo that does not gitignore it those writes are untracked, so counting
 them would arm this gate on a tree the operator never dirtied. Exclusion is done
 by filtering porcelain paths, not by a git pathspec: `:!.scratchpad` anchors to

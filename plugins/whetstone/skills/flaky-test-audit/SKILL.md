@@ -1,6 +1,6 @@
 ---
 name: flaky-test-audit
-description: Run a test suite repeatedly and compute a per-test flakiness rate, then quarantine the nondeterministic ones. Use when the user asks whether a test is flaky, to audit test health, why a test sometimes fails, to find flaky tests, or as a scheduled nightly or weekly test-health routine.
+description: Run a test suite repeatedly, compute a per-test flakiness rate, quarantine the nondeterministic ones. Use when the user asks whether a test is flaky, to audit test health, why a test sometimes fails, to find flaky tests, or as a scheduled nightly or weekly test-health routine.
 ---
 
 # flaky-test-audit — measure flakiness, don't guess it

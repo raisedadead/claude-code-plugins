@@ -1,6 +1,6 @@
 ---
 name: status
-description: The dossier driver + read-only sit-rep. Default session-open action. Hydrates the Claude Code TaskList from §T, then prints a decision-first summary (next decision, blockers, just-did, next-auto); full tables on --full. Surfaces multi-live consolidation. Invoke when the user says "ds:status", "ds", "dossier status", "where are we", "sit-rep", "what's next", "check dossier", or session-start before any other ds:* verb.
+description: The dossier driver + read-only sit-rep. Default session-open action. Invoke when the user says "ds:status", "ds", "dossier status", "where are we", "sit-rep", "what's next", "check dossier", or session-start before any other ds:* verb.
 disallowed-tools: Edit, Write, NotebookEdit
 ---
 

@@ -1,6 +1,6 @@
 ---
 name: check
-description: Drift detector. Read-only. Diffs DOSSIER.md against code, git state, and Vm meta-invariants. Spawns dossier-scout subagents in parallel for multi-repo §V scans. Reports violations grouped by severity. Writes nothing. Invoke when the user says "ds:check", "check drift", "audit dossier", "does code still match spec", "verify invariants", or before opening a PR.
+description: Drift detector. Read-only — writes nothing. Invoke when the user says "ds:check", "check drift", "audit dossier", "does code still match spec", "verify invariants", or before opening a PR.
 disallowed-tools: Edit, Write, NotebookEdit
 ---
 

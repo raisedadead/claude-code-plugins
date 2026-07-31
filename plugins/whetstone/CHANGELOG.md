@@ -4,6 +4,14 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-07-31 (leaner descriptions)
+
+Every session injects each skill's full `description` frontmatter, so description length is a per-session context cost paid whether or not the skill is used.
+
+### Changed
+
+- Skill descriptions trimmed: **1,568 → 1,468 chars across 5 skills (6.4%)**. Deliberately small. These descriptions were already almost entirely trigger surface — `doubt-pass` and `skill-smith` were left byte-identical because every clause in them is a firing condition, and cutting one would trade context cost for discoverability. `tdd-cycle` gave up the most (−90) while keeping its `dossier:build` composition note, which is what makes the two plugins compose discoverably.
+
 ## 2026-07-31 (docs consolidation)
 
 Docs moved to the repository root. No skill or script behaviour changed.

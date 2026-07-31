@@ -1,6 +1,6 @@
 ---
 name: merge-resolve
-description: Resolve git merge or rebase conflicts hunk-by-hunk with a mandatory post-resolution verification. Use when the user hits a merge conflict, asks to resolve conflicts, fix the merge, or handle a rebase conflict, or when git reports CONFLICT / "both modified".
+description: Resolve git merge or rebase conflicts hunk-by-hunk with mandatory post-resolution verification. Use when the user hits a merge conflict, asks to resolve conflicts, fix the merge, or handle a rebase conflict, or when git reports CONFLICT / "both modified".
 ---
 
 # merge-resolve — resolve, then prove it clean
