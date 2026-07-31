@@ -521,25 +521,25 @@ def test_invariant_guard_stays_silent_where_no_registry_exists() -> None:
         assert rc == 0 and out == "", (rc, out)
 
 
-def test_invariant_guard_blocks_from_tracked_registry_without_scratchpad() -> None:
+def test_invariant_guard_leaves_no_artifact_outside_scratchpad() -> None:
     with tempfile.TemporaryDirectory() as root:
+        (Path(root) / ".scratchpad" / "dossier").mkdir(parents=True)
         reg = Path(root) / ".dossier"
         reg.mkdir(parents=True)
         (reg / "invariant-guards.json").write_text(json.dumps([_GUARD_ENTRY]), encoding="utf-8")
-        assert not (Path(root) / ".scratchpad").exists()
         payload = _write_payload("src/app.py", "x = eval(y)")
         payload["cwd"] = root
-        rc, _ = _drive_in(invariant_guard, payload, Path(root))
-        assert rc == 2, rc
+        rc, out = _drive_in(invariant_guard, payload, Path(root))
+        assert rc == 0 and out == "", (rc, out)
 
 
-def test_invariant_guard_still_reads_the_legacy_registry_path() -> None:
-    with tempfile.TemporaryDirectory() as root:
-        _invariant_registry(Path(root), [_GUARD_ENTRY])
+def test_invariant_guard_skips_a_project_with_no_dossier_tree() -> None:
+    with tempfile.TemporaryDirectory() as dossier_root, tempfile.TemporaryDirectory() as bare_root:
+        _invariant_registry(Path(dossier_root), [_GUARD_ENTRY])
         payload = _write_payload("src/app.py", "x = eval(y)")
-        payload["cwd"] = root
-        rc, _ = _drive_in(invariant_guard, payload, Path(root))
-        assert rc == 2, rc
+        payload["cwd"] = bare_root
+        rc, out = _drive_in(invariant_guard, payload, Path(dossier_root))
+        assert rc == 0 and out == "", (rc, out)
 
 
 _PROBE_RULE = {

@@ -10,8 +10,9 @@ empty or malformed registry, a bad regex, or an out-of-scope path, it exits 0
 and the write proceeds. Only an explicit, in-scope, matching registered pattern
 blocks. Escape hatch: DOSSIER_INVARIANT_GUARD=off (log the rationale in §S).
 
-Registry: .dossier/invariant-guards.json (cwd-relative), a JSON list;
-    the legacy .scratchpad/dossier/.invariant-guards.json path is still read
+Registry: .scratchpad/dossier/.invariant-guards.json (cwd-relative), a JSON list.
+    Colocated with the DOSSIER.md that minted it — a guard must not outlive its
+    provenance, and no artifact belongs in a project that did not ask for one
 of {"id", "pattern", "message", "paths"?}. "paths" is an optional list of fnmatch
 globs scoping the guard; absent means every non-dossier source file.
 """
@@ -28,10 +29,7 @@ from pathlib import Path
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit"}
 DOSSIER_ALLOW_PREFIXES = (".scratchpad/dossier/", ".scratchpad/")
 DOSSIER_ALLOW_NAMES = {"DOSSIER.md", "PLAN.md", "SPEC.md", "AUDIT.md", "LENS.md"}
-REGISTRY_CANDIDATES = (
-    Path(".dossier/invariant-guards.json"),
-    Path(".scratchpad/dossier/.invariant-guards.json"),
-)
+REGISTRY_REL = Path(".scratchpad/dossier/.invariant-guards.json")
 
 
 def hook_payload(event: dict) -> tuple[str | None, list[str]]:
@@ -70,14 +68,9 @@ def is_dossier_path(file_path: str) -> bool:
 
 def load_registry() -> list[dict]:
     """Read the guard registry. Returns [] on any read/parse error (fail-open)."""
-    data = None
-    for candidate in REGISTRY_CANDIDATES:
-        try:
-            data = json.loads(candidate.read_text(encoding="utf-8"))
-            break
-        except (OSError, json.JSONDecodeError):
-            continue
-    if data is None:
+    try:
+        data = json.loads(REGISTRY_REL.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
         return []
     if not isinstance(data, list):
         return []
@@ -130,6 +123,10 @@ def main() -> int:
         return 0
 
     if not isinstance(event, dict):
+        return 0
+
+    cwd = event.get("cwd")
+    if isinstance(cwd, str) and cwd and not (Path(cwd) / ".scratchpad" / "dossier").is_dir():
         return 0
 
     if os.environ.get("DOSSIER_INVARIANT_GUARD") == "off":
