@@ -33,4 +33,31 @@ if python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); sys.exit(0 if an
 	fail "a marketplace plugin entry carries a version key. Commit SHA is the version — see RESEARCH.md D1."
 fi
 
+python3 - "$ROOT" <<'PY' || fail "a shipped markdown link escapes its plugin root"
+import os, re, sys
+
+root = os.path.realpath(sys.argv[1])
+link_re = re.compile(r"\]\((\.[^)\s]*)\)")
+bad = []
+for plugin in ("dossier", "whetstone"):
+    proot = os.path.join(root, "plugins", plugin)
+    for dirpath, _, files in os.walk(proot):
+        for name in files:
+            if not name.endswith(".md"):
+                continue
+            path = os.path.join(dirpath, name)
+            with open(path, encoding="utf-8") as handle:
+                body = handle.read()
+            for match in link_re.finditer(body):
+                target = match.group(1).split("#")[0]
+                if not target:
+                    continue
+                resolved = os.path.normpath(os.path.join(dirpath, target))
+                if resolved != proot and not resolved.startswith(proot + os.sep):
+                    bad.append(f"{os.path.relpath(path, root)} -> {match.group(1)}")
+for entry in bad:
+    print(f"  escapes install root: {entry}", file=sys.stderr)
+sys.exit(1 if bad else 0)
+PY
+
 printf 'ok\n'

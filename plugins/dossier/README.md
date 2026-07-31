@@ -2,11 +2,11 @@
 
 Phase-scoped engineering workflow. One resumable `DOSSIER.md` drives a wave of work — tasks, bugs, invariants, cross-repo state, evidence log — with in-session quality gates.
 
-Docs live at the repository root:
+Docs live at the repository root, which is not shipped to the install path — these are absolute so they resolve from the plugin cache too:
 
-- [README](../../README.md) — install, commands, gates, configuration
-- [ARCHITECTURE.md](../../ARCHITECTURE.md) — priorities, tenets, enforcement map, testing standard
-- [RESEARCH.md](../../RESEARCH.md) — decisions and their rejected alternatives
+- [README](https://github.com/raisedadead/claude-code-plugins/blob/main/README.md) — install, commands, gates, configuration
+- [ARCHITECTURE.md](https://github.com/raisedadead/claude-code-plugins/blob/main/ARCHITECTURE.md) — priorities, tenets, enforcement map, testing standard
+- [RESEARCH.md](https://github.com/raisedadead/claude-code-plugins/blob/main/RESEARCH.md) — decisions and their rejected alternatives
 
 Local to this plugin:
 
