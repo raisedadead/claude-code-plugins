@@ -92,7 +92,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 1. **Wire, don't merge.** Composition routes, never fusion. Absent sibling means graceful skip, never a block and never an error.
 1. **Assert the negative space.** Prove a gate fails when it should, not only that it passes when it should. `run_slice.sh` fails a slice whose test passes on the first run — a test that was never red proves nothing.
 1. **Bound every loop.** Doubt-pass caps at three cycles. `ds:build --auto` has explicit pause classes. Any new loop states its bound.
-1. **Zero technical debt.** The slop gate denies new debt markers at write time, on by default. A problem solved in design costs less than the same problem solved in production.
+1. **Zero technical debt.** The slop gate denies new debt markers at write time, for as long as a wave is live or paused. A problem solved in design costs less than the same problem solved in production.
 1. **Extend built-ins, don't reinvent.** Claude Code ships `/review`, `/security-review`, `/simplify`. Gate them; do not rebuild them.
 
 ## Testing standard
@@ -104,6 +104,7 @@ Tests here guard hard-won invariants. They do not assert that prose says what pr
 - **Cross-check load-bearing predicates in two places.** If two subsystems must agree on what a value means, test that they agree — on a shared fixture, from both sides. The cautionary example is in this repo: `test_lib_regen.sh` asserts that a closeout written `complete: true.` — with the trailing period — still reads as closed, and its own failure message claims "regen/reconcile predicate parity". No matching fixture exists on the reconcile side. The test names the property it does not verify, and a reader who trusts the message inherits a false belief about coverage. A parity claim that runs against one implementation is not a cross-check.
 - **A false positive becomes a permanent regression test.** `test_marker_guard.sh` carries one named inline as the artemis regression: a comment reading `# Step 1: dump the database` must not trigger the guard. It once did.
 - **Never test documentation.** A grep asserting a README contains a phrase catches nothing and breaks on every edit.
+- **A recorded number is a claim, and decays like one.** Counts written into a finding age badly and are rarely re-probed, so a stale one quietly becomes evidence for a conclusion it never supported. `F20` claimed ten leaked cites proving an advisory guard had failed; the real count was seven, and `git blame` put every one of them two months before the detecting pattern existed — the number was wrong and the inference it carried was backwards. Record the command beside the count, and re-run it before the count is used to justify a change.
 
 ## How this improves
 

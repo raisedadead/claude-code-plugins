@@ -95,11 +95,11 @@ def main() -> None:
     tool_name = data.get("tool_name", "")
     if tool_name not in {"Edit", "Write", "MultiEdit"}:
         sys.exit(0)
-    if not _dossier_active(data):
-        sys.exit(0)
     tool_input = data.get("tool_input", {}) or {}
     path = str(tool_input.get("file_path") or tool_input.get("path") or "")
     if path.endswith((".md", ".mdc", ".markdown")):
+        sys.exit(0)
+    if not _dossier_active(data):
         sys.exit(0)
     content = _new_content(tool_name, tool_input)
     if _MARKERS.search(content):

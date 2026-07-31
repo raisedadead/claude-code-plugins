@@ -97,4 +97,17 @@ expect_gate_silent "$(workspace archived '.scratchpad/dossier/_archive/2026-06-0
 expect_gate_fires "$(workspace livestate '.scratchpad/dossier/2026-06-01-x' live)" "live dossier"
 expect_gate_fires "$(workspace pausedstate '.scratchpad/dossier/2026-06-01-x' paused)" "paused dossier"
 
-printf 'PASS: test_slop_guard (14 cases)\n'
+workspace_raw() {
+	local name="$1" body="$2"
+	local ws="$TMP/$name" rel='.scratchpad/dossier/2026-06-01-x'
+	rm -rf "$ws"
+	mkdir -p "$ws/$rel"
+	printf '%s\n' "$body" >"$ws/$rel/DOSSIER.md"
+	printf '%s' "$ws"
+}
+
+expect_gate_silent "$(workspace_raw nohdr 'no header line here at all')" "ledger with no parseable header"
+expect_gate_silent "$(workspace_raw badtoken '`2026-06-01` · `wip` · `P1/1`')" "non-canonical state token"
+expect_gate_silent "$(workspace_raw emptytok '`2026-06-01` · `` · `P1/1`')" "empty state token"
+
+printf 'PASS: test_slop_guard (17 cases)\n'

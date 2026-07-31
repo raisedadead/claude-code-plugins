@@ -47,6 +47,10 @@ def has_active_dossier(cwd: str) -> bool:
 
     Archived waves are excluded: ds:close moves them under _archive/, and a
     closed wave must not keep workflow policy switched on.
+
+    An unreadable or unparseable ledger counts as not active. A corrupt header
+    means we cannot show a wave is running, and workflow policy should follow
+    what is demonstrable rather than assume the stricter reading.
     """
     root = Path(cwd) / DOSSIER_REL
     if not root.is_dir():
