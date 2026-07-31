@@ -62,6 +62,12 @@ grep -q "additionalContext" "$TMP/out" || fail "sessionTitle must not displace a
 run_hook '{"hook_event_name":"SessionStart","source":"resume","session_title":""}'
 [ "$(title_of)" = "2026-06-05-foo" ] || fail "resume + empty title must emit sessionTitle"
 
+run_hook '{"hook_event_name":"SessionStart","source":"fork","session_title":""}'
+[ "$(title_of)" = "2026-06-05-foo" ] || fail "fork + empty title must emit sessionTitle (2.1.216 split fork out of resume)"
+
+run_hook '{"hook_event_name":"SessionStart","source":"fork","session_title":"user-set"}'
+[ -z "$(title_of)" ] || fail "fork must not clobber a non-empty session_title"
+
 run_hook '{"hook_event_name":"SessionStart","source":"resume","session_title":"user-set"}'
 [ -z "$(title_of)" ] || fail "non-empty session_title must never be clobbered"
 

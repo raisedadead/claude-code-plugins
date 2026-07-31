@@ -101,7 +101,7 @@ fi
 
 session_title_out=""
 case "${hook_src}" in
-startup | resume)
+startup | resume | fork)
 	if [[ -z "${hook_cur_title}" && -n "${live_slug}" ]]; then
 		session_title_out="${live_slug}"
 	fi
