@@ -4,7 +4,9 @@
 Enabled only when DOSSIER_FAKEIMPL_CMD is set to a project's fast smoke/test
 command. On Stop, if the working tree has uncommitted changes, that command
 runs; a non-zero exit blocks completion so an unverified "it works" claim can
-not stand. Inert (exit 0) when the var is unset — safe to ship default-off.
+not stand. Dirty is `git status --porcelain`, so a brand-new untracked file
+counts — that is where a fake implementation usually lives, and an earlier
+`git diff HEAD` check silently missed the whole class. Inert (exit 0) when the var is unset — safe to ship default-off.
 This is the ambient backstop for ad-hoc sessions; it never duplicates the
 in-covenant run_slice.sh proof that ds:build / whetstone tdd-cycle already give.
 """
@@ -32,7 +34,7 @@ def main() -> None:
         pass
     try:
         changed = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD"],
+            ["git", "status", "--porcelain"],
             capture_output=True,
             text=True,
             timeout=10,

@@ -45,4 +45,9 @@ git -C "$TMP" checkout -- a.txt
 out="$(run "false")"
 if is_block "$out"; then fail "clean tree must not run the cmd"; fi
 
-printf 'PASS: test_fakeimpl_stop (4 cases)\n'
+printf 'def f():\n    pass\n' >"$TMP/brand_new.py"
+out="$(run "false")"
+is_block "$out" || fail "an untracked-only change is still a dirty tree — a new file is where a fake implementation lives"
+rm -f "$TMP/brand_new.py"
+
+printf 'PASS: test_fakeimpl_stop (5 cases)\n'
