@@ -21,6 +21,8 @@ if grep -qF "$KEY" "$CHANGELOG"; then
 fi
 
 TMP_FILE="$(mktemp "$CHANGELOG.tmp.XXXXXX")"
+cleanup() { rm -f "$TMP_FILE"; }
+trap cleanup EXIT
 awk -v secfile="$SECTION" '
 BEGIN {
 	while ((getline line < secfile) > 0) sec = sec line "\n"
