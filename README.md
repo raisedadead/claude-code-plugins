@@ -61,7 +61,7 @@ Everything else fires automatically or is power-user: `build` (the TDD engine, `
 
 ## Quality gates
 
-In-session hooks. They scope themselves to projects that opted in — a repo with no `.scratchpad/dossier/` sees nothing at all — and within such a repo they cover ad-hoc edits too, not just work driven by a command. Slop is stricter still: it is a workflow policy, live only while a wave is. Gate strength matches signal strength — see [ARCHITECTURE.md](./ARCHITECTURE.md).
+In-session hooks. The four write-time gates scope themselves to projects that opted in — with no `.scratchpad/dossier/` directory they do nothing — and inside such a repo they cover ad-hoc edits too, not just work driven by a command. Slop is stricter still: it is a workflow policy, live only while a wave is. The fake-impl backstop is the exception on both counts: it runs at Stop rather than at write time, and it is keyed to its env var alone, so once you set that it applies in any repo. Gate strength matches signal strength — see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 | Gate                   | Default | Toggle                               | What it catches                                                                                 |
 | ---------------------- | ------- | ------------------------------------ | ----------------------------------------------------------------------------------------------- |
