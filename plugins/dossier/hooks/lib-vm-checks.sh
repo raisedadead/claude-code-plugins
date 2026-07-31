@@ -25,12 +25,12 @@ per_file() {
 			if (t !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] [0-9][0-9]:[0-9][0-9]/)
 				printf "WARN Vm.2 %s: §S line missing ISO timestamp: %s\n", f, t
 			if (match(t, /ds:[a-z]+ [A-Za-z0-9_-]+ START/)) {
-				k=substr(t,RSTART,RLENGTH); sub(/ START$/,"",k); started[k]=1
+				k=substr(t,RSTART,RLENGTH); sub(/ START$/,"",k); open_ops[k]=1
 				split(k, kf, " "); if (kf[2] == "pending") pending_of[kf[1]]=k
 			}
 			if (match(t, /ds:[a-z]+ [A-Za-z0-9_-]+ DONE/)) {
-				k=substr(t,RSTART,RLENGTH); sub(/ DONE$/,"",k); done[k]=1
-				split(k, kf, " "); if (kf[1] in pending_of) { done[pending_of[kf[1]]]=1; delete pending_of[kf[1]] }
+				k=substr(t,RSTART,RLENGTH); sub(/ DONE$/,"",k); delete open_ops[k]
+				split(k, kf, " "); if (kf[1] in pending_of) { delete open_ops[pending_of[kf[1]]]; delete pending_of[kf[1]] }
 			}
 		}
 		sec=="T" {
@@ -42,7 +42,7 @@ per_file() {
 			if (state=="x" && (cite=="" || cite=="—" || cite=="-"))
 				printf "CRITICAL Vm.3 %s: §T row %s state=x has empty cite\n", f, id
 		}
-		END { for (k in started) if (!(k in done)) printf "WARN Vm.6 %s: §S %s START without DONE\n", f, k }
+		END { for (k in open_ops) printf "WARN Vm.6 %s: §S %s START without DONE\n", f, k }
 	' "$f"
 }
 

@@ -64,6 +64,19 @@ ws="$(fixture_with_status_log exact_pair \
 	'2026-07-31 10:05 ds:build T3 DONE')"
 assert_both_enforcers_agree "$ws" no "START and DONE on an identical target"
 
+ws="$(fixture_with_status_log second_pending_open \
+	'2026-07-31 10:00 ds:backprop pending START' \
+	'2026-07-31 10:05 ds:backprop B1 DONE' \
+	'2026-07-31 11:00 ds:backprop pending START')"
+assert_both_enforcers_agree "$ws" yes "a second pending START after an earlier DONE is still open"
+
+ws="$(fixture_with_status_log both_pendings_closed \
+	'2026-07-31 10:00 ds:backprop pending START' \
+	'2026-07-31 10:05 ds:backprop B1 DONE' \
+	'2026-07-31 11:00 ds:backprop pending START' \
+	'2026-07-31 11:05 ds:backprop B2 DONE')"
+assert_both_enforcers_agree "$ws" no "two sequential backprops both resolved"
+
 ws="$(fixture_with_status_log cross_verb \
 	'2026-07-31 10:00 ds:backprop pending START' \
 	'2026-07-31 10:05 ds:build T3 DONE')"
