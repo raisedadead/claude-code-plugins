@@ -522,6 +522,80 @@ def test_invariant_guard_skips_non_dossier_repo() -> None:
         assert rc == 0 and out == "", (rc, out)
 
 
+_PROBE_RULE = {
+    "ruleName": "probe-freshness",
+    "regex": r"PROBE-([A-Z0-9]+)",
+    "check_args": [1],
+    "check": lambda token: (f"probe {token}", "superseded", "https://example.invalid"),
+    "icon": "!",
+    "scope": "all",
+}
+
+
+@contextlib.contextmanager
+def _only_probe_rule():
+    import verify_patterns
+
+    saved = verify_patterns.VERIFY_PATTERNS
+    verify_patterns.VERIFY_PATTERNS = [_PROBE_RULE]
+    try:
+        yield
+    finally:
+        verify_patterns.VERIFY_PATTERNS = saved
+
+
+def _dossier_workspace(root: str) -> Path:
+    ws = Path(root)
+    (ws / ".scratchpad" / "dossier").mkdir(parents=True, exist_ok=True)
+    return ws
+
+
+def _verify_payload(ws: Path, body: str, file_path: str = "app.py") -> dict:
+    return {
+        "tool_name": "Write",
+        "cwd": str(ws),
+        "tool_input": {"file_path": file_path, "content": body},
+    }
+
+
+def test_verify_hook_emits_reminder_when_a_rule_fires() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        ws = _dossier_workspace(d)
+        with _only_probe_rule():
+            rc, out = _drive_in(verify_hook, _verify_payload(ws, "x = 'PROBE-ABC'\n"), ws)
+        assert rc == 0, rc
+        assert "additionalContext" in out, out
+        assert "probe ABC" in out, out
+
+
+def test_verify_hook_stays_silent_on_benign_content() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        ws = _dossier_workspace(d)
+        with _only_probe_rule():
+            rc, out = _drive_in(verify_hook, _verify_payload(ws, "x = 1\n"), ws)
+        assert rc == 0 and out == "", (rc, out)
+
+
+def test_verify_hook_dedups_a_repeated_finding() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        ws = _dossier_workspace(d)
+        payload = _verify_payload(ws, "x = 'PROBE-ABC'\n")
+        with _only_probe_rule():
+            _, first = _drive_in(verify_hook, payload, ws)
+            _, second = _drive_in(verify_hook, payload, ws)
+        assert "additionalContext" in first, first
+        assert second == "", second
+
+
+def test_verify_hook_honours_an_inline_skip_marker() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        ws = _dossier_workspace(d)
+        body = "x = 'PROBE-ABC'  # verify-skip: probe-freshness\n"
+        with _only_probe_rule():
+            rc, out = _drive_in(verify_hook, _verify_payload(ws, body), ws)
+        assert rc == 0 and out == "", (rc, out)
+
+
 def _run() -> int:
     tests = [
         v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)
