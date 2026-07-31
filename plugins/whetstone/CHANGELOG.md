@@ -4,6 +4,16 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-07-31 (lint what the host actually parses)
+
+### Added
+
+- `lint_skill.py` now fails a frontmatter value that will not survive a real YAML parse: an unquoted scalar containing a colon-space, or one opening with a flow/block indicator (`[ { * & ! % @ \` > |\`). The linter reads frontmatter with a regex, so until now a value that broke YAML linted perfectly clean and then loaded with every field dropped — the skill kept its file and lost its trigger surface. Three shipped dossier skills were in that state.
+
+  The gate is deliberately stricter than "does it parse". `migrate`'s `argument-hint: [<repo-path> | --all | --gc]` parsed *fine* — into a `list` rather than a `str`. A parse-only check reports success on exactly the defect that matters.
+
+  Four tests: colon-space fires, flow indicator fires, quoted values do not false-positive, and a plain `<T-id> | --next` value with pipes is not flagged.
+
 ## 2026-07-31 (leaner descriptions)
 
 Every session injects each skill's full `description` frontmatter, so description length is a per-session context cost paid whether or not the skill is used.

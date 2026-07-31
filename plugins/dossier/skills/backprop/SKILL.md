@@ -1,6 +1,6 @@
 ---
 name: backprop
-description: Bug → §V protocol. Traces root cause, decides whether a new §V invariant prevents recurrence. Invoke when the user says "ds:backprop", "bug: <description>", "backprop B<N>", "root-cause this", "add invariant for <X>", or auto-trigger from ds:build on test failure.
+description: 'Bug → §V protocol. Traces root cause, decides whether a new §V invariant prevents recurrence. Invoke when the user says "ds:backprop", "bug: <description>", "backprop B<N>", "root-cause this", "add invariant for <X>", or auto-trigger from ds:build on test failure.'
 argument-hint: <B-id> | <bug-description> | --resume
 ---
 

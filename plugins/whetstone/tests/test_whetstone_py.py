@@ -44,6 +44,62 @@ def test_lint_clean() -> None:
         assert lint_skill.lint(p) == [], lint_skill.lint(p)
 
 
+def test_lint_yaml_colon_space_in_unquoted_description() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        p = _write_skill(
+            root,
+            "backprop",
+            'name: backprop\ndescription: Traces a root cause. Invoke when the user says "bug: <description>".',
+        )
+        findings = lint_skill.lint(p)
+        assert any("YAML-safe" in f and f.startswith("FAIL") for f in findings), (
+            findings
+        )
+
+
+def test_lint_yaml_flow_indicator_in_unquoted_value() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        p = _write_skill(
+            root,
+            "ship",
+            "name: ship\ndescription: Ships it. Use when the user asks to ship.\n"
+            "argument-hint: [--preview] [--changelog <path>]",
+        )
+        findings = lint_skill.lint(p)
+        assert any("YAML-safe" in f and f.startswith("FAIL") for f in findings), (
+            findings
+        )
+
+
+def test_lint_yaml_quoted_values_do_not_false_positive() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        p = _write_skill(
+            root,
+            "quoted",
+            "name: quoted\n"
+            "description: 'Does it. Use when the user says \"bug: <x>\".'\n"
+            "argument-hint: '[--preview] | --all'",
+        )
+        findings = lint_skill.lint(p)
+        assert not any("YAML-safe" in f for f in findings), findings
+
+
+def test_lint_yaml_plain_pipe_value_is_not_flagged() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        p = _write_skill(
+            root,
+            "build",
+            "name: build\ndescription: Builds. Use when the user asks to build.\n"
+            "argument-hint: <T-id> | --next | --auto",
+        )
+        findings = lint_skill.lint(p)
+        assert not any("YAML-safe" in f for f in findings), findings
+
+
 def test_lint_name_mismatch() -> None:
     with tempfile.TemporaryDirectory() as t:
         root = Path(t)

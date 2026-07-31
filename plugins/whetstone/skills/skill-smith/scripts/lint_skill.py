@@ -36,6 +36,40 @@ def _field(frontmatter: str, key: str) -> str:
     return ""
 
 
+YAML_INDICATORS = "[]{}*&!%@`>|"
+
+
+def _yaml_hazards(frontmatter: str) -> list[str]:
+    """Frontmatter keys whose unquoted value will not survive a YAML parse.
+
+    The host parses this block as real YAML; this linter reads it with a regex,
+    so a value that breaks YAML lints clean and then loads with EVERY field
+    silently dropped — the skill keeps its file but loses its name, description
+    and trigger surface, and simply stops firing. Two shapes cause it, both seen
+    in this repo: an unquoted value containing a colon-space (YAML reads the
+    tail as a nested mapping) and an unquoted value opening with a flow or
+    block indicator. Quoting the scalar fixes both without touching content.
+    """
+    bad: list[str] = []
+    for line in frontmatter.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or ":" not in stripped:
+            continue
+        key, _, value = stripped.partition(":")
+        if not key or " " in key.strip():
+            continue
+        value = value.strip()
+        if not value:
+            continue
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+            continue
+        if value[0] in YAML_INDICATORS:
+            bad.append(f"{key.strip()} (opens with '{value[0]}')")
+        elif ": " in value:
+            bad.append(f"{key.strip()} (contains a colon-space)")
+    return bad
+
+
 def _split_frontmatter(text: str) -> tuple[str, str] | None:
     parts = text.split("---")
     if len(parts) < 3:
@@ -53,6 +87,12 @@ def lint(skill_md: Path) -> list[str]:
         findings.append(f"FAIL {name_hint}: no YAML frontmatter (--- … ---)")
         return findings
     frontmatter, body = split
+
+    for hazard in _yaml_hazards(frontmatter):
+        findings.append(
+            f"FAIL {name_hint}: frontmatter value is not YAML-safe unquoted — {hazard}. "
+            "Wrap it in single quotes; the host drops every field when the block fails to parse."
+        )
 
     name = _field(frontmatter, "name")
     description = _field(frontmatter, "description")

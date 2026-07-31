@@ -1,7 +1,7 @@
 ---
 name: ship
 description: Ship-stage changelog before ds:close, derived from the §T ledger. Version bump is advisory, never an auto tag. Invoke when the user says "ds:ship", "generate the changelog", "write the changelog for this wave", "what's the version bump", or before ds:close --complete / --successor on a dossier with unreleased §T work. Do NOT use for a single mid-build commit message, and never to actually cut a tag or push.
-argument-hint: [--preview] [--changelog <path>]
+argument-hint: '[--preview] [--changelog <path>]'
 ---
 
 # ds:ship — changelog from the ledger, before the archive

@@ -4,6 +4,16 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-31 (frontmatter that actually parses)
+
+### Fixed
+
+Three skills carried YAML frontmatter the host could not parse as intended. A skill whose frontmatter fails to parse loads with **every field silently dropped** — it keeps its file but loses its name, description and trigger surface, so it simply stops firing. Nothing reported an error; `claude plugin validate` was what surfaced it.
+
+- `backprop` — the description's `"bug: <description>"` trigger puts a colon-space inside the scalar, so it has to be quoted. It always was. **The trim in the previous entry stripped the quotes**: that rewrite replaced the whole `description:` line and emitted a plain scalar, not noticing the original was single-quoted. `backprop` was the only description in either plugin that carried quotes, which is exactly why it was the only one broken. Re-quoted; the trigger text is byte-identical either way.
+- `ship` — `argument-hint` opened with `[`, which YAML reads as a flow sequence. Two bracketed groups in a row is a parse error. This predates the trim.
+- `migrate` — same bracket shape, but well-formed, so it parsed *successfully* into a **list** instead of a string. No error anywhere; the wrong type just loaded. This predates the trim.
+
 ## 2026-07-31 (leaner descriptions, precise claims)
 
 Every session injects each skill's full `description` frontmatter, so description length is a per-session context cost paid whether or not the skill is used. This wave cuts that cost without touching the trigger surface.
