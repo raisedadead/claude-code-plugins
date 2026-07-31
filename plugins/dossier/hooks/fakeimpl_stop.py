@@ -9,9 +9,14 @@ counts — that is where a fake implementation usually lives, and an earlier
 `git diff HEAD` check silently missed the whole class.
 
 `.scratchpad` is excluded by pathspec. The suite's own hooks write there, and
-in a repo that does not gitignore it those writes are untracked forever — no
-commit clears them — so counting them would arm this gate permanently on a
-tree the operator never dirtied. Inert (exit 0) when the var is unset — safe to ship default-off.
+in a repo that does not gitignore it those writes are untracked, so counting
+them would arm this gate on a tree the operator never dirtied. Exclusion is done
+by filtering porcelain paths, not by a git pathspec: `:!.scratchpad` anchors to
+the directory git runs in, so it misses a nested `.scratchpad` and misses a
+root one when the session cwd is a subdirectory, and every ledger path in this
+suite is cwd-relative, so both orientations occur. `-uall` is required — git
+otherwise collapses a wholly-untracked tree to its top directory, hiding the
+`.scratchpad` component the filter matches on. Inert (exit 0) when the var is unset — safe to ship default-off.
 This is the ambient backstop for ad-hoc sessions; it never duplicates the
 in-covenant run_slice.sh proof that ds:build / whetstone tdd-cycle already give.
 """
@@ -22,6 +27,18 @@ import json
 import os
 import subprocess
 import sys
+
+
+SCRATCHPAD_DIRNAME = ".scratchpad"
+
+
+def _is_scratchpad_entry(entry: str) -> bool:
+    """True when a porcelain line names a path under any .scratchpad directory."""
+    path = entry[3:].strip() if len(entry) > 3 else ""
+    if " -> " in path:
+        path = path.rsplit(" -> ", 1)[-1]
+    path = path.strip().strip('"')
+    return SCRATCHPAD_DIRNAME in path.split("/")
 
 
 def _block(reason: str) -> None:
@@ -39,14 +56,19 @@ def main() -> None:
         pass
     try:
         changed = subprocess.run(
-            ["git", "status", "--porcelain", "--", ":!.scratchpad"],
+            ["git", "status", "--porcelain", "-uall"],
             capture_output=True,
             text=True,
             timeout=10,
-        ).stdout.strip()
+        ).stdout
     except (OSError, subprocess.SubprocessError):
         sys.exit(0)
-    if not changed:
+    dirty = [
+        line
+        for line in changed.splitlines()
+        if line.strip() and not _is_scratchpad_entry(line)
+    ]
+    if not dirty:
         sys.exit(0)
     try:
         timeout = int(os.environ.get("DOSSIER_FAKEIMPL_TIMEOUT", "120"))

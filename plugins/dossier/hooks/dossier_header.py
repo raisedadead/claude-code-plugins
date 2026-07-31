@@ -10,12 +10,20 @@ Two patterns live here and they are not interchangeable. `HEADER_RE` validates
 a state token being written and is deliberately strict. `AWK_HEADER_RE` reads
 what is already on disk and is a transcription of lib-regen-index.sh:29 — the
 authority for what a ledger's state is — down to its looseness, so the slop
-gate and INDEX.md can never disagree about whether a wave is running. They did
-disagree while this module used the strict pattern for both jobs: a header with
-a leading space inside the date span read as live to the shell and as nothing
-to Python. `test_header_parity.sh` runs both extractors over shared fixtures so
-that class stays closed. Any change to the header encoding must land in
-FORMAT.md, this module, and lib-regen-index.sh together.
+gate and INDEX.md agree about whether a wave is running. They did disagree
+while this module used the strict pattern for both jobs: a header with a
+leading space inside the date span read as live to the shell and as nothing to
+Python. `test_header_parity.sh` runs the real `lib-regen-index.sh` against this
+module over shared fixtures so that class stays closed.
+
+One divergence is deliberate and bounded: the awk scans to end of file, this
+scans `MAX_HEADER_LINES`. Bounding the read is a tenet, and FORMAT.md puts the
+header on line 1, so 512 is far past any well-formed ledger — but a header
+below that line reads as live to the shell and as nothing here. Prefer this
+over an unbounded read of a file the suite does not control.
+
+Any change to the header encoding must land in FORMAT.md, this module, and
+lib-regen-index.sh together.
 """
 
 from __future__ import annotations
@@ -32,7 +40,7 @@ AWK_STATE_FIELD = 3
 
 DOSSIER_REL = Path(".scratchpad") / "dossier"
 ARCHIVE_DIRNAME = "_archive"
-MAX_HEADER_LINES = 8
+MAX_HEADER_LINES = 512
 MAX_DOSSIERS_SCANNED = 128
 
 

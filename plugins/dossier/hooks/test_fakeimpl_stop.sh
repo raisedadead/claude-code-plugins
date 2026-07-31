@@ -52,9 +52,18 @@ out="$(run "false")"
 if is_block "$out"; then fail "the suite's own .scratchpad writes must not arm the gate"; fi
 rm -rf "$TMP/.scratchpad"
 
+mkdir -p "$TMP/apps/web/.scratchpad/dossier"
+printf 'ledger\n' >"$TMP/apps/web/.scratchpad/dossier/DOSSIER.md"
+out="$(run "false")"
+if is_block "$out"; then fail "a nested .scratchpad must not arm the gate either"; fi
+
+out="$(cd "$TMP/apps/web" && printf '{}' | env DOSSIER_FAKEIMPL_CMD="false" python3 "$HOOK")"
+if is_block "$out"; then fail "a .scratchpad above the session cwd must not arm the gate"; fi
+rm -rf "$TMP/apps"
+
 printf 'def f():\n    pass\n' >"$TMP/brand_new.py"
 out="$(run "false")"
 is_block "$out" || fail "an untracked-only change is still a dirty tree — a new file is where a fake implementation lives"
 rm -f "$TMP/brand_new.py"
 
-printf 'PASS: test_fakeimpl_stop (6 cases)\n'
+printf 'PASS: test_fakeimpl_stop (8 cases)\n'
