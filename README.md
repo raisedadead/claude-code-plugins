@@ -61,15 +61,15 @@ Everything else fires automatically or is power-user: `build` (the TDD engine, `
 
 ## Quality gates
 
-In-session hooks, firing whenever the plugin is enabled, so they cover ad-hoc work too. Gate strength matches signal strength — see [ARCHITECTURE.md](./ARCHITECTURE.md).
+In-session hooks. They scope themselves to projects that opted in — a repo with no `.scratchpad/dossier/` sees nothing at all — and within such a repo they cover ad-hoc edits too, not just work driven by a command. Slop is stricter still: it is a workflow policy, live only while a wave is. Gate strength matches signal strength — see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-| Gate                   | Default | Toggle                               | What it catches                                                                |
-| ---------------------- | ------- | ------------------------------------ | ------------------------------------------------------------------------------ |
-| **slop**               | on      | `DOSSIER_SLOP_GATE=0`                | New `TODO` / `FIXME` / `XXX` / `HACK` markers and weak-secret literals.        |
-| **marker guard**       | on      | `DOSSIER_MARKER_GUARD=off`           | Phase and audit-id markers leaking into source; bad state tokens in a ledger.  |
-| **invariant guard**    | on      | `DOSSIER_INVARIANT_GUARD=off`        | Edits matching a project-registered pattern. Fail-open until you register one. |
-| **freshness verify**   | on      | `# verify-skip: <rule>` on the line  | Stale version, EOL, SHA and deprecated-model claims. Advisory; never blocks.   |
-| **fake-impl backstop** | off     | `DOSSIER_FAKEIMPL_CMD='<fast test>'` | On stop with a dirty tree, runs your test command; non-zero blocks.            |
+| Gate                   | Default | Toggle                               | What it catches                                                                        |
+| ---------------------- | ------- | ------------------------------------ | -------------------------------------------------------------------------------------- |
+| **slop**               | wave    | `DOSSIER_SLOP_GATE=0`                | New placeholder markers and weak-secret literals. Only while a wave is live or paused. |
+| **marker guard**       | on      | `DOSSIER_MARKER_GUARD=off`           | Phase and audit-id markers leaking into source; bad state tokens in a ledger.          |
+| **invariant guard**    | on      | `DOSSIER_INVARIANT_GUARD=off`        | Edits matching a project-registered pattern. Fail-open until you register one.         |
+| **freshness verify**   | on      | `# verify-skip: <rule>` on the line  | Stale version, EOL, SHA and deprecated-model claims. Advisory; never blocks.           |
+| **fake-impl backstop** | off     | `DOSSIER_FAKEIMPL_CMD='<fast test>'` | On stop with a dirty tree, runs your test command; non-zero blocks.                    |
 
 The invariant guard is where the ratchet lands: `ds:backprop` promotes a recurring bug class into a write-time block. Registry is a JSON list at `.scratchpad/dossier/.invariant-guards.json` — gitignored by design, so the suite leaves no artifact in a project that did not ask for one:
 

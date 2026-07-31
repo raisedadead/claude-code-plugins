@@ -49,4 +49,52 @@ expect_allow 1 Write foo.py "clean and complete implementation"
 expect_allow 1 Write notes.md "TODO write the docs later"
 expect_allow 1 Read foo.py "TODO"
 
-printf 'PASS: test_slop_guard (9 cases)\n'
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/dossier-slop.XXXXXX")"
+trap 'rm -rf "$TMP"' EXIT
+
+# workaround: marker built at runtime — a literal would trip the slop gate editing this file
+MARKER="$(printf 'TO%sDO' '')"
+
+mkjson_cwd() {
+	python3 -c '
+import json, sys
+cwd, content = sys.argv[1], sys.argv[2]
+print(json.dumps({"tool_name": "Write", "tool_input": {"file_path": "foo.py", "content": content}, "cwd": cwd}))
+' "$1" "$2"
+}
+
+run_in() {
+	mkjson_cwd "$1" "$MARKER finish this" | env DOSSIER_SLOP_GATE=1 python3 "$GUARD"
+}
+
+workspace() {
+	local name="$1" rel="$2" state="$3"
+	local ws="$TMP/$name"
+	rm -rf "$ws"
+	mkdir -p "$ws"
+	if [[ -n "$rel" ]]; then
+		mkdir -p "$ws/$rel"
+		printf '`2026-06-01` · `%s` · `P1/1`\n' "$state" >"$ws/$rel/DOSSIER.md"
+	fi
+	printf '%s' "$ws"
+}
+
+expect_gate_silent() {
+	local out
+	out="$(run_in "$1")"
+	if is_deny "$out"; then fail "expected allow (no active dossier): $2"; fi
+}
+
+expect_gate_fires() {
+	local out
+	out="$(run_in "$1")"
+	is_deny "$out" || fail "expected deny (active dossier): $2"
+}
+
+expect_gate_silent "$(workspace bare '' '')" "bare project, no .scratchpad at all"
+expect_gate_silent "$(workspace donestate '.scratchpad/dossier/2026-06-01-x' 'done')" "dossier present but state=done"
+expect_gate_silent "$(workspace archived '.scratchpad/dossier/_archive/2026-06-01-x' live)" "live header but under _archive"
+expect_gate_fires "$(workspace livestate '.scratchpad/dossier/2026-06-01-x' live)" "live dossier"
+expect_gate_fires "$(workspace pausedstate '.scratchpad/dossier/2026-06-01-x' paused)" "paused dossier"
+
+printf 'PASS: test_slop_guard (14 cases)\n'

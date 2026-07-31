@@ -56,8 +56,8 @@ DOSSIER_ALLOW_NAMES = {
 
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit"}
 
-CANONICAL_STATES = frozenset({"live", "done", "paused"})
-HEADER_RE = re.compile(r"^`\d[^`]*`\s+·\s+`([^`]*)`\s+·\s+`")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from dossier_header import CANONICAL_STATES, HEADER_RE  # noqa: E402
 
 
 def hook_payload(event: dict) -> tuple[str | None, list[str]]:
