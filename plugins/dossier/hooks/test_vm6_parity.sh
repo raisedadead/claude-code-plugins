@@ -82,4 +82,13 @@ ws="$(fixture_with_status_log cross_verb \
 	'2026-07-31 10:05 ds:build T3 DONE')"
 assert_both_enforcers_agree "$ws" yes "a DONE for an unrelated verb must not clear a pending START"
 
+ws="$(fixture_with_status_log emdash_open \
+	'2026-07-31 10:00 ds:close — START successor=— complete=true abandon=false')"
+assert_both_enforcers_agree "$ws" yes "an unclosed ds:close with the em-dash target close/SKILL.md mandates"
+
+ws="$(fixture_with_status_log emdash_closed \
+	'2026-07-31 10:00 ds:close — START successor=— complete=true abandon=false' \
+	'2026-07-31 10:05 ds:close — DONE')"
+assert_both_enforcers_agree "$ws" no "the same ds:close, resolved"
+
 printf 'ok\n'
