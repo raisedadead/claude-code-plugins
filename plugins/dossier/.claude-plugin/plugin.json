@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "dossier",
   "description": "Phase-scoped engineering workflow with single-file DOSSIER.md, resumable builds, drift detection, evidence log, cross-repo state, and an opt-in scout subagent.",
   "author": {

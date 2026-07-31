@@ -51,6 +51,15 @@ jobs:
       - name: skill lint (all dossier skills)
         run: python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/dossier/skills
 
+      - name: manifest schema validation (advisory)
+        continue-on-error: true
+        run: |
+          pip install check-jsonschema
+          check-jsonschema --schemafile https://json.schemastore.org/claude-code-plugin-manifest.json \
+            plugins/dossier/.claude-plugin/plugin.json plugins/whetstone/.claude-plugin/plugin.json
+          check-jsonschema --schemafile https://json.schemastore.org/claude-code-marketplace.json \
+            .claude-plugin/marketplace.json
+
       - name: ruff
         run: |
           pip install -r requirements-dev.txt
