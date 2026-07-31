@@ -8,7 +8,7 @@ Companion: [`RESEARCH.md`](./RESEARCH.md) holds the append-only record — decis
 
 An agent will happily report success it cannot demonstrate. These two plugins exist to make "done" a checkable fact rather than a claim: a wave of work is tracked in one resumable ledger, and every gate along the way ends in an exit code, a computed number, or a verdict line that is honestly labelled as a judgment.
 
-Sole operator, personal toolbox. Nothing here is built for a hypothetical adopter.
+Sole operator, many projects. Nothing here is built for a hypothetical adopter — but everything here is built to work in whatever repo it is installed into. Those are not the same constraint, and conflating them produces bad calls: a capability that helps in a consuming project is in scope, while a file left behind in that project is not. Behave everywhere; leave nothing behind.
 
 ## The pair
 
@@ -65,6 +65,10 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 | `verify_hook.py`                | network-dependent freshness claim                                     | never blocks |
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.
+
+## Enforcement must travel with the plugin
+
+A consumer installs `hooks/`, `skills/` and `agents/`. They never receive `.github/`. Any rule enforced only in this repo's CI is a benefit no consuming project ever gets, and measuring its value from inside this repo will overstate it — the safety net here is not present there. When a check could live in either place, prefer the hook.
 
 ## Verdict grammar
 
