@@ -4,6 +4,22 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-31 (gate scoping and honest claims)
+
+Behaviour changes a consumer will notice, plus corrections to documentation that overstated what is enforced.
+
+### Fixed
+
+- **Slop gate no longer fires in projects that never asked for it.** It was the only PreToolUse hook without a scope check, so `TODO` in any file in any repo was hard-denied. It is now a dossier workflow policy: active only while a wave is `live` or `paused`, silent once closed or archived, silent in a bare repo. An unparseable ledger counts as not-active.
+- **Fake-impl backstop now sees new files.** Dirty-tree detection used `git diff --name-only HEAD`, which is empty when a session's only output is untracked — precisely where a fake implementation lives. It now uses `git status --porcelain`. Still default-off.
+- **Links in this plugin's README resolve from the install path.** They pointed at repo-root docs with `../../`, which exists in the repo and not in the plugin cache.
+
+### Changed
+
+- `verify` no longer claims to fire on every edit; it is dormant without a `.scratchpad/dossier/` directory, and now says so.
+- `DS_HEALTH_CMD`, `DS_LIGHT_LOG` and `DS_RECOVER_DAYS` are documented as honoured by the `status` skill rather than by hook code — strong defaults, not enforcement.
+- Adapter coverage moved from grepping `ADAPTERS.md` prose to resolving every `plugin:id` referenced in shipped docs against a real skill or agent file.
+
 ## 2026-07-31 (docs consolidation)
 
 Repo-level architecture and decision docs; plugin README gutted to a pointer. No plugin behaviour changed.
