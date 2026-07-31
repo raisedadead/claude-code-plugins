@@ -96,7 +96,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 Tests here guard hard-won invariants. They do not assert that prose says what prose says.
 
 - **Every gate needs both a positive and a negative test.** One proving it fires, one proving it does not false-positive. TIGER_STYLE's "assert the positive space AND the negative space" applied to hooks.
-- **Cross-check load-bearing predicates in two places.** If two subsystems must agree on what a value means, test that they agree. `test_lib_regen.sh` asserts a closeout written `complete: true.` — with the trailing period — reads as closed in both the regen pass and the reconcile pass, so the two cannot silently diverge.
+- **Cross-check load-bearing predicates in two places.** If two subsystems must agree on what a value means, test that they agree — on a shared fixture, from both sides. The cautionary example is in this repo: `test_lib_regen.sh` asserts that a closeout written `complete: true.` — with the trailing period — still reads as closed, and its own failure message claims "regen/reconcile predicate parity". No matching fixture exists on the reconcile side. The test names the property it does not verify, and a reader who trusts the message inherits a false belief about coverage. A parity claim that runs against one implementation is not a cross-check.
 - **A false positive becomes a permanent regression test.** `test_marker_guard.sh` carries one named inline as the artemis regression: a comment reading `# Step 1: dump the database` must not trigger the guard. It once did.
 - **Never test documentation.** A grep asserting a README contains a phrase catches nothing and breaks on every edit.
 
