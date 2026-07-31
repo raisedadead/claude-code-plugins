@@ -90,7 +90,7 @@ Deterministic, in-session hooks. They fire whenever the plugin is enabled, so th
 | **freshness verify**   | on      | `# verify-skip: <rule>` on the line  | Advisory only. Checks version, EOL and SHA claims against primary sources. Never blocks.                      |
 | **fake-impl backstop** | off     | `DOSSIER_FAKEIMPL_CMD='<fast test>'` | On stop with a dirty tree, runs your test command; non-zero blocks finishing.                                 |
 
-The invariant guard is where the ratchet lands: `ds:backprop` can promote a recurring bug class into a write-time block, so the class stops recurring instead of being re-flagged at the next audit. The registry is a JSON list at `.scratchpad/dossier/.invariant-guards.json`:
+The invariant guard is where the ratchet lands: `ds:backprop` can promote a recurring bug class into a write-time block, so the class stops recurring instead of being re-flagged at the next audit. The registry is a JSON list at `.dossier/invariant-guards.json` — tracked, so the guard survives a fresh clone. The legacy `.scratchpad/dossier/.invariant-guards.json` path is still read:
 
 ```json
 [{ "id": "no-raw-sql", "pattern": "execute\\(f?\"SELECT", "message": "parameterize", "paths": ["**/*.py"] }]
