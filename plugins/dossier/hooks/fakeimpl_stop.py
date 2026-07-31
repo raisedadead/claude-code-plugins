@@ -6,7 +6,12 @@ command. On Stop, if the working tree has uncommitted changes, that command
 runs; a non-zero exit blocks completion so an unverified "it works" claim can
 not stand. Dirty is `git status --porcelain`, so a brand-new untracked file
 counts — that is where a fake implementation usually lives, and an earlier
-`git diff HEAD` check silently missed the whole class. Inert (exit 0) when the var is unset — safe to ship default-off.
+`git diff HEAD` check silently missed the whole class.
+
+`.scratchpad` is excluded by pathspec. The suite's own hooks write there, and
+in a repo that does not gitignore it those writes are untracked forever — no
+commit clears them — so counting them would arm this gate permanently on a
+tree the operator never dirtied. Inert (exit 0) when the var is unset — safe to ship default-off.
 This is the ambient backstop for ad-hoc sessions; it never duplicates the
 in-covenant run_slice.sh proof that ds:build / whetstone tdd-cycle already give.
 """
@@ -34,7 +39,7 @@ def main() -> None:
         pass
     try:
         changed = subprocess.run(
-            ["git", "status", "--porcelain"],
+            ["git", "status", "--porcelain", "--", ":!.scratchpad"],
             capture_output=True,
             text=True,
             timeout=10,

@@ -18,6 +18,7 @@ fail() {
 git -C "$TMP" init -q
 git -C "$TMP" config user.email t@example.com
 git -C "$TMP" config user.name tester
+git -C "$TMP" config core.excludesFile /dev/null
 printf 'seed\n' >"$TMP/a.txt"
 git -C "$TMP" add -A
 git -C "$TMP" commit -qm seed
@@ -45,9 +46,15 @@ git -C "$TMP" checkout -- a.txt
 out="$(run "false")"
 if is_block "$out"; then fail "clean tree must not run the cmd"; fi
 
+mkdir -p "$TMP/.scratchpad/dossier"
+printf 'ledger\n' >"$TMP/.scratchpad/dossier/DOSSIER.md"
+out="$(run "false")"
+if is_block "$out"; then fail "the suite's own .scratchpad writes must not arm the gate"; fi
+rm -rf "$TMP/.scratchpad"
+
 printf 'def f():\n    pass\n' >"$TMP/brand_new.py"
 out="$(run "false")"
 is_block "$out" || fail "an untracked-only change is still a dirty tree — a new file is where a fake implementation lives"
 rm -f "$TMP/brand_new.py"
 
-printf 'PASS: test_fakeimpl_stop (5 cases)\n'
+printf 'PASS: test_fakeimpl_stop (6 cases)\n'
