@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Empirical fact-check for any freshness-sensitive technical claim — versions, EOLs, package latest, GitHub Action SHAs, k8s apiVersions, AI model deprecations, CLI flags, API endpoints, framework versions, image tags, or anything where the model's training cutoff might be wrong. Routes through primary sources, never accepts model-paraphrased data. Auto-fires as PreToolUse hook on every Edit/Write/MultiEdit; invoke `/dossier:verify` on demand for the previous response. Invoke when user says "verify", "fact-check", "is this current", "/dossier:verify", "double check", or when reviewing freshness claims.
+description: Empirical fact-check for any freshness-sensitive technical claim — versions, EOLs, package latest, GitHub Action SHAs, k8s apiVersions, AI model deprecations, CLI flags, API endpoints, framework versions, image tags, or anything where the model's training cutoff might be wrong. Routes through primary sources, never accepts model-paraphrased data. Auto-fires as PreToolUse hook on Edit/Write/MultiEdit, but only in a repo that has a `.scratchpad/dossier/` directory; invoke `/dossier:verify` on demand for the previous response, which works anywhere. Invoke when user says "verify", "fact-check", "is this current", "/dossier:verify", "double check", or when reviewing freshness claims.
 argument-hint: '[claim or topic; empty = fact-check previous response]'
 ---
 
