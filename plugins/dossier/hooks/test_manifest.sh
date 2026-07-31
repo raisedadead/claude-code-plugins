@@ -86,4 +86,6 @@ for entry in sorted(bad):
 sys.exit(1 if bad else 0)
 PY
 
+grep -q 'test_manifest.sh' "$ROOT/.github/workflows/ci.yml" || fail "ci.yml must run this test; a gate nobody invokes enforces nothing"
+
 printf 'ok\n'

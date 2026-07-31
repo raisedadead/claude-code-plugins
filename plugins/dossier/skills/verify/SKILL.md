@@ -86,7 +86,7 @@ Per-source raw-JSON `curl` / `gh api` paths, and how to add a new authority (pur
 ## Composition
 
 - **With `ds:check`**: drift detector runs `verify_sweep.py` on touched files automatically; findings fold into 🟡 warnings.
-- **With `ds:build`**: PreToolUse hook fires on every Edit/Write inside the build; no explicit invocation needed.
+- **With `ds:build`**: the PreToolUse hook is active inside the build (a live wave means the `.scratchpad/dossier/` gate passes), so no explicit invocation is needed. It skips dossier paths themselves — `.scratchpad/`, `DOSSIER.md`, `PLAN.md`, `SPEC.md` — so ledger writes are never scanned.
 - **With `ds:backprop`**: if a bug's root cause is "stale claim baked into code", the backprop fix should add the missing alias to `verify_authorities.py` so recurrence is caught at write time.
 
 ## Cite

@@ -68,6 +68,14 @@ def has_active_dossier(cwd: str) -> bool:
     Archived waves are excluded: ds:close moves them under _archive/, and a
     closed wave must not keep workflow policy switched on.
 
+    A UTF-8 BOM on line 1 counts as unparseable: the byte sits before the
+    opening backtick, so neither pattern here matches. Reading the file as
+    utf-8-sig would fix this side and break the parity the module exists to
+    hold, because lib-regen-index.sh does not strip a BOM either. Both readers
+    change together or neither does; today they agree that a BOM'd ledger has
+    no readable state, and the shell surfaces that loudly as `drift!` while
+    this side simply reports no active wave.
+
     An unreadable or unparseable ledger counts as not active. A corrupt header
     means we cannot show a wave is running, and workflow policy should follow
     what is demonstrable rather than assume the stricter reading.

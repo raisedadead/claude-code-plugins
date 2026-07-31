@@ -4,6 +4,14 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-07-31 (claims match code)
+
+### Changed
+
+- `verify/SKILL.md` no longer says the PreToolUse hook "fires on every Edit/Write inside the build". It is active inside a build, but `verify_hook.py:99` returns 0 for `.scratchpad/` paths and for `DOSSIER.md` / `PLAN.md` / `SPEC.md`, so ledger writes are never scanned — a large share of the writes a build actually makes.
+- `test_manifest.sh` asserts that `ci.yml` invokes it. The test it replaced carried that guard and the replacement dropped it; a gate nobody runs enforces nothing.
+- `dossier_header.py` documents that a UTF-8 BOM on line 1 reads as no-state, and why the obvious `utf-8-sig` fix is not applied: `lib-regen-index.sh` does not strip a BOM either, so changing one side alone would reintroduce the awk-vs-Python divergence this module exists to prevent. Both readers change together or neither does.
+
 ## 2026-07-31 (frontmatter that actually parses)
 
 ### Fixed
