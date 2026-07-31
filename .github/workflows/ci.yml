@@ -63,11 +63,14 @@ jobs:
           pip install -r requirements-dev.txt
           ruff check plugins/dossier/hooks
 
-      - name: shellcheck (pinned — runner default differs from local)
+      - name: shellcheck
+        env:
+          # renovate: datasource=github-releases depName=koalaman/shellcheck
+          SHELLCHECK_VERSION: "v0.11.0"
         run: |
-          curl -fsSL https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz | tar -xJ
-          sudo mv shellcheck-v0.11.0/shellcheck /usr/local/bin/shellcheck
-          shellcheck --version | grep 'version: 0.11.0'
+          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ
+          sudo mv "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
+          shellcheck --version | grep "version: ${SHELLCHECK_VERSION#v}"
           shellcheck plugins/dossier/hooks/*.sh
 
   whetstone:
@@ -97,9 +100,12 @@ jobs:
           pip install -r requirements-dev.txt
           ruff check plugins/whetstone
 
-      - name: shellcheck (pinned — runner default differs from local)
+      - name: shellcheck
+        env:
+          # renovate: datasource=github-releases depName=koalaman/shellcheck
+          SHELLCHECK_VERSION: "v0.11.0"
         run: |
-          curl -fsSL https://github.com/koalaman/shellcheck/releases/download/v0.11.0/shellcheck-v0.11.0.linux.x86_64.tar.xz | tar -xJ
-          sudo mv shellcheck-v0.11.0/shellcheck /usr/local/bin/shellcheck
-          shellcheck --version | grep 'version: 0.11.0'
+          curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ
+          sudo mv "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
+          shellcheck --version | grep "version: ${SHELLCHECK_VERSION#v}"
           shellcheck plugins/whetstone/skills/*/scripts/*.sh plugins/whetstone/tests/*.sh
