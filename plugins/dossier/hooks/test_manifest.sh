@@ -60,4 +60,30 @@ for entry in bad:
 sys.exit(1 if bad else 0)
 PY
 
+python3 - "$ROOT" <<'PY' || fail "a shipped doc names a skill or agent id that does not exist"
+import os, re, sys
+
+root = os.path.realpath(sys.argv[1])
+id_re = re.compile(r"\b(dossier|whetstone):([a-z][a-z0-9-]*)\b")
+bad = set()
+for plugin in ("dossier", "whetstone"):
+    proot = os.path.join(root, "plugins", plugin)
+    for dirpath, _, files in os.walk(proot):
+        for name in files:
+            if not name.endswith(".md"):
+                continue
+            path = os.path.join(dirpath, name)
+            with open(path, encoding="utf-8") as handle:
+                body = handle.read()
+            for owner, ident in id_re.findall(body):
+                oroot = os.path.join(root, "plugins", owner)
+                skill = os.path.join(oroot, "skills", ident, "SKILL.md")
+                agent = os.path.join(oroot, "agents", f"{ident}.md")
+                if not os.path.exists(skill) and not os.path.exists(agent):
+                    bad.add(f"{os.path.relpath(path, root)} -> {owner}:{ident}")
+for entry in sorted(bad):
+    print(f"  unresolvable id: {entry}", file=sys.stderr)
+sys.exit(1 if bad else 0)
+PY
+
 printf 'ok\n'

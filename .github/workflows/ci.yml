@@ -37,7 +37,6 @@ jobs:
           bash plugins/dossier/hooks/test_closure_parity.sh
           bash plugins/dossier/hooks/test_drift_gate.sh
           bash plugins/dossier/hooks/test_vm6_parity.sh
-          bash plugins/dossier/hooks/test_adapters_whetstone.sh
           bash plugins/dossier/hooks/test_build_doubt_gate.sh
           bash plugins/dossier/hooks/test_manifest.sh
           bash plugins/dossier/hooks/test_lib_assert_grill.sh
