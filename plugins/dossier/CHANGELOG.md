@@ -11,8 +11,14 @@ Behaviour changes a consumer will notice, plus corrections to documentation that
 ### Fixed
 
 - **Slop gate no longer fires in projects that never asked for it.** It was the only PreToolUse hook without a scope check, so `TODO` in any file in any repo was hard-denied. It is now a dossier workflow policy: active only while a wave is `live` or `paused`, silent once closed or archived, silent in a bare repo. An unparseable ledger counts as not-active.
+
 - **Fake-impl backstop now sees new files.** Dirty-tree detection used `git diff --name-only HEAD`, which is empty when a session's only output is untracked — precisely where a fake implementation lives. It now uses `git status --porcelain -uall`, filtering out any path under a `.scratchpad` directory — the suite writes there itself, and in a repo that does not gitignore it those writes would otherwise arm the gate on a tree you never dirtied. The filter is applied to the paths rather than as a git pathspec, because a pathspec anchors to the directory git runs in and would miss a `.scratchpad` nested below it or sitting above it. Still default-off.
+
 - **Links in this plugin's README resolve from the install path.** They pointed at repo-root docs with `../../`, which exists in the repo and not in the plugin cache.
+
+- **Vm.6 can now see a crashed `ds:close`.** Its target-token pattern required `[A-Za-z0-9_-]`, but `ds:close` writes the em-dash target that `close/SKILL.md` mandates, so an unclosed `ds:close — START` was invisible to `ds:check` — the exact operation whose interrupted state Vm.6 exists to catch. `session-start.sh` saw it; the two enforcers disagreed.
+
+- `lib-changelog-write.sh` now removes its temp file on failure. It is the only ledger writer whose target sits outside `.scratchpad/`, so an interrupted write left a `CHANGELOG.md.tmp.XXXXXX` in the project root.
 
 ### Removed
 
