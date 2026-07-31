@@ -14,6 +14,10 @@ Behaviour changes a consumer will notice, plus corrections to documentation that
 - **Fake-impl backstop now sees new files.** Dirty-tree detection used `git diff --name-only HEAD`, which is empty when a session's only output is untracked — precisely where a fake implementation lives. It now uses `git status --porcelain`, excluding `.scratchpad` by pathspec — the suite writes there itself, and in a repo that does not gitignore that directory those writes are untracked forever, which would have armed the gate permanently on a tree you never dirtied. Still default-off.
 - **Links in this plugin's README resolve from the install path.** They pointed at repo-root docs with `../../`, which exists in the repo and not in the plugin cache.
 
+### Removed
+
+- `hooks/lib-drift-gate.sh`. It wrapped `lib-ds-check.sh` in a `git diff --exit-code` on `.scratchpad/INDEX.md`, which only means anything where `.scratchpad` is tracked; where it is gitignored the gate either passed vacuously or, after being taught to detect that, refused outright. `ds:check` and `ds:status` already call `lib-ds-check.sh` directly, so nothing is lost.
+
 ### Changed
 
 - `verify` no longer claims to fire on every edit; it is dormant without a `.scratchpad/dossier/` directory, and now says so.

@@ -81,16 +81,6 @@ Freshness authorities live in `hooks/verify_authorities.py` — adding a product
 
 Other knobs: `DOSSIER_FAKEIMPL_TIMEOUT` (120) is read by hook code. `DS_HEALTH_CMD`, `DS_LIGHT_LOG` (5) and `DS_RECOVER_DAYS` (3) are honoured by the `status` skill, not by any hook — they steer a model-run step, so treat them as strong defaults rather than enforcement.
 
-## Drift gate
-
-Deterministic, zero model turns. Wire it as a push or CI gate:
-
-```bash
-bash plugins/dossier/hooks/lib-drift-gate.sh .scratchpad
-```
-
-It exits 2 rather than passing when it cannot actually work — outside a git work tree, or when the index is gitignored, including by a global ignore file that makes it inert in every repo. A gitignored index makes `git diff --exit-code` succeed on a stale or absent file alike, which reads as a green gate that checked nothing.
-
 ## Docs
 
 | Doc                                          | What is in it                                                                    |
