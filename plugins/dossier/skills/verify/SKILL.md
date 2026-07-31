@@ -10,7 +10,7 @@ Two surfaces, same hard rule: **trust primary sources, never paraphrase JSON.**
 
 ## Surface 1 — PreToolUse hook (auto)
 
-Wired in `hooks/hooks.json`. Fires on every `Edit | Write | MultiEdit`. Scans content against the broad pattern registry in `hooks/verify_patterns.py` and the authority catalog in `hooks/verify_authorities.py` (140+ aliases, 34 Docker images, 31 AI models). Covers language/runtime/OS/distro/database EOL, container-image EOL, GitHub Action SHA pinning, k8s deprecated apiVersions, npm/PyPI/Cargo/RubyGems/Go-mod outdated packages, and AI-model deprecation. Full coverage matrix + per-source cheatsheet → [`references/authorities.md`](references/authorities.md).
+Wired in `hooks/hooks.json`. Fires on `Edit | Write | MultiEdit`, but only in a repo that has a `.scratchpad/dossier/` directory — elsewhere it exits 0 without scanning. Scans content against the broad pattern registry in `hooks/verify_patterns.py` and the authority catalog in `hooks/verify_authorities.py` (140+ aliases, 34 Docker images, 31 AI models). Covers language/runtime/OS/distro/database EOL, container-image EOL, GitHub Action SHA pinning, k8s deprecated apiVersions, npm/PyPI/Cargo/RubyGems/Go-mod outdated packages, and AI-model deprecation. Full coverage matrix + per-source cheatsheet → [`references/authorities.md`](references/authorities.md).
 
 Non-blocking by design — emits stderr reminder + `additionalContext`. Per-session dedup. Operator escape: `# verify-skip: <ruleName>` on or near the line.
 

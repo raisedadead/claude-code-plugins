@@ -83,7 +83,7 @@ Append §S: `ds:backprop <B> flake=<rate> runs=<n>` (the resume row above keys o
 
 Write test that reproduces the bug. Run → must FAIL (RED). If it passes, the bug isn't characterized correctly — revisit step 4.
 
-**Test comments stay phase-agnostic.** No `// Phase N`, `// PH<n>-B<k>`, `// V<n> (Phase <m> / A<k>)` in the test body. Test name and `Refs §B B<N>` in the commit message carry the link. The `marker_guard.py` PreToolUse hook blocks these — exit 2 on Edit/Write/MultiEdit if a phase marker leaks into source or test files.
+**Test comments stay phase-agnostic.** No `// Phase N`, `// PH<n>-B<k>`, `// V<n> (Phase <m> / A<k>)` in the test body. Test name and `Refs §B B<N>` in the commit message carry the link. The `marker_guard.py` PreToolUse hook flags these advisorily — it nudges and exits 0, so the write still lands. Treat it as a reminder, not a gate.
 
 Commit:
 

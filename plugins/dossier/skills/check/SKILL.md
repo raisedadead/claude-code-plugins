@@ -65,21 +65,21 @@ Independent of scouts. Run concurrently with dispatch:
 
 **Deterministic Vm sweep (Vm.2/3/6/8/9, enforced by code — not model discretion):** run `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-vm-checks.sh .scratchpad`. One pass over every DOSSIER.md in the tree covers §S timestamp format (Vm.2), §T `x`-rows with empty `cite` (Vm.3), unpaired §S START/DONE (Vm.6), write-temp orphans (Vm.8), and stale locks (Vm.9, via `lib-clear-stale-locks.sh --dry-run`). Each finding line is prefixed `CRITICAL` (→ 🔴) or `WARN` (→ 🟡); non-zero exit = at least one finding. Read-only — the dry-run stale-lock probe mutates nothing.
 
-| Vm    | Check                                                            | How                                                  |
-| ----- | ---------------------------------------------------------------- | ---------------------------------------------------- |
-| Vm.1  | live dossier count ≤ 1 per slug; header⇔location concordant      | `lib-ds-check.sh` (deterministic header×location×§Z) |
-| Vm.2  | every §S line has ISO timestamp                                  | `lib-vm-checks.sh` (Vm.2, deterministic)             |
-| Vm.3  | every §T `x` row has non-empty `cite`                            | `lib-vm-checks.sh` (Vm.3, deterministic)             |
-| Vm.4  | closed dossiers under `_archive/`                                | `lib-ds-check.sh` (deterministic)                    |
-| Vm.5  | INDEX counts match DOSSIER §T/§B                                 | parse both, diff                                     |
-| Vm.6  | no §S START without DONE for same target                         | `lib-vm-checks.sh` (Vm.6, deterministic)             |
-| Vm.7  | INDEX regenerable (run lib-regen-index.sh, diff against current) | optional                                             |
-| Vm.8  | no write-temp orphans                                            | `lib-vm-checks.sh` (Vm.8, deterministic)             |
-| Vm.9  | locks not stale                                                  | `lib-vm-checks.sh` (Vm.9, deterministic)             |
-| Vm.10 | migrate markers consistent (if migration in progress)            | n/a unless ds:migrate active                         |
-| Vm.12 | ≤1 live dossier (excl. paused)                                   | count INDEX rows state=live; >1 → 🟡 warn            |
-| Vm.13 | no stale-live (no §S in >N days)                                 | newest §S ts per live vs `DS_STALE_LIVE_DAYS` (14)   |
-| Vm.14 | every `--auto` PAUSE carries a reason class                      | grep §S `PAUSE reason=`; flag any bare PAUSE         |
+| Vm    | Check                                                                    | How                                                  |
+| ----- | ------------------------------------------------------------------------ | ---------------------------------------------------- |
+| Vm.1  | every live dossier reads state=live in INDEX; header⇔location concordant | `lib-ds-check.sh` (deterministic header×location×§Z) |
+| Vm.2  | every §S line has ISO timestamp                                          | `lib-vm-checks.sh` (Vm.2, deterministic)             |
+| Vm.3  | every §T `x` row has non-empty `cite`                                    | `lib-vm-checks.sh` (Vm.3, deterministic)             |
+| Vm.4  | closed dossiers under `_archive/`                                        | `lib-ds-check.sh` (deterministic)                    |
+| Vm.5  | INDEX counts match DOSSIER §T/§B                                         | parse both, diff                                     |
+| Vm.6  | no §S START without DONE for same target                                 | `lib-vm-checks.sh` (Vm.6, deterministic)             |
+| Vm.7  | INDEX regenerable (run lib-regen-index.sh, diff against current)         | optional                                             |
+| Vm.8  | no write-temp orphans                                                    | `lib-vm-checks.sh` (Vm.8, deterministic)             |
+| Vm.9  | locks not stale                                                          | `lib-vm-checks.sh` (Vm.9, deterministic)             |
+| Vm.10 | migrate markers consistent (if migration in progress)                    | n/a unless ds:migrate active                         |
+| Vm.12 | ≤1 live dossier (excl. paused)                                           | count INDEX rows state=live; >1 → 🟡 warn            |
+| Vm.13 | no stale-live (no §S in >N days)                                         | newest §S ts per live vs `DS_STALE_LIVE_DAYS` (14)   |
+| Vm.14 | every `--auto` PAUSE carries a reason class                              | grep §S `PAUSE reason=`; flag any bare PAUSE         |
 
 ### 4. Aggregate
 

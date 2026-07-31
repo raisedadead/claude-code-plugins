@@ -10,11 +10,14 @@ empty or malformed registry, a bad regex, or an out-of-scope path, it exits 0
 and the write proceeds. Only an explicit, in-scope, matching registered pattern
 blocks. Escape hatch: DOSSIER_INVARIANT_GUARD=off (log the rationale in §S).
 
-Registry: .scratchpad/dossier/.invariant-guards.json (cwd-relative), a JSON list.
-    Colocated with the DOSSIER.md that minted it — a guard must not outlive its
-    provenance, and no artifact belongs in a project that did not ask for one
+Registry: .scratchpad/dossier/.invariant-guards.json (cwd-relative), a JSON list
 of {"id", "pattern", "message", "paths"?}. "paths" is an optional list of fnmatch
 globs scoping the guard; absent means every non-dossier source file.
+
+It is colocated with the DOSSIER.md that minted it, deliberately: a guard must
+not outlive its provenance, and no artifact belongs in a project that did not
+ask for one. The registry is regenerable — re-hit the bug and ds:backprop mints
+it again.
 """
 
 from __future__ import annotations
