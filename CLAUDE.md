@@ -8,6 +8,10 @@ Check [`RESEARCH.md`](./RESEARCH.md) §D first. Several obvious-looking improvem
 
 The standing example: there is no `version` key in either `plugin.json`, and that is intentional — the commit SHA is the version. Do not add one. See D1.
 
+Then read §O. Work worth doing here is already listed there, with the reason it has not been done yet — starting from §O beats inventing a task, and re-filing something already tracked is the most common way a session wastes its first hour. Count what is live with `grep -cE '^\| O[0-9]+ .*\| *(open|partial)' RESEARCH.md` rather than trusting a number written in prose; O-rows flip state as work lands.
+
+The largest one today is **O13** — the suite enforces process but not code shape. It carries its own measuring commands; run them, do not cite the figures next to them. They were already stale within hours of being written, because deleting two files moved both counts.
+
 ## Priorities
 
 Honesty > Recoverability > Leverage, in that order. Use it to settle conflicts rather than arguing them case by case.
