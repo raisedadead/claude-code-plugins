@@ -63,8 +63,7 @@ jobs:
           pip install -r requirements-dev.txt
           ruff check plugins/dossier/hooks
 
-      - name: shellcheck (advisory)
-        continue-on-error: true
+      - name: shellcheck
         run: shellcheck plugins/dossier/hooks/*.sh
 
   whetstone:
@@ -94,6 +93,5 @@ jobs:
           pip install -r requirements-dev.txt
           ruff check plugins/whetstone
 
-      - name: shellcheck (advisory)
-        continue-on-error: true
+      - name: shellcheck
         run: shellcheck plugins/whetstone/skills/*/scripts/*.sh plugins/whetstone/tests/*.sh

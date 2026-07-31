@@ -91,22 +91,27 @@ printf '{"tool_name":"Bash","tool_input":{"command":"echo PH3-B7"}}\n' |
 ! grep -q "additionalContext" "$TMP/out" || fail "non-Edit tool must be ignored"
 
 DOSS=".scratchpad/dossier/2026-01-01-foo/DOSSIER.md"
+# shellcheck disable=SC2016
 guard Write "$DOSS" '`2026-01-01` · `sealed` · `P1/1`'
 [ "$rc" -eq 2 ] || fail "non-canonical header token 'sealed' must block (exit 2, got $rc)"
 grep -q 'non-canonical header' "$TMP/err" || fail "header block must explain on stderr"
 
+# shellcheck disable=SC2016
 guard Write "$DOSS" '`2026-01-01` · `live` · `P1/1`'
 [ "$rc" -eq 0 ] || fail "canonical header token 'live' must pass (got $rc)"
 
 guard Edit "$DOSS" '2026-01-01 10:00 ds:build T1 START'
 [ "$rc" -eq 0 ] || fail "a normal §S edit (no header line) must not block"
 
+# shellcheck disable=SC2016
 guard Edit "src/app.ts" '`const` · `x` · `y`'
 [ "$rc" -eq 0 ] || fail "header-shaped line in a non-DOSSIER file must not block"
 
+# shellcheck disable=SC2016
 guard Edit "$DOSS" '`lib-regen-index.sh` emits `drift!` not a live state'
 [ "$rc" -eq 0 ] || fail "inline-code prose naming a state must NOT block (no date/middot header shape)"
 
+# shellcheck disable=SC2016
 guard Edit "$DOSS" '- `drift!` is a derived sentinel · never a header token'
 [ "$rc" -eq 0 ] || fail "prose with a middot but no date-led backtick field must not block"
 

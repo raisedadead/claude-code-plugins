@@ -18,6 +18,7 @@ write_full() {
 	mkdir -p "$dir"
 	{
 		printf '# demo-slug\n\n'
+		# shellcheck disable=SC2016
 		printf '`2026-07-07` · `live` · `P1/1`\n\n'
 		cat <<'EOF'
 ## §G — Goal

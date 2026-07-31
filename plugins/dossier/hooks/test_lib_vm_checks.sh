@@ -24,6 +24,7 @@ write_clean() {
 	mkdir -p "$dir"
 	{
 		printf '# clean\n\n'
+		# shellcheck disable=SC2016
 		printf '`2026-07-07` · `live` · `P1/1`\n\n'
 		cat <<'EOF'
 ## §T — Task ledger
@@ -48,6 +49,7 @@ write_dirty() {
 	mkdir -p "$dir"
 	{
 		printf '# dirty\n\n'
+		# shellcheck disable=SC2016
 		printf '`2026-07-07` · `live` · `P1/1`\n\n'
 		cat <<'EOF'
 ## §T — Task ledger
