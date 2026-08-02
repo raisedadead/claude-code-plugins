@@ -82,6 +82,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | `merge-resolve`     | exit 0 on marker count and pass count                                           | code — `verify_clean.sh` |
 | `flaky-test-audit`  | per-test rate; anything between 0 and 1 is flaky                                | code — computed rate     |
 | `tiger-style` check | `TIGER: CLEAN <n> file(s)[, <m> skipped]`, `BLOCK <n>` or `NAG <n>`; exit 0/1/2 | code — `tiger_check.py`  |
+| `ds:converge`       | `CONVERGE: MET <n>/<n>`, `UNMET <n> of <m>` or `PARSE — <why>`; exit 0/1/2 | code — `converge.py` |
 | `ds:ship` bump      | `recommend: <BUMP>`                                                             | advisory; model-mapped   |
 
 ## Tenets

@@ -26,6 +26,7 @@ import sys
 from pathlib import Path
 
 CONTRACT_DIR = ".dossier"
+LEDGER_GLOB = ".scratchpad/dossier/*/DOSSIER.md"
 RECENT_COMMITS = 5
 GIT_TIMEOUT = 5
 
@@ -58,12 +59,20 @@ def _cells(line: str) -> list[str]:
     return [cell.replace("\\|", "|").strip() for cell in _SPLIT.split(match.group(1))]
 
 
-def _contract(root: Path) -> Path | None:
+def _contract_for(root: Path, slug: str) -> Path | None:
+    """The contract belonging to a named wave.
+
+    Selecting the alphabetically last contract reported a closed wave's budget
+    the first time two contracts shared a date. The report follows the live
+    wave, never the sort order.
+    """
     folder = root / CONTRACT_DIR
     if not folder.is_dir():
         return None
-    found = sorted(p for p in folder.glob("*.md") if p.is_file())
-    return found[-1] if found else None
+    for candidate in sorted(folder.glob("*.md")):
+        if candidate.is_file() and candidate.stem.endswith(slug):
+            return candidate
+    return None
 
 
 def _criteria_count(text: str) -> int:
@@ -104,6 +113,30 @@ def _layer_mix(root: Path, since: str) -> str:
         elif suffix in DOC_SUFFIXES:
             docs += changed
     return f"  lines since contract: runtime {runtime} · tests {tests} · docs {docs}"
+
+
+def _live_waves(root: Path) -> list[str]:
+    """Slugs of ledgers whose header still reads live.
+
+    A closed wave is not prompt noise, and a live wave carrying no contract is
+    the exact condition this hook exists to surface — the one case where
+    nothing else will mention it.
+    """
+    found: list[str] = []
+    for ledger in sorted(root.glob(LEDGER_GLOB)):
+        try:
+            head = ledger.read_text(encoding="utf-8", errors="replace")[:400]
+        except OSError:
+            continue
+        if "`live`" not in head:
+            continue
+        slug = ledger.parent.name
+        for line in head.splitlines():
+            if line.startswith("# "):
+                slug = line[2:].strip()
+                break
+        found.append(slug)
+    return found
 
 
 def _report(root: Path, contract: Path) -> list[str]:
@@ -155,16 +188,25 @@ def main() -> int:
     if not root.is_dir():
         return 0
 
-    contract = _contract(root)
-    if contract is None:
+    try:
+        live = _live_waves(root)
+    except (OSError, ValueError):
         return 0
 
-    try:
-        lines = _report(root, contract)
-    except (OSError, ValueError, UnicodeError):
-        return 0
-    if lines:
-        print("\n".join(lines))
+    out: list[str] = []
+    for slug in live:
+        contract = _contract_for(root, slug)
+        if contract is None:
+            out.append(
+                f"wave {slug} · no contract · ds:new writes one, ds:converge reads it"
+            )
+            continue
+        try:
+            out.extend(_report(root, contract))
+        except (OSError, ValueError, UnicodeError):
+            continue
+    if out:
+        print("\n".join(out))
     return 0
 
 

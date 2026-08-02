@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -16,12 +17,25 @@ REPO = PLUGIN.parent.parent
 MET, UNMET, PARSE = 0, 1, 2
 
 
+def _clean_env() -> dict[str, str]:
+    """Drop the depth counter the parent may have set.
+
+    converge exports DS_CONVERGE_DEPTH to every child it runs, not only to
+    nested converge calls. Running this suite as a contract criterion therefore
+    starts it one level down, and the nesting tests hit a cap they never set.
+    """
+    env = dict(os.environ)
+    env.pop("DS_CONVERGE_DEPTH", None)
+    return env
+
+
 def _run(contract: Path, *extra: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(CONVERGE), str(contract), *extra],
         capture_output=True,
         text=True,
         cwd=REPO,
+        env=_clean_env(),
     )
 
 
@@ -102,24 +116,96 @@ def test_stdout_nothing_requires_empty_output() -> None:
     assert "nope" in result.stdout or "yes" in result.stdout, result.stdout
 
 
-def test_a_contract_naming_the_runner_is_refused() -> None:
-    """A criterion that invokes converge recurses; refuse rather than hang."""
-    recursive = FIXTURES / "recursive.md"
-    recursive.write_text(
-        "# recursive\n\n## done-when\n\n"
-        "| id  | command                  | expect |\n"
-        "| --- | ------------------------ | ------ |\n"
-        "| 1   | `bash hooks/lib-converge.sh x` | exit 0 |\n",
+def test_a_criterion_pointed_at_another_contract_is_allowed() -> None:
+    """Naming the runner is fine; the runner's own contract tests it on fixtures."""
+    sibling = FIXTURES / "sibling.md"
+    sibling.write_text(
+        "# sibling\n\n## done-when\n\n"
+        "| id  | command | expect |\n"
+        "| --- | ------- | ------ |\n"
+        "| 1   | `bash plugins/dossier/hooks/lib-converge.sh "
+        "plugins/dossier/tests/fixtures/met.md` | exit 0 |\n",
         encoding="utf-8",
     )
     try:
-        result = _run(recursive)
-        assert _verdict(result).startswith("CONVERGE: PARSE"), (
-            result.stdout + result.stderr
-        )
-        assert result.returncode == PARSE, result.stdout + result.stderr
+        result = _run(sibling)
+        assert _verdict(result) == "CONVERGE: MET 1/1", result.stdout + result.stderr
     finally:
-        recursive.unlink()
+        sibling.unlink()
+
+
+def test_a_name_containing_the_runner_is_not_the_runner() -> None:
+    """`test_converge.py` is not `converge.py`; substring matching said it was."""
+    lookalike = FIXTURES / "lookalike.md"
+    lookalike.write_text(
+        "# lookalike\n\n## done-when\n\n"
+        "| id  | command | expect |\n"
+        "| --- | ------- | ------ |\n"
+        "| 1   | `test -f plugins/dossier/tests/test_converge.py` | exit 0 |\n",
+        encoding="utf-8",
+    )
+    try:
+        result = _run(lookalike)
+        assert _verdict(result) == "CONVERGE: MET 1/1", result.stdout + result.stderr
+    finally:
+        lookalike.unlink()
+
+
+def test_a_self_referencing_contract_terminates() -> None:
+    """The invariant is termination, not refusal. Depth is counted, not guessed."""
+    loop = FIXTURES / "loop.md"
+    loop.write_text(
+        "# loop\n\n## done-when\n\n"
+        "| id  | command | expect |\n"
+        "| --- | ------- | ------ |\n"
+        "| 1   | `python3 plugins/dossier/hooks/converge.py "
+        "plugins/dossier/tests/fixtures/loop.md` | exit 0 |\n",
+        encoding="utf-8",
+    )
+    try:
+        result = subprocess.run(
+            [sys.executable, str(CONVERGE), str(loop)],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            timeout=60,
+            env=_clean_env(),
+        )
+        assert result.returncode in (UNMET, PARSE), result.stdout + result.stderr
+    finally:
+        loop.unlink()
+
+
+def test_nesting_past_the_cap_is_refused() -> None:
+    env = _clean_env()
+    env["DS_CONVERGE_DEPTH"] = "2"
+    result = subprocess.run(
+        [sys.executable, str(CONVERGE), str(FIXTURES / "met.md")],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        env=env,
+    )
+    assert "refusing to recurse" in result.stdout, result.stdout
+    assert result.returncode == PARSE, result.stdout
+
+
+def test_one_level_of_nesting_is_allowed() -> None:
+    """Criteria 1 and 2 of this runner's own contract do exactly this."""
+    nested = FIXTURES / "nested.md"
+    nested.write_text(
+        "# nested\n\n## done-when\n\n"
+        "| id  | command | expect |\n"
+        "| --- | ------- | ------ |\n"
+        "| 1   | `python3 plugins/dossier/hooks/converge.py "
+        "plugins/dossier/tests/fixtures/met.md` | exit 0 |\n",
+        encoding="utf-8",
+    )
+    try:
+        result = _run(nested)
+        assert _verdict(result) == "CONVERGE: MET 1/1", result.stdout + result.stderr
+    finally:
+        nested.unlink()
 
 
 def test_the_shell_wrapper_agrees_with_the_module() -> None:
@@ -129,6 +215,7 @@ def test_the_shell_wrapper_agrees_with_the_module() -> None:
         capture_output=True,
         text=True,
         cwd=REPO,
+        env=_clean_env(),
     )
     assert viashell.returncode == direct.returncode, viashell.stdout + viashell.stderr
 

@@ -59,6 +59,15 @@ def _git(repo: Path, *args: str) -> None:
     )
 
 
+def _live_ledger(root: Path, slug: str) -> None:
+    wave = root / ".scratchpad" / "dossier" / f"2026-08-01-{slug}"
+    wave.mkdir(parents=True, exist_ok=True)
+    (wave / "DOSSIER.md").write_text(
+        "\n".join([f"# {slug}", "", "`2026-08-01` · `live` · `P1/1`", ""]),
+        encoding="utf-8",
+    )
+
+
 def _repo_with_contract(root: Path) -> None:
     _git(root, "init", "-q", "-b", "main")
     _git(root, "config", "user.email", "t@example.com")
@@ -67,7 +76,8 @@ def _repo_with_contract(root: Path) -> None:
     (root / ".dossier" / "2026-08-01-demo-wave.md").write_text(
         CONTRACT, encoding="utf-8"
     )
-    _git(root, "add", ".dossier")
+    _live_ledger(root, "demo-wave")
+    _git(root, "add", ".")
     _git(root, "commit", "-q", "-m", "chore: contract")
 
 
@@ -125,7 +135,8 @@ def test_a_contract_outside_a_git_repo_still_reports() -> None:
     with tempfile.TemporaryDirectory() as t:
         root = Path(t)
         (root / ".dossier").mkdir()
-        (root / ".dossier" / "x-loose.md").write_text(CONTRACT, encoding="utf-8")
+        (root / ".dossier" / "x-demo-wave.md").write_text(CONTRACT, encoding="utf-8")
+        _live_ledger(root, "demo-wave")
         result = _run({"cwd": str(root)})
         assert result.returncode == 0, result.stderr
         assert "demo-wave" in result.stdout, result.stdout
@@ -136,6 +147,7 @@ def test_an_unreadable_contract_never_breaks_the_prompt() -> None:
         root = Path(t)
         (root / ".dossier").mkdir()
         (root / ".dossier" / "broken.md").write_text("nothing here\n", encoding="utf-8")
+        _live_ledger(root, "broken")
         result = _run({"cwd": str(root)})
         assert result.returncode == 0, result.stderr
 
@@ -153,6 +165,80 @@ def test_it_reports_the_layer_mix_of_recent_work() -> None:
         assert "docs" in result.stdout, result.stdout
 
 
+def test_a_contractless_live_wave_is_named() -> None:
+    """A wave with no definition of done is where the loop is needed most."""
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        _git(root, "init", "-q", "-b", "main")
+        _git(root, "config", "user.email", "t@example.com")
+        _git(root, "config", "user.name", "t")
+        wave = root / ".scratchpad" / "dossier" / "2026-08-01-demo"
+        wave.mkdir(parents=True)
+        (wave / "DOSSIER.md").write_text(
+            "\n".join(["# demo", "", "`2026-08-01` · `live` · `P1/1`", ""]),
+            encoding="utf-8",
+        )
+        result = _run({"cwd": str(root)})
+        assert result.returncode == 0, result.stderr
+        assert "demo" in result.stdout, result.stdout
+        assert "no contract" in result.stdout, result.stdout
+
+
+def test_a_contractless_archived_wave_is_not_named() -> None:
+    """Closed waves are not missing anything."""
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        wave = root / ".scratchpad" / "dossier" / "_archive" / "2026-07-01-old"
+        wave.mkdir(parents=True)
+        (wave / "DOSSIER.md").write_text(
+            "\n".join(["# old", "", "`2026-07-01` · `done` · `P1/1`", ""]),
+            encoding="utf-8",
+        )
+        result = _run({"cwd": str(root)})
+        assert result.returncode == 0, result.stderr
+        assert result.stdout == "", result.stdout
+
+
+def test_the_live_wave_is_reported_not_the_alphabetical_last() -> None:
+    """Two contracts, one live wave. Sorting picked the closed one."""
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        _git(root, "init", "-q", "-b", "main")
+        _git(root, "config", "user.email", "t@example.com")
+        _git(root, "config", "user.name", "t")
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "2026-08-01-aaa-live.md").write_text(
+            CONTRACT.replace("demo-wave", "aaa-live"), encoding="utf-8"
+        )
+        (root / ".dossier" / "2026-08-01-zzz-closed.md").write_text(
+            CONTRACT.replace("demo-wave", "zzz-closed"), encoding="utf-8"
+        )
+        wave = root / ".scratchpad" / "dossier" / "2026-08-01-aaa-live"
+        wave.mkdir(parents=True)
+        (wave / "DOSSIER.md").write_text(
+            "\n".join(["# aaa-live", "", "`2026-08-01` · `live` · `P1/1`", ""]),
+            encoding="utf-8",
+        )
+        _git(root, "add", ".")
+        _git(root, "commit", "-q", "-m", "chore: two contracts")
+        result = _run({"cwd": str(root)})
+        assert "aaa-live" in result.stdout, result.stdout
+        assert "zzz-closed" not in result.stdout, result.stdout
+
+
+def test_no_live_wave_means_silence() -> None:
+    """A closed wave's contract is not prompt noise."""
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "2026-08-01-done.md").write_text(
+            CONTRACT, encoding="utf-8"
+        )
+        result = _run({"cwd": str(root)})
+        assert result.returncode == 0, result.stderr
+        assert result.stdout == "", result.stdout
+
+
 def test_it_finishes_fast_enough_to_sit_on_every_prompt() -> None:
     with tempfile.TemporaryDirectory() as t:
         root = Path(t)
@@ -162,10 +248,18 @@ def test_it_finishes_fast_enough_to_sit_on_every_prompt() -> None:
 
 
 def _main() -> int:
+    wanted = ""
+    argv = sys.argv[1:]
+    if "-k" in argv:
+        wanted = argv[argv.index("-k") + 1]
     failures = 0
+    selected = 0
     for name, fn in sorted(globals().items()):
         if not name.startswith("test_") or not callable(fn):
             continue
+        if wanted and wanted not in name:
+            continue
+        selected += 1
         try:
             fn()
         except Exception as exc:
@@ -175,6 +269,9 @@ def _main() -> int:
             print(f"ok {name}")
     if failures:
         print(f"{failures} failing", file=sys.stderr)
+        return 1
+    if wanted and not selected:
+        print(f"no test matched {wanted!r}", file=sys.stderr)
         return 1
     print("ok")
     return 0

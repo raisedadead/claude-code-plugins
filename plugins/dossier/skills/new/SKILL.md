@@ -78,6 +78,16 @@ python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/resolve_pins.py eol:<slug>... <ecosystem>:
 
 These fold into the single atomic step-3 Write — no extra commit, no TDD cycle.
 
+### 2.7. Write the contract (tracked)
+
+Before scaffolding the ledger, write `.dossier/<date>-<slug>.md` per FORMAT.md — `consumer`, `reached-via`, `budget`, and a `## done-when` table whose every row is a command with an expected result.
+
+`consumer` is the field that asks whether the work reaches anyone, and the one nobody writes unprompted. Ask for it plainly: who runs this, and by what path does it get to them? A wave once hardened a checker through three review rounds while no consumer could execute it, and no step in this skill had ever asked.
+
+A criterion that cannot be written as a command is a criterion nobody can check. Turn it into one, or drop it and say what was dropped.
+
+Commit the contract before the first task — `ds:converge` reads it, and the `UserPromptSubmit` hook reports against it from the commit that added it.
+
 ### 3. Scaffold DOSSIER.md
 
 Compute fields:

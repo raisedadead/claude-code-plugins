@@ -14,6 +14,7 @@ crash. No `CONVERGE:` line means nothing ran.
 
 from __future__ import annotations
 
+import os
 import re
 import shlex
 import subprocess
@@ -22,7 +23,9 @@ from pathlib import Path
 
 MET, UNMET, PARSE = 0, 1, 2
 TIMEOUT_SECONDS = 120
-RUNNER_NAMES = ("converge.py", "lib-converge.sh", "ds:converge")
+CONTRACT_DIR = ".dossier"
+DEPTH_VAR = "DS_CONVERGE_DEPTH"
+MAX_DEPTH = 2
 
 _ROW = re.compile(r"^\|(.+)\|\s*$")
 _SPLIT = re.compile(r"(?<!\\)\|")
@@ -81,7 +84,9 @@ def _met(expect: str, code: int, out: str) -> bool:
     return False
 
 
-def _run(command: str, root: Path) -> tuple[int, str]:
+def _run(command: str, root: Path, depth: int) -> tuple[int, str]:
+    child = dict(os.environ)
+    child[DEPTH_VAR] = str(depth + 1)
     try:
         done = subprocess.run(
             command,
@@ -90,6 +95,7 @@ def _run(command: str, root: Path) -> tuple[int, str]:
             text=True,
             cwd=root,
             timeout=TIMEOUT_SECONDS,
+            env=child,
         )
     except subprocess.TimeoutExpired:
         return 124, f"timed out after {TIMEOUT_SECONDS}s"
@@ -101,10 +107,40 @@ def _fail(reason: str) -> int:
     return PARSE
 
 
+def _newest_contract(root: Path) -> Path | None:
+    folder = root / CONTRACT_DIR
+    if not folder.is_dir():
+        return None
+    found = sorted(p for p in folder.glob("*.md") if p.is_file())
+    return found[-1] if found else None
+
+
+def _depth() -> int:
+    """How many converge runs are already on the stack.
+
+    A criterion may legitimately invoke the runner — this runner's own contract
+    tests it against fixtures. What must not happen is unbounded nesting, and no
+    reading of the command string decides that reliably: `shellcheck lib-converge.sh`
+    names it without running it, and `test_converge.py` merely contains its name.
+    Counting actual invocations does decide it.
+    """
+    try:
+        return max(0, int(os.environ.get(DEPTH_VAR, "0")))
+    except ValueError:
+        return 0
+
+
 def main(argv: list[str]) -> int:
+    depth = _depth()
+    if depth >= MAX_DEPTH:
+        return _fail(f"converge nested {depth} deep; refusing to recurse further")
     if len(argv) < 2:
-        return _fail("usage: converge.py <contract-path>")
-    contract = Path(argv[1])
+        found = _newest_contract(Path.cwd())
+        if found is None:
+            return _fail("no contract given and none found under .dossier/")
+        contract = found
+    else:
+        contract = Path(argv[1])
     if not contract.is_file():
         return _fail(f"no contract at {contract}")
     text = contract.read_text(encoding="utf-8", errors="replace")
@@ -116,8 +152,6 @@ def main(argv: list[str]) -> int:
     for ident, command, expect in criteria:
         if not _is_command(command):
             return _fail(f"criterion {ident} is not a backticked command: {command!r}")
-        if any(name in command for name in RUNNER_NAMES):
-            return _fail(f"criterion {ident} invokes the runner, which recurses")
         if not _met(expect, 0, "") and not re.fullmatch(
             r"(exit\s+\d+|stdout:.*)", expect.strip()
         ):
@@ -127,7 +161,7 @@ def main(argv: list[str]) -> int:
     unmet = 0
     for ident, command, expect in criteria:
         bare = command[1:-1]
-        code, out = _run(bare, root)
+        code, out = _run(bare, root, depth)
         ok = _met(expect, code, out)
         unmet += 0 if ok else 1
         print(f"  {'MET  ' if ok else 'UNMET'} {ident}. {bare}  [{expect}]")
