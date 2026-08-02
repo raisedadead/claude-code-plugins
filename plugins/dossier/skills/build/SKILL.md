@@ -23,7 +23,7 @@ TDD covenant: RED → GREEN → refactor. One commit per `x`-flip. Resumable.
 
 Per ADAPTERS.md. Note `HAS_RTK`, `HAS_FASTEDIT`.
 
-DOSSIER.md writes use the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` for §T flips, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` for §S appends. Always present, no detection. The §S code-fence examples below show the full line — pass only the text **after** the timestamp (`lib-s-append.sh` prepends it). `HAS_FASTEDIT` governs SOURCE code edits in step 6 only, never DOSSIER.md.
+DOSSIER.md writes use the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` for §T flips, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` for §S appends. Always present, no detection. The §S code-fence examples below show the full line — pass only the text **after** the timestamp (`lib-s-append.sh` prepends it). `HAS_FASTEDIT` governs SOURCE code edits in step 6; DOSSIER.md always goes through the helpers above.
 
 ### 1. Locate live dossier
 
@@ -78,13 +78,13 @@ Before writing any test or code, ensure the libraries this task introduces are p
 - If a needed lib is missing: `python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/resolve_pins.py <ecosystem>:<pkg>`, append the row to §I via the Edit tool (DOSSIER.md is `.md` → not fastedit), and append §S `ds:build <T-id> pin=<pkg>@<ver>` (or `pin=offline` if unreachable).
 - Optionally ground the API SHAPE via the `§context7` adapter (ADAPTERS.md): `resolve-library-id` then `query-docs`; WebFetch the official docs as fallback.
 
-Runs OUTSIDE the RED→GREEN→refactor cycle — a dossier-bookkeeping write (like §X refresh), never a source commit. The model then writes source using the §I version, so the reactive verify hook fires on a warm-cache HIT and stays silent.
+Runs OUTSIDE the RED→GREEN→refactor cycle: it lands as a dossier-bookkeeping write, the same class as the §X refresh. The model then writes source using the §I version, so the reactive verify hook fires on a warm-cache HIT and stays silent.
 
 ### 5.6. DOUBT (design-class gate, pre-WORK)
 
 Runs when `--doubt` is set, or auto for a **design-class** task — no flag required (mirror of `--review` auto-on destructive-class; opt-in alone never activates). design-class = the task implies a design decision (new skill / new agent / new interface or contract / schema / data model / protocol / cross-plugin wiring / architecture choice).
 
-Availability gate per ADAPTERS §whetstone: proceed only if the session agent list has `whetstone:whetstone-doubter`. Absent → append §S `ds:build <T-id> doubt=skipped-absent`, continue to WORK. A spawn that still errors `Agent type ... not found` takes the same skip path. Never block, never prompt.
+Availability gate per ADAPTERS §whetstone: proceed only if the session agent list has `whetstone:whetstone-doubter`. Absent → append §S `ds:build <T-id> doubt=skipped-absent`, continue to WORK. A spawn that still errors `Agent type ... not found` takes the same skip path. The build continues either way, with no prompt to the operator.
 
 When present:
 
@@ -94,11 +94,11 @@ When present:
 1. FAILURES → classify each finding actionable / not-actionable; fold actionable ones into the approach BEFORE the first RED. A finding that contradicts the §T contract itself: interactive → surface to operator; under `--auto` → PAUSE (`ambiguous`).
 1. Append §S: `ds:build <T-id> doubt=<FAILURES:<n>-actionable | clean>`.
 
-**One doubt cycle max per task** — in-build doubt is a gate, not the full doubt-pass loop; a contested design after one cycle escalates instead of looping. Zero actionable findings = say so plainly (doubt-theater guard), never "design validated".
+**One doubt cycle max per task** — in-build doubt is a gate, not the full doubt-pass loop; a contested design after one cycle escalates instead of looping. Zero actionable findings = report exactly that, in those words (doubt-theater guard): the doubter found nothing actionable.
 
 ### 6. WORK (TDD)
 
-**Baseline check (before RED):** confirm the existing suite for the touched package is green (or note known-failing). A new RED must be attributable to THIS task — never build atop already-broken ground. Under `--auto`, an unexpected red baseline is a PAUSE (`ambiguous`).
+**Baseline check (before RED):** confirm the existing suite for the touched package is green (or note known-failing). A new RED must be attributable to THIS task, so start from a green baseline. Under `--auto`, an unexpected red baseline is a PAUSE (`ambiguous`).
 
 If `verify` column references `V<N>`:
 
@@ -116,15 +116,15 @@ Use `fastedit` if `HAS_FASTEDIT=1` for surgical code edits. Else Edit tool.
 
 **Skill-lint route (whetstone compose, touched SKILL.md only):** lint before COMMIT when whetstone's linter resolves — source checkout (`plugins/whetstone/skills/skill-smith/scripts/lint_skill.py <path>`) or operator-set `DOSSIER_LINT_SKILL` (ADAPTERS §whetstone). Exit 0 gates the commit — same yardstick CI enforces repo-wide. Unresolvable → skip silently, §S `skill-lint=skipped-absent` (CI still lints on push; either plugin alone stays functional).
 
-**Source comments stay phase-agnostic.** Never write `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)`, or `// PH<n>-B<k>` in source or test files. Phase / audit tracking lives in DOSSIER.md §B and §S. Comments in source answer _why_ (workaround refs, non-obvious invariants, upstream-bug links), not _which phase_. The `marker_guard.py` PreToolUse hook watches for this, but it is advisory: it emits a nudge and exits 0, so the write proceeds. Nothing blocks a phase marker at write time — keeping them out is on you.
+**Source comments stay phase-agnostic.** A comment in source or test answers _why_: a workaround ref, a non-obvious invariant, an upstream-bug link. Phase and audit tracking are ledger vocabulary and live in DOSSIER.md §B and §S — that is where `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)` and `// PH<n>-B<k>` belong. The `marker_guard.py` PreToolUse hook watches for the audit-id forms and is advisory: it emits a nudge and exits 0, so the write proceeds. Keeping source clean of them is yours.
 
 **Conflict route (whetstone compose, merge-class only):** a plain `git merge` conflict during WORK, with `whetstone:merge-resolve` in the available-skills list, resolves per that skill's process — hunk-by-hunk with intent, then the `verify_clean.sh` proof (baseline `-` marker-mode when no pre-conflict count exists; the step-6 full-suite GREEN gate already floors regressions). §S: `ds:build <T-id> conflict=resolved verify_clean=0`. Skill absent → resolve inline as before, §S `conflict=resolved-inline`. Routing is model-judgment (trigger-phrase match); the verify_clean exit code is the code-enforced part. Conflicts from `rebase` / `cherry-pick` are OUT of this route — their `--continue` creates commits outside step 7's task-scoped discipline: under `--auto` PAUSE (`destructive`); interactive, hand to the operator (standalone `whetstone:merge-resolve` already owns that trigger).
 
-**Stall rule:** the same identical failure twice in a row is a stuck signal, not bad luck — the second occurrence forces a strategy change (different diagnosis, different seam, or scout spawn), never a third identical retry. Retry caps count ATTEMPTS; this rule catches the tighter loop inside them.
+**Stall rule:** the same identical failure twice in a row is a stuck signal, not bad luck — the second occurrence forces a strategy change before the third attempt — a different diagnosis, a different seam, or a scout spawn. Retry caps count ATTEMPTS; this rule catches the tighter loop inside them.
 
 If tests fail and root cause unclear: **spawn `dossier-scout` subagent** with mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>". Use report to guide fix. Scout output is caveman-compressed; main thread aggregates.
 
-If failure suggests a missing invariant: trigger `ds:backprop` flow (don't just patch the symptom).
+If failure suggests a missing invariant: trigger the `ds:backprop` flow, which registers the invariant first and fixes the symptom under it.
 
 ### 6.5. REVIEW (fresh-context, optional)
 
@@ -148,7 +148,7 @@ Append §S either way, the same as the doubt gate at §5.6 does — `ds:build <T
 
 Skip entirely if neither `--review` nor destructive-class — keeps the fast path fast.
 
-Built-in `/review`, `/security-review`, `/simplify` complement (never replace) this artifact-only gate for whole-branch looks — invoke them rather than reimplementing their checks; the `skill_gate.py` hook breadcrumbs their invocation mid-build so the verdict lands in §S instead of evaporating (reminder is non-blocking; honoring it is model-judgment).
+Built-in `/review`, `/security-review`, `/simplify` sit alongside this artifact-only gate and cover whole-branch looks it cannot — invoke them rather than reimplementing their checks; the `skill_gate.py` hook breadcrumbs their invocation mid-build so the verdict lands in §S instead of evaporating (reminder is non-blocking; honoring it is model-judgment).
 
 ### 7. COMMIT
 
@@ -158,7 +158,7 @@ Built-in `/review`, `/security-review`, `/simplify` complement (never replace) t
 
 **Read the verdict line before the exit code.** A missing script or a bad `DOSSIER_TIGER_CHECK` makes the interpreter itself exit 2 or 1 — the same numbers the checker uses for NAG and BLOCK — so a code-only reading reports a result for a check that never ran. Require a `TIGER:` line in stdout. No such line means unresolvable, whatever the number was.
 
-With that line present, route on the exit code and never on "non-zero": `0` clean, commit — the line carries how many files were examined and how many were staged but skipped, and a bare `CLEAN 0 files` with no skipped count means the index was empty rather than that nothing was wrong; `CLEAN 0 files, 3 skipped` is an ordinary docs-only commit · `2` the built-in 100-column fallback was exceeded — print the offences, commit anyway, never block · `1` a limit the repo itself declared was exceeded, which is a `tiger` PAUSE under `--auto` and an operator decision interactively · `64` the path is not a work tree, treat as unresolvable. Unresolvable → skip silently.
+With that line present, route on the exact exit code rather than on "non-zero": `0` clean, commit — the line carries how many files were examined and how many were staged but skipped, and a bare `CLEAN 0 files` with no skipped count means the index was empty rather than that nothing was wrong; `CLEAN 0 files, 3 skipped` is an ordinary docs-only commit · `2` the built-in 100-column fallback was exceeded — print the offences and commit · `1` a limit the repo itself declared was exceeded, which is a `tiger` PAUSE under `--auto` and an operator decision interactively · `64` the path is not a work tree, treat as unresolvable. Unresolvable → skip silently.
 
 **Where this actually resolves.** A consumer gets `tiger-check` on `PATH` whenever whetstone is enabled, so the route reaches them without configuration — `bin/` is the supported way across plugins, since `${CLAUDE_PLUGIN_ROOT}` names only the running plugin's own root. With whetstone absent the command is simply not on `PATH`: record `tiger=skipped-absent` and continue, the same absent-skip every composed route uses.
 
@@ -180,7 +180,7 @@ Capture SHA. Append §S:
 <YYYY-MM-DD HH:MM> ds:build <T-id> commit=<sha>
 ```
 
-If commit hooks fail: investigate root cause (do NOT `--no-verify`). Fix, retry commit.
+If commit hooks fail: a hook failure is a signal about the change, so investigate the root cause, fix it, and retry the commit as it stands.
 
 ### 8. §X REFRESH
 
@@ -236,23 +236,23 @@ commit=<sha>
 next: ds:build --next [or remaining T-ids]
 ```
 
-## Common shortcuts (and why not)
+## Common shortcuts and what holds instead
 
-Every rebuttal here is already stated once in the steps above — collected so the skip-temptation and its answer sit together.
+Every answer here is already stated once in the steps above — collected so the skip-temptation and the move that answers it sit together.
 
-| Tempting shortcut                                      | Why not                                                                                                                                 |
-| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Build on a red baseline ("tests were already failing") | A new RED must trace to THIS task (§6). Under `--auto` a red baseline is a PAUSE (`ambiguous`), not a green light.                      |
-| Skip PIN CHECK, code against a remembered API          | §5.5 — unpinned libs drift; the verify hook fires on a cache miss. Pin first, then code against the §I version.                         |
-| `git commit --no-verify` past a failing hook           | §7 — a hook failure is a root-cause signal, not a speed bump. Fix it, retry the commit.                                                 |
-| Auto-confirm the §X stale guard                        | §8a / Vm.X — stale §X hides push/ahead drift. Under `--auto` it's a PAUSE (`x-stale`), never an auto-`y`.                               |
-| Keep retrying a red test past 2 attempts               | `retries-exhausted` PAUSE (2 fixes + one auto-`ds:backprop`). Looping burns turns — escalate the decision.                              |
-| Patch the symptom, skip the invariant                  | §6 — if the failure implies a missing invariant, run `ds:backprop`; don't just green the test.                                          |
-| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. `marker_guard.py` only nudges (exit 0). Source comments answer _why_, never _which phase_.               |
-| Retry the same fix after an identical failure          | Stall rule (§6) — twice-identical output is a stuck signal; change strategy or spawn a scout, never a third identical run.              |
-| Blow past the budget ceiling mid-task                  | `budget` PAUSE — land clean: WIP commit, `~` row, §S handoff. An unrecorded tree is the expensive part.                                 |
-| Keep correcting the same issue in a stale context      | Failure handling — two failed corrections = contaminated context; reset via `ds:roll` + fresh session, lesson recorded.                 |
-| Skip the doubt gate on a design-class task             | §5.6 — design flaws are cheapest pre-RED. Auto-fires without a flag; absent whetstone logs `doubt=skipped-absent`, never a silent skip. |
+| Tempting shortcut                                      | What holds instead                                                                                                                               |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Build on a red baseline ("tests were already failing") | A new RED must trace to THIS task (§6). Under `--auto` a red baseline is a PAUSE (`ambiguous`), not a green light.                               |
+| Skip PIN CHECK, code against a remembered API          | §5.5 — unpinned libs drift; the verify hook fires on a cache miss. Pin first, then code against the §I version.                                  |
+| `git commit --no-verify` past a failing hook           | §7 — a hook failure is a root-cause signal, not a speed bump. Fix it, retry the commit.                                                          |
+| Auto-confirm the §X stale guard                        | §8a / Vm.X — stale §X hides push/ahead drift. Under `--auto` it is a PAUSE (`x-stale`) and the operator answers the prompt.                      |
+| Keep retrying a red test past 2 attempts               | `retries-exhausted` PAUSE (2 fixes + one auto-`ds:backprop`). Looping burns turns — escalate the decision.                                       |
+| Patch the symptom, skip the invariant                  | §6 — if the failure implies a missing invariant, run `ds:backprop` to register it, then green the test under it.                                 |
+| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. `marker_guard.py` only nudges (exit 0). Source comments answer _why_; §B/§S answer _which phase_.                 |
+| Retry the same fix after an identical failure          | Stall rule (§6) — twice-identical output is a stuck signal; change strategy or spawn a scout before the third attempt.                           |
+| Blow past the budget ceiling mid-task                  | `budget` PAUSE — land clean: WIP commit, `~` row, §S handoff. An unrecorded tree is the expensive part.                                          |
+| Keep correcting the same issue in a stale context      | Failure handling — two failed corrections = contaminated context; reset via `ds:roll` + fresh session, lesson recorded.                          |
+| Skip the doubt gate on a design-class task             | §5.6 — design flaws are cheapest pre-RED. Auto-fires without a flag; absent whetstone logs `doubt=skipped-absent`, so the skip is on the record. |
 
 ## Autonomous mode (`--auto`)
 
@@ -271,23 +271,23 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 /goal Keep running ds:build --auto until it prints DONE or PAUSE. Stop on PAUSE.
 ```
 
-`/goal clear` (or Esc) ends the run cleanly. Do NOT use Workflows or `/loop` (background / no mid-run steer / not dependency-ordered).
+`/goal clear` (or Esc) ends the run cleanly. `/goal` is the driver because it runs in the foreground, takes mid-run steer, and respects dependency order — Workflows and `/loop` give up all three.
 
-**Decision boundary — MUST PAUSE (never auto-resolve):**
+**Decision boundary — MUST PAUSE, the operator resolves these:**
 
 | class               | trigger                                                                                                                                                                                                                                                         |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `blocked`           | row state `!` or `?`                                                                                                                                                                                                                                            |
 | `ambiguous`         | `verify=—` on a behaviour-bearing task, or >1 reasonable implementation                                                                                                                                                                                         |
 | `destructive`       | task implies delete/drop/migrate/force, schema change, files outside §X repos, or a rebase/cherry-pick conflict hit mid-WORK (§6 conflict route)                                                                                                                |
-| `push`              | any `git push` / network-mutating op (never auto-push)                                                                                                                                                                                                          |
+| `push`              | any `git push` / network-mutating op — stop and hand back; never auto-push                                                                                                                                                                                      |
 | `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                                                                                                                                                                                                    |
 | `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                                                                                                                                              |
 | `tiger`             | `tiger_check.py` exit 1 (§7 tiger route) — an added line exceeds a limit the repo itself declared. Exit 2 is advisory and never pauses                                                                                                                          |
-| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — do NOT auto-confirm                                                                                                                                                                                                |
-| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`. Clean landing: commit WIP work to the task's files (a `~` row never enters the ds:ship pipeline), row stays `~`, §S handoff note — never stop mid-air with an unrecorded tree |
+| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — the operator answers it                                                                                                                                                                                            |
+| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`. Clean landing: commit WIP work to the task's files (a `~` row never enters the ds:ship pipeline), row stays `~`, §S handoff note — the tree is recorded before the loop stops |
 
-**Excuse table — the rationalization each class invites, and why it never wins.** Prose rails, model-enforced; the PAUSE itself stays the contract:
+**Excuse table — the rationalization each class invites, and the answer that holds.** Prose rails, model-enforced; the PAUSE itself stays the contract:
 
 | class               | tempting excuse                           | rebuttal                                                                                                                       |
 | ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
@@ -301,7 +301,7 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 | `x-stale`           | "refresh later, flip now"                 | stale §X hides push/ahead drift; a flip on stale state forges the ledger                                                       |
 | `budget`            | "one more task won't hurt"                | ceilings exist because 'one more' compounds; land clean (commit + §S) and hand back                                            |
 
-**Rails:** never auto-push · never auto-close (stop at the last `x`-flip; `ds:close` stays an explicit operator step) · per-task lock · atomic writes · `marker_guard` + `verify` hooks stay active during WORK. Every PAUSE writes its reason to §S so `ds:status` shows WHY on return (Vm.14).
+**Rails:** push stays the operator's, never automatic · `ds:close` stays an explicit operator step, so the loop stops at the last `x`-flip · per-task lock · atomic writes · `marker_guard` + `verify` hooks stay active during WORK. Every PAUSE writes its reason to §S so `ds:status` shows WHY on return (Vm.14).
 
 ## Failure handling
 

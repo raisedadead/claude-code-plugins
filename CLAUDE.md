@@ -6,7 +6,7 @@ Read [`ARCHITECTURE.md`](./ARCHITECTURE.md) before changing anything under `plug
 
 Check [`RESEARCH.md`](./RESEARCH.md) §D first. Several obvious-looking improvements here were already made, deliberately, in the other direction. A gap you spot may be a decision you cannot see the reason for.
 
-The standing example: there is no `version` key in either `plugin.json`, and that is intentional — the commit SHA is the version. Do not add one. See D1.
+The standing example: the commit SHA is the version, so both `plugin.json` files ship without a `version` key and stay that way. See D1.
 
 Then read §O. Work worth doing here is already listed there, with the reason it has not been done yet — starting from §O beats inventing a task, and re-filing something already tracked is the most common way a session wastes its first hour. Count what is live with `grep -cE '^\| O[0-9]+ .*\| *(open|partial)' RESEARCH.md` rather than trusting a number written in prose; O-rows flip state as work lands.
 
@@ -14,7 +14,7 @@ Then read §O. Work worth doing here is already listed there, with the reason it
 
 Honesty > Recoverability > Leverage, in that order. Use it to settle conflicts rather than arguing them case by case.
 
-Never claim enforcement that does not exist. An opt-in gate, a default-off gate and an advisory nag are not gates — describe them as what they are. A verdict parsed from a model is model-judgment, not computation.
+Describe every gate as the thing it actually is. An opt-in gate, a default-off gate and an advisory nag each get named as such; a verdict parsed from a model is model-judgment, and computation is what a script returns. `claim-check` exits 1 on a sentence that claims enforcement while naming neither an exit code nor one of those labels.
 
 `blocks`, `enforces` and `gates` are claims about runtime, and a doc cannot prove one. Run the thing and read the exit code before writing the verb. This rule was already on this page and the class still recurred three times in a single wave — a hook that nudges at exit 0 described as blocking, a correct `--cached` read justified by a false claim about what `git diff HEAD` does, and a regression test named for a case its own fixture ruled out. All three shipped. Each was found by a reviewer; none by a test.
 
@@ -22,7 +22,7 @@ The middle one is the shape to watch: **right behaviour, wrong stated reason.** 
 
 ## Evidence
 
-`.scratchpad/` is gitignored. Never cite a path inside it as evidence in a tracked file — it is invisible to every other reader. Use a commit SHA, a tracked path, or a URL.
+`.scratchpad/` is gitignored and invisible to every other reader, so evidence in a tracked file cites a commit SHA, a tracked path, or a URL.
 
 Probe the invocation the code makes, not the one the sentence resembles. A docstring here quoted `fatal: bad revision 'HEAD'`; a review called it invented, checked by running a bare `git diff HEAD`, got `fatal: ambiguous argument` and substituted that. Both strings are real — git says the first when a pathspec follows `--`, which is what the code does, and the second otherwise. The correction shipped the wrong one, and two later reviews confirmed it by re-running that same bare command. Independent confirmations are only independent if they probe independently; three checks agreeing after making the same substitution is one check. When a claim names a command, run that command with its arguments.
 
