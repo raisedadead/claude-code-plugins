@@ -36,6 +36,7 @@ jobs:
           bash plugins/dossier/hooks/test_lib_vm_checks.sh
           bash plugins/dossier/hooks/test_closure_parity.sh
           bash plugins/dossier/hooks/test_vm6_parity.sh
+          bash plugins/dossier/hooks/test_pause_class_parity.sh
           bash plugins/dossier/hooks/test_manifest.sh
           bash plugins/dossier/hooks/test_lib_assert_grill.sh
           bash plugins/dossier/hooks/test_lib_changelog_write.sh

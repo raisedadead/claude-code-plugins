@@ -148,6 +148,10 @@ If absent: skip the doubt gate silently (§S note only). Never error, never prom
 
 **Script route (`lint_skill.py`, ds:build step 6):** same deterministic resolution (source-checkout relative path or `DOSSIER_LINT_SKILL`); lints any touched SKILL.md pre-commit. Unresolvable → skip silently with §S note — CI's repo-wide sweep remains the backstop.
 
+**Script route (`tiger_check.py`, ds:build step 6):** same deterministic resolution (source-checkout relative path `plugins/whetstone/skills/tiger-style/scripts/tiger_check.py`, or an operator-set `DOSSIER_TIGER_CHECK` env path); measures the column budget of the lines the staged diff adds. Exit `0` clean · `1` a limit the repo declared was exceeded (blocking) · `2` the built-in 100-column fallback was exceeded (advisory, never blocks) · `64` not a git work tree. Unresolvable → skip silently, §S `tiger=skipped-absent`.
+
+The checker's own limit knob is `WHETSTONE_TIGER_COLS`, deliberately NOT a `DOSSIER_` name: it configures whetstone's behaviour and has to work for someone who never installed this plugin (D2). `DOSSIER_TIGER_CHECK` keeps the dossier prefix because it is this plugin resolving a path to a sibling — the same shape as the three routes around it.
+
 **Script route (`flake_runner.sh`, ds:backprop step 4.5):** same deterministic resolution as run_slice below (source-checkout relative path or `DOSSIER_FLAKE_RUNNER`); triages failing-test bugs for nondeterminism before an invariant is minted. Unresolvable → triage skipped silently.
 
 **Script route (`run_slice.sh`, ds:build step 6):** resolution is deterministic only — the source-checkout relative path (`plugins/whetstone/skills/tdd-cycle/scripts/run_slice.sh`) or an operator-set `DOSSIER_RUN_SLICE` env path. Glob auto-discovery of the installed plugin cache was rejected by doubt-pass: extraction mtimes are not version signals, stale cache dirs survive reinstalls, and cross-marketplace name collisions can select wrong-provenance scripts. The agent-registry check above governs AGENT composition only; script and agent detection never substitute for each other. Unresolvable script → raw test commands, silently.

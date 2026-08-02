@@ -16,6 +16,8 @@ Honesty > Recoverability > Leverage, in that order. Use it to settle conflicts r
 
 Never claim enforcement that does not exist. An opt-in gate, a default-off gate and an advisory nag are not gates — describe them as what they are. A verdict parsed from a model is model-judgment, not computation.
 
+`blocks`, `enforces` and `gates` are claims about runtime, and a doc cannot prove one. Run the thing and read the exit code before writing the verb. This rule was already on this page and the class still recurred three times in a single wave — a hook that nudges at exit 0 described as blocking, a ledger event nothing emits, a rule labelled `code` before its script existed. Each was caught by a reviewer; none by a test. See F25.
+
 ## Evidence
 
 `.scratchpad/` is gitignored. Never cite a path inside it as evidence in a tracked file — it is invisible to every other reader. Use a commit SHA, a tracked path, or a URL.

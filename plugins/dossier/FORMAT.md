@@ -286,9 +286,9 @@ Format rules:
 - Timestamp = minute-granular `YYYY-MM-DD HH:MM`. Override to seconds via env `DS_TS_SECONDS=1` (concurrent-write disambiguation).
 - `<skill>` = `ds:<verb>`.
 - `<target>` = `T<N>`, `B<N>`, `V<N>`, or `—` for non-targeted ops.
-- `<event>` ∈ `{START, DONE, commit=<sha>, §<X>=<status>, §X=stale-confirmed, drift=<n>, lock=<acquired|released>, paused reason=<text>, resumed, abandoned reason=<text>, PAUSE reason=<class>:<detail>, auto-stop=<reason>}`.
+- `<event>` ∈ `{START, DONE, commit=<sha>, §<X>=<status>, §X=stale-confirmed, drift=<n>, lock=<acquired|released>, paused reason=<text>, resumed, abandoned reason=<text>, PAUSE reason=<class>:<detail>, auto-stop=<reason>}`, plus the gate-outcome forms a skill emits for its own composed routes (`tiger=`, `doubt=`, `pin=`, `conflict=`, `skill-lint=`, `verify_clean=`). The brace set is closed; the gate-outcome forms are not — a new composed route may add one, and `<skill>`/`<target>`/timestamp still bind.
 - `paused` / `resumed` / `abandoned` are **atomic single-line** events — they emit NO `START`/`DONE` pair (pause/resume are non-resumable one-shot ops). A bare `START` for them would trip the incomplete-op detector.
-- `PAUSE` (from `ds:build --auto`) carries a reason class ∈ `{blocked, ambiguous, destructive, push, retries-exhausted, x-stale, budget}`; if it follows a task `START` with no `DONE`, that task correctly shows as incomplete (resume needed). `auto-stop=<reason>` is a run-terminal line with target `—` (clean exhaustion / budget), not a `START`/`DONE`.
+- `PAUSE` (from `ds:build --auto`) carries a reason class ∈ `{blocked, ambiguous, destructive, push, retries-exhausted, review, tiger, x-stale, budget}`; if it follows a task `START` with no `DONE`, that task correctly shows as incomplete (resume needed). `auto-stop=<reason>` is a run-terminal line with target `—` (clean exhaustion / budget), not a `START`/`DONE`.
 - `<detail>` free-text, ≤120 chars.
 
 Vm.6: every multi-step op MUST emit `START` line before mutation, `DONE` line after final mutation. Missing `DONE` = incomplete = resume needed.

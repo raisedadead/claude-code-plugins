@@ -150,7 +150,15 @@ Built-in `/review`, `/security-review`, `/simplify` complement (never replace) t
 
 ### 7. COMMIT
 
-`git add` only files touched by this task. `git commit` with subject pattern:
+`git add` only files touched by this task.
+
+**Tiger route (whetstone compose, every build commit).** Between the `git add` and the `git commit` — never before the `git add`, because the checker reads `git diff --cached` and an empty index always reports clean — measure the column budget of the lines this task ADDS. Resolve the checker from the source checkout (`plugins/whetstone/skills/tiger-style/scripts/tiger_check.py`) or an operator-set `DOSSIER_TIGER_CHECK` (ADAPTERS §whetstone). No flag: it runs on every build commit, because a gate nobody turns on is not a gate (D7).
+
+Route on the exit code, never on "non-zero": `0` clean, commit · `2` the built-in 100-column fallback was exceeded — print the offences, commit anyway, never block · `1` a limit the repo itself declared was exceeded, which is a `tiger` PAUSE under `--auto` and an operator decision interactively · `64` the path is not a work tree, treat as unresolvable. Unresolvable → skip silently.
+
+§S records non-clean runs only — `tiger=block@<n>`, `tiger=nag@<n>`, or `tiger=skipped-absent`. A clean run writes nothing; logging every uneventful pass buries the events that matter.
+
+Then `git commit` with subject pattern:
 
 ```
 <type>(<scope>): <imperative summary>
@@ -269,21 +277,23 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 | `push`              | any `git push` / network-mutating op (never auto-push)                                                                                                                                                                                                          |
 | `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                                                                                                                                                                                                    |
 | `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                                                                                                                                              |
+| `tiger`             | `tiger_check.py` exit 1 (§6 tiger route) — an added line exceeds a limit the repo itself declared. Exit 2 is advisory and never pauses                                                                                                                          |
 | `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — do NOT auto-confirm                                                                                                                                                                                                |
 | `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`. Clean landing: commit WIP work to the task's files (a `~` row never enters the ds:ship pipeline), row stays `~`, §S handoff note — never stop mid-air with an unrecorded tree |
 
 **Excuse table — the rationalization each class invites, and why it never wins.** Prose rails, model-enforced; the PAUSE itself stays the contract:
 
-| class               | tempting excuse                           | rebuttal                                                                                  |
-| ------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `blocked`           | "the `!` row is probably fine to attempt" | `!`/`?` encode a human's unanswered question — attempting it answers FOR the human        |
-| `ambiguous`         | "any reasonable reading will do"          | two readings = two different diffs; the operator picks, or the wrong one ships silently   |
-| `destructive`       | "it's a small migration"                  | small deletes are still irreversible; blast radius is judged before, not after            |
-| `push`              | "pushing saves the operator a step"       | publishing is the operator's irreversible act; nothing network-mutating is ever auto      |
-| `retries-exhausted` | "third time's the charm"                  | two failed fixes = the diagnosis is wrong, not the luck; more turns buy noise, not signal |
-| `review`            | "the reviewer misread it — overrule"      | a second `CHANGES` after a fix cycle is a genuine disagreement; humans arbitrate those    |
-| `x-stale`           | "refresh later, flip now"                 | stale §X hides push/ahead drift; a flip on stale state forges the ledger                  |
-| `budget`            | "one more task won't hurt"                | ceilings exist because 'one more' compounds; land clean (commit + §S) and hand back       |
+| class               | tempting excuse                           | rebuttal                                                                                                                       |
+| ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `blocked`           | "the `!` row is probably fine to attempt" | `!`/`?` encode a human's unanswered question — attempting it answers FOR the human                                             |
+| `ambiguous`         | "any reasonable reading will do"          | two readings = two different diffs; the operator picks, or the wrong one ships silently                                        |
+| `destructive`       | "it's a small migration"                  | small deletes are still irreversible; blast radius is judged before, not after                                                 |
+| `push`              | "pushing saves the operator a step"       | publishing is the operator's irreversible act; nothing network-mutating is ever auto                                           |
+| `retries-exhausted` | "third time's the charm"                  | two failed fixes = the diagnosis is wrong, not the luck; more turns buy noise, not signal                                      |
+| `review`            | "the reviewer misread it — overrule"      | a second `CHANGES` after a fix cycle is a genuine disagreement; humans arbitrate those                                         |
+| `tiger`             | "the limit is arbitrary — bump it"        | the repo chose that number; raising a declared limit to pass a check decides something about the codebase, not about this task |
+| `x-stale`           | "refresh later, flip now"                 | stale §X hides push/ahead drift; a flip on stale state forges the ledger                                                       |
+| `budget`            | "one more task won't hurt"                | ceilings exist because 'one more' compounds; land clean (commit + §S) and hand back                                            |
 
 **Rails:** never auto-push · never auto-close (stop at the last `x`-flip; `ds:close` stays an explicit operator step) · per-task lock · atomic writes · `marker_guard` + `verify` hooks stay active during WORK. Every PAUSE writes its reason to §S so `ds:status` shows WHY on return (Vm.14).
 

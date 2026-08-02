@@ -48,7 +48,7 @@ Prose and data formats are skipped outright (`.md`, `.markdown`, `.rst`, `.txt`,
 
 ## The manual pass — what the script cannot judge
 
-These are the TIGER_STYLE rules that need a reader. **Nothing enforces them.** They are not wired to any gate, they produce no exit code, and no tool in this plugin will stop a commit that violates them. Read the diff against them yourself:
+These are the TIGER_STYLE rules that need a reader. **Nothing enforces them.** They produce no exit code, and no tool will stop a commit that violates them. Read the diff against them yourself:
 
 - **Function length.** A function that does not fit on a screen is doing more than one thing. Split at the seam, not at the line count.
 - **Assert adequacy.** A non-trivial function asserts its preconditions. Assert the negative space too — the states that must never occur, not only the ones you expect.
@@ -56,6 +56,8 @@ These are the TIGER_STYLE rules that need a reader. **Nothing enforces them.** T
 - **Limits as numbers.** Every limit is a named constant with a stated unit, never an inline literal. A magic number is a decision nobody can find later.
 
 Treat this list the way `skill-smith` treats its reference checklists: the exit code is the gate, the checklist is the judgement, and the two are never described as the same thing.
+
+Inside a dossier build run with `--review`, the `dossier-reviewer` agent reads the diff against this same list. That does not make it a gate: its findings on these four rules are capped at `Warn:`, which cannot block a commit, and `--review` is opt-in — it auto-fires only for destructive-class tasks, a category that has nothing to do with code shape. A second reader is worth having. It is not enforcement.
 
 ## What is deliberately not here
 
