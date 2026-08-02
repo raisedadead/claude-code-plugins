@@ -48,3 +48,17 @@ Done = `lint_skill.py <path>` exits 0 **and** you have read the change against b
 ## Dossier breadcrumb
 
 In a repo with a live dossier ledger, finish by recording the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip, no-op: this skill ships no hooks and no dossier dependency.
+
+## Claim check
+
+`claim-check <path>...` (also `skills/skill-smith/scripts/claim_check.py`) reads shipped prose for a narrower defect than structure: a sentence asserting that something of ours **blocks**, **enforces**, **gates**, **denies** or **prevents**, while naming nothing a reader could check.
+
+| exit | line                     | meaning                                            |
+| ---- | ------------------------ | -------------------------------------------------- |
+| 0    | `CLAIMS: CLEAN <n> file(s)` | every claim names an exit code, a citation, or a label |
+| 1    | `CLAIMS: FLAGGED <n>`    | `<n>` claims name none of those                    |
+| 64   | —                        | no paths given, or a path that does not exist      |
+
+A claim passes by naming an exit code, carrying a citation, or labelling itself advisory / model-judgment / opt-in / a nag. It decides **shape, never fact**: whether the exit code named is the real one is a reader's question. That is the mechanical half of a defect class this repo has shipped nine times (`RESEARCH.md` F19, F25).
+
+Deliberately narrow. Matching the bare verbs flagged 113 lines here, nearly all nouns and adjectives — "doubt gate", "env-gated backstops", "the three write-time gates". A claim is now a backticked name followed by a finite verb, and a verb trailed by a past participle is read as a noun. That trades misses for false positives on purpose: a lint that flags honest prose gets deleted, and then it catches nothing.

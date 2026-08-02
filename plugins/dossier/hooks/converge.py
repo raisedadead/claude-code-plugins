@@ -107,12 +107,37 @@ def _fail(reason: str) -> int:
     return PARSE
 
 
-def _newest_contract(root: Path) -> Path | None:
+LEDGER_GLOB = ".scratchpad/dossier/*/DOSSIER.md"
+
+
+def _live_slugs(root: Path) -> list[str]:
+    found: list[str] = []
+    for ledger in sorted(root.glob(LEDGER_GLOB)):
+        try:
+            head = ledger.read_text(encoding="utf-8", errors="replace")[:400]
+        except OSError:
+            continue
+        if "`live`" in head:
+            found.append(ledger.parent.name)
+    return found
+
+
+def _default_contract(root: Path) -> Path | None:
+    """The live wave's contract, never the alphabetically last one.
+
+    Sorting picked a closed wave's contract the first time two shared a date,
+    and ran its criteria instead. The prompt hook had the same defect; fixing
+    one and leaving the twin is the shape this repo keeps catching.
+    """
     folder = root / CONTRACT_DIR
     if not folder.is_dir():
         return None
-    found = sorted(p for p in folder.glob("*.md") if p.is_file())
-    return found[-1] if found else None
+    contracts = sorted(p for p in folder.glob("*.md") if p.is_file())
+    for slug in _live_slugs(root):
+        for candidate in contracts:
+            if slug.endswith(candidate.stem) or candidate.stem.endswith(slug):
+                return candidate
+    return contracts[-1] if contracts else None
 
 
 def _depth() -> int:
@@ -135,7 +160,7 @@ def main(argv: list[str]) -> int:
     if depth >= MAX_DEPTH:
         return _fail(f"converge nested {depth} deep; refusing to recurse further")
     if len(argv) < 2:
-        found = _newest_contract(Path.cwd())
+        found = _default_contract(Path.cwd())
         if found is None:
             return _fail("no contract given and none found under .dossier/")
         contract = found
@@ -148,6 +173,7 @@ def main(argv: list[str]) -> int:
     criteria = _criteria(text)
     if not criteria:
         return _fail("no done-when table, or it holds no numbered rows")
+    print(f"contract: {contract}")
 
     for ident, command, expect in criteria:
         if not _is_command(command):

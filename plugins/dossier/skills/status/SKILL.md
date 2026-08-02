@@ -33,7 +33,7 @@ Warn (never block) when the tree needs tidying:
 
 - **>1 live dossier** (Vm.12): print a CONSOLIDATE block listing each live slug + its §S-tail age, then suggest picking the current one and **pausing** or **closing** the rest.
 - **stale-live** (Vm.13): any live dossier whose last §S entry is older than `${DS_STALE_LIVE_DAYS:-14}` days → suggest pause or `ds:close --abandon`.
-- **drift** (Vm.15): if the INDEX carries a `<!-- drift:N slugs:... -->` trailer (any dossier rendered `drift!` — header/location/§Z disagreement, the sealed-zombie class), print a DRIFT block naming each drift slug and its likely cause, then route it: a `§Z`-closed drift auto-heals on the next SessionStart (session-start runs `lib-reconcile-state.sh`); anything else is operator-resolved — finish the close (`ds:close --resume`) or correct the header via `lib-header-state.sh` (never a raw Edit — `marker_guard.py` blocks a non-canonical token). Run `hooks/lib-ds-check.sh .scratchpad` for the deterministic list.
+- **drift** (Vm.15): if the INDEX carries a `<!-- drift:N slugs:... -->` trailer (any dossier rendered `drift!` — header/location/§Z disagreement, the sealed-zombie class), print a DRIFT block naming each drift slug and its likely cause, then route it: a `§Z`-closed drift auto-heals on the next SessionStart (session-start runs `lib-reconcile-state.sh`); anything else is operator-resolved — finish the close (`ds:close --resume`) or correct the header via `lib-header-state.sh` (never a raw Edit — `marker_guard.py` blocks a non-canonical token at exit 2). Run `hooks/lib-ds-check.sh .scratchpad` for the deterministic list.
 
 ds:status only SUGGESTS — it never flips state itself. The operator (or the model on explicit request) performs an action below.
 

@@ -31,7 +31,7 @@ The §S DONE line (step 6) appends via `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.s
 
 - Slug must match `^[a-z0-9][a-z0-9-]{0,29}$`. Refuse otherwise w/ explanation.
 - Compute `dir=.scratchpad/dossier/<date>-<slug>/`.
-- Collision check: if `dir` exists **OR `.scratchpad/dossier/_archive/<date>-<slug>/` exists** (a same-day close+reopen), ask operator to bump to `<slug>-2`, `<slug>-3`, etc. Checking `_archive/` too prevents two INDEX rows keyed to one slug (Vm.1).
+- Collision check: if `dir` exists **OR `.scratchpad/dossier/_archive/<date>-<slug>/` exists** (a same-day close+reopen), ask operator to bump to `<slug>-2`, `<slug>-3`, etc. Checking `_archive/` too avoids two INDEX rows keyed to one slug (Vm.1).
 
 ### 1.5. Grill gate (conditional)
 

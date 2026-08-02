@@ -1,6 +1,6 @@
 # SKILL.md anatomy
 
-The shape a well-formed skill converges on. `lint_skill.py` enforces the mechanical parts; this is the structure to diff a new skill against by hand.
+The shape a well-formed skill converges on. `lint_skill.py` enforces the mechanical parts at exit 1; this is the structure to diff a new skill against by hand.
 
 ## Frontmatter
 

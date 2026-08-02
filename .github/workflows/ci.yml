@@ -96,6 +96,11 @@ jobs:
           pip install -r requirements-dev.txt
           ruff check plugins/whetstone
 
+      - name: claim-check
+        run: |
+          git ls-files '*.md' | grep -v tests/fixtures/ \
+            | xargs python3 plugins/whetstone/skills/skill-smith/scripts/claim_check.py
+
       - name: shellcheck
         env:
           # renovate: datasource=github-releases depName=koalaman/shellcheck

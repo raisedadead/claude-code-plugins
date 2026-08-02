@@ -11,10 +11,10 @@
 | id  | command                                                           | expect    |
 | --- | ----------------------------------------------------------------- | --------- |
 | 1   | `python3 plugins/whetstone/tests/test_claim_check.py`             | exit 0    |
-| 2   | `claim-check plugins/whetstone/tests/fixtures/claims-false.md`    | exit 1    |
-| 3   | `claim-check plugins/whetstone/tests/fixtures/claims-true.md`     | exit 0    |
-| 4   | `claim-check plugins/whetstone/tests/fixtures/claims-labelled.md` | exit 0    |
-| 5   | `claim-check $(git ls-files '*.md')`                              | exit 0    |
+| 2   | `bash plugins/whetstone/bin/claim-check plugins/whetstone/tests/fixtures/claims-false.md`    | exit 1    |
+| 3   | `bash plugins/whetstone/bin/claim-check plugins/whetstone/tests/fixtures/claims-true.md`     | exit 0    |
+| 4   | `bash plugins/whetstone/bin/claim-check plugins/whetstone/tests/fixtures/claims-labelled.md` | exit 0    |
+| 5   | `bash plugins/whetstone/bin/claim-check $(git ls-files '*.md' \| grep -v tests/fixtures/)`                              | exit 0    |
 | 6   | `test -x plugins/whetstone/bin/claim-check`                       | exit 0    |
 | 7   | `grep -c claim-check .github/workflows/ci.yml`                    | stdout: 1 |
 | 8   | `ruff check plugins`                                              | exit 0    |

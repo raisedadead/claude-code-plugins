@@ -47,7 +47,7 @@ Skip pure formatting nits — a formatter owns those.
 
 ## Severity prefixes
 
-Prefix every finding. Only `Critical` gates the commit.
+Prefix every finding. Only `Critical` gates the commit, and that routing is model-judgment parsed from this verdict, never computed.
 
 - `Critical:` — the change is wrong, incomplete against the contract, or introduces a regression. Blocks commit.
 - `Warn:` — real problem, does not block (stale comment, missing edge-case test, narrow smell).

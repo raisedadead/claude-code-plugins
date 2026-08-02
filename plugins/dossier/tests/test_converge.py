@@ -6,6 +6,7 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parent.parent
@@ -218,6 +219,40 @@ def test_the_shell_wrapper_agrees_with_the_module() -> None:
         env=_clean_env(),
     )
     assert viashell.returncode == direct.returncode, viashell.stdout + viashell.stderr
+
+
+def test_the_default_contract_is_the_live_wave_not_the_last_sorted() -> None:
+    """Selecting by sort order ran a closed wave's contract. Twice."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / ".dossier").mkdir()
+        body = (
+            "# {slug}\n\n## done-when\n\n"
+            "| id  | command | expect |\n"
+            "| --- | ------- | ------ |\n"
+            "| 1   | `true`  | exit 0 |\n"
+        )
+        (root / ".dossier" / "2026-08-01-aaa-live.md").write_text(
+            body.format(slug="aaa-live"), encoding="utf-8"
+        )
+        (root / ".dossier" / "2026-08-01-zzz-closed.md").write_text(
+            body.format(slug="zzz-closed"), encoding="utf-8"
+        )
+        wave = root / ".scratchpad" / "dossier" / "2026-08-01-aaa-live"
+        wave.mkdir(parents=True)
+        (wave / "DOSSIER.md").write_text(
+            "\n".join(["# aaa-live", "", "`2026-08-01` · `live` · `P1/1`", ""]),
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [sys.executable, str(CONVERGE)],
+            capture_output=True,
+            text=True,
+            cwd=root,
+            env=_clean_env(),
+        )
+        assert "aaa-live" in result.stdout, result.stdout
+        assert "zzz-closed" not in result.stdout, result.stdout
 
 
 def _main() -> int:
