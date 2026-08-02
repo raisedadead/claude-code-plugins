@@ -895,6 +895,45 @@ def test_the_root_config_is_reached_past_a_non_root_one() -> None:
         assert "limit 40" in result.stdout, result.stdout
 
 
+def test_an_unparseable_section_glob_is_not_read_as_a_block() -> None:
+    """`[[!]]` used to splice into `[^]` and raise; the traceback exited 1 —
+    the checker's own BLOCK code — so a broken config read as a real offence."""
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, ".editorconfig", "root = true\n\n[[!]]\nmax_line_length = 40\n")
+        _write(repo, "a.py", _line(120))
+        _git(repo, "add", ".editorconfig", "a.py")
+        result = _run(repo)
+        assert result.returncode == NAG, result.stdout + result.stderr
+        assert "TIGER: NAG 1" in result.stdout, result.stdout
+
+
+def test_a_wildcard_heavy_section_glob_does_not_hang() -> None:
+    """Twelve star groups against a long path backtracked for minutes, which is
+    a stall on every commit for whoever wrote that `.editorconfig`."""
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        glob = "*a" * 12 + "*b"
+        _write(
+            repo, ".editorconfig", f"root = true\n\n[{glob}]\nmax_line_length = 40\n"
+        )
+        name = "a" * 120 + ".py"
+        _write(repo, name, _line(120))
+        _git(repo, "add", ".editorconfig", name)
+        env = dict(os.environ)
+        env.pop("WHETSTONE_TIGER_COLS", None)
+        result = subprocess.run(
+            [sys.executable, str(CHECK), str(repo)],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            env=env,
+        )
+        assert result.returncode == NAG, result.stdout + result.stderr
+
+
 def _main() -> int:
     failures = 0
     for name, fn in sorted(globals().items()):

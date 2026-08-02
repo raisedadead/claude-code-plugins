@@ -57,18 +57,23 @@ def _is_command(text: str) -> bool:
         return False
 
 
-def _criteria(text: str) -> list[tuple[str, str, str]]:
+def _numbered_rows(text: str) -> list[list[str]]:
+    """Every done-when row whose id cell is a number, well-formed or not.
+
+    Shape is judged by the caller, never here. A row that lost its `expect` cell
+    to a formatter used to be skipped by this parser while the prompt hook still
+    counted it, so `MET 1/1` printed for a contract whose second criterion never
+    ran. The hook counts through this same function for that reason.
+    """
     section = text.split("## done-when", 1)
     if len(section) != 2:
         return []
     body = section[1].split("\n## ", 1)[0]
-    found: list[tuple[str, str, str]] = []
-    for line in body.splitlines():
-        cells = _cells(line)
-        if len(cells) < 3 or not cells[0].isdigit():
-            continue
-        found.append((cells[0], cells[1], cells[2]))
-    return found
+    return [
+        cells
+        for line in body.splitlines()
+        if (cells := _cells(line)) and cells[0].isdigit()
+    ]
 
 
 def _consumer(text: str) -> bool:
@@ -165,6 +170,18 @@ def _contract_for(root: Path, slug: str) -> Path | None:
     return None
 
 
+def _untracked(contract: Path) -> bool:
+    """True for the wave-dir home, the one no diff ever showed a reviewer.
+
+    Criteria reach a shell and `ds:close` resolves a contract with no argument,
+    so the weaker home is named in the header instead of read silently. This
+    reads the home from the filename rather than asking git: `_contract_for`
+    only ever returns `CONTRACT.md` from a wave directory, and the header says
+    which home won rather than what git currently knows about the file.
+    """
+    return contract.name == "CONTRACT.md"
+
+
 def _depth() -> int:
     """How many converge runs are already on the stack.
 
@@ -202,12 +219,16 @@ def main(argv: list[str]) -> int:
         return _fail(f"no contract at {contract}")
     text = contract.read_text(encoding="utf-8", errors="replace")
 
-    criteria = _criteria(text)
-    if not criteria:
+    rows = _numbered_rows(text)
+    if not rows:
         return _fail("no done-when table, or it holds no numbered rows")
-    print(f"contract: {contract}")
+    home = " (wave-dir, untracked)" if _untracked(contract) else ""
+    print(f"contract: {contract}{home}", flush=True)
 
-    for ident, command, expect in criteria:
+    for row in rows:
+        if len(row) != 3:
+            return _fail(f"criterion {row[0]} is not exactly id | command | expect")
+        ident, command, expect = row
         if not _is_command(command):
             return _fail(f"criterion {ident} is not a backticked command: {command!r}")
         if not _EXPECT.fullmatch(expect.strip()):
@@ -216,9 +237,13 @@ def main(argv: list[str]) -> int:
     if not _consumer(text):
         return _fail(f"{contract} names no consumer")
 
+    for ident, command, _ in rows:
+        print(f"will run {ident}. {command[1:-1]}")
+    sys.stdout.flush()
+
     root = Path.cwd()
     unmet = 0
-    for ident, command, expect in criteria:
+    for ident, command, expect in rows:
         bare = command[1:-1]
         code, out = _run(bare, root, depth)
         ok = _met(expect, code, out)
@@ -226,9 +251,9 @@ def main(argv: list[str]) -> int:
         print(f"  {'MET  ' if ok else 'UNMET'} {ident}. {bare}  [{expect}]")
 
     if unmet:
-        print(f"CONVERGE: UNMET {unmet} of {len(criteria)}")
+        print(f"CONVERGE: UNMET {unmet} of {len(rows)}")
         return UNMET
-    print(f"CONVERGE: MET {len(criteria)}/{len(criteria)}")
+    print(f"CONVERGE: MET {len(rows)}/{len(rows)}")
     return MET
 
 

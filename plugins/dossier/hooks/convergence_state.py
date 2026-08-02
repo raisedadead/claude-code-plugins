@@ -27,9 +27,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from converge import _cells, _contract_for, _live_slugs
+from converge import _cells, _contract_for, _live_slugs, _numbered_rows
 
-RECENT_COMMITS = 5
 GIT_TIMEOUT = 5
 
 RUNTIME_SUFFIXES = (".py", ".sh", ".js", ".ts", ".go", ".rs", ".rb")
@@ -52,13 +51,12 @@ def _git(root: Path, *args: str) -> str:
 
 
 def _criteria_count(text: str) -> int:
-    section = text.split("## done-when", 1)
-    if len(section) != 2:
-        return 0
-    body = section[1].split("\n## ", 1)[0]
-    return sum(
-        1 for line in body.splitlines() if (c := _cells(line)) and c[0].isdigit()
-    )
+    """Rows the runner will judge, counted by the runner's own predicate.
+
+    Counting here and parsing there once diverged: a row missing its `expect`
+    cell was counted as a criterion and skipped as one.
+    """
+    return len(_numbered_rows(text))
 
 
 def _field(text: str, name: str) -> str:

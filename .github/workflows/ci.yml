@@ -56,11 +56,22 @@ jobs:
           test "$(grep -oiE "$pattern" plugins/dossier/skills/build/SKILL.md | wc -l)" -le 13
           test "$(grep -oiE "$pattern" plugins/dossier/agents/dossier-reviewer.md | wc -l)" -le 9
           test "$(grep -oiE "$pattern" CLAUDE.md | wc -l)" -le 1
-          contract=.dossier/2026-08-02-positive-rails.md
-          rows=$(sed -n '/^## survivors/,/^## what changes/p' "$contract" | grep -c -e '| fact' -e '| guarded' -e '| hatch')
+          # ds:close archives a tracked contract, so look in both homes.
+          contract=$(find .dossier -maxdepth 1 -name '*positive-rails*.md' 2>/dev/null | LC_ALL=C sort | head -n 1)
+          if [ -z "$contract" ]; then
+            contract=$(find .dossier/_archive -maxdepth 1 -name '*positive-rails*.md' 2>/dev/null | LC_ALL=C sort | head -n 1)
+          fi
+          if [ -z "$contract" ]; then
+            echo "no positive-rails contract under .dossier/ or .dossier/_archive/" >&2
+            exit 1
+          fi
+          rows=$(sed -n '/^## survivors/,/^## what changes/p' "$contract" | grep -c -e '| fact' -e '| guarded' -e '| hatch' || true)
           # shellcheck disable=SC2086
-          total=$(grep -oiE "$pattern" $files | wc -l)
-          test "$rows" -eq "$total"
+          total=$(grep -oiE "$pattern" $files | wc -l | tr -d ' ')
+          if [ "$rows" -ne "$total" ]; then
+            echo "$contract lists $rows survivors; the rails carry $total occurrences" >&2
+            exit 1
+          fi
 
       - name: first-party manifest + skill validation
         run: |

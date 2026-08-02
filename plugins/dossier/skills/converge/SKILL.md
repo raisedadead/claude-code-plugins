@@ -16,6 +16,8 @@ bash "${CLAUDE_PLUGIN_ROOT}"/hooks/lib-converge.sh [contract-path]
 
 With no argument the runner resolves the live wave's contract — the tracked `.dossier/` home first, then the wave directory's own `CONTRACT.md`. No live wave is `PARSE`: a closed wave's contract runs only by explicit path.
 
+A criterion is a shell command, and `ds:close` resolves one with no argument, so the runner names what it is about to do before it does any of it: a `contract: <path>` header (carrying `(wave-dir, untracked)` when that home won) and one `will run <id>. <command>` line per criterion, flushed before the first command starts — a pipe would otherwise hold the block until the run ended, which is every caller here. In a repo somebody else wrote, read that block: the untracked home in particular is a file no diff ever showed a reviewer.
+
 | exit | line                         | meaning                                   |
 | ---- | ---------------------------- | ----------------------------------------- |
 | 0    | `CONVERGE: MET <n>/<n>`      | every criterion met — the wave is over    |
@@ -45,10 +47,14 @@ With no argument the runner resolves the live wave's contract — the tracked `.
 
 `expect` is `exit <n>`, `stdout: <substring>`, or `stdout: (nothing)`.
 
-Three shapes the runner refuses at parse time — each one is `CONVERGE: PARSE`, exit 2:
+Four shapes the runner refuses at parse time — each one is `CONVERGE: PARSE`, exit 2:
+
+- **A numbered row that is not exactly `id | command | expect`.** A row whose `expect` cell was lost to a formatter used to be skipped while the prompt hook still counted it — `MET 1/1` for a contract of two criteria, one of which never ran. (A row with an extra cell, which is how an unescaped pipe arrives, was already refused for not being backticked.)
 
 - **A prose criterion.** Every criterion is a backticked command — `the tests should pass` would otherwise reach the shell, run `the`, and report whatever that did.
+
 - **A missing or empty `consumer`.** It is the field that asks whether the work reaches anyone, and the one nobody writes unprompted. A wave once hardened a checker through three review rounds while no consumer could execute it.
+
 - **An empty or unreadable `expect`.** A bare `stdout:` with no substring would match every output and report MET on any command that exits 0, so it is refused with the malformed rest.
 
 Nesting is bounded, not banned. A criterion may invoke the runner — this runner's own contract does exactly that — and the invocation count travels in `DS_CONVERGE_DEPTH`: one nested level runs, the next refuses (`CONVERGE: PARSE`, exit 2). Reading the command string cannot decide what will recurse; counting invocations can.

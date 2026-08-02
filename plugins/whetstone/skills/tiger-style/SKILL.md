@@ -34,7 +34,7 @@ Each offence prints as `path:line: <width> cols (limit <n>)` before the verdict 
 
 `CLEAN 0 files` and `CLEAN 3 files` are both exit 0, and the difference matters: the first means nothing was measured. A caller that reads only the exit code cannot tell "checked, fine" from "checked nothing" — which is how a mis-typed `git add` reads as a pass.
 
-Nothing measured has two causes, so the line separates them. A bare `CLEAN 0 files` is an empty index. `CLEAN 0 files, 2 skipped` is a commit whose every file was prose, data, or declared `off` — a docs-only or lockfile-bump commit reaches it correctly, and it is not a mistake. Only the bare form is worth checking your `git add` over.
+`CLEAN 0 files, 2 skipped` is a commit whose every file was prose, data, or declared `off` — a docs-only or lockfile-bump commit reaches it correctly, and it is not a mistake. A bare `CLEAN 0 files` means no added, copied, modified, renamed or type-changed path was staged at all, which has two causes: an empty index, or a commit that stages only deletions. Deletions have no added lines to measure, so they reach neither counter. Check your `git add` over the bare form when the commit was meant to change a file.
 
 One run can turn up both kinds at once — a declared-limit offence in one file and a fallback offence in another. Every offence is printed either way, but `<n>` in the verdict counts only the kind the verdict names. A fallback offence is never counted into a `BLOCK` and never blocks a commit, whatever else the run found.
 

@@ -18,7 +18,7 @@ Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — ev
 
   The split is the point. A repo that has stated its limit gets it enforced; a repo that has not gets told, never stopped. The other four TIGER_STYLE rules — function length, assert adequacy, loop bounds, magic numbers — need a reader, so they ship as a labelled manual pass with no exit code, and the skill says plainly that nothing enforces them. A checklist that presents itself as a gate is worse than no gate.
 
-  Width is display columns, not code points: a tab advances to its stop, a wide character counts two, a combining mark counts zero. A verdict line carries how many files were examined and how many were staged but skipped, so an empty index is distinguishable from a docs-only commit rather than reading as the same "clean".
+  Width is display columns, not code points: a tab advances to its stop, a wide character counts two, a combining mark counts zero. A verdict line carries how many files were examined and how many were staged but skipped, so a docs-only commit reads differently from a real pass rather than as the same "clean". A bare `CLEAN 0 files` covers an empty index and a deletion-only commit alike — a deletion adds no line to measure.
 
   Ships on `PATH` as `bin/tiger-check`: Claude Code adds an enabled plugin's `bin/` to the Bash tool's `PATH`, so a consuming project reaches the checker without configuration. An earlier draft of this entry said the composed route could not address its sibling from the plugin cache — `bin/` is what closed that.
 

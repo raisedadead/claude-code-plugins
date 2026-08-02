@@ -181,40 +181,112 @@ def _expand_braces(pattern: str) -> list[str]:
         current = expanded
 
 
-def _glob_to_regex(pattern: str) -> str:
-    out, i = [], 0
+GLOBSTAR_SLASH, GLOBSTAR, STAR, ANY, CLASS, LIT = "**/", "**", "*", "?", "[]", "c"
+
+
+def _tokens(pattern: str) -> list[tuple[str, str]]:
+    """Split a section header into match tokens. A bare glob matches anywhere.
+
+    Tokens rather than a compiled regex, because the header is repo-controlled
+    text and compiling it had two failure modes of its own: `[[!]]` spliced into
+    a character class raised `re.error`, whose traceback exits 1 — the code this
+    tool uses for BLOCK — and `*a*a...*b` against a long path backtracked for
+    minutes. Matching over tokens (`_glob_matches`) is linear in the path and
+    can neither raise nor stall.
+    """
+    out: list[tuple[str, str]] = []
+    i = 0
     while i < len(pattern):
         char = pattern[i]
         if pattern.startswith("**/", i):
-            out.append("(?:.*/)?")
+            out.append((GLOBSTAR_SLASH, ""))
             i += 3
         elif pattern.startswith("**", i):
-            out.append(".*")
+            out.append((GLOBSTAR, ""))
             i += 2
         elif char == "*":
-            out.append("[^/]*")
+            out.append((STAR, ""))
             i += 1
         elif char == "?":
-            out.append("[^/]")
+            out.append((ANY, ""))
             i += 1
         elif char == "[":
             close = pattern.find("]", i + 1)
             if close == -1:
-                out.append(re.escape(char))
+                out.append((LIT, char))
                 i += 1
             else:
-                body = pattern[i + 1 : close]
-                if body.startswith("!"):
-                    body = "^" + body[1:]
-                out.append("[" + body + "]")
+                out.append((CLASS, pattern[i + 1 : close]))
                 i = close + 1
         else:
-            out.append(re.escape(char))
+            out.append((LIT, char))
             i += 1
-    body = "".join(out)
     if "/" not in pattern:
-        body = "(?:.*/)?" + body
-    return "^" + body + "$"
+        out.insert(0, (GLOBSTAR_SLASH, ""))
+    return out
+
+
+def _in_class(body: str, char: str) -> bool:
+    """One character against a `[abc]` / `[a-z]` / `[!abc]` body."""
+    negated = body.startswith("!")
+    if negated:
+        body = body[1:]
+    hit = False
+    i = 0
+    while i < len(body):
+        if i + 2 < len(body) and body[i + 1] == "-":
+            hit = hit or body[i] <= char <= body[i + 2]
+            i += 3
+        else:
+            hit = hit or body[i] == char
+            i += 1
+    return hit != negated
+
+
+def _glob_matches(pattern: str, path: str) -> bool:
+    """Whether one section glob covers one repo-relative path.
+
+    Reachable path positions are carried forward one token at a time, so the
+    cost is tokens times path length whatever the header contains. `*` and `?`
+    stop at a directory boundary; `**` crosses one.
+    """
+    length = len(path)
+    reachable = [False] * (length + 1)
+    reachable[0] = True
+    for kind, body in _tokens(pattern):
+        nxt = [False] * (length + 1)
+        if kind == STAR:
+            run = False
+            for j in range(length + 1):
+                run = run or reachable[j]
+                nxt[j] = run
+                if j < length and path[j] == "/":
+                    run = False
+        elif kind == GLOBSTAR:
+            run = False
+            for j in range(length + 1):
+                run = run or reachable[j]
+                nxt[j] = run
+        elif kind == GLOBSTAR_SLASH:
+            run = False
+            for j in range(length + 1):
+                run = run or reachable[j]
+                nxt[j] = reachable[j] or (run and j > 0 and path[j - 1] == "/")
+        else:
+            for j in range(length):
+                if not reachable[j]:
+                    continue
+                char = path[j]
+                if kind == LIT:
+                    nxt[j + 1] = char == body
+                elif kind == ANY:
+                    nxt[j + 1] = char != "/"
+                else:
+                    nxt[j + 1] = _in_class(body, char)
+        if not any(nxt):
+            return False
+        reachable = nxt
+    return reachable[length]
 
 
 def _sections(text: str) -> list[tuple[str, dict[str, str]]]:
@@ -276,9 +348,7 @@ def _editorconfig_limit(root: Path, rel: str) -> int | None:
         for glob, values in _sections(text):
             if not glob or "max_line_length" not in values:
                 continue
-            if not any(
-                re.match(_glob_to_regex(alt), scoped) for alt in _expand_braces(glob)
-            ):
+            if not any(_glob_matches(alt, scoped) for alt in _expand_braces(glob)):
                 continue
             raw = values["max_line_length"].lower()
             if raw == "off":

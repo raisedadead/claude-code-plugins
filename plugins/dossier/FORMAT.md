@@ -8,6 +8,7 @@ Design goals: caveman-compressed, pipe-tables for state, append-only logs, atomi
 
 - `1` File location + naming
 - `2` DOSSIER.md section order
+- `2.5` Wave contract (its own file, outside the ledger)
 - `3` Caveman encoding
 - `4` §G — Goal
 - `5` §C — Constraints
@@ -58,14 +59,6 @@ Headings are fixed. Order is fixed. Skills parse positionally.
 ## §I — Interfaces
 ## §V — Invariants
 ## §T — Task ledger
-## Wave contract (tracked, outside the ledger)
-
-A wave's definition of done lives in `.dossier/<date>-<slug>.md` where the repo has opted in by creating that directory — tracked, citable as evidence, outliving the wave, and archived to `.dossier/_archive/` by `ds:close`. A repo that never opted in gets `<wave-dir>/CONTRACT.md` instead: untracked, archived with the ledger, citable by nobody — the degraded home is priced at write time rather than hidden. Resolution prefers the tracked home.
-
-Shape: a `field | value` table carrying `consumer`, `reached-via` and `budget`, then a `## done-when` table of `id | command | expect`. Every command is backticked and every `expect` is `exit <n>`, `stdout: <substring>` or `stdout: (nothing)`. `ds:converge` runs them; prose criteria, a missing or empty `consumer`, and a bare `stdout:` are each refused at parse time (`CONVERGE: PARSE`, exit 2) rather than reaching a shell. Of the other two fields, `budget` is read by the prompt hook for its commits-spent line — in the tracked home only, since the count starts at the commit that added the contract; `reached-via` is read by no code — it is there for the reviewer.
-
-A pipe inside a command is written `\|` so the row survives; the runner unescapes it. Tables are used rather than prose lists because prettier merges adjacent paragraphs and renumbers ordered lists, and a contract that the formatter rewrites is a contract the runner misreads.
-
 ## §B — Bug ledger
 ## §X — Cross-repo state
 ## §S — Rolling status log
@@ -73,6 +66,14 @@ A pipe inside a command is written `\|` so the row survives; the runner unescape
 ```
 
 State values: `live` | `done` | `paused`. Default at `ds:new` = `live`. The header state token is flipped atomically by `lib-header-state.sh` (§15): `ds:close` sets `done`; the `ds:status` pause/resume actions toggle `live` ↔ `paused`. A `paused` dossier stays a direct child of `dossier/` (not archived — pause is reversible) and is excluded from the live-count + the SessionStart "current live" pick.
+
+## 2.5 Wave contract (its own file, outside the ledger)
+
+A wave's definition of done is a separate file — DOSSIER.md carries no contract heading, and the nine headings above are the whole ledger. It lives at `.dossier/<date>-<slug>.md` where the repo has opted in by creating that directory: tracked, citable as evidence, outliving the wave, and archived to `.dossier/_archive/` by `ds:close`. A repo that never opted in gets `<wave-dir>/CONTRACT.md` instead: untracked, archived with the ledger, citable by nobody — the degraded home is priced at write time rather than hidden. Resolution prefers the tracked home.
+
+Shape: a `field | value` table carrying `consumer`, `reached-via` and `budget`, then a `## done-when` table of `id | command | expect`. Every command is backticked and every `expect` is `exit <n>`, `stdout: <substring>` or `stdout: (nothing)`. `ds:converge` runs them; prose criteria, a missing or empty `consumer`, a bare `stdout:`, and a numbered row that is not exactly `id | command | expect` are each refused at parse time (`CONVERGE: PARSE`, exit 2) rather than reaching a shell. Of the other two fields, `budget` is read by the prompt hook for its commits-spent line — in the tracked home only, since the count starts at the commit that added the contract; `reached-via` is read by no code — it is there for the reviewer.
+
+A pipe inside a command is written `\|` so the row survives; the runner unescapes it. Tables are used rather than prose lists because prettier merges adjacent paragraphs and renumbers ordered lists, and a contract that the formatter rewrites is a contract the runner misreads.
 
 ## 3. Caveman encoding
 

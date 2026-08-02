@@ -7,6 +7,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parent.parent
@@ -457,6 +458,145 @@ def test_an_empty_stdout_expect_fails_the_parse() -> None:
         result = _run(contract)
         assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
         assert result.returncode == PARSE, result.stdout
+
+
+def _malformed(row: str) -> subprocess.CompletedProcess[str]:
+    with tempfile.TemporaryDirectory() as tmp:
+        contract = Path(tmp) / "malformed.md"
+        contract.write_text(
+            "# c\n\n| field    | value |\n| -------- | ----- |\n| consumer | tests |\n\n"
+            "## done-when\n\n"
+            "| id  | command | expect |\n"
+            "| --- | ------- | ------ |\n"
+            "| 1   | `true`  | exit 0 |\n" + row,
+            encoding="utf-8",
+        )
+        return _run(contract)
+
+
+def test_a_numbered_row_missing_a_cell_fails_the_parse() -> None:
+    """A criterion whose `expect` cell is gone reported MET on the rows that
+    survived, so a wave was declared over on a criterion that never ran."""
+    result = _malformed("| 2   | `false` |\n")
+    verdict = _verdict(result)
+    assert verdict.startswith("CONVERGE: PARSE"), result.stdout + result.stderr
+    assert "2" in verdict, result.stdout
+    assert result.returncode == PARSE, result.stdout
+
+
+def test_a_numbered_row_with_an_extra_cell_fails_the_parse() -> None:
+    """An unescaped pipe splits one command into two cells. This shape was
+    already refused for not being backticked; the row-shape gate names it."""
+    result = _malformed("| 2   | `echo a | cat` | exit 0 |\n")
+    assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
+    assert "not exactly id | command | expect" in _verdict(result), result.stdout
+    assert result.returncode == PARSE, result.stdout
+
+
+def test_the_prompt_hook_counts_the_rows_this_runner_refuses() -> None:
+    """The hook counts a row the runner will refuse, so no row is counted by one
+    and skipped by the other — which is how `MET 1/1` printed for two criteria."""
+    sys.path.insert(0, str(PLUGIN / "hooks"))
+    from converge import _numbered_rows
+    from convergence_state import _criteria_count
+
+    text = (
+        "# c\n\n## done-when\n\n"
+        "| id  | command | expect |\n"
+        "| --- | ------- | ------ |\n"
+        "| 1   | `true`  | exit 0 |\n"
+        "| 2   | `false` |\n"
+    )
+    assert len(_numbered_rows(text)) == 2
+    assert _criteria_count(text) == 2
+
+
+def test_a_matching_substring_with_a_failed_command_is_unmet() -> None:
+    """Right text, failed command. `stdout:` carries an exit-zero conjunct and
+    nothing pinned it."""
+    with tempfile.TemporaryDirectory() as tmp:
+        contract = Path(tmp) / "loud-failure.md"
+        contract.write_text(
+            "# c\n\n| field    | value |\n| -------- | ----- |\n| consumer | tests |\n\n"
+            "## done-when\n\n"
+            "| id  | command                        | expect        |\n"
+            "| --- | ----------------------------- | ------------- |\n"
+            "| 1   | `sh -c 'echo hello; exit 3'`  | stdout: hello |\n",
+            encoding="utf-8",
+        )
+        result = _run(contract)
+        assert _verdict(result) == "CONVERGE: UNMET 1 of 1", result.stdout
+        assert result.returncode == UNMET, result.stdout
+
+
+def test_stdout_nothing_with_a_failed_command_is_unmet() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        contract = Path(tmp) / "silent-failure.md"
+        contract.write_text(
+            "# c\n\n| field    | value |\n| -------- | ----- |\n| consumer | tests |\n\n"
+            "## done-when\n\n"
+            "| id  | command        | expect            |\n"
+            "| --- | -------------- | ----------------- |\n"
+            "| 1   | `sh -c 'exit 3'` | stdout: (nothing) |\n",
+            encoding="utf-8",
+        )
+        result = _run(contract)
+        assert _verdict(result) == "CONVERGE: UNMET 1 of 1", result.stdout
+        assert result.returncode == UNMET, result.stdout
+
+
+def test_the_plan_block_reaches_a_pipe_while_the_run_is_still_going() -> None:
+    """Ordering in the buffer is not ordering for the reader. Python block-
+    buffers stdout when it is not a terminal, and every caller here reads a
+    pipe, so without a flush the block a reader is told to read arrives after
+    every command has already run."""
+    with tempfile.TemporaryDirectory() as tmp:
+        contract = Path(tmp) / "slow.md"
+        contract.write_text(
+            "# c\n\n| field    | value |\n| -------- | ----- |\n| consumer | tests |\n\n"
+            "## done-when\n\n"
+            "| id  | command           | expect |\n"
+            "| --- | ----------------- | ------ |\n"
+            "| 1   | `sh -c 'sleep 4'` | exit 0 |\n",
+            encoding="utf-8",
+        )
+        env = _clean_env()
+        env.pop("PYTHONUNBUFFERED", None)
+        started = time.perf_counter()
+        proc = subprocess.Popen(
+            [sys.executable, str(CONVERGE), str(contract)],
+            stdout=subprocess.PIPE,
+            text=True,
+            cwd=REPO,
+            env=env,
+        )
+        planned: float | None = None
+        try:
+            assert proc.stdout is not None
+            while True:
+                line = proc.stdout.readline()
+                if not line:
+                    break
+                if line.startswith("will run "):
+                    planned = time.perf_counter() - started
+                    break
+        finally:
+            proc.stdout.close() if proc.stdout else None
+            proc.wait(timeout=30)
+        assert planned is not None, "no will-run line"
+        assert planned < 2.0, f"plan block arrived after {planned:.2f}s"
+
+
+def test_every_command_is_named_before_the_first_one_runs() -> None:
+    """A contract's criteria are shell, and `ds:close` resolves one with no
+    argument. The commands are printed as a block first so a reader sees what
+    is about to run rather than reconstructing it afterwards."""
+    result = _run(FIXTURES / "met.md")
+    lines = result.stdout.splitlines()
+    planned = [i for i, line in enumerate(lines) if line.startswith("will run ")]
+    ran = [i for i, line in enumerate(lines) if line.startswith(("  MET", "  UNMET"))]
+    assert len(planned) == len(ran) == 5, result.stdout
+    assert max(planned) < min(ran), result.stdout
 
 
 def _main() -> int:
