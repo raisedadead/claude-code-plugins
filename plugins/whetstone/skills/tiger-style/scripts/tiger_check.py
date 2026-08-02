@@ -378,9 +378,12 @@ def _positive_int(raw: str) -> int | None:
 def _env_limit() -> int | None:
     """Parse WHETSTONE_TIGER_COLS, and say so out loud when it is unusable.
 
-    Falling through to the fallback in silence is the worse failure: the
-    operator who typed `WHETSTONE_TIGER_COLS=0` believes a declared limit is
-    blocking commits, and gets an advisory nag that blocks nothing.
+    An unusable value is dropped and resolution continues at the next source —
+    `.editorconfig`, then the 100-column fallback — so the operator who typed
+    `WHETSTONE_TIGER_COLS=0` gets whatever that repo declares rather than the
+    limit they thought they set. Naming it on stderr is what makes the
+    difference visible; silence would leave them reading someone else's number
+    as their own.
     """
     raw = os.environ.get("WHETSTONE_TIGER_COLS", "").strip()
     if not raw:

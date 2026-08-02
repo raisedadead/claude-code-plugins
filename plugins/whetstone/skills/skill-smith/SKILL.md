@@ -5,11 +5,11 @@ description: Lint and structure-check a SKILL.md — frontmatter, line budget, t
 
 # skill-smith — lint a SKILL.md
 
-A skill is only as good as its routing and its shape. This lints both the deterministic parts (frontmatter, line budget, reference depth) and hands you a checklist for the parts a script cannot judge.
+A skill lives or dies on its routing and its shape. The script judges the deterministic half — frontmatter, line budget, reference depth — and hands you a checklist for the half it cannot.
 
 ## When to use
 
-- Authoring a new skill — run it before you consider the skill done.
+- Authoring a new skill — run it before calling the skill done.
 - Reviewing or editing an existing `SKILL.md`.
 - After any edit under a `skills/*/SKILL.md` path.
 
@@ -19,7 +19,7 @@ A skill is only as good as its routing and its shape. This lints both the determ
 python3 "${CLAUDE_PLUGIN_ROOT}"/skills/skill-smith/scripts/lint_skill.py <path-to-SKILL.md>
 ```
 
-Pass a single `SKILL.md`, or a `skills/` directory to lint every skill under it. Exit 1 if any `FAIL` is present; `WARN` alone exits 0.
+Pass a single `SKILL.md`, or a `skills/` directory to lint every skill under it. Exit 1 when any `FAIL` is present; `WARN` alone exits 0.
 
 What it checks, deterministically:
 
@@ -30,9 +30,9 @@ What it checks, deterministically:
 
 ## The loop
 
-Fix the reported `FAIL`s, re-run, repeat — cap at **3 rounds**. If findings remain after the third round, stop and hand the operator the residual list rather than churning. This is a goal-shaped loop: the exit criterion is `lint_skill.py` exiting 0, judged by the script, not by eye.
+Fix the reported `FAIL`s, re-run, repeat — cap at **3 rounds**. Findings still standing after the third round go to the operator as a residual list. The exit criterion is `lint_skill.py` exiting 0, judged by the script.
 
-`WARN`s do not block, but read them — a first-person description or a body creeping toward the budget is usually worth fixing while you are here.
+`WARN`s exit 0 and are still worth reading — a first-person description or a body creeping toward the budget is cheapest to fix while you are here.
 
 ## Manual pass (what the script cannot judge)
 
@@ -47,18 +47,18 @@ Done = `lint_skill.py <path>` exits 0 **and** you have read the change against b
 
 ## Dossier breadcrumb
 
-In a repo with a live dossier ledger, finish by recording the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip, no-op: this skill ships no hooks and no dossier dependency.
+In a repo with a live dossier ledger, record the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip: this skill ships no hooks and no dossier dependency.
 
 ## Claim check
 
-`claim-check <path>...` (also `skills/skill-smith/scripts/claim_check.py`) reads shipped prose for a narrower defect than structure: a sentence asserting that something of ours **blocks**, **enforces**, **gates**, **denies** or **prevents**, while naming nothing a reader could check.
+`claim-check <path>...` (also `skills/skill-smith/scripts/claim_check.py`) reads shipped prose for a narrower defect than structure: a sentence asserting that something of ours **blocks**, **enforces**, **gates**, **denies**, **prevents** or **refuses**, while naming nothing a reader could check.
 
-| exit | line                     | meaning                                            |
-| ---- | ------------------------ | -------------------------------------------------- |
+| exit | line                        | meaning                                                |
+| ---- | --------------------------- | ------------------------------------------------------ |
 | 0    | `CLAIMS: CLEAN <n> file(s)` | every claim names an exit code, a citation, or a label |
-| 1    | `CLAIMS: FLAGGED <n>`    | `<n>` claims name none of those                    |
-| 64   | —                        | no paths given, or a path that does not exist      |
+| 1    | `CLAIMS: FLAGGED <n>`       | `<n>` claims name none of those                        |
+| 64   | —                           | no paths given, or a path that does not exist          |
 
-A claim passes by naming an exit code, carrying a citation, or labelling itself advisory / model-judgment / opt-in / a nag. It decides **shape, never fact**: whether the exit code named is the real one is a reader's question. That is the mechanical half of a defect class this repo has shipped nine times (`RESEARCH.md` F19, F25).
+A claim passes by naming an exit code, carrying a citation, or labelling itself advisory / model-judgment / opt-in / a nag. It decides **shape, never fact**: whether the exit code named is the real one stays a reader's question. That is the mechanical half of a defect class this repo has shipped nine times (`RESEARCH.md` F19, F25).
 
-Deliberately narrow. Matching the bare verbs flagged 113 lines here, nearly all nouns and adjectives — "doubt gate", "env-gated backstops", "the three write-time gates". A claim is now a backticked name followed by a finite verb, and a verb trailed by a past participle is read as a noun. That trades misses for false positives on purpose: a lint that flags honest prose gets deleted, and then it catches nothing.
+Deliberately narrow. The subject is a backticked name or a definite machinery noun (`the runner`, `this hook`, `the script`, `the gate`, `the check`/`checker`, `the guard`, `the linter`) followed by a finite verb; a verb trailed by a past participle reads as a noun and is left alone. Matching the bare verbs instead flagged 113 lines here, nearly all nouns and adjectives — "doubt gate", "env-gated backstops", "the three write-time gates". The narrowing trades misses for false positives on purpose: a lint that flags honest prose gets deleted, and then it catches nothing.

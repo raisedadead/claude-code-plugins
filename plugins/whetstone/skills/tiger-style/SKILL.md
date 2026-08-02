@@ -5,7 +5,7 @@ description: Check the column budget of the lines a change adds, and read that c
 
 # tiger-style — one shape rule computed, the rest read by hand
 
-TIGER_STYLE is a code-shape discipline. Exactly one of its rules is cheap to compute from a diff; the rest need a reader. This skill keeps those two halves apart and labelled, because a checklist that pretends to be a gate is worse than no gate.
+One TIGER_STYLE rule is cheap to compute from a diff; the rest need a reader. This skill keeps the two halves apart and labelled — a checklist presented as a gate is worse than no gate.
 
 ## When to use
 
@@ -42,7 +42,7 @@ One run can turn up both kinds at once — a declared-limit offence in one file 
 
 Resolved per file, first match wins:
 
-1. `WHETSTONE_TIGER_COLS` — a **positive** integer. Declared, so it **blocks**. `0`, a negative, or a non-number is not a limit: the value is ignored, the fallback applies, and the reason is named on stderr. Silence there would be the worse bug — an operator who set `WHETSTONE_TIGER_COLS=0` would believe commits were being blocked while getting an advisory nag that blocks nothing.
+1. `WHETSTONE_TIGER_COLS` — a **positive** integer. Declared, so it **blocks**. `0`, a negative, or a non-number is not a limit: the value is dropped, resolution continues at the next source, and the reason is named on stderr. An operator who set `WHETSTONE_TIGER_COLS=0` in a repo with an `.editorconfig` limit therefore gets that repo's limit — still a `BLOCK`, at a number they did not choose. The stderr line is what makes that visible.
 1. `.editorconfig` `max_line_length` for the nearest section matching the file. Declared, so it **blocks**. A value of `off` is spec-legal and skips the file entirely.
 
 "Nearest" is directory distance: the walk starts beside the file and stops at a `root = true`. It is not specificity. Where two sections in the **same** file both match, EditorConfig's own rule applies and the later one wins — `[*.py]` followed by `[*]` loses to the `[*]`, which is the opposite of what CSS-shaped intuition predicts.
@@ -82,7 +82,7 @@ Four TIGER_STYLE rules are absent on purpose, so their absence does not read as 
 Named so nobody assumes they work:
 
 - **Formatter configs as a limit source.** Prettier's `printWidth`, black's `line-length` and rustfmt's `max_width` are not read. Only `WHETSTONE_TIGER_COLS` and `.editorconfig` are.
-- **Full `.editorconfig` glob syntax.** Brace expansion, `*`, `**`, `?`, `[seq]` and `[!seq]` work. Escapes and numeric ranges (`{1..9}`) do not. Brace expansion is capped at 256 alternatives — past that the pattern is left unexpanded and matches nothing, so the file falls back to the advisory limit instead of hanging the commit.
+- **Full `.editorconfig` glob syntax.** Brace expansion, `*`, `**`, `?`, `[seq]` and `[!seq]` work. Escapes and numeric ranges (`{1..9}`) do not, and `[^seq]` is a literal `^` — the spec's negation form is `[!seq]`. Brace expansion is capped at 256 alternatives; past the cap the pattern is left unexpanded and matches nothing, so the file falls back to the advisory limit instead of stalling the commit.
 - **Configurable tab width.** A tab advances to the next multiple of 8. `.editorconfig`'s `tab_width` and `indent_size` are not read.
 - **Per-language parsing.** Width is display columns — a tab advances to its stop, a CJK or otherwise wide character counts two, a combining mark counts zero. What is missing is an AST, so nothing here can measure a function's length or find a magic number, which is exactly why those rules sit in the manual pass above rather than in the table.
 

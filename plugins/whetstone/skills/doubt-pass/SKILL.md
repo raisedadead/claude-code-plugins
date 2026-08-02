@@ -5,39 +5,39 @@ description: Adversarial doubt cycle on a plan or design before any code exists 
 
 # doubt-pass — break the plan before you build it
 
-The cheapest bug to fix is the one caught before code exists. `doubt-pass` hands a plan to a fresh-context reviewer whose only job is to find where it breaks — not whether it's nice. It is bounded: at most three cycles, every finding classified, and a name for the failure mode where doubt spins without ever landing anything.
+The cheapest bug is the one caught before the code exists. A fresh-context reviewer gets the plan and one job: find where it breaks, not whether it is nice. Bounded at three cycles, every finding classified, with a name for the case where doubt spins and lands nothing.
 
 ## When to use
 
-- Before implementing a non-trivial architecture or design decision.
-- The user wants a plan stress-tested, holes poked, a second opinion on an approach — while it's still a plan, no diff yet.
+- Before a non-trivial architecture or design decision.
+- The user asks for a plan to be stress-tested, holes poked, a second opinion — while it is still a plan, no diff yet.
 
-This is a different moment from `/code-review` (which needs a diff that already exists) and from `grill-me` (which interviews *you* for requirements). `doubt-pass` sends a fresh agent to attack an artifact.
+Neighbours: `/code-review` needs a diff that already exists; `grill-me` interviews _you_ for requirements. This one sends a fresh agent at an artifact.
 
 ## Protocol
 
-Run the five steps in `reference/doubt-protocol.md`:
+Five steps, detailed in `reference/doubt-protocol.md`:
 
 1. **CLAIM** — state the decision in one paragraph.
-1. **EXTRACT** — strip it to an artifact + contract (inputs, outputs, invariants), no reasoning trail. The reviewer judges the plan, not your defense of it.
-1. **DOUBT** — spawn the `whetstone-doubter` agent (`Agent`, `subagent_type: whetstone:whetstone-doubter`) with **only** the extracted artifact and contract. The agent already carries the adversarial method ("find where this breaks," not "is this good") and its word budget; `reference/adversarial-prompt-template.md` is the exact mission text to fill and send. It returns a `DOUBT: FAILURES | NO FAILURE FOUND` verdict.
-1. **RECONCILE** — classify every returned finding `actionable` or `not-actionable`. Don't rubber-stamp; don't dismiss.
-1. **STOP** — end when the cap (3 cycles) is hit, or a cycle returns zero new findings. Fold actionable findings back into the plan between cycles.
+1. **EXTRACT** — strip it to an artifact plus a contract (inputs, outputs, invariants). Send those two; the reasoning trail stays behind, so the reviewer judges the design rather than your defence of it.
+1. **DOUBT** — spawn `whetstone-doubter` (`Agent`, `subagent_type: whetstone:whetstone-doubter`) with the extracted artifact and contract as its whole input. The agent already carries the adversarial method — "find where this breaks" — and its word budget; `reference/adversarial-prompt-template.md` is the mission text to fill and send. It returns `DOUBT: FAILURES` or `NO FAILURE FOUND`.
+1. **RECONCILE** — tag every returned finding `actionable` or `not-actionable`, each on its own merits.
+1. **STOP** — at the 3-cycle cap, or at the first cycle that returns nothing new. Fold actionable findings into the plan between cycles.
 
 ## Doubt theater
 
-If all cycles complete with **zero cumulative actionable findings**, do not report "the plan is sound." Report it plainly:
+Zero cumulative actionable findings across every cycle is its own result. Report it as one:
 
 ```
 doubt theater — N findings raised, 0 actionable across M cycles. Escalate to a human or ship as-is.
 ```
 
-Cycling a reviewer that never lands anything actionable is motion without progress — name it rather than laundering it into false confidence.
+Cycling a reviewer that lands nothing is motion. Naming it keeps it from reading as confidence.
 
 ## Verification
 
-Done = the loop stopped at ≤ 3 cycles, **every** finding carries an `actionable` / `not-actionable` tag, and the outcome is one of: plan amended with the actionable findings, or an explicit `doubt theater` note. The cap and the classification are the gate — an unbounded "let me think about it more" is not a doubt-pass.
+Done = the loop stopped at ≤ 3 cycles, every finding carries an `actionable` / `not-actionable` tag, and the outcome is one of: plan amended with the actionable findings, or an explicit `doubt theater` note. The cap and the classification are the gate; "let me think about it more" is a different activity.
 
 ## Dossier breadcrumb
 
-In a repo with a live dossier ledger, finish by recording the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip, no-op: this skill ships no hooks and no dossier dependency.
+In a repo with a live dossier ledger, record the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip: this skill ships no hooks and no dossier dependency.
