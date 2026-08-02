@@ -260,6 +260,152 @@ def test_the_default_contract_is_the_live_wave_not_the_last_sorted() -> None:
         assert "zzz-closed" not in result.stdout, result.stdout
 
 
+def _wave(root: Path, dirname: str, state: str = "live") -> None:
+    wave = root / ".scratchpad" / "dossier" / dirname
+    wave.mkdir(parents=True, exist_ok=True)
+    (wave / "DOSSIER.md").write_text(
+        "\n".join([f"# {dirname[11:]}", "", f"`2026-08-01` · `{state}` · `P1/1`", ""]),
+        encoding="utf-8",
+    )
+
+
+def _contract_text(criterion: str = "`true`  | exit 0") -> str:
+    return (
+        "# c\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n"
+        "## done-when\n\n"
+        "| id  | command | expect |\n"
+        "| --- | ------- | ------ |\n"
+        f"| 1   | {criterion} |\n"
+    )
+
+
+def _run_noarg(root: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(CONVERGE)],
+        capture_output=True,
+        text=True,
+        cwd=root,
+        env=_clean_env(),
+    )
+
+
+def test_a_wave_dir_contract_is_found_without_a_dossier_dir() -> None:
+    """A repo that never opted into tracking still converges."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-01-solo")
+        wave = root / ".scratchpad" / "dossier" / "2026-08-01-solo"
+        (wave / "CONTRACT.md").write_text(_contract_text(), encoding="utf-8")
+        result = _run_noarg(root)
+        assert "CONVERGE: MET 1/1" in result.stdout, result.stdout + result.stderr
+
+
+def test_the_tracked_contract_wins_over_the_wave_dir_copy() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-01-solo")
+        wave = root / ".scratchpad" / "dossier" / "2026-08-01-solo"
+        (wave / "CONTRACT.md").write_text(
+            _contract_text("`false` | exit 0"), encoding="utf-8"
+        )
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "2026-08-01-solo.md").write_text(
+            _contract_text(), encoding="utf-8"
+        )
+        result = _run_noarg(root)
+        assert "CONVERGE: MET 1/1" in result.stdout, result.stdout
+
+
+def test_no_live_wave_yields_parse_not_a_closed_contract() -> None:
+    """Running a finished wave's contract reported MET on a dead objective."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "2026-08-01-done.md").write_text(
+            _contract_text(), encoding="utf-8"
+        )
+        result = _run_noarg(root)
+        assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
+        assert "live wave" in _verdict(result), result.stdout
+        assert result.returncode == PARSE, result.stdout
+
+
+def test_a_live_wave_without_a_contract_is_a_parse() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-01-bare")
+        result = _run_noarg(root)
+        assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
+        assert "2026-08-01-bare" in _verdict(result), result.stdout
+        assert result.returncode == PARSE, result.stdout
+
+
+def test_a_same_slug_successor_selects_the_live_wave() -> None:
+    """Predecessor and successor share a slug; only the live dir decides."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-05-rails")
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "2026-08-01-rails.md").write_text(
+            _contract_text("`false` | exit 0"), encoding="utf-8"
+        )
+        (root / ".dossier" / "2026-08-05-rails.md").write_text(
+            _contract_text(), encoding="utf-8"
+        )
+        result = _run_noarg(root)
+        assert "2026-08-05-rails" in result.stdout, result.stdout
+        assert "CONVERGE: MET 1/1" in result.stdout, result.stdout
+
+
+def test_a_single_char_stem_does_not_match_an_unrelated_wave() -> None:
+    """`s.md` once matched wave 2026-08-05-rails by suffix and reported MET
+    against a contract belonging to nothing."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-05-rails")
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "s.md").write_text(_contract_text(), encoding="utf-8")
+        result = _run_noarg(root)
+        assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
+        assert result.returncode == PARSE, result.stdout
+
+
+def test_a_shared_suffix_does_not_match_across_slugs() -> None:
+    """`rails.md` is not the contract of wave 2026-08-05-guardrails."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-05-guardrails")
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "rails.md").write_text(_contract_text(), encoding="utf-8")
+        result = _run_noarg(root)
+        assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
+        assert result.returncode == PARSE, result.stdout
+
+
+def test_an_undated_contract_name_still_matches_its_own_wave() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-05-rails")
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "rails.md").write_text(_contract_text(), encoding="utf-8")
+        result = _run_noarg(root)
+        assert "CONVERGE: MET 1/1" in result.stdout, result.stdout
+
+
+def test_an_archived_contract_is_not_resolved() -> None:
+    """Retirement (close step 7.5) depends on `_archive/` staying invisible to
+    the resolver; a later switch to a recursive glob would break it silently."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-05-rails")
+        archive = root / ".dossier" / "_archive"
+        archive.mkdir(parents=True)
+        (archive / "2026-08-05-rails.md").write_text(_contract_text(), encoding="utf-8")
+        result = _run_noarg(root)
+        assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
+        assert result.returncode == PARSE, result.stdout
+
+
 def test_a_contract_without_a_consumer_fails_the_parse() -> None:
     """`consumer` is the field nobody writes unprompted, so prose alone never
     gets it written — the runner refuses a contract that omits it."""

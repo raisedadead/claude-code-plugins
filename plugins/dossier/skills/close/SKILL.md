@@ -73,6 +73,16 @@ Append §S as its own paragraph (blank line before AND after — per FORMAT.md �
 <YYYY-MM-DD HH:MM> ds:close — START successor=<slug-or-—> complete=<bool> abandon=<bool>
 ```
 
+### 5.5. CONVERGE (contract gate; `--abandon` skips it)
+
+Run `bash "$CLAUDE_PLUGIN_ROOT"/hooks/lib-converge.sh` with no argument — it resolves the live wave's contract itself, tracked `.dossier/` home first, wave-dir `CONTRACT.md` fallback. Read the `CONVERGE:` line before the exit code (a missing runner exits 1 or 2 on its own, aliasing UNMET and PARSE). Running this at all is model-judgment — no hook fires on close; the verdict is computed.
+
+| verdict        | action                                                                                                                                                                      |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `MET n/n`      | append §S `ds:close — converge=met@<n>`; carry the line into §Z `key cites`                                                                                                 |
+| `UNMET n of m` | print the unmet rows. Closing `--complete` over them is an operator call — proceed only on explicit confirmation, §S `converge=unmet@<n> operator-override`                 |
+| `PARSE`        | §S `converge=parse` (or `converge=absent` when the message says no contract). Close proceeds — waves predating contracts stay closable, and a broken contract is not a lock |
+
 ### 6. WRITE §Z
 
 Write §Z through the bundled helper (atomic tmp+rename, and it guarantees the §12 blank-line separation so a formatter cannot merge the fields — the markdown blocks below show the resulting shape, not a manual edit):
@@ -150,6 +160,10 @@ Append §S (to the moved file):
 ```
 <YYYY-MM-DD HH:MM> ds:close — DONE archived
 ```
+
+### 7.5. Retire a tracked contract
+
+If the wave's contract lives in `.dossier/` and is tracked (`git ls-files --error-unmatch <path>` exits 0): `mkdir -p .dossier/_archive` (the first close in a repo has no archive yet — `git mv` cannot create it), then `git mv` the contract to `.dossier/_archive/<same-name>.md` and commit — `chore(dossier): archive wave contract <slug>`. The path stays citable, the active directory stays one-wave deep, and the resolver never matches `_archive/`. An untracked wave-dir `CONTRACT.md` needs nothing: it rode the ledger's own move in step 7.
 
 ### 8. Regen INDEX
 

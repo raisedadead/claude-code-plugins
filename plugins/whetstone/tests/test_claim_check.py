@@ -120,6 +120,69 @@ def test_a_table_row_keeps_its_evidence_cell() -> None:
         assert result.returncode == CLEAN, result.stdout + result.stderr
 
 
+def test_an_agent_noun_subject_is_a_claim() -> None:
+    """F25's third recurrence shipped as 'Three rules the runner enforces
+    rather than trusts:' — no backticks, so the subject rule never saw it.
+    A shipped-machinery noun before the verb is a claim too."""
+    with tempfile.TemporaryDirectory() as t:
+        path = Path(t) / "noun.md"
+        path.write_text(
+            "Three rules the runner enforces rather than trusts:\n\n"
+            "The hook blocks a phase marker on sight.\n",
+            encoding="utf-8",
+        )
+        result = _run(path)
+        assert _verdict(result) == "CLAIMS: FLAGGED 2", result.stdout + result.stderr
+        assert result.returncode == FLAGGED, result.stdout
+
+
+def test_a_backed_agent_noun_claim_passes() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        path = Path(t) / "backed.md"
+        path.write_text(
+            "The runner refuses a prose criterion at parse time, exit 2.\n",
+            encoding="utf-8",
+        )
+        result = _run(path)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+
+
+def test_an_indefinite_subject_is_not_a_claim() -> None:
+    """The determiner restriction the widening argues for, pinned: honest
+    generalisations read with indefinite subjects and must stay unflagged."""
+    with tempfile.TemporaryDirectory() as t:
+        path = Path(t) / "general.md"
+        path.write_text(
+            "A gate that blocks on a signal it cannot back will be disabled "
+            "by the operator within a week.\n",
+            encoding="utf-8",
+        )
+        result = _run(path)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+
+
+def test_a_code_labelled_enforcement_row_passes() -> None:
+    """FORMAT.md's verdict grammar labels enforcement `code — <script>`; the
+    ledger of honest labels must not be flagged by the tool built from it."""
+    with tempfile.TemporaryDirectory() as t:
+        path = Path(t) / "row.md"
+        path.write_text(
+            "| Vm.3 | every x row has a cite | code — `lib-row-flip.sh` "
+            "refuses cite-less `x` |\n",
+            encoding="utf-8",
+        )
+        result = _run(path)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+
+
+def test_an_unknown_option_is_a_usage_error() -> None:
+    """Silently dropping `--help` reported CLEAN for a file list the caller
+    never gave — the silent-ignore class `tiger_check` already names aloud."""
+    result = _run("--help", FIXTURES / "claims-true.md")
+    assert result.returncode == USAGE, result.stdout + result.stderr
+    assert "--help" in result.stderr, result.stderr
+
+
 def test_the_wrapper_agrees_with_the_module() -> None:
     direct = _run(FIXTURES / "claims-false.md")
     shell = subprocess.run(

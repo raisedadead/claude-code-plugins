@@ -78,15 +78,17 @@ python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/resolve_pins.py eol:<slug>... <ecosystem>:
 
 These fold into the single atomic step-3 Write — no extra commit, no TDD cycle.
 
-### 2.7. Write the contract (tracked)
+### 2.7. Write the contract
 
-Before scaffolding the ledger, write `.dossier/<date>-<slug>.md` per FORMAT.md — `consumer`, `reached-via`, `budget`, and a `## done-when` table whose every row is a command with an expected result.
+The repo decides the home, not this skill. `.dossier/` exists → the repo opted into tracked contracts: write `.dossier/<date>-<slug>.md` and commit it before the first task — citable as evidence, outlives the wave. Otherwise write `<wave-dir>/CONTRACT.md` beside the ledger and say plainly what that home costs: untracked wherever `.scratchpad/` is gitignored (the assumed setup), archived with the wave, citable by nobody — and its criteria run as shell from a file no diff ever showed a reviewer, where a tracked contract's criteria appear in the commit that added them. Name the opt-in (`mkdir .dossier`, track it) so the choice stays the operator's. Never create `.dossier/` yourself: a tracked directory appearing in a repo that did not ask for one is the artifact rule this split exists to respect.
+
+Either way the content is FORMAT.md's — `consumer`, `reached-via`, `budget`, and a `## done-when` table whose every row is a command with an expected result. `ds:converge` and the `UserPromptSubmit` hook resolve both homes, tracked first.
 
 `consumer` is the field that asks whether the work reaches anyone, and the one nobody writes unprompted. Ask for it plainly: who runs this, and by what path does it get to them? A wave once hardened a checker through three review rounds while no consumer could execute it, and no step in this skill had ever asked. `ds:converge` refuses a contract whose `consumer` row is missing or empty (`CONVERGE: PARSE`, exit 2), so a contract written without the answer fails its first run.
 
 A criterion that cannot be written as a command is a criterion nobody can check. Turn it into one, or drop it and say what was dropped.
 
-Commit the contract before the first task — `ds:converge` reads it, and the `UserPromptSubmit` hook reports against it from the commit that added it.
+In the tracked home, commit before the first task — the `UserPromptSubmit` hook counts budget from the commit that added the contract.
 
 ### 3. Scaffold DOSSIER.md
 

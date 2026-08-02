@@ -25,8 +25,10 @@ from pathlib import Path
 CLEAN, FLAGGED, USAGE = 0, 1, 64
 
 CLAIM = re.compile(
-    r"`[^`]+`\s+(?:\w[\w-]*\s+){0,3}?"
-    r"(?:hard-)?(?:blocks|enforces|gates|denies|prevents)\b"
+    r"(?:`[^`]+`"
+    r"|\b(?:the|this)\s+(?:runner|hook|script|gate|check(?:er)?|guard|linter)\b)"
+    r"\s+(?:\w[\w-]*\s+){0,3}?"
+    r"(?:hard-)?(?:blocks|enforces|gates|denies|prevents|refuses)\b"
     r"(?!\s+\w+ed\b)",
     re.I,
 )
@@ -38,7 +40,8 @@ BACKED = re.compile(
 LABELLED = re.compile(
     r"\badvisory\b|\bmodel-judgment\b|\bmodel judgement\b|\bopt-in\b|\bnag\b"
     r"|\bnon-blocking\b|\bnever blocks\b|\bblocks nothing\b|\bdoes not block\b"
-    r"|\bnot a gate\b|\bjudgement\b|\bjudgment\b",
+    r"|\bnot a gate\b|\bjudgement\b|\bjudgment\b"
+    r"|\bcode\s*[—–-]\s*`[^`]+`",
     re.I,
 )
 
@@ -71,8 +74,16 @@ def _is_claim(unit: str) -> bool:
     Matching the bare verbs flagged 113 lines, nearly all of them nouns and
     adjectives: "doubt gate", "env-gated backstops", "the three write-time
     gates". A lint that flags honest prose gets deleted, and then it catches
-    nothing — so the subject has to be a backticked name and the verb has to
-    be finite and follow it.
+    nothing — so the subject has to name shipped machinery and the verb has
+    to be finite and follow it. Machinery is a backticked name, or the/this
+    plus one singular noun from a closed list — runner, hook, script, gate,
+    check, checker, guard, linter: F25's third recurrence shipped as "the
+    runner enforces" with no backticks in reach. Plurals, other nouns ("the
+    plugin", "the wrapper") and passives still pass unexamined; the list
+    grows per recurrence, never speculatively. The determiner stays
+    restricted to the/this because indefinite subjects are how honest
+    generalisations read — "a gate that blocks on a signal it cannot back"
+    claims nothing about any shipped gate.
 
     A past participle after the verb marks it as a noun — "`tool_use` blocks
     counted by" is a count of blocks, not a claim that anything blocks. This
@@ -97,7 +108,12 @@ def _scan(path: Path) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    paths = [Path(a) for a in argv[1:] if not a.startswith("-")]
+    options = [a for a in argv[1:] if a.startswith("-")]
+    if options:
+        for option in options:
+            print(f"claim_check: unknown option: {option}", file=sys.stderr)
+        return USAGE
+    paths = [Path(a) for a in argv[1:]]
     if not paths:
         print("claim_check: usage: claim_check.py <path>...", file=sys.stderr)
         return USAGE

@@ -139,22 +139,30 @@ def _live_slugs(root: Path) -> list[str]:
     return found
 
 
-def _default_contract(root: Path) -> Path | None:
-    """The live wave's contract, never the alphabetically last one.
+def _contract_for(root: Path, slug: str) -> Path | None:
+    """The contract belonging to one named wave, keyed on its directory name.
 
     Sorting picked a closed wave's contract the first time two shared a date,
-    and ran its criteria instead. The prompt hook had the same defect; fixing
-    one and leaving the twin is the shape this repo keeps catching.
+    and the prompt hook keyed on a title two waves can share — both defects
+    were fixed separately with different algorithms, so the hook now imports
+    this function instead of transcribing it. The match is the full stem, or
+    the stem as the slug's own name with its date prefix dropped: a bare
+    suffix test let `s.md` claim wave 2026-08-05-rails and `rails.md` claim
+    2026-08-05-guardrails, each reporting MET for a contract of nothing.
+
+    `.dossier/` is the tracked home a repo opts into by creating it; the wave
+    directory's own `CONTRACT.md` is the untracked fallback, which dies with
+    the wave and can be cited by nobody — its writer was told so at `ds:new`.
     """
     folder = root / CONTRACT_DIR
-    if not folder.is_dir():
-        return None
-    contracts = sorted(p for p in folder.glob("*.md") if p.is_file())
-    for slug in _live_slugs(root):
-        for candidate in contracts:
-            if slug.endswith(candidate.stem) or candidate.stem.endswith(slug):
+    if folder.is_dir():
+        for candidate in sorted(p for p in folder.glob("*.md") if p.is_file()):
+            if candidate.stem == slug or slug.endswith("-" + candidate.stem):
                 return candidate
-    return contracts[-1] if contracts else None
+    fallback = root / ".scratchpad" / "dossier" / slug / "CONTRACT.md"
+    if fallback.is_file():
+        return fallback
+    return None
 
 
 def _depth() -> int:
@@ -177,9 +185,16 @@ def main(argv: list[str]) -> int:
     if depth >= MAX_DEPTH:
         return _fail(f"converge nested {depth} deep; refusing to recurse further")
     if len(argv) < 2:
-        found = _default_contract(Path.cwd())
+        root = Path.cwd()
+        slugs = _live_slugs(root)
+        if not slugs:
+            return _fail(
+                "no live wave under .scratchpad/dossier/ — a closed wave's"
+                " contract runs only by explicit path"
+            )
+        found = next((c for s in slugs if (c := _contract_for(root, s))), None)
         if found is None:
-            return _fail("no contract given and none found under .dossier/")
+            return _fail(f"live wave {slugs[0]} has no contract — ds:new writes one")
         contract = found
     else:
         contract = Path(argv[1])

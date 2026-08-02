@@ -226,6 +226,47 @@ def test_the_live_wave_is_reported_not_the_alphabetical_last() -> None:
         assert "zzz-closed" not in result.stdout, result.stdout
 
 
+def test_a_same_slug_successor_reports_the_live_wave() -> None:
+    """Two contracts share the slug `rails`; the report keys on the live wave's
+    directory name, never on a title both waves carry."""
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        (root / ".dossier").mkdir()
+        old = CONTRACT.replace("demo-wave", "rails")
+        new = CONTRACT.replace("demo-wave", "rails").replace(
+            "| 2   | `false` | exit 1 |",
+            "| 2   | `false` | exit 1 |\n| 3   | `true`  | exit 0 |",
+        )
+        (root / ".dossier" / "2026-08-01-rails.md").write_text(old, encoding="utf-8")
+        (root / ".dossier" / "2026-08-05-rails.md").write_text(new, encoding="utf-8")
+        wave = root / ".scratchpad" / "dossier" / "2026-08-05-rails"
+        wave.mkdir(parents=True)
+        (wave / "DOSSIER.md").write_text(
+            "\n".join(["# rails", "", "`2026-08-05` · `live` · `P1/1`", ""]),
+            encoding="utf-8",
+        )
+        result = _run({"cwd": str(root)})
+        assert "3 criteria" in result.stdout, result.stdout
+        assert "2 criteria" not in result.stdout, result.stdout
+
+
+def test_a_wave_dir_contract_is_reported() -> None:
+    """A repo that never opted into tracked contracts still gets the report."""
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        wave = root / ".scratchpad" / "dossier" / "2026-08-01-solo"
+        wave.mkdir(parents=True)
+        (wave / "DOSSIER.md").write_text(
+            "\n".join(["# solo", "", "`2026-08-01` · `live` · `P1/1`", ""]),
+            encoding="utf-8",
+        )
+        (wave / "CONTRACT.md").write_text(CONTRACT, encoding="utf-8")
+        result = _run({"cwd": str(root)})
+        assert result.returncode == 0, result.stderr
+        assert "2 criteria" in result.stdout, result.stdout
+        assert "no contract" not in result.stdout, result.stdout
+
+
 def test_no_live_wave_means_silence() -> None:
     """A closed wave's contract is not prompt noise."""
     with tempfile.TemporaryDirectory() as t:

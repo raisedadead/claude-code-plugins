@@ -4,10 +4,10 @@
 
 An agent will happily report success it cannot demonstrate. These two plugins make "done" a checkable fact: a wave of work lives in one resumable ledger, and every gate ends in an exit code, a computed number, or a verdict line honestly labelled as a judgment.
 
-| Plugin        | What it does                                                                                                                                 |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **dossier**   | Phase-scoped workflow. One resumable `DOSSIER.md` drives a wave — tasks, bugs, invariants, cross-repo state — with in-session quality gates. |
-| **whetstone** | Per-task craft, each skill carrying a deterministic self-verify: red-green TDD, flaky-test audit, doubt review, merge-resolve, skill lint, column budget.   |
+| Plugin        | What it does                                                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **dossier**   | Phase-scoped workflow. One resumable `DOSSIER.md` drives a wave — tasks, bugs, invariants, cross-repo state — with in-session quality gates.              |
+| **whetstone** | Per-task craft, each skill carrying a deterministic self-verify: red-green TDD, flaky-test audit, doubt review, merge-resolve, skill lint, column budget. |
 
 dossier drives the wave; whetstone is the craft at each gate. Designed to be used together, independent by invariant — either works alone, and every composition route skips silently when its sibling is absent.
 
@@ -37,6 +37,8 @@ Needs `python3` 3.10+ on `PATH`; without it the python hooks no-op gracefully.
 | `/dossier:close`                           | `--complete` · `--successor <slug>` · `--abandon "<why>"`. Validate, close, archive.         |
 
 Everything else fires automatically or is power-user: `build` (the TDD engine, `--auto` to loop hands-off), `backprop` (bug → invariant), `grill`, `ship`, `verify`, `roll`, `migrate`.
+
+Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes tasks, `/dossier:converge` runs the wave contract's done-when criteria ("are we done"), `/dossier:ship` writes the changelog, and `backprop` / `grill` / `verify` / `roll` / `migrate` fire at their moments. In a live wave the `UserPromptSubmit` hook prints the contract's state beside every prompt, naming `ds:converge` for the verdict.
 
 **whetstone — invoke directly, or let dossier compose them:**
 

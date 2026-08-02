@@ -25,16 +25,15 @@ import subprocess
 import sys
 from pathlib import Path
 
-CONTRACT_DIR = ".dossier"
-LEDGER_GLOB = ".scratchpad/dossier/*/DOSSIER.md"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from converge import _cells, _contract_for, _live_slugs
+
 RECENT_COMMITS = 5
 GIT_TIMEOUT = 5
 
 RUNTIME_SUFFIXES = (".py", ".sh", ".js", ".ts", ".go", ".rs", ".rb")
 DOC_SUFFIXES = (".md", ".json", ".txt", ".yml", ".yaml")
-
-_ROW = re.compile(r"^\|(.+)\|\s*$")
-_SPLIT = re.compile(r"(?<!\\)\|")
 
 
 def _git(root: Path, *args: str) -> str:
@@ -50,29 +49,6 @@ def _git(root: Path, *args: str) -> str:
     except (OSError, subprocess.SubprocessError):
         return ""
     return done.stdout if done.returncode == 0 else ""
-
-
-def _cells(line: str) -> list[str]:
-    match = _ROW.match(line.rstrip())
-    if not match:
-        return []
-    return [cell.replace("\\|", "|").strip() for cell in _SPLIT.split(match.group(1))]
-
-
-def _contract_for(root: Path, slug: str) -> Path | None:
-    """The contract belonging to a named wave.
-
-    Selecting the alphabetically last contract reported a closed wave's budget
-    the first time two contracts shared a date. The report follows the live
-    wave, never the sort order.
-    """
-    folder = root / CONTRACT_DIR
-    if not folder.is_dir():
-        return None
-    for candidate in sorted(folder.glob("*.md")):
-        if candidate.is_file() and candidate.stem.endswith(slug):
-            return candidate
-    return None
 
 
 def _criteria_count(text: str) -> int:
@@ -113,30 +89,6 @@ def _layer_mix(root: Path, since: str) -> str:
         elif suffix in DOC_SUFFIXES:
             docs += changed
     return f"  lines since contract: runtime {runtime} · tests {tests} · docs {docs}"
-
-
-def _live_waves(root: Path) -> list[str]:
-    """Slugs of ledgers whose header still reads live.
-
-    A closed wave is not prompt noise, and a live wave carrying no contract is
-    the exact condition this hook exists to surface — the one case where
-    nothing else will mention it.
-    """
-    found: list[str] = []
-    for ledger in sorted(root.glob(LEDGER_GLOB)):
-        try:
-            head = ledger.read_text(encoding="utf-8", errors="replace")[:400]
-        except OSError:
-            continue
-        if "`live`" not in head:
-            continue
-        slug = ledger.parent.name
-        for line in head.splitlines():
-            if line.startswith("# "):
-                slug = line[2:].strip()
-                break
-        found.append(slug)
-    return found
 
 
 def _report(root: Path, contract: Path) -> list[str]:
@@ -189,7 +141,7 @@ def main() -> int:
         return 0
 
     try:
-        live = _live_waves(root)
+        live = _live_slugs(root)
     except (OSError, ValueError):
         return 0
 

@@ -4,6 +4,12 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-08-02 (claims name their backing)
+
+### Added
+
+- `claim-check` (`bin/claim-check`, `skills/skill-smith/scripts/claim_check.py`): flags a shipped sentence that claims runtime enforcement — `blocks`, `enforces`, `gates`, `denies`, `prevents`, `refuses` — while naming neither an exit code, a citation, nor an advisory/model-judgment label. Shape only, by design: whether the named exit code is the real one stays a reader's question. Exit `0` `CLAIMS: CLEAN`, `1` `CLAIMS: FLAGGED <n>`, `64` usage.
+
 ## 2026-08-01 (one shape rule computed, the rest read by hand)
 
 ### Added
@@ -14,7 +20,7 @@ Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — ev
 
   Width is display columns, not code points: a tab advances to its stop, a wide character counts two, a combining mark counts zero. A verdict line carries how many files were examined and how many were staged but skipped, so an empty index is distinguishable from a docs-only commit rather than reading as the same "clean".
 
-  Reaches only a checkout of this repo today. A consuming project installs `skills/` into the plugin cache, where the composed route cannot address its sibling — see the open stride in `RESEARCH.md`.
+  Ships on `PATH` as `bin/tiger-check`: Claude Code adds an enabled plugin's `bin/` to the Bash tool's `PATH`, so a consuming project reaches the checker without configuration. An earlier draft of this entry said the composed route could not address its sibling from the plugin cache — `bin/` is what closed that.
 
 ## 2026-07-31 (lint what the host actually parses)
 

@@ -14,7 +14,7 @@ A `§T` task list says what to do. It never says what done means, so without a c
 bash "${CLAUDE_PLUGIN_ROOT}"/hooks/lib-converge.sh [contract-path]
 ```
 
-Default path is the newest `.dossier/*.md`.
+With no argument the runner resolves the live wave's contract — the tracked `.dossier/` home first, then the wave directory's own `CONTRACT.md`. No live wave is `PARSE`: a closed wave's contract runs only by explicit path.
 
 | exit | line                         | meaning                                   |
 | ---- | ---------------------------- | ----------------------------------------- |
@@ -26,7 +26,7 @@ Default path is the newest `.dossier/*.md`.
 
 ## What a contract looks like
 
-`.dossier/<date>-<slug>.md`, tracked. A gitignored contract cannot be cited as evidence and dies with the wave.
+`.dossier/<date>-<slug>.md` where the repo has opted into tracking (the directory exists), else `<wave-dir>/CONTRACT.md` beside the ledger. The tracked home is the strong one — an untracked contract cannot be cited as evidence and dies with the wave's archive; `ds:new` says so when it writes one.
 
 ```markdown
 | field       | value                              |
