@@ -144,6 +144,8 @@ Read its verdict line:
 
 One review cycle max — the reviewer does a single pass and the build retries at most once, so a genuine disagreement escalates instead of looping (addyosmani "doubt theater" cap).
 
+Append §S either way, the same as the doubt gate at §5.6 does — `ds:build <T-id> review=<PASS:<n>-warn | CHANGES:<n>-critical>`. Without this the artifact-only reviewer is the one composed gate whose verdict leaves no trace, which is precisely the evaporation the breadcrumb below exists to prevent.
+
 Skip entirely if neither `--review` nor destructive-class — keeps the fast path fast.
 
 Built-in `/review`, `/security-review`, `/simplify` complement (never replace) this artifact-only gate for whole-branch looks — invoke them rather than reimplementing their checks; the `skill_gate.py` hook breadcrumbs their invocation mid-build so the verdict lands in §S instead of evaporating (reminder is non-blocking; honoring it is model-judgment).
@@ -152,9 +154,13 @@ Built-in `/review`, `/security-review`, `/simplify` complement (never replace) t
 
 `git add` only files touched by this task.
 
-**Tiger route (whetstone compose, every build commit).** Between the `git add` and the `git commit` — never before the `git add`, because the checker reads `git diff --cached` and an empty index always reports clean — measure the column budget of the lines this task ADDS. Resolve the checker from the source checkout (`plugins/whetstone/skills/tiger-style/scripts/tiger_check.py`) or an operator-set `DOSSIER_TIGER_CHECK` (ADAPTERS §whetstone). No flag: it runs on every build commit, because a gate nobody turns on is not a gate (D7).
+**Tiger route (whetstone compose, every build commit).** Between the `git add` and the `git commit` — never before the `git add`, because the checker reads `git diff --cached` and an empty index always reports clean — measure the column budget of the lines this task ADDS. Resolve the checker from the source checkout (`plugins/whetstone/skills/tiger-style/scripts/tiger_check.py`) or an operator-set `DOSSIER_TIGER_CHECK` (ADAPTERS §whetstone). No flag, so nothing has to be opted into first — D7's failure mode, a gate the operator never turns on, does not reach this one. The other failure mode does: no hook fires on `git commit`, so running this at all is model-judgment. The verdict is computed; arriving at the point of producing one is not. Read the reach caveat below before treating it as universal.
 
-Route on the exit code, never on "non-zero": `0` clean, commit · `2` the built-in 100-column fallback was exceeded — print the offences, commit anyway, never block · `1` a limit the repo itself declared was exceeded, which is a `tiger` PAUSE under `--auto` and an operator decision interactively · `64` the path is not a work tree, treat as unresolvable. Unresolvable → skip silently.
+**Read the verdict line before the exit code.** A missing script or a bad `DOSSIER_TIGER_CHECK` makes the interpreter itself exit 2 or 1 — the same numbers the checker uses for NAG and BLOCK — so a code-only reading reports a result for a check that never ran. Require a `TIGER:` line in stdout. No such line means unresolvable, whatever the number was.
+
+With that line present, route on the exit code and never on "non-zero": `0` clean, commit — the line also carries how many files were examined, and `CLEAN 0 files` means nothing was staged rather than nothing was wrong · `2` the built-in 100-column fallback was exceeded — print the offences, commit anyway, never block · `1` a limit the repo itself declared was exceeded, which is a `tiger` PAUSE under `--auto` and an operator decision interactively · `64` the path is not a work tree, treat as unresolvable. Unresolvable → skip silently.
+
+**Where this actually resolves.** The source-relative path exists only inside a checkout of this repo. A consuming project installs `skills/` and `hooks/` into the plugin cache, where the two plugins sit in sibling directories that this skill has no supported way to address — `${CLAUDE_PLUGIN_ROOT}` names the running plugin's own root and nothing else. So for a consumer the honest default is `tiger=skipped-absent` on every commit unless the operator sets `DOSSIER_TIGER_CHECK` by hand. Say that plainly rather than describing the check as universal; closing the gap is its own stride, not something to imply here.
 
 §S records non-clean runs only — `tiger=block@<n>`, `tiger=nag@<n>`, or `tiger=skipped-absent`. A clean run writes nothing; logging every uneventful pass buries the events that matter.
 

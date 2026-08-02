@@ -16,7 +16,9 @@ Honesty > Recoverability > Leverage, in that order. Use it to settle conflicts r
 
 Never claim enforcement that does not exist. An opt-in gate, a default-off gate and an advisory nag are not gates — describe them as what they are. A verdict parsed from a model is model-judgment, not computation.
 
-`blocks`, `enforces` and `gates` are claims about runtime, and a doc cannot prove one. Run the thing and read the exit code before writing the verb. This rule was already on this page and the class still recurred three times in a single wave — a hook that nudges at exit 0 described as blocking, a ledger event nothing emits, a rule labelled `code` before its script existed. Each was caught by a reviewer; none by a test. See F25.
+`blocks`, `enforces` and `gates` are claims about runtime, and a doc cannot prove one. Run the thing and read the exit code before writing the verb. This rule was already on this page and the class still recurred three times in a single wave — a hook that nudges at exit 0 described as blocking, a correct `--cached` read justified by a false claim about what `git diff HEAD` does, and a regression test named for a case its own fixture ruled out. All three shipped. Each was found by a reviewer; none by a test.
+
+The middle one is the shape to watch: **right behaviour, wrong stated reason.** Nothing it predicted ever failed, so no test could catch it, and it survived three reviews reading as authoritative. When you write down *why* a thing is done, that sentence needs a probe too. See F25.
 
 ## Evidence
 

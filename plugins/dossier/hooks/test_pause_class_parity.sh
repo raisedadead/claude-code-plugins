@@ -29,7 +29,13 @@ if len(matches) != 1:
         file=sys.stderr,
     )
     sys.exit(2)
-declared = {token.strip() for token in matches[0].split(",") if token.strip()}
+tokens = [token.strip().strip("`").strip() for token in matches[0].split(",")]
+tokens = [token for token in tokens if token]
+repeated = {token for token in tokens if tokens.count(token) > 1}
+if repeated:
+    print(f"  duplicated brace-set tokens: {sorted(repeated)}", file=sys.stderr)
+    sys.exit(1)
+declared = set(tokens)
 
 skill = skill_path.read_text(encoding="utf-8")
 try:
@@ -40,7 +46,13 @@ except IndexError:
     print("  build/SKILL.md is missing a PAUSE table anchor", file=sys.stderr)
     sys.exit(2)
 
-rows = lambda block: set(re.findall(r"^\|\s*`([a-z-]+)`\s*\|", block, re.M))
+def rows(block):
+    found = re.findall(r"^\|\s*`([a-z-]+)`\s*\|", block, re.M)
+    duplicated = {label for label in found if found.count(label) > 1}
+    if duplicated:
+        print(f"  duplicated rows: {sorted(duplicated)}", file=sys.stderr)
+        sys.exit(1)
+    return set(found)
 tables = {
     "FORMAT.md brace set": declared,
     "decision-boundary table": rows(boundary),
@@ -114,5 +126,35 @@ PY
 rc=0
 bash "$0" "$TMP" >/dev/null 2>&1 || rc=$?
 [[ "$rc" -eq 2 ]] || fail "a moved table anchor must exit 2, not 1 — parse failure is not divergence (got $rc)"
+
+cp "$REPO/plugins/dossier/skills/build/SKILL.md" "$TMP/plugins/dossier/skills/build/SKILL.md"
+python3 - "$TMP" <<'PY'
+import pathlib, re, sys
+
+path = pathlib.Path(sys.argv[1]) / "plugins" / "dossier" / "FORMAT.md"
+body = path.read_text(encoding="utf-8")
+match = re.search(r"reason class ∈ `\{([^}]*)\}`", body)
+tokens = [token.strip() for token in match.group(1).split(",")]
+quoted = "reason class ∈ `{" + ", ".join(f"`{token}`" for token in tokens) + "}`"
+path.write_text(body[: match.start()] + quoted + body[match.end() :], encoding="utf-8")
+PY
+
+bash "$0" "$TMP" >/dev/null 2>&1 || fail "backticking each brace-set token is cosmetic and must still pass"
+
+cp "$REPO/plugins/dossier/FORMAT.md" "$TMP/plugins/dossier/FORMAT.md"
+python3 - "$TMP" <<'PY'
+import pathlib, re, sys
+
+path = pathlib.Path(sys.argv[1]) / "plugins" / "dossier" / "FORMAT.md"
+body = path.read_text(encoding="utf-8")
+match = re.search(r"reason class ∈ `\{([^}]*)\}`", body)
+first = match.group(1).split(",")[0].strip()
+doubled = "reason class ∈ `{" + match.group(1) + ", " + first + "}`"
+path.write_text(body[: match.start()] + doubled + body[match.end() :], encoding="utf-8")
+PY
+
+rc=0
+bash "$0" "$TMP" >/dev/null 2>&1 || rc=$?
+[[ "$rc" -eq 1 ]] || fail "a repeated brace-set token must exit 1, as a repeated table row does (got $rc)"
 
 printf 'ok\n'

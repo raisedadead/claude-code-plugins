@@ -19,18 +19,20 @@ TIGER_STYLE is a code-shape discipline. Exactly one of its rules is cheap to com
 python3 "${CLAUDE_PLUGIN_ROOT}"/skills/tiger-style/scripts/tiger_check.py [repo-path]
 ```
 
-Reads the **staged** diff (`git diff --cached`), never `HEAD` — a diff against `HEAD` is empty when a change consists only of staged-new files, which would leave the check silently disarmed on exactly the commits that add the most code.
+Reads the **staged** diff (`git diff --cached`), never `HEAD`. `--cached` compares HEAD against the index, which is exactly what the commit will contain. `HEAD` would compare against the working tree instead: it would flag unstaged edits the commit does not carry, and it fails outright in a repository with no commits yet — a failure the checker would read as "nothing was added".
 
 Only lines the change **adds** are measured. Existing long lines are somebody else's commit.
 
-| exit | signal             | meaning                                                   |
-| ---- | ------------------ | --------------------------------------------------------- |
-| 0    | `TIGER: CLEAN`     | no added line is over its limit                           |
-| 1    | `TIGER: BLOCK <n>` | `<n>` added lines exceed a limit **the repo declared**    |
-| 2    | `TIGER: NAG <n>`   | `<n>` added lines exceed the built-in 100-column fallback |
-| 64   | —                  | the path is not a git work tree                           |
+| exit | signal                   | meaning                                                          |
+| ---- | ------------------------ | ---------------------------------------------------------------- |
+| 0    | `TIGER: CLEAN <n> file(s)` | no added line is over its limit, across the `<n>` files examined |
+| 1    | `TIGER: BLOCK <n>`       | `<n>` added lines exceed a limit **the repo declared**           |
+| 2    | `TIGER: NAG <n>`         | `<n>` added lines exceed the built-in 100-column fallback        |
+| 64   | —                        | the path is not a git work tree                                  |
 
 Each offence prints as `path:line: <width> cols (limit <n>)` before the verdict line.
+
+`CLEAN 0 files` and `CLEAN 3 files` are both exit 0, and the difference matters: the first means nothing was staged to look at. A caller that reads only the exit code cannot tell "checked, fine" from "checked nothing" — which is how a mis-typed `git add` reads as a pass.
 
 One run can turn up both kinds at once — a declared-limit offence in one file and a fallback offence in another. Every offence is printed either way, but `<n>` in the verdict counts only the kind the verdict names. A fallback offence is never counted into a `BLOCK` and never blocks a commit, whatever else the run found.
 
@@ -73,8 +75,9 @@ Four TIGER_STYLE rules are absent on purpose, so their absence does not read as 
 Named so nobody assumes they work:
 
 - **Formatter configs as a limit source.** Prettier's `printWidth`, black's `line-length` and rustfmt's `max_width` are not read. Only `WHETSTONE_TIGER_COLS` and `.editorconfig` are.
-- **Full `.editorconfig` glob syntax.** Brace expansion, `*`, `**`, `?` and `[seq]` work. Escapes and numeric ranges (`{1..9}`) do not.
-- **Per-language parsing.** Width is counted in characters. There is no AST, so nothing here can measure a function's length or find a magic number — which is exactly why those rules sit in the manual pass above rather than in the table.
+- **Full `.editorconfig` glob syntax.** Brace expansion, `*`, `**`, `?`, `[seq]` and `[!seq]` work. Escapes and numeric ranges (`{1..9}`) do not. Brace expansion is capped at 256 alternatives — past that the pattern is left unexpanded and matches nothing, so the file falls back to the advisory limit instead of hanging the commit.
+- **Configurable tab width.** A tab advances to the next multiple of 8. `.editorconfig`'s `tab_width` and `indent_size` are not read.
+- **Per-language parsing.** Width is display columns — a tab advances to its stop, a CJK or otherwise wide character counts two, a combining mark counts zero. What is missing is an AST, so nothing here can measure a function's length or find a magic number, which is exactly why those rules sit in the manual pass above rather than in the table.
 
 ## Verification
 

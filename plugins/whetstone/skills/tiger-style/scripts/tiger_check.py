@@ -18,9 +18,12 @@ import os
 import re
 import subprocess
 import sys
+import unicodedata
 from pathlib import Path
 
 FALLBACK_COLS = 100
+TAB_STOP = 8
+BRACE_LIMIT = 256
 OFF = -1
 CLEAN, BLOCK, NAG, USAGE = 0, 1, 2, 64
 
@@ -45,9 +48,12 @@ _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
 
 def _run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *args], cwd=root, capture_output=True, text=True, check=False
-    )
+    try:
+        return subprocess.run(
+            ["git", *args], cwd=root, capture_output=True, text=True, check=False
+        )
+    except (FileNotFoundError, NotADirectoryError, PermissionError):
+        return subprocess.CompletedProcess(list(args), 127, "", "git unavailable")
 
 
 def _is_work_tree(root: Path) -> bool:
@@ -57,44 +63,110 @@ def _is_work_tree(root: Path) -> bool:
     return probe.returncode == 0 and probe.stdout.strip() == "true"
 
 
-def _staged_added_lines(root: Path) -> list[tuple[str, int, str]]:
-    """Return (path, line-number, text) for every line the index ADDS.
+def _staged_entries(root: Path) -> list[tuple[str, list[str]]]:
+    """Return (path, paths-to-diff) for everything the index adds or changes.
 
-    Reads `--cached`, never `HEAD`: `git diff HEAD` is empty when a change
-    consists only of staged-new files, which silently disarms the check.
+    `-z` output is never quoted or octal-escaped, so a path holding a space or
+    a non-ASCII character survives intact. Reading them out of `+++` headers
+    does not: git quotes those, and the quoting silently broke limit lookup.
+
+    A rename carries BOTH names, because git only pairs the two sides when the
+    diff is given both. Ask for the new path alone and a moved file reports
+    every one of its lines as freshly added — a file move would light up the
+    whole file for lines it did not touch.
+    """
+    listing = _run_git(
+        root, "diff", "--cached", "--name-status", "-z", "-M", "--diff-filter=ACMRT"
+    )
+    if listing.returncode != 0:
+        return []
+    tokens = [entry for entry in listing.stdout.split("\0") if entry]
+    entries: list[tuple[str, list[str]]] = []
+    index = 0
+    while index < len(tokens) - 1:
+        status = tokens[index]
+        if status[:1] in ("R", "C") and index + 2 < len(tokens):
+            old, new = tokens[index + 1], tokens[index + 2]
+            entries.append((new, [old, new]))
+            index += 3
+        else:
+            path = tokens[index + 1]
+            entries.append((path, [path]))
+            index += 2
+    return entries
+
+
+def _added_lines(root: Path, paths: list[str]) -> list[tuple[int, str]]:
+    """Return (line-number, text) for each line the index ADDS to one file.
+
+    Diffing a single path removes the file-header ambiguity entirely. Within
+    one file's diff nothing before the first `@@` is content, and after it every
+    content line carries a `+`/`-` marker — so an added line reading `++ b/x.md`
+    can no longer be mistaken for a `+++ b/x.md` header and silently redirect
+    the rest of the diff at another file.
+
+    Reads `--cached`, never `HEAD`. `--cached` is HEAD-against-index, which is
+    exactly what the commit will contain. `git diff HEAD` is HEAD-against-worktree:
+    it drags in unstaged edits the commit will not carry, and it fails outright
+    before the first commit exists (`fatal: ambiguous argument 'HEAD'`), which this
+    function would swallow as "no lines added".
     """
     diff = _run_git(
-        root, "diff", "--cached", "--unified=0", "--no-color", "--no-ext-diff", "-M"
+        root,
+        "diff",
+        "--cached",
+        "--unified=0",
+        "--no-color",
+        "--no-ext-diff",
+        "-M",
+        "--",
+        *paths,
     )
     if diff.returncode != 0:
         return []
-    added: list[tuple[str, int, str]] = []
-    path = ""
+    added: list[tuple[int, str]] = []
     lineno = 0
+    in_body = False
     for raw in diff.stdout.splitlines():
-        if raw.startswith("+++ "):
-            target = raw[4:].strip()
-            path = "" if target == "/dev/null" else target[2:]
-            continue
         hunk = _HUNK.match(raw)
         if hunk:
             lineno = int(hunk.group(1))
+            in_body = True
             continue
-        if path and raw.startswith("+"):
-            added.append((path, lineno, raw[1:]))
+        if in_body and raw.startswith("+"):
+            added.append((lineno, raw[1:]))
             lineno += 1
     return added
 
 
 def _expand_braces(pattern: str) -> list[str]:
-    match = re.search(r"\{([^{}]*)\}", pattern)
-    if not match:
-        return [pattern]
-    head, tail = pattern[: match.start()], pattern[match.end() :]
-    out: list[str] = []
-    for choice in match.group(1).split(","):
-        out.extend(_expand_braces(head + choice + tail))
-    return out
+    """Expand `{a,b}` groups, bounded at BRACE_LIMIT alternatives.
+
+    Expansion is 2^groups. Twenty-two groups in one section header took the
+    check past thirty seconds, which is a hang on every commit for whoever
+    wrote that `.editorconfig`. Past the cap the pattern is left unexpanded:
+    it then matches nothing, so the file falls back to the advisory limit
+    rather than to a wrong declared one.
+    """
+    current = [pattern]
+    while True:
+        expanded: list[str] = []
+        changed = False
+        for item in current:
+            match = re.search(r"\{([^{}]*)\}", item)
+            if not match:
+                expanded.append(item)
+                continue
+            changed = True
+            head, tail = item[: match.start()], item[match.end() :]
+            expanded.extend(
+                head + choice + tail for choice in match.group(1).split(",")
+            )
+        if not changed:
+            return current
+        if len(expanded) > BRACE_LIMIT:
+            return [pattern]
+        current = expanded
 
 
 def _glob_to_regex(pattern: str) -> str:
@@ -119,7 +191,10 @@ def _glob_to_regex(pattern: str) -> str:
                 out.append(re.escape(char))
                 i += 1
             else:
-                out.append("[" + pattern[i + 1 : close] + "]")
+                body = pattern[i + 1 : close]
+                if body.startswith("!"):
+                    body = "^" + body[1:]
+                out.append("[" + body + "]")
                 i = close + 1
         else:
             out.append(re.escape(char))
@@ -188,14 +263,44 @@ def _editorconfig_limit(root: Path, rel: str) -> int | None:
             raw = values["max_line_length"].lower()
             if raw == "off":
                 limit = OFF
-            elif raw.isdigit():
-                limit = int(raw)
+            else:
+                parsed = _positive_int(raw)
+                if parsed is not None:
+                    limit = parsed
     return limit
 
 
+def _positive_int(raw: str) -> int | None:
+    """`str.isdigit()` is true for '²' while `int('²')` raises — parse, don't test."""
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return value if value > 0 else None
+
+
 def _env_limit() -> int | None:
-    raw = os.environ.get("WHETSTONE_TIGER_COLS", "").strip()
-    return int(raw) if raw.isdigit() else None
+    return _positive_int(os.environ.get("WHETSTONE_TIGER_COLS", "").strip())
+
+
+def _display_width(text: str) -> int:
+    """Columns the line occupies on a terminal, not code points.
+
+    `len()` is a different measurement wearing the same name: a tab counts one,
+    and a CJK character counts one while rendering two. A line of 100 wide
+    characters is 200 columns and would have read as exactly at the limit.
+    """
+    width = 0
+    for char in text:
+        if char == "\t":
+            width += TAB_STOP - (width % TAB_STOP)
+        elif unicodedata.combining(char):
+            continue
+        elif unicodedata.east_asian_width(char) in ("W", "F"):
+            width += 2
+        else:
+            width += 1
+    return width
 
 
 def _skipped(rel: str) -> bool:
@@ -203,7 +308,7 @@ def _skipped(rel: str) -> bool:
     return path.suffix.lower() in SKIP_SUFFIXES or path.name in SKIP_NAMES
 
 
-def _offences(root: Path) -> tuple[list[str], int]:
+def _offences(root: Path) -> tuple[list[str], int, int]:
     """Return every offence line, plus how many broke a limit the repo DECLARED.
 
     The two are counted apart on purpose: a fallback offence is advisory and must
@@ -212,23 +317,23 @@ def _offences(root: Path) -> tuple[list[str], int]:
     env = _env_limit()
     reported: list[str] = []
     declared_count = 0
-    resolved: dict[str, int | None] = {}
-    for rel, lineno, text in _staged_added_lines(root):
+    examined = 0
+    for rel, paths in _staged_entries(root):
         if _skipped(rel):
             continue
-        if rel not in resolved:
-            resolved[rel] = env if env is not None else _editorconfig_limit(root, rel)
-        limit = resolved[rel]
+        limit = env if env is not None else _editorconfig_limit(root, rel)
         if limit == OFF:
             continue
+        examined += 1
         declared = limit is not None
         effective = limit if declared else FALLBACK_COLS
-        width = len(text.rstrip("\r\n"))
-        if width <= effective:
-            continue
-        declared_count += 1 if declared else 0
-        reported.append(f"{rel}:{lineno}: {width} cols (limit {effective})")
-    return reported, declared_count
+        for lineno, text in _added_lines(root, paths):
+            width = _display_width(text.rstrip("\r\n"))
+            if width <= effective:
+                continue
+            declared_count += 1 if declared else 0
+            reported.append(f"{rel}:{lineno}: {width} cols (limit {effective})")
+    return reported, declared_count, examined
 
 
 def main(argv: list[str]) -> int:
@@ -236,11 +341,11 @@ def main(argv: list[str]) -> int:
     if not _is_work_tree(root):
         print(f"tiger_check: not a git work tree: {root}", file=sys.stderr)
         return USAGE
-    reported, declared_count = _offences(root)
+    reported, declared_count, examined = _offences(root)
     for entry in reported:
         print(entry)
     if not reported:
-        print("TIGER: CLEAN")
+        print(f"TIGER: CLEAN {examined} file{'' if examined == 1 else 's'}")
         return CLEAN
     if declared_count:
         print(f"TIGER: BLOCK {declared_count}")
