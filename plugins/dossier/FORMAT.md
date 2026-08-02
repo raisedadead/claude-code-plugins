@@ -62,7 +62,7 @@ Headings are fixed. Order is fixed. Skills parse positionally.
 
 A wave's definition of done lives in `.dossier/<date>-<slug>.md`, **tracked**. The ledger is working state and is gitignored; the contract has to be citable as evidence and outlive the wave, so it is neither.
 
-Shape: a `field | value` table carrying `consumer`, `reached-via` and `budget`, then a `## done-when` table of `id | command | expect`. Every command is backticked and every `expect` is `exit <n>`, `stdout: <substring>` or `stdout: (nothing)`. `ds:converge` runs them; prose is refused at parse time rather than reaching a shell.
+Shape: a `field | value` table carrying `consumer`, `reached-via` and `budget`, then a `## done-when` table of `id | command | expect`. Every command is backticked and every `expect` is `exit <n>`, `stdout: <substring>` or `stdout: (nothing)`. `ds:converge` runs them; prose criteria, a missing or empty `consumer`, and a bare `stdout:` are each refused at parse time (`CONVERGE: PARSE`, exit 2) rather than reaching a shell. Of the other two fields, `budget` is read by the prompt hook for its commits-spent line; `reached-via` is read by no code — it is there for the reviewer.
 
 A pipe inside a command is written `\|` so the row survives; the runner unescapes it. Tables are used rather than prose lists because prettier merges adjacent paragraphs and renumbers ordered lists, and a contract that the formatter rewrites is a contract the runner misreads.
 

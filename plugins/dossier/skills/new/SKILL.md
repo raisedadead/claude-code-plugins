@@ -82,7 +82,7 @@ These fold into the single atomic step-3 Write — no extra commit, no TDD cycle
 
 Before scaffolding the ledger, write `.dossier/<date>-<slug>.md` per FORMAT.md — `consumer`, `reached-via`, `budget`, and a `## done-when` table whose every row is a command with an expected result.
 
-`consumer` is the field that asks whether the work reaches anyone, and the one nobody writes unprompted. Ask for it plainly: who runs this, and by what path does it get to them? A wave once hardened a checker through three review rounds while no consumer could execute it, and no step in this skill had ever asked.
+`consumer` is the field that asks whether the work reaches anyone, and the one nobody writes unprompted. Ask for it plainly: who runs this, and by what path does it get to them? A wave once hardened a checker through three review rounds while no consumer could execute it, and no step in this skill had ever asked. `ds:converge` refuses a contract whose `consumer` row is missing or empty (`CONVERGE: PARSE`, exit 2), so a contract written without the answer fails its first run.
 
 A criterion that cannot be written as a command is a criterion nobody can check. Turn it into one, or drop it and say what was dropped.
 

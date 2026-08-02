@@ -39,7 +39,7 @@ declared = set(tokens)
 
 skill = skill_path.read_text(encoding="utf-8")
 try:
-    boundary = skill.split("MUST PAUSE (never auto-resolve):**")[1]
+    boundary = skill.split("MUST PAUSE")[1]
     boundary, excuse = boundary.split("**Excuse table")[0], boundary.split("**Excuse table")[1]
     excuse = excuse.split("**Rails:**")[0]
 except IndexError:

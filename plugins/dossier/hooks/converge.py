@@ -71,6 +71,23 @@ def _criteria(text: str) -> list[tuple[str, str, str]]:
     return found
 
 
+def _consumer(text: str) -> bool:
+    """A contract names who the work reaches, or it is refused.
+
+    The field nobody writes unprompted: a wave once hardened a checker through
+    three review rounds while no consumer could execute it. Prose calling the
+    field mandatory shipped before anything read it — this makes the claim true.
+    """
+    for line in text.splitlines():
+        cells = _cells(line)
+        if len(cells) >= 2 and cells[0].lower() == "consumer" and cells[1]:
+            return True
+    return False
+
+
+_EXPECT = re.compile(r"exit\s+\d+|stdout:\s*\S.*")
+
+
 def _met(expect: str, code: int, out: str) -> bool:
     expect = expect.strip()
     if expect.startswith("stdout:"):
@@ -178,10 +195,11 @@ def main(argv: list[str]) -> int:
     for ident, command, expect in criteria:
         if not _is_command(command):
             return _fail(f"criterion {ident} is not a backticked command: {command!r}")
-        if not _met(expect, 0, "") and not re.fullmatch(
-            r"(exit\s+\d+|stdout:.*)", expect.strip()
-        ):
+        if not _EXPECT.fullmatch(expect.strip()):
             return _fail(f"criterion {ident} has an unreadable expect: {expect!r}")
+
+    if not _consumer(text):
+        return _fail(f"{contract} names no consumer")
 
     root = Path.cwd()
     unmet = 0

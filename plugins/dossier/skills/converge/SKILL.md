@@ -1,7 +1,7 @@
 ---
 name: converge
 description: Run a wave contract's done-when criteria and report whether the wave is over. Use when the user says "ds:converge", "are we done", "is this wave finished", or asks whether more work on the current wave is warranted.
-argument-hint: "[contract-path]"
+argument-hint: '[contract-path]'
 ---
 
 # ds:converge — ask the contract whether the wave is over
@@ -45,11 +45,13 @@ Default path is the newest `.dossier/*.md`.
 
 `expect` is `exit <n>`, `stdout: <substring>`, or `stdout: (nothing)`.
 
-Three rules the runner enforces rather than trusts:
+Three shapes the runner refuses at parse time — each one is `CONVERGE: PARSE`, exit 2:
 
-- **Every criterion is a backticked command.** Prose is refused at parse time — `the tests should pass` would otherwise reach the shell, run `the`, and report whatever that did.
-- **A contract never names the runner.** That recurses; it is refused.
-- **`consumer` is mandatory.** It is the field that asks whether the work reaches anyone, and the one nobody writes unprompted. A wave once hardened a checker through three review rounds while no consumer could execute it.
+- **A prose criterion.** Every criterion is a backticked command — `the tests should pass` would otherwise reach the shell, run `the`, and report whatever that did.
+- **A missing or empty `consumer`.** It is the field that asks whether the work reaches anyone, and the one nobody writes unprompted. A wave once hardened a checker through three review rounds while no consumer could execute it.
+- **An empty or unreadable `expect`.** A bare `stdout:` with no substring would match every output and report MET on any command that exits 0, so it is refused with the malformed rest.
+
+Nesting is bounded, not banned. A criterion may invoke the runner — this runner's own contract does exactly that — and the invocation count travels in `DS_CONVERGE_DEPTH`: one nested level runs, the next refuses (`CONVERGE: PARSE`, exit 2). Reading the command string cannot decide what will recurse; counting invocations can.
 
 ## When it says MET
 

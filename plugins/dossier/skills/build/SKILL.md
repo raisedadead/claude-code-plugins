@@ -116,7 +116,7 @@ Use `fastedit` if `HAS_FASTEDIT=1` for surgical code edits. Else Edit tool.
 
 **Skill-lint route (whetstone compose, touched SKILL.md only):** lint before COMMIT when whetstone's linter resolves — source checkout (`plugins/whetstone/skills/skill-smith/scripts/lint_skill.py <path>`) or operator-set `DOSSIER_LINT_SKILL` (ADAPTERS §whetstone). Exit 0 gates the commit — same yardstick CI enforces repo-wide. Unresolvable → skip silently, §S `skill-lint=skipped-absent` (CI still lints on push; either plugin alone stays functional).
 
-**Source comments stay phase-agnostic.** A comment in source or test answers _why_: a workaround ref, a non-obvious invariant, an upstream-bug link. Phase and audit tracking are ledger vocabulary and live in DOSSIER.md §B and §S — that is where `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)` and `// PH<n>-B<k>` belong. The `marker_guard.py` PreToolUse hook watches for the audit-id forms and is advisory: it emits a nudge and exits 0, so the write proceeds. Keeping source clean of them is yours.
+**Source comments stay phase-agnostic.** A comment in source or test answers _why_: a workaround ref, a non-obvious invariant, an upstream-bug link. Phase and audit tracking live in DOSSIER.md §B and §S, which is the whole record of them — so `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)` and `// PH<n>-B<k>` stay out of every source and test file, and a comment that would carry one is either rewritten as a _why_ or dropped. The `marker_guard.py` PreToolUse hook watches for the audit-id forms and is advisory: it emits a nudge and exits 0, so the write proceeds, and this paragraph is what keeps them out.
 
 **Conflict route (whetstone compose, merge-class only):** a plain `git merge` conflict during WORK, with `whetstone:merge-resolve` in the available-skills list, resolves per that skill's process — hunk-by-hunk with intent, then the `verify_clean.sh` proof (baseline `-` marker-mode when no pre-conflict count exists; the step-6 full-suite GREEN gate already floors regressions). §S: `ds:build <T-id> conflict=resolved verify_clean=0`. Skill absent → resolve inline as before, §S `conflict=resolved-inline`. Routing is model-judgment (trigger-phrase match); the verify_clean exit code is the code-enforced part. Conflicts from `rebase` / `cherry-pick` are OUT of this route — their `--continue` creates commits outside step 7's task-scoped discipline: under `--auto` PAUSE (`destructive`); interactive, hand to the operator (standalone `whetstone:merge-resolve` already owns that trigger).
 
@@ -180,7 +180,7 @@ Capture SHA. Append §S:
 <YYYY-MM-DD HH:MM> ds:build <T-id> commit=<sha>
 ```
 
-If commit hooks fail: a hook failure is a signal about the change, so investigate the root cause, fix it, and retry the commit as it stands.
+If commit hooks fail: a hook failure is a signal about the change, so investigate the root cause, fix it, and retry the same commit — never `--no-verify` past it. One flag disarms every gate the step just ran, and nothing this plugin ships denies it.
 
 ### 8. §X REFRESH
 
@@ -271,7 +271,7 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 /goal Keep running ds:build --auto until it prints DONE or PAUSE. Stop on PAUSE.
 ```
 
-`/goal clear` (or Esc) ends the run cleanly. `/goal` is the driver because it runs in the foreground, takes mid-run steer, and respects dependency order — Workflows and `/loop` give up all three.
+`/goal clear` (or Esc) ends the run cleanly. `/goal` is the driver because it runs in the foreground, takes mid-run steer, and respects dependency order — Workflows and `/loop` give up all three, so the `--auto` loop stays on `/goal`.
 
 **Decision boundary — MUST PAUSE, the operator resolves these:**
 

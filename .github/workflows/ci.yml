@@ -19,7 +19,10 @@ jobs:
           python-version: "3.10"
 
       - name: python hook tests
-        run: python3 plugins/dossier/hooks/test_python.py
+        run: |
+          python3 plugins/dossier/hooks/test_python.py
+          python3 plugins/dossier/tests/test_converge.py
+          python3 plugins/dossier/tests/test_convergence_state.py
 
       - name: shell helper + marker-guard tests
         run: |
@@ -50,11 +53,11 @@ jobs:
         run: |
           pattern='\bnever\b|\bdo not\b|\bdon.t\b|\bmust not\b'
           files='plugins/dossier/skills/build/SKILL.md plugins/dossier/agents/dossier-reviewer.md CLAUDE.md'
-          test "$(grep -oiE "$pattern" plugins/dossier/skills/build/SKILL.md | wc -l)" -le 12
+          test "$(grep -oiE "$pattern" plugins/dossier/skills/build/SKILL.md | wc -l)" -le 13
           test "$(grep -oiE "$pattern" plugins/dossier/agents/dossier-reviewer.md | wc -l)" -le 9
           test "$(grep -oiE "$pattern" CLAUDE.md | wc -l)" -le 1
           contract=.dossier/2026-08-02-positive-rails.md
-          rows=$(sed -n '/^## survivors/,/^## what changes/p' "$contract" | grep -c -e '| fact' -e '| guarded')
+          rows=$(sed -n '/^## survivors/,/^## what changes/p' "$contract" | grep -c -e '| fact' -e '| guarded' -e '| hatch')
           # shellcheck disable=SC2086
           total=$(grep -oiE "$pattern" $files | wc -l)
           test "$rows" -eq "$total"
@@ -94,6 +97,7 @@ jobs:
         run: |
           python3 plugins/whetstone/tests/test_whetstone_py.py
           python3 plugins/whetstone/tests/test_tiger_check.py
+          python3 plugins/whetstone/tests/test_claim_check.py
 
       - name: shell script tests
         run: |

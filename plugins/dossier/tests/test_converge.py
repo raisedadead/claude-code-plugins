@@ -121,7 +121,8 @@ def test_a_criterion_pointed_at_another_contract_is_allowed() -> None:
     """Naming the runner is fine; the runner's own contract tests it on fixtures."""
     sibling = FIXTURES / "sibling.md"
     sibling.write_text(
-        "# sibling\n\n## done-when\n\n"
+        "# sibling\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n"
+        "## done-when\n\n"
         "| id  | command | expect |\n"
         "| --- | ------- | ------ |\n"
         "| 1   | `bash plugins/dossier/hooks/lib-converge.sh "
@@ -139,7 +140,8 @@ def test_a_name_containing_the_runner_is_not_the_runner() -> None:
     """`test_converge.py` is not `converge.py`; substring matching said it was."""
     lookalike = FIXTURES / "lookalike.md"
     lookalike.write_text(
-        "# lookalike\n\n## done-when\n\n"
+        "# lookalike\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n"
+        "## done-when\n\n"
         "| id  | command | expect |\n"
         "| --- | ------- | ------ |\n"
         "| 1   | `test -f plugins/dossier/tests/test_converge.py` | exit 0 |\n",
@@ -156,7 +158,8 @@ def test_a_self_referencing_contract_terminates() -> None:
     """The invariant is termination, not refusal. Depth is counted, not guessed."""
     loop = FIXTURES / "loop.md"
     loop.write_text(
-        "# loop\n\n## done-when\n\n"
+        "# loop\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n"
+        "## done-when\n\n"
         "| id  | command | expect |\n"
         "| --- | ------- | ------ |\n"
         "| 1   | `python3 plugins/dossier/hooks/converge.py "
@@ -195,7 +198,8 @@ def test_one_level_of_nesting_is_allowed() -> None:
     """Criteria 1 and 2 of this runner's own contract do exactly this."""
     nested = FIXTURES / "nested.md"
     nested.write_text(
-        "# nested\n\n## done-when\n\n"
+        "# nested\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n"
+        "## done-when\n\n"
         "| id  | command | expect |\n"
         "| --- | ------- | ------ |\n"
         "| 1   | `python3 plugins/dossier/hooks/converge.py "
@@ -227,7 +231,8 @@ def test_the_default_contract_is_the_live_wave_not_the_last_sorted() -> None:
         root = Path(tmp)
         (root / ".dossier").mkdir()
         body = (
-            "# {slug}\n\n## done-when\n\n"
+            "# {slug}\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n"
+            "## done-when\n\n"
             "| id  | command | expect |\n"
             "| --- | ------- | ------ |\n"
             "| 1   | `true`  | exit 0 |\n"
@@ -253,6 +258,59 @@ def test_the_default_contract_is_the_live_wave_not_the_last_sorted() -> None:
         )
         assert "aaa-live" in result.stdout, result.stdout
         assert "zzz-closed" not in result.stdout, result.stdout
+
+
+def test_a_contract_without_a_consumer_fails_the_parse() -> None:
+    """`consumer` is the field nobody writes unprompted, so prose alone never
+    gets it written — the runner refuses a contract that omits it."""
+    with tempfile.TemporaryDirectory() as tmp:
+        contract = Path(tmp) / "no-consumer.md"
+        contract.write_text(
+            "# c\n\n## done-when\n\n"
+            "| id  | command | expect |\n"
+            "| --- | ------- | ------ |\n"
+            "| 1   | `true`  | exit 0 |\n",
+            encoding="utf-8",
+        )
+        result = _run(contract)
+        verdict = _verdict(result)
+        assert verdict.startswith("CONVERGE: PARSE"), result.stdout + result.stderr
+        assert "consumer" in verdict, result.stdout
+        assert result.returncode == PARSE, result.stdout
+
+
+def test_a_consumer_row_with_an_empty_value_fails_the_parse() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        contract = Path(tmp) / "blank-consumer.md"
+        contract.write_text(
+            "# c\n\n| field    | value |\n| -------- | ----- |\n| consumer |       |\n\n"
+            "## done-when\n\n"
+            "| id  | command | expect |\n"
+            "| --- | ------- | ------ |\n"
+            "| 1   | `true`  | exit 0 |\n",
+            encoding="utf-8",
+        )
+        result = _run(contract)
+        assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
+        assert result.returncode == PARSE, result.stdout
+
+
+def test_an_empty_stdout_expect_fails_the_parse() -> None:
+    """A bare `stdout:` matches every output — `"" in anything` is true — so a
+    criterion carrying it reports MET on any command that exits 0."""
+    with tempfile.TemporaryDirectory() as tmp:
+        contract = Path(tmp) / "empty-expect.md"
+        contract.write_text(
+            "# c\n\n| field    | value |\n| -------- | ----- |\n| consumer | tests |\n\n"
+            "## done-when\n\n"
+            "| id  | command              | expect  |\n"
+            "| --- | -------------------- | ------- |\n"
+            "| 1   | `echo totally-wrong` | stdout: |\n",
+            encoding="utf-8",
+        )
+        result = _run(contract)
+        assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
+        assert result.returncode == PARSE, result.stdout
 
 
 def _main() -> int:

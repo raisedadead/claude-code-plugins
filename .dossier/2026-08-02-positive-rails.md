@@ -10,26 +10,28 @@
 
 | id  | command                                                                                                                                                                                                                                                                                                        | expect    |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- |
-| 1   | `test "$(grep -oiE '\bnever\b\|\bdo not\b\|\bdon.t\b\|\bmust not\b' plugins/dossier/skills/build/SKILL.md \| wc -l)" -le 12`                                                                                                                                                                                   | exit 0    |
+| 1   | `test "$(grep -oiE '\bnever\b\|\bdo not\b\|\bdon.t\b\|\bmust not\b' plugins/dossier/skills/build/SKILL.md \| wc -l)" -le 13`                                                                                                                                                                                   | exit 0    |
 | 2   | `test "$(grep -oiE '\bnever\b\|\bdo not\b\|\bdon.t\b\|\bmust not\b' plugins/dossier/agents/dossier-reviewer.md \| wc -l)" -le 9`                                                                                                                                                                               | exit 0    |
 | 3   | `test "$(grep -oiE '\bnever\b\|\bdo not\b\|\bdon.t\b\|\bmust not\b' CLAUDE.md \| wc -l)" -le 1`                                                                                                                                                                                                                | exit 0    |
-| 4   | `test "$(sed -n '/^## survivors/,/^## what changes/p' .dossier/2026-08-02-positive-rails.md \| grep -c -e '\| fact' -e '\| guarded')" -eq "$(grep -oiE '\bnever\b\|\bdo not\b\|\bdon.t\b\|\bmust not\b' plugins/dossier/skills/build/SKILL.md plugins/dossier/agents/dossier-reviewer.md CLAUDE.md \| wc -l)"` | exit 0    |
+| 4   | `test "$(sed -n '/^## survivors/,/^## what changes/p' .dossier/2026-08-02-positive-rails.md \| grep -c -e '\| fact' -e '\| guarded' -e '\| hatch')" -eq "$(grep -oiE '\bnever\b\|\bdo not\b\|\bdon.t\b\|\bmust not\b' plugins/dossier/skills/build/SKILL.md plugins/dossier/agents/dossier-reviewer.md CLAUDE.md \| wc -l)"` | exit 0    |
 | 5   | `bash plugins/whetstone/bin/claim-check $(git ls-files '*.md' \| grep -v tests/fixtures/)`                                                                                                                                                                                                                     | exit 0    |
 | 6   | `python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/dossier/skills`                                                                                                                                                                                                                    | exit 0    |
 | 7   | `python3 plugins/dossier/hooks/test_python.py`                                                                                                                                                                                                                                                                 | exit 0    |
 | 8   | `claude plugin validate plugins/dossier`                                                                                                                                                                                                                                                                       | exit 0    |
 | 9   | `grep -c 'positive-rails ceiling' .github/workflows/ci.yml`                                                                                                                                                                                                                                                    | stdout: 1 |
 | 10  | `actionlint .github/workflows/ci.yml`                                                                                                                                                                                                                                                                          | exit 0    |
+| 11  | `for t in plugins/dossier/hooks/test_*.sh; do bash "$t" >/dev/null 2>&1 \|\| exit 1; done`                                                                                                                                                                                                                     | exit 0    |
 
 ## survivors
 
 Every prohibition left in the three files, with the reason it stays. Criterion 4 holds this table and the files to the same count, so a prohibition that is added back without a row here fails the wave.
 
-Two reasons qualify. **fact** — the sentence describes what the system does, and the negative is the accurate description; rewriting it positively would destroy information. **guarded** — the action is irreversible or a hook returns a non-zero exit on it, so F28's carve-out for hard guardrails applies, and the row is paired with a positive in the same sentence.
+Three reasons qualify. **fact** — the sentence describes what the system does, and the negative is the accurate description; rewriting it positively would destroy information. **guarded** — the action is irreversible or a hook returns a non-zero exit on it, so F28's carve-out for hard guardrails applies, and the row is paired with a positive in the same sentence. **hatch** — a single named flag disarms a gate the surrounding step depends on, and the positive form has nothing to attach to: "retry the commit" does not tell a reader which one-word bypass to leave alone. The flag gets named and closed, after the positive.
 
 | file     | phrase                                                   | why     |
 | -------- | -------------------------------------------------------- | ------- |
 | build    | `--doubt` alone never activates the gate                 | fact    |
+| build    | never `--no-verify` past a failing commit hook           | hatch   |
 | build    | `Warn:` / `Nit:` never block the commit                  | fact    |
 | build    | measure after `git add`, never before                    | guarded |
 | build    | a check that never ran                                   | fact    |
@@ -67,5 +69,7 @@ Baseline occurrences of `never` / `do not` / `don't` / `must not`: build 36, rev
 ## notes
 
 Criterion 4 is the exhaustiveness half. A count alone can be met by deleting a sentence that carried a real constraint; pairing the count with a table that must list every survivor means each one was looked at and argued for.
+
+Criterion 11 was added after the first `MET 8/8` found the shell suites unrun. `test_pause_class_parity.sh` split `build/SKILL.md` on the literal string `MUST PAUSE (never auto-resolve):**`, which this wave rewrote, so the parity check went to a parse failure while every criterion still read MET. A contract that names one suite reports on one suite; the anchor is now the stable `MUST PAUSE` prefix and the criterion runs all of them.
 
 Criteria 9 and 10 were added after the first `MET 8/8`. The wave's own D14 write-up said the ceiling was "enforced", and at that moment nothing ran it except a hand invocation of `ds:converge` — the F25 class, caught inside the wave that exists to reduce it. The choice was to weaken the word or build the thing; the ceiling is four greps, so it became a CI step and the word stayed.
