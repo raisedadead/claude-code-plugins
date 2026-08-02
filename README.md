@@ -7,7 +7,7 @@ An agent will happily report success it cannot demonstrate. These two plugins ma
 | Plugin        | What it does                                                                                                                                 |
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | **dossier**   | Phase-scoped workflow. One resumable `DOSSIER.md` drives a wave — tasks, bugs, invariants, cross-repo state — with in-session quality gates. |
-| **whetstone** | Per-task craft, each skill carrying a deterministic self-verify: red-green TDD, flaky-test audit, doubt review, merge-resolve, skill lint.   |
+| **whetstone** | Per-task craft, each skill carrying a deterministic self-verify: red-green TDD, flaky-test audit, doubt review, merge-resolve, skill lint, column budget.   |
 
 dossier drives the wave; whetstone is the craft at each gate. Designed to be used together, independent by invariant — either works alone, and every composition route skips silently when its sibling is absent.
 
@@ -47,6 +47,7 @@ Everything else fires automatically or is power-user: `build` (the TDD engine, `
 | `/whetstone:flaky-test-audit` | computed per-test rate                        |
 | `/whetstone:merge-resolve`    | zero markers, pass-count at or above baseline |
 | `/whetstone:skill-smith`      | frontmatter, line budget, reference depth     |
+| `/whetstone:tiger-style`      | column budget computed from the staged diff   |
 
 ## Quickstart
 

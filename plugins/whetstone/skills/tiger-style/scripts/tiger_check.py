@@ -7,9 +7,12 @@ Exit codes:
   2  offences against the built-in 100 fallback  (NAG, advisory)
   64 usage error — the path is not a git work tree
 
-The limit is resolved per file: WHETSTONE_TIGER_COLS, else the .editorconfig
-max_line_length of the nearest matching section, else 100 as a nag-only default.
-A declared limit blocks; the fallback never does.
+The limit is resolved per file: WHETSTONE_TIGER_COLS, else .editorconfig
+max_line_length — nearest by directory, last matching section within a file —
+else 100 as a nag-only default. A declared limit blocks; the fallback never
+does. A value that is neither a positive integer nor `off` is ignored, and
+saying so on stderr is the point: an ignored limit the operator believes is
+active is the failure this checker exists to prevent.
 """
 
 from __future__ import annotations
@@ -263,10 +266,16 @@ def _editorconfig_limit(root: Path, rel: str) -> int | None:
             raw = values["max_line_length"].lower()
             if raw == "off":
                 limit = OFF
-            else:
-                parsed = _positive_int(raw)
-                if parsed is not None:
-                    limit = parsed
+                continue
+            parsed = _positive_int(raw)
+            if parsed is None:
+                print(
+                    f"tiger_check: ignoring max_line_length={raw!r} in {config}"
+                    " — expected a positive integer or 'off'",
+                    file=sys.stderr,
+                )
+                continue
+            limit = parsed
     return limit
 
 
@@ -280,7 +289,23 @@ def _positive_int(raw: str) -> int | None:
 
 
 def _env_limit() -> int | None:
-    return _positive_int(os.environ.get("WHETSTONE_TIGER_COLS", "").strip())
+    """Parse WHETSTONE_TIGER_COLS, and say so out loud when it is unusable.
+
+    Falling through to the fallback in silence is the worse failure: the
+    operator who typed `WHETSTONE_TIGER_COLS=0` believes a declared limit is
+    blocking commits, and gets an advisory nag that blocks nothing.
+    """
+    raw = os.environ.get("WHETSTONE_TIGER_COLS", "").strip()
+    if not raw:
+        return None
+    parsed = _positive_int(raw)
+    if parsed is None:
+        print(
+            f"tiger_check: ignoring WHETSTONE_TIGER_COLS={raw!r}"
+            " — expected a positive integer",
+            file=sys.stderr,
+        )
+    return parsed
 
 
 def _display_width(text: str) -> int:
@@ -308,21 +333,30 @@ def _skipped(rel: str) -> bool:
     return path.suffix.lower() in SKIP_SUFFIXES or path.name in SKIP_NAMES
 
 
-def _offences(root: Path) -> tuple[list[str], int, int]:
-    """Return every offence line, plus how many broke a limit the repo DECLARED.
+def _offences(root: Path) -> tuple[list[str], int, int, int]:
+    """Return offence lines, the DECLARED-limit count, and examined vs skipped.
 
-    The two are counted apart on purpose: a fallback offence is advisory and must
-    never be swept into a BLOCK count just because some other file declared one.
+    Declared and fallback offences are counted apart on purpose: a fallback
+    offence is advisory and must never be swept into a BLOCK count just because
+    some other file declared one.
+
+    Skipped files are counted because `examined` alone cannot answer the
+    question an operator actually asks. Zero examined means nothing was
+    measured, and a docs-only commit reaches that the same way a mis-typed
+    `git add` does — identically, until the skipped count separates them.
     """
     env = _env_limit()
     reported: list[str] = []
     declared_count = 0
     examined = 0
+    skipped = 0
     for rel, paths in _staged_entries(root):
         if _skipped(rel):
+            skipped += 1
             continue
         limit = env if env is not None else _editorconfig_limit(root, rel)
         if limit == OFF:
+            skipped += 1
             continue
         examined += 1
         declared = limit is not None
@@ -333,7 +367,7 @@ def _offences(root: Path) -> tuple[list[str], int, int]:
                 continue
             declared_count += 1 if declared else 0
             reported.append(f"{rel}:{lineno}: {width} cols (limit {effective})")
-    return reported, declared_count, examined
+    return reported, declared_count, examined, skipped
 
 
 def main(argv: list[str]) -> int:
@@ -341,11 +375,12 @@ def main(argv: list[str]) -> int:
     if not _is_work_tree(root):
         print(f"tiger_check: not a git work tree: {root}", file=sys.stderr)
         return USAGE
-    reported, declared_count, examined = _offences(root)
+    reported, declared_count, examined, skipped = _offences(root)
     for entry in reported:
         print(entry)
     if not reported:
-        print(f"TIGER: CLEAN {examined} file{'' if examined == 1 else 's'}")
+        tail = f", {skipped} skipped" if skipped else ""
+        print(f"TIGER: CLEAN {examined} file{'' if examined == 1 else 's'}{tail}")
         return CLEAN
     if declared_count:
         print(f"TIGER: BLOCK {declared_count}")

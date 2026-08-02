@@ -315,6 +315,115 @@ def test_nothing_staged_says_zero_files() -> None:
         result = _run(repo)
         assert result.returncode == CLEAN, result.stdout + result.stderr
         assert "TIGER: CLEAN 0 files" in result.stdout, result.stdout
+        assert "skipped" not in result.stdout, result.stdout
+
+
+def test_all_staged_files_skipped_is_not_nothing_staged() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "seed.py", _line(10))
+        _git(repo, "add", "seed.py")
+        _commit(repo, "chore: seed")
+        _write(repo, "README.md", _line(300))
+        _write(repo, "data.json", _line(300))
+        _git(repo, "add", "README.md", "data.json")
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+        assert "TIGER: CLEAN 0 files, 2 skipped" in result.stdout, result.stdout
+
+
+def test_off_declared_file_counts_as_skipped_not_examined() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "seed.py", _line(10))
+        _git(repo, "add", "seed.py")
+        _commit(repo, "chore: seed")
+        _write(repo, ".editorconfig", "[*.py]\nmax_line_length = off\n")
+        _write(repo, "wide.py", _line(300))
+        _git(repo, "add", ".editorconfig", "wide.py")
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+        assert "1 skipped" in result.stdout, result.stdout
+
+
+def test_unusable_env_limit_is_announced_not_swallowed() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "seed.py", _line(10))
+        _git(repo, "add", "seed.py")
+        _commit(repo, "chore: seed")
+        _write(repo, "wide.py", _line(150))
+        _git(repo, "add", "wide.py")
+        result = _run(repo, WHETSTONE_TIGER_COLS="0")
+        assert result.returncode == NAG, result.stdout + result.stderr
+        assert "WHETSTONE_TIGER_COLS" in result.stderr, result.stderr
+
+
+def test_unusable_editorconfig_limit_is_announced_not_swallowed() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "seed.py", _line(10))
+        _git(repo, "add", "seed.py")
+        _commit(repo, "chore: seed")
+        _write(repo, ".editorconfig", "[*.py]\nmax_line_length = 0\n")
+        _write(repo, "wide.py", _line(150))
+        _git(repo, "add", ".editorconfig", "wide.py")
+        result = _run(repo)
+        assert result.returncode == NAG, result.stdout + result.stderr
+        assert "max_line_length" in result.stderr, result.stderr
+
+
+def test_unusable_later_section_does_not_silently_keep_the_earlier_limit() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "seed.py", _line(10))
+        _git(repo, "add", "seed.py")
+        _commit(repo, "chore: seed")
+        _write(
+            repo,
+            ".editorconfig",
+            "[*]\nmax_line_length = 80\n\n[*.py]\nmax_line_length = 0\n",
+        )
+        _write(repo, "wide.py", _line(150))
+        _git(repo, "add", ".editorconfig", "wide.py")
+        result = _run(repo)
+        assert result.returncode == BLOCK, result.stdout + result.stderr
+        assert "limit 80" in result.stdout, result.stdout
+        assert "max_line_length" in result.stderr, result.stderr
+
+
+def test_usable_editorconfig_limit_stays_silent_on_stderr() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "seed.py", _line(10))
+        _git(repo, "add", "seed.py")
+        _commit(repo, "chore: seed")
+        _write(repo, ".editorconfig", "[*.py]\nmax_line_length = 40\n")
+        _write(repo, "wide.py", _line(150))
+        _git(repo, "add", ".editorconfig", "wide.py")
+        result = _run(repo)
+        assert result.returncode == BLOCK, result.stdout + result.stderr
+        assert "max_line_length" not in result.stderr, result.stderr
+
+
+def test_usable_env_limit_stays_silent_on_stderr() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "seed.py", _line(10))
+        _git(repo, "add", "seed.py")
+        _commit(repo, "chore: seed")
+        _write(repo, "wide.py", _line(150))
+        _git(repo, "add", "wide.py")
+        result = _run(repo, WHETSTONE_TIGER_COLS="40")
+        assert result.returncode == BLOCK, result.stdout + result.stderr
+        assert "WHETSTONE_TIGER_COLS" not in result.stderr, result.stderr
 
 
 def test_staged_new_file_is_seen() -> None:

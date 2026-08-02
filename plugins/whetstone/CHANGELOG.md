@@ -4,6 +4,18 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-08-01 (one shape rule computed, the rest read by hand)
+
+### Added
+
+- `tiger-style`, a sixth skill: the one TIGER_STYLE rule cheap to compute from a diff — the column budget of the lines a change ADDS. `tiger_check.py` reads the staged index, resolves a limit per file (`WHETSTONE_TIGER_COLS`, then `.editorconfig` `max_line_length`, then a 100-column fallback) and exits `0` clean, `1` for a limit the repo declared, `2` for the advisory fallback, `64` for a non-work-tree.
+
+  The split is the point. A repo that has stated its limit gets it enforced; a repo that has not gets told, never stopped. The other four TIGER_STYLE rules — function length, assert adequacy, loop bounds, magic numbers — need a reader, so they ship as a labelled manual pass with no exit code, and the skill says plainly that nothing enforces them. A checklist that presents itself as a gate is worse than no gate.
+
+  Width is display columns, not code points: a tab advances to its stop, a wide character counts two, a combining mark counts zero. A verdict line carries how many files were examined and how many were staged but skipped, so an empty index is distinguishable from a docs-only commit rather than reading as the same "clean".
+
+  Reaches only a checkout of this repo today. A consuming project installs `skills/` into the plugin cache, where the composed route cannot address its sibling — see the open stride in `RESEARCH.md`.
+
 ## 2026-07-31 (lint what the host actually parses)
 
 ### Added

@@ -23,16 +23,18 @@ Reads the **staged** diff (`git diff --cached`), never `HEAD`. `--cached` compar
 
 Only lines the change **adds** are measured. Existing long lines are somebody else's commit.
 
-| exit | signal                   | meaning                                                          |
-| ---- | ------------------------ | ---------------------------------------------------------------- |
-| 0    | `TIGER: CLEAN <n> file(s)` | no added line is over its limit, across the `<n>` files examined |
-| 1    | `TIGER: BLOCK <n>`       | `<n>` added lines exceed a limit **the repo declared**           |
-| 2    | `TIGER: NAG <n>`         | `<n>` added lines exceed the built-in 100-column fallback        |
-| 64   | —                        | the path is not a git work tree                                  |
+| exit | signal                                    | meaning                                                                                                   |
+| ---- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 0    | `TIGER: CLEAN <n> file(s)[, <m> skipped]` | no added line is over its limit, across the `<n>` files examined; `<m>` more were staged but not measured |
+| 1    | `TIGER: BLOCK <n>`                        | `<n>` added lines exceed a limit **the repo declared**                                                    |
+| 2    | `TIGER: NAG <n>`                          | `<n>` added lines exceed the built-in 100-column fallback                                                 |
+| 64   | —                                         | the path is not a git work tree                                                                           |
 
 Each offence prints as `path:line: <width> cols (limit <n>)` before the verdict line.
 
-`CLEAN 0 files` and `CLEAN 3 files` are both exit 0, and the difference matters: the first means nothing was staged to look at. A caller that reads only the exit code cannot tell "checked, fine" from "checked nothing" — which is how a mis-typed `git add` reads as a pass.
+`CLEAN 0 files` and `CLEAN 3 files` are both exit 0, and the difference matters: the first means nothing was measured. A caller that reads only the exit code cannot tell "checked, fine" from "checked nothing" — which is how a mis-typed `git add` reads as a pass.
+
+Nothing measured has two causes, so the line separates them. A bare `CLEAN 0 files` is an empty index. `CLEAN 0 files, 2 skipped` is a commit whose every file was prose, data, or declared `off` — a docs-only or lockfile-bump commit reaches it correctly, and it is not a mistake. Only the bare form is worth checking your `git add` over.
 
 One run can turn up both kinds at once — a declared-limit offence in one file and a fallback offence in another. Every offence is printed either way, but `<n>` in the verdict counts only the kind the verdict names. A fallback offence is never counted into a `BLOCK` and never blocks a commit, whatever else the run found.
 
@@ -40,8 +42,13 @@ One run can turn up both kinds at once — a declared-limit offence in one file 
 
 Resolved per file, first match wins:
 
-1. `WHETSTONE_TIGER_COLS` — an integer. Declared, so it **blocks**.
+1. `WHETSTONE_TIGER_COLS` — a **positive** integer. Declared, so it **blocks**. `0`, a negative, or a non-number is not a limit: the value is ignored, the fallback applies, and the reason is named on stderr. Silence there would be the worse bug — an operator who set `WHETSTONE_TIGER_COLS=0` would believe commits were being blocked while getting an advisory nag that blocks nothing.
 1. `.editorconfig` `max_line_length` for the nearest section matching the file. Declared, so it **blocks**. A value of `off` is spec-legal and skips the file entirely.
+
+"Nearest" is directory distance: the walk starts beside the file and stops at a `root = true`. It is not specificity. Where two sections in the **same** file both match, EditorConfig's own rule applies and the later one wins — `[*.py]` followed by `[*]` loses to the `[*]`, which is the opposite of what CSS-shaped intuition predicts.
+
+A later section only wins if its value parses. `max_line_length = 0` in the more specific section leaves the broader section's limit standing, which is the same silent-ignore trap as the env var and gets the same treatment: the value is named on stderr rather than dropped.
+
 1. Nothing declared → 100 columns, and exceeding it only **nags**.
 
 The distinction is the point: a repo that has stated its limit gets it enforced, and a repo that has not gets told, never stopped. The env var carries whetstone's own prefix rather than a `DOSSIER_` one — this is whetstone's behaviour, and it must be configurable by someone who has never installed the dossier plugin.

@@ -1,6 +1,6 @@
 # whetstone
 
-Engineering-craft skills that sharpen the edge before you cut. Five small, composable skills — each carries a deterministic self-verify, so "done" is a checkable fact.
+Engineering-craft skills that sharpen the edge before you cut. Six small, composable skills — each carries a deterministic self-verify, so "done" is a checkable fact.
 
 Docs live at the repository root, which is not shipped to the install path — these are absolute so they resolve from the plugin cache too:
 
