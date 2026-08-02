@@ -89,6 +89,7 @@ Other knobs: `DOSSIER_FAKEIMPL_TIMEOUT` (120) is read by hook code. `DS_HEALTH_C
 | -------------------------------------------- | -------------------------------------------------------------------------------- |
 | [ARCHITECTURE.md](./ARCHITECTURE.md)         | Priorities, tenets, enforcement map, testing standard, how this evolves, lineage |
 | [RESEARCH.md](./RESEARCH.md)                 | Decisions with rejected alternatives, facts with a recheck trigger, open strides |
+| [INSPIRATIONS.md](./INSPIRATIONS.md)         | Sources we borrow from, what we refused from each, and when we last looked       |
 | [FORMAT.md](./plugins/dossier/FORMAT.md)     | Ledger encoding spec                                                             |
 | [ADAPTERS.md](./plugins/dossier/ADAPTERS.md) | Host-environment detection and composition routes                                |
 
