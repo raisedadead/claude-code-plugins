@@ -60,6 +60,17 @@ def _line(width: int) -> str:
     return "x" * width + "\n"
 
 
+def _verdict(result: subprocess.CompletedProcess[str]) -> str:
+    """The verdict line, exactly.
+
+    Substring assertions cannot see a suffix: `"CLEAN 1 file" in stdout` is
+    true of `CLEAN 1 files`, so a test named for the singular form passed
+    with the singular form mutated away.
+    """
+    lines = [line for line in result.stdout.splitlines() if line.startswith("TIGER:")]
+    return lines[-1] if lines else ""
+
+
 def test_clean_under_default() -> None:
     with tempfile.TemporaryDirectory() as t:
         repo = Path(t)
@@ -302,7 +313,7 @@ def test_clean_reports_how_many_files_it_examined() -> None:
         _git(repo, "add", "a.py")
         result = _run(repo)
         assert result.returncode == CLEAN, result.stdout + result.stderr
-        assert "TIGER: CLEAN 1 file" in result.stdout, result.stdout
+        assert _verdict(result) == "TIGER: CLEAN 1 file", result.stdout
 
 
 def test_nothing_staged_says_zero_files() -> None:
@@ -314,8 +325,7 @@ def test_nothing_staged_says_zero_files() -> None:
         _commit(repo, "chore: seed")
         result = _run(repo)
         assert result.returncode == CLEAN, result.stdout + result.stderr
-        assert "TIGER: CLEAN 0 files" in result.stdout, result.stdout
-        assert "skipped" not in result.stdout, result.stdout
+        assert _verdict(result) == "TIGER: CLEAN 0 files", result.stdout
 
 
 def test_all_staged_files_skipped_is_not_nothing_staged() -> None:
@@ -330,7 +340,7 @@ def test_all_staged_files_skipped_is_not_nothing_staged() -> None:
         _git(repo, "add", "README.md", "data.json")
         result = _run(repo)
         assert result.returncode == CLEAN, result.stdout + result.stderr
-        assert "TIGER: CLEAN 0 files, 2 skipped" in result.stdout, result.stdout
+        assert _verdict(result) == "TIGER: CLEAN 0 files, 2 skipped", result.stdout
 
 
 def test_off_declared_file_counts_as_skipped_not_examined() -> None:
@@ -634,11 +644,255 @@ def test_tabs_count_to_the_next_tab_stop() -> None:
     with tempfile.TemporaryDirectory() as t:
         repo = Path(t)
         _init(repo)
-        _write(repo, "tabbed.py", "\t" * 20 + "x = 1\n")
+        _write(repo, "tabbed.py", "xxx\t" * 13 + "\n")
         _git(repo, "add", "tabbed.py")
         result = _run(repo)
         assert result.returncode == NAG, result.stdout + result.stderr
-        assert "165 cols" in result.stdout, result.stdout
+        assert "104 cols" in result.stdout, result.stdout
+
+
+SKIPPED_FIXTURES = (
+    "a.md",
+    "a.markdown",
+    "a.rst",
+    "a.txt",
+    "a.json",
+    "a.jsonl",
+    "a.csv",
+    "a.tsv",
+    "a.svg",
+    "a.lock",
+    "a.snap",
+    "go.sum",
+    "yarn.lock",
+    "poetry.lock",
+    "Cargo.lock",
+)
+
+
+def test_every_skipped_kind_is_actually_skipped() -> None:
+    """Listed literally, not imported — importing the set would test nothing.
+
+    Only `.md` and `.json` had coverage; dropping any other entry left the
+    whole suite green.
+    """
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "seed.py", _line(10))
+        _git(repo, "add", "seed.py")
+        _commit(repo, "chore: seed")
+        for name in SKIPPED_FIXTURES:
+            _write(repo, name, _line(300))
+        _git(repo, "add", *SKIPPED_FIXTURES)
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+        expected = f"TIGER: CLEAN 0 files, {len(SKIPPED_FIXTURES)} skipped"
+        assert _verdict(result) == expected, result.stdout
+
+
+def test_combining_marks_do_not_widen_a_line() -> None:
+    """100 base characters each carrying a combining mark occupy 100 columns.
+
+    Counting the marks would read 200 and flag a line that renders exactly at
+    the limit; no fixture put one near a boundary before.
+    """
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "accents.py", "e\u0301" * 100 + "\n")
+        _git(repo, "add", "accents.py")
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+
+
+def test_filename_with_a_space_keeps_its_declared_limit() -> None:
+    """The space-path case was only ever asserted against the fallback."""
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, ".editorconfig", "root = true\n\n[*.py]\nmax_line_length = 40\n")
+        _write(repo, "two words.py", _line(90))
+        _git(repo, "add", ".editorconfig", "two words.py")
+        result = _run(repo)
+        assert result.returncode == BLOCK, result.stdout + result.stderr
+        assert "two words.py:1: 90 cols (limit 40)" in result.stdout, result.stdout
+
+
+def test_star_does_not_cross_a_directory_boundary() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(
+            repo, ".editorconfig", "root = true\n\n[src/*.py]\nmax_line_length = 40\n"
+        )
+        _write(repo, "src/a.py", _line(90))
+        _write(repo, "src/sub/deep.py", _line(90))
+        _git(repo, "add", ".editorconfig", "src/a.py", "src/sub/deep.py")
+        result = _run(repo)
+        assert result.returncode == BLOCK, result.stdout + result.stderr
+        assert "src/a.py:1: 90 cols (limit 40)" in result.stdout, result.stdout
+        assert "deep.py" not in result.stdout, result.stdout
+
+
+def test_question_mark_does_not_match_a_slash() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, ".editorconfig", "root = true\n\n[a?c.py]\nmax_line_length = 40\n")
+        _write(repo, "a/c.py", _line(90))
+        _git(repo, "add", ".editorconfig", "a/c.py")
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+
+
+def test_bare_glob_still_matches_inside_a_subdirectory() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, ".editorconfig", "root = true\n\n[*.py]\nmax_line_length = 40\n")
+        _write(repo, "deep/nested/a.py", _line(90))
+        _git(repo, "add", ".editorconfig", "deep/nested/a.py")
+        result = _run(repo)
+        assert result.returncode == BLOCK, result.stdout + result.stderr
+        assert "limit 40" in result.stdout, result.stdout
+
+
+def test_no_newline_marker_is_not_an_added_line() -> None:
+    """`\\ No newline at end of file` follows a hunk and starts with neither +/-."""
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "seed.py", _line(10))
+        _git(repo, "add", "seed.py")
+        _commit(repo, "chore: seed")
+        (repo / "a.py").write_text("x" * 50, encoding="utf-8")
+        _git(repo, "add", "a.py")
+        result = _run(repo, WHETSTONE_TIGER_COLS="10")
+        assert result.returncode == BLOCK, result.stdout + result.stderr
+        assert _verdict(result) == "TIGER: BLOCK 1", result.stdout
+
+
+def test_a_staged_deletion_is_not_examined() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "gone.py", _line(300))
+        _git(repo, "add", "gone.py")
+        _commit(repo, "chore: seed")
+        _git(repo, "rm", "-q", "gone.py")
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+        assert _verdict(result) == "TIGER: CLEAN 0 files", result.stdout
+
+
+def test_rename_is_attributed_to_the_new_name() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "old.py", _line(120) * 5)
+        _git(repo, "add", "old.py")
+        _commit(repo, "chore: seed")
+        _git(repo, "mv", "old.py", "new.py")
+        _write(repo, "new.py", _line(120) * 5 + _line(130))
+        _git(repo, "add", "new.py")
+        result = _run(repo)
+        assert result.returncode == NAG, result.stdout + result.stderr
+        assert "new.py:6: 130 cols" in result.stdout, result.stdout
+        assert "old.py" not in result.stdout, result.stdout
+
+
+def test_rename_beside_another_change_loses_neither() -> None:
+    """The rename branch consumes three tokens; miscounting eats the next entry."""
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "old.py", _line(10))
+        _write(repo, "other.py", _line(10))
+        _git(repo, "add", "old.py", "other.py")
+        _commit(repo, "chore: seed")
+        _git(repo, "mv", "old.py", "new.py")
+        _write(repo, "other.py", _line(10) + _line(140))
+        _git(repo, "add", "new.py", "other.py")
+        result = _run(repo)
+        assert result.returncode == NAG, result.stdout + result.stderr
+        assert "other.py:2: 140 cols" in result.stdout, result.stdout
+
+
+def test_rename_pairing_survives_renames_being_off() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _git(repo, "config", "diff.renames", "false")
+        _write(repo, "old.py", _line(130) * 5)
+        _git(repo, "add", "old.py")
+        _commit(repo, "chore: seed")
+        _git(repo, "mv", "old.py", "new.py")
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+        assert _verdict(result) == "TIGER: CLEAN 1 file", result.stdout
+
+
+def test_an_honoured_off_is_never_reported_as_ignored() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, ".editorconfig", "root = true\n\n[*.py]\nmax_line_length = off\n")
+        _write(repo, "a.py", _line(300))
+        _git(repo, "add", ".editorconfig", "a.py")
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+        assert "max_line_length" not in result.stderr, result.stderr
+
+
+def test_fullwidth_characters_count_as_two_columns() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, "wide.py", "Ａ" * 51 + "\n")
+        _git(repo, "add", "wide.py")
+        result = _run(repo)
+        assert result.returncode == NAG, result.stdout + result.stderr
+        assert "102 cols" in result.stdout, result.stdout
+
+
+def test_editorconfig_comments_are_not_settings() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(
+            repo,
+            ".editorconfig",
+            "root = true\n\n[*.py]\n; max_line_length = 20\n# max_line_length = 20\nmax_line_length = 40\n",
+        )
+        _write(repo, "a.py", _line(30))
+        _git(repo, "add", ".editorconfig", "a.py")
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+
+
+def test_a_setting_outside_any_section_is_not_a_glob() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, ".editorconfig", "root = true\nmax_line_length = 20\n")
+        _write(repo, "a.py", _line(60))
+        _git(repo, "add", ".editorconfig", "a.py")
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+
+
+def test_the_root_config_is_reached_past_a_non_root_one() -> None:
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, ".editorconfig", "root = true\n\n[*.py]\nmax_line_length = 40\n")
+        _write(repo, "src/.editorconfig", "[*.js]\nmax_line_length = 200\n")
+        _write(repo, "src/a.py", _line(90))
+        _git(repo, "add", ".editorconfig", "src/.editorconfig", "src/a.py")
+        result = _run(repo)
+        assert result.returncode == BLOCK, result.stdout + result.stderr
+        assert "limit 40" in result.stdout, result.stdout
 
 
 def _main() -> int:

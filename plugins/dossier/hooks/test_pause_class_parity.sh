@@ -157,4 +157,73 @@ rc=0
 bash "$0" "$TMP" >/dev/null 2>&1 || rc=$?
 [[ "$rc" -eq 1 ]] || fail "a repeated brace-set token must exit 1, as a repeated table row does (got $rc)"
 
+cp "$REPO/plugins/dossier/FORMAT.md" "$TMP/plugins/dossier/FORMAT.md"
+python3 - "$TMP" <<'PY'
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1]) / "plugins" / "dossier" / "skills" / "build" / "SKILL.md"
+body = path.read_text(encoding="utf-8")
+head, sep, tail = body.partition("**Excuse table")
+match = re.search(r"^\|\s*`x-stale`\s*\|.*\n", tail, flags=re.M)
+path.write_text(head + sep + tail[: match.end()] + match.group(0) + tail[match.end() :], encoding="utf-8")
+PY
+
+rc=0
+bash "$0" "$TMP" >/dev/null 2>&1 || rc=$?
+[[ "$rc" -eq 1 ]] || fail "a repeated row inside a PAUSE table must exit 1 (got $rc)"
+
+cp "$REPO/plugins/dossier/skills/build/SKILL.md" "$TMP/plugins/dossier/skills/build/SKILL.md"
+python3 - "$TMP" <<'PY'
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1]) / "plugins" / "dossier" / "FORMAT.md"
+body = path.read_text(encoding="utf-8")
+path.write_text(re.sub(r"reason class ∈ `\{[^}]*\}`", "reason class is open", body, count=1), encoding="utf-8")
+PY
+
+rc=0
+bash "$0" "$TMP" >/dev/null 2>&1 || rc=$?
+[[ "$rc" -eq 2 ]] || fail "zero brace sets must exit 2, the same as too many (got $rc)"
+
+DISPATCH="$TMP/dispatch"
+mkdir -p "$DISPATCH/plugins/dossier/hooks" "$DISPATCH/plugins/dossier/skills/build"
+cp "$0" "$DISPATCH/plugins/dossier/hooks/parity.sh"
+cp "$REPO/plugins/dossier/FORMAT.md" "$DISPATCH/plugins/dossier/FORMAT.md"
+cp "$REPO/plugins/dossier/skills/build/SKILL.md" "$DISPATCH/plugins/dossier/skills/build/SKILL.md"
+
+python3 - "$DISPATCH" <<'PY'
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1]) / "plugins" / "dossier" / "skills" / "build" / "SKILL.md"
+body = path.read_text(encoding="utf-8")
+head, sep, tail = body.partition("**Excuse table")
+path.write_text(head + sep + re.sub(r"^\|\s*`x-stale`\s*\|.*\n", "", tail, count=1, flags=re.M), encoding="utf-8")
+PY
+
+rc=0
+out="$(bash "$DISPATCH/plugins/dossier/hooks/parity.sh" 2>&1)" || rc=$?
+[[ "$rc" -eq 1 ]] || fail "every fixture above passes a path and skips the dispatch; a no-argument run on a divergent tree must fail (got $rc)"
+grep -q 'diverges across FORMAT.md' <<<"$out" || fail "the divergence arm must name the divergence, not a downstream fixture"
+
+cp "$REPO/plugins/dossier/skills/build/SKILL.md" "$DISPATCH/plugins/dossier/skills/build/SKILL.md"
+python3 - "$DISPATCH" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1]) / "plugins" / "dossier" / "skills" / "build" / "SKILL.md"
+body = path.read_text(encoding="utf-8")
+path.write_text(body.replace("**Excuse table", "**Rationalization table", 1), encoding="utf-8")
+PY
+
+rc=0
+out="$(bash "$DISPATCH/plugins/dossier/hooks/parity.sh" 2>&1)" || rc=$?
+[[ "$rc" -eq 1 ]] || fail "a no-argument run that cannot compute parity must fail (got $rc)"
+grep -q 'could not be computed' <<<"$out" || fail "the parse-failure arm must say so, never report divergence"
+
 printf 'ok\n'

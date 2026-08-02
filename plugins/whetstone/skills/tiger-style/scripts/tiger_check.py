@@ -27,6 +27,7 @@ from pathlib import Path
 FALLBACK_COLS = 100
 TAB_STOP = 8
 BRACE_LIMIT = 256
+MAX_CONFIG_DEPTH = 64
 OFF = -1
 CLEAN, BLOCK, NAG, USAGE = 0, 1, 2, 64
 
@@ -111,8 +112,16 @@ def _added_lines(root: Path, paths: list[str]) -> list[tuple[int, str]]:
     Reads `--cached`, never `HEAD`. `--cached` is HEAD-against-index, which is
     exactly what the commit will contain. `git diff HEAD` is HEAD-against-worktree:
     it drags in unstaged edits the commit will not carry, and it fails outright
-    before the first commit exists (`fatal: ambiguous argument 'HEAD'`), which this
-    function would swallow as "no lines added".
+    before the first commit exists, which this function would swallow as "no
+    lines added".
+
+    That failure reads `fatal: bad revision 'HEAD'` for the call below, because
+    a pathspec after `--` changes the message; a bare `git diff HEAD` says
+    `fatal: ambiguous argument 'HEAD'` instead. An earlier pass called the
+    first string invented, checked it by running the bare form, and replaced it
+    with the second — three separate reviews then confirmed the wrong one, each
+    by re-running that same bare form. Probe the invocation the code makes, not
+    the one the sentence resembles.
     """
     diff = _run_git(
         root,
@@ -227,11 +236,19 @@ def _sections(text: str) -> list[tuple[str, dict[str, str]]]:
 
 
 def _config_chain(root: Path, rel: str) -> list[Path]:
-    """.editorconfig files from the file's directory up to the repo root."""
+    """.editorconfig files from the file's directory up to the repo root.
+
+    The walk is bounded because an unbounded one hangs rather than fails.
+    Changing the exit test's `or` to `and` made this spin forever: at the
+    filesystem root `current.parent == current` stays true while `current ==
+    stop` never becomes true again, so every commit blocked with no output.
+    A depth cap turns that class of typo into a wrong answer, which a test
+    can see. MAX_CONFIG_DEPTH is far past any real tree.
+    """
     chain: list[Path] = []
     current = (root / rel).parent.resolve()
     stop = root.resolve()
-    while True:
+    for _ in range(MAX_CONFIG_DEPTH):
         candidate = current / ".editorconfig"
         if candidate.is_file():
             chain.append(candidate)
