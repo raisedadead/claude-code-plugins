@@ -90,6 +90,18 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/convergence_state.py",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

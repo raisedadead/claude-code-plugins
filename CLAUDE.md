@@ -24,6 +24,8 @@ The middle one is the shape to watch: **right behaviour, wrong stated reason.** 
 
 `.scratchpad/` is gitignored. Never cite a path inside it as evidence in a tracked file — it is invisible to every other reader. Use a commit SHA, a tracked path, or a URL.
 
+Probe the invocation the code makes, not the one the sentence resembles. A docstring here quoted `fatal: bad revision 'HEAD'`; a review called it invented, checked by running a bare `git diff HEAD`, got `fatal: ambiguous argument` and substituted that. Both strings are real — git says the first when a pathspec follows `--`, which is what the code does, and the second otherwise. The correction shipped the wrong one, and two later reviews confirmed it by re-running that same bare command. Independent confirmations are only independent if they probe independently; three checks agreeing after making the same substitution is one check. When a claim names a command, run that command with its arguments.
+
 ## Tests
 
 Tests guard invariants that would silently break. They do not assert that documentation contains a phrase. Every gate wants two tests: one proving it fires, one proving it does not false-positive.
