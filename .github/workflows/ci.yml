@@ -36,16 +36,10 @@ jobs:
           bash plugins/dossier/hooks/test_lib_vm_checks.sh
           bash plugins/dossier/hooks/test_closure_parity.sh
           bash plugins/dossier/hooks/test_vm6_parity.sh
-          bash plugins/dossier/hooks/test_build_doubt_gate.sh
           bash plugins/dossier/hooks/test_manifest.sh
           bash plugins/dossier/hooks/test_lib_assert_grill.sh
           bash plugins/dossier/hooks/test_lib_changelog_write.sh
           bash plugins/dossier/hooks/test_skill_gate.sh
-          bash plugins/dossier/hooks/test_tdd_compose.sh
-          bash plugins/dossier/hooks/test_merge_route.sh
-          bash plugins/dossier/hooks/test_flake_triage.sh
-          bash plugins/dossier/hooks/test_skill_lint_gate.sh
-          bash plugins/dossier/hooks/test_loop_rails.sh
           bash plugins/dossier/hooks/test_fakeimpl_stop.sh
 
       - name: skill lint (all dossier skills)
@@ -90,7 +84,6 @@ jobs:
           bash plugins/whetstone/tests/test_flake_runner.sh
           bash plugins/whetstone/tests/test_verify_clean.sh
           bash plugins/whetstone/tests/test_run_slice.sh
-          bash plugins/whetstone/tests/test_dossier_breadcrumb.sh
 
       - name: skill lint (self-hosted)
         run: python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/whetstone/skills

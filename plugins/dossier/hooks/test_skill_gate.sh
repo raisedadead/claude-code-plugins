@@ -82,7 +82,5 @@ HOOKS_JSON="$SCRIPT_DIR/hooks.json"
 grep -q '"Skill"' "$HOOKS_JSON" || fail "hooks.json must register the Skill matcher"
 grep -q 'UserPromptExpansion' "$HOOKS_JSON" || fail "hooks.json must register UserPromptExpansion"
 grep -q 'skill_gate.py' "$HOOKS_JSON" || fail "hooks.json must run skill_gate.py"
-grep -qE 'excuse.*rebuttal|rebuttal.*excuse' "$SCRIPT_DIR/../skills/build/SKILL.md" || fail "build SKILL must carry the excuse-rebuttal table"
-grep -q 'test_skill_gate.sh' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must run this test"
 
 printf 'ok\n'

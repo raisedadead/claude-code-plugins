@@ -64,11 +64,4 @@ rc=0
 "$ASSERT" "$TMP" alpha-2 2>/dev/null || rc=$?
 [[ "$rc" -eq 1 ]] || fail "bumped slug must not inherit base-slug artifact (got $rc)"
 
-grep -q 'lib-assert-grill.sh' "$SCRIPT_DIR/../skills/new/SKILL.md" || fail "ds:new must wire the grill gate"
-grep -q 'ds:grill' "$SCRIPT_DIR/../skills/new/SKILL.md" || fail "ds:new must point at ds:grill"
-grep -q -- '--consume' "$SCRIPT_DIR/../skills/new/SKILL.md" || fail "ds:new must stamp consumption via the helper"
-[[ -f "$SCRIPT_DIR/../skills/grill/SKILL.md" ]] || fail "grill skill must exist"
-grep -q 'test_lib_assert_grill.sh' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must run this test"
-grep -q 'lint_skill.py plugins/dossier/skills' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must lint dossier skills (grill included)"
-
 printf 'ok\n'

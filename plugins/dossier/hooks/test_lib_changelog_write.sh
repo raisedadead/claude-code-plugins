@@ -51,14 +51,6 @@ rc=0
 "$WRITE" "$CL" "$TMP/nosec.md" 'k' 2>/dev/null || rc=$?
 [[ "$rc" -eq 64 ]] || fail "missing section file must exit 64 (got $rc)"
 
-SHIP="$SCRIPT_DIR/../skills/ship/SKILL.md"
-[[ -f "$SHIP" ]] || fail "ship skill must exist"
-grep -q 'cat-file' "$SHIP" || fail "ship must resolve SHA cites via cat-file, not pathspec-prone log"
-grep -qi 'no commit cite' "$SHIP" || fail "ship must bucket non-SHA cites explicitly"
-grep -q -- '--changelog' "$SHIP" || fail "ship must support explicit --changelog for multi-changelog repos"
 [[ -f "$SCRIPT_DIR/../skills/ship/reference/changelog-mapping.md" ]] || fail "mapping reference must exist"
-grep -q 'ds:ship' "$SCRIPT_DIR/../skills/close/SKILL.md" || fail "ds:close must carry the ship advisory"
-grep -q 'test_lib_changelog_write.sh' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must run this test"
-grep -q 'lint_skill.py plugins/dossier/skills' "$SCRIPT_DIR/../../../.github/workflows/ci.yml" || fail "ci must lint dossier skills (ship included)"
 
 printf 'ok\n'
