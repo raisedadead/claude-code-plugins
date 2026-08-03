@@ -6,23 +6,23 @@ argument-hint: '[claim or topic; empty = fact-check previous response]'
 
 # ds:verify — empirical freshness check
 
-Two surfaces, same hard rule: **trust primary sources, never paraphrase JSON.**
+Two surfaces, one rule: **read the primary source's raw bytes.**
 
 ## Surface 1 — PreToolUse hook (auto)
 
-Wired in `hooks/hooks.json`. Fires on `Edit | Write | MultiEdit`, but only in a repo that has a `.scratchpad/dossier/` directory — elsewhere it exits 0 without scanning. Scans content against the broad pattern registry in `hooks/verify_patterns.py` and the authority catalog in `hooks/verify_authorities.py` (140+ aliases, 34 Docker images, 31 AI models). Covers language/runtime/OS/distro/database EOL, container-image EOL, GitHub Action SHA pinning, k8s deprecated apiVersions, npm/PyPI/Cargo/RubyGems/Go-mod outdated packages, and AI-model deprecation. Full coverage matrix + per-source cheatsheet → [`references/authorities.md`](references/authorities.md).
+Wired in `hooks/hooks.json`. Fires on `Edit | Write | MultiEdit`, and only in a repo that has a `.scratchpad/dossier/` directory — elsewhere it exits 0 without scanning. Scans content against the pattern registry in `hooks/verify_patterns.py` and the authority catalog in `hooks/verify_authorities.py` (140+ aliases, 34 Docker images, 31 AI models). Covers language/runtime/OS/distro/database EOL, container-image EOL, GitHub Action SHA pinning, k8s deprecated apiVersions, npm/PyPI/Cargo/RubyGems/Go-mod outdated packages, and AI-model deprecation. Full coverage matrix + per-source cheatsheet → [`references/authorities.md`](references/authorities.md).
 
-Non-blocking by design — emits stderr reminder + `additionalContext`. Per-session dedup. Operator escape: `# verify-skip: <ruleName>` on or near the line.
+Non-blocking by design — emits a stderr reminder plus `additionalContext`. Per-session dedup. Operator escape: `# verify-skip: <ruleName>` on or near the line.
 
 Cache at `<cwd>/.scratchpad/.verify-cache/` (24h TTL on registries, 30d on resolved SHAs). Offline = silent skip.
 
 ## Surface 2 — `/dossier:verify [<topic>]` (manual, generic)
 
-**No pattern lock-in.** Model handles arbitrary freshness claims by classifying them and routing to the right primary source.
+No pattern lock-in: the model classifies an arbitrary freshness claim and routes it to the right primary source.
 
 ### Steps
 
-1. **Identify claims.** From `$ARGUMENTS` if provided, else extract every freshness-sensitive claim from the previous assistant message. A "freshness-sensitive" claim is any statement where the answer could plausibly have changed since the model's training cutoff. Categories below.
+1. **Identify claims.** From `$ARGUMENTS` when provided, else every freshness-sensitive claim in the previous assistant message. Freshness-sensitive = the answer could plausibly have changed since the training cutoff.
 1. **Classify each claim** into one of these buckets:
    - **Version / LTS / EOL** of language, OS, distro, database, runtime → `endoflife.date/api/v1/products/<slug>`
    - **Package latest** → ecosystem registry (npm/PyPI/crates/RubyGems/Hex/Packagist/Go proxy/Maven Central/Homebrew)
@@ -35,10 +35,10 @@ Cache at `<cwd>/.scratchpad/.verify-cache/` (24h TTL on registries, 30d on resol
    - **Standard / RFC** → ietf.org / w3.org
    - **Anything else freshness-sensitive** → WebSearch first, then WebFetch the top primary source.
 1. **Query the authority.**
-   - JSON APIs: prefer `Bash` + `curl -s <url>` so you read **raw JSON** directly. Never use `WebFetch` for JSON — it summarizes and can hallucinate.
-   - HTML docs: `WebSearch` then `WebFetch` is acceptable, but quote the exact text you compared against.
-   - GitHub: prefer `gh api <path>` over WebFetch on github.com.
-1. **Compare exact field values.** Pull the specific field (`releases[].name`, `info.version`, `crate.newest_version`, etc.) and compare against the claim's literal value. **Do NOT ask the model to read prose and decide if the claim matches.**
+   - JSON APIs: `Bash` + `curl -s <url>`, so you read raw JSON. `WebFetch` summarises JSON, and a summary can hallucinate.
+   - HTML docs: `WebSearch` then `WebFetch`, quoting the exact text you compared against.
+   - GitHub: `gh api <path>` over WebFetch on github.com.
+1. **Compare exact field values.** Pull the specific field (`releases[].name`, `info.version`, `crate.newest_version`, …) and compare it against the claim's literal value. The comparison is field-to-value, not prose-to-impression.
 1. **Render verdict table.**
 
 ### Output format
@@ -72,12 +72,12 @@ wrong: Node 20 LTS · right: current LTS = v24 (Krypton) + v22 (Jod). v20 EOL 20
 
 ## Hard rules
 
-- **Trust raw JSON. Never trust a model-summarized JSON response.** This is the single most important rule. `WebFetch` summarizes — that summary CAN hallucinate. Always use `curl -s <url>` (raw bytes) when the authority is a JSON endpoint, then `jq` or Python to extract exact fields.
-- **Cite the authority URL in every row.** No verdict without a source.
-- **Quote the exact text or field you compared.** Make the comparison reproducible.
-- **If authority unreachable: mark `Unverifiable` and say which URL failed.** Never guess.
-- **Never bump copyright years proactively** — see operator MEMORY.md.
-- **Resist the "looks fine" instinct.** If you didn't pull the answer from a primary source, mark `Unverifiable`.
+- **Raw JSON only.** `curl -s <url>` (raw bytes) then `jq` or Python for the exact field. `WebFetch` returns a model summary of the JSON, and that summary can hallucinate — this is the rule the rest depend on.
+- **Cite the authority URL in every row.** A verdict carries its source.
+- **Quote the exact text or field you compared**, so the comparison reproduces.
+- **Authority unreachable → `Unverifiable`, naming the URL that failed.**
+- **Copyright years change when the operator asks for it** — see operator MEMORY.md.
+- **Answer from the source you pulled.** Anything that came from memory instead is `Unverifiable`, whatever it looks like.
 
 ## Authority cheatsheet + extending the catalog
 
@@ -85,9 +85,9 @@ Per-source raw-JSON `curl` / `gh api` paths, and how to add a new authority (pur
 
 ## Composition
 
-- **With `ds:check`**: drift detector runs `verify_sweep.py` on touched files automatically; findings fold into 🟡 warnings.
-- **With `ds:build`**: the PreToolUse hook is active inside the build (a live wave means the `.scratchpad/dossier/` gate passes), so no explicit invocation is needed. It skips dossier paths themselves — `.scratchpad/`, `DOSSIER.md`, `PLAN.md`, `SPEC.md` — so ledger writes are never scanned.
-- **With `ds:backprop`**: if a bug's root cause is "stale claim baked into code", the backprop fix should add the missing alias to `verify_authorities.py` so recurrence is caught at write time.
+- **With `ds:check`**: the drift detector runs `verify_sweep.py` on touched files automatically; findings fold into 🟡 warnings.
+- **With `ds:build`**: the PreToolUse hook is active inside the build (a live wave means the `.scratchpad/dossier/` gate passes), so no explicit invocation is needed. It skips dossier paths themselves — `.scratchpad/`, `DOSSIER.md`, `PLAN.md`, `SPEC.md` — so ledger writes stay unscanned.
+- **With `ds:backprop`**: when a bug's root cause is "stale claim baked into code", the backprop fix adds the missing alias to `verify_authorities.py` so recurrence is caught at write time.
 
 ## Cite
 

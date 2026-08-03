@@ -6,7 +6,7 @@ disallowed-tools: Edit, Write, NotebookEdit
 
 # ds:check — drift detector
 
-Read-only. Validates DOSSIER.md against reality. Returns severity-tagged violation list. Never mutates.
+Validates DOSSIER.md against reality and returns a severity-tagged violation list. Read-only.
 
 ## Steps
 
@@ -16,11 +16,11 @@ Per ADAPTERS.md. Note `Workflow` tool presence (scout fan-out routing, §workflo
 
 ### 1. Locate
 
-Live dossier per `ds:status` step 1. If `--all`: also check archived dossiers (sanity sweep).
+Live dossier per `ds:status` step 1. `--all` adds archived dossiers as a sanity sweep.
 
 ### 2. Plan scout dispatch
 
-For each repo in §X: prepare a scout mission. Missions are **independent + parallel**.
+One scout mission per §X repo, independent and parallel.
 
 Mission template (per scout):
 
@@ -41,29 +41,29 @@ Output: caveman pipe-table. One row per finding.
 <paste DOSSIER.md here>
 ```
 
-Spawn one `dossier-scout` per repo, in parallel. Use Agent tool with `subagent_type: dossier:dossier-scout`.
+Spawn one `dossier-scout` per repo, in parallel, via the Agent tool with `subagent_type: dossier:dossier-scout`.
 
-§X repos > 2 AND `Workflow` tool present → route the same missions through the §workflow fan-out (ADAPTERS.md): schema-validated rows, budget-gated width, crash-resumable. Else: Agent spawns above.
+§X repos > 2 and `Workflow` present → route the same missions through the §workflow fan-out (ADAPTERS.md): schema-validated rows, budget-gated width, crash-resumable. Otherwise the Agent spawns above.
 
 ### 2a. Verify-layer sweep (existing content)
 
-PreToolUse `verify_hook.py` only catches new writes. Existing files may carry pre-hook claims. Scan them:
+PreToolUse `verify_hook.py` sees new writes only, so existing files may still carry pre-hook claims. Scan them:
 
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/verify_sweep.py <touched-files...>
 ```
 
-Touched-files = union of files cited by any §T `x`-row commit + files in `git status -sb` (changed but uncommitted). Findings folded into 🟡 warnings (verify is advisory, never critical).
+Touched-files = files cited by any §T `x`-row commit, unioned with files in `git status -sb` (changed but uncommitted). Findings fold into 🟡 warnings — verify is advisory.
 
-Skip if `verify_sweep.py` missing (older plugin install) — sweep is opt-in.
+Missing `verify_sweep.py` (older plugin install) → skip; the sweep is opt-in.
 
 ### 3. Local checks (main thread)
 
-Independent of scouts. Run concurrently with dispatch:
+Independent of the scouts; run concurrently with dispatch.
 
-**Deterministic drift gate (Vm.1 + Vm.4, enforced by code — not model discretion):** run `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-ds-check.sh .scratchpad`. It regenerates INDEX (the single source of the header × location × §Z reconcile predicate) and exits non-zero, naming every dossier whose header token, directory location, and §Z closure disagree — the sealed-zombie / done-not-archived class that the old heuristics missed. Non-zero exit = 🔴 critical.
+**Deterministic drift gate (Vm.1 + Vm.4, code):** run `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-ds-check.sh .scratchpad`. It regenerates INDEX — the single source of the header × location × §Z reconcile predicate — and exits non-zero naming every dossier whose header token, directory location and §Z closure disagree: the sealed-zombie / done-not-archived class the old heuristics missed. Non-zero exit = 🔴 critical.
 
-**Deterministic Vm sweep (Vm.2/3/6/8/9, enforced by code — not model discretion):** run `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-vm-checks.sh .scratchpad`. One pass over every DOSSIER.md in the tree covers §S timestamp format (Vm.2), §T `x`-rows with empty `cite` (Vm.3), unpaired §S START/DONE (Vm.6), write-temp orphans (Vm.8), and stale locks (Vm.9, via `lib-clear-stale-locks.sh --dry-run`). Each finding line is prefixed `CRITICAL` (→ 🔴) or `WARN` (→ 🟡); non-zero exit = at least one finding. Read-only — the dry-run stale-lock probe mutates nothing.
+**Deterministic Vm sweep (Vm.2/3/6/8/9, code):** run `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-vm-checks.sh .scratchpad`. One pass over every DOSSIER.md in the tree covers §S timestamp format (Vm.2), §T `x`-rows with an empty `cite` (Vm.3), unpaired §S START/DONE (Vm.6), write-temp orphans (Vm.8) and stale locks (Vm.9, via `lib-clear-stale-locks.sh --dry-run`). Each finding line is prefixed `CRITICAL` (→ 🔴) or `WARN` (→ 🟡); non-zero exit = at least one finding. Read-only — the dry-run stale-lock probe mutates nothing.
 
 | Vm    | Check                                                                    | How                                                  |
 | ----- | ------------------------------------------------------------------------ | ---------------------------------------------------- |
@@ -83,12 +83,7 @@ Independent of scouts. Run concurrently with dispatch:
 
 ### 4. Aggregate
 
-Collect:
-
-- Scout reports (one per repo).
-- Local Vm findings.
-
-Group by severity:
+Collect the scout reports (one per repo) and the local Vm findings, grouped by severity:
 
 | Severity    | Examples                                                                           |
 | ----------- | ---------------------------------------------------------------------------------- |
@@ -114,7 +109,7 @@ ds:check <slug>: <N> critical, <M> warnings, <K> info
 Vm summary:
   Vm.1 ✓ Vm.2 ✓ Vm.3 ✗ (2 rows) Vm.4 ✓ ...
 
-Suggested remediations (do NOT auto-apply):
+Suggested remediations (operator applies):
   - <T-id> cite=<sha> missing → ds:backprop or rebase
   - §X <repo> stale → ds:build --next (refresh as side-effect)
   - §V.<N> test MISSING → ds:backprop B<N>
@@ -122,17 +117,15 @@ Suggested remediations (do NOT auto-apply):
 
 ### 6. No mutations
 
-`ds:check` writes no DOSSIER.md content and touches no repo. The sole exception is the derived, idempotent INDEX.md regen inside `lib-ds-check.sh` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7), never source of truth, so re-deriving it is not a mutation — same carve-out as `ds:status`.
+`ds:check` leaves DOSSIER.md content and every repo untouched. The one exception is the derived, idempotent INDEX.md regen inside `lib-ds-check.sh` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7) rather than source of truth, so re-deriving it is the same carve-out `ds:status` has. The Vm.7 dry-check regen falls under it too.
 
-Append §S? No. Read-only verb. Skipping §S keeps the log noise-free.
-
-Exception: if `lib-regen-index.sh` is run as part of Vm.7 dry-check, that's a derived-state regen (idempotent, not a mutation per Vm.7).
+No §S append — this is a read-only verb, and the log stays free of the noise.
 
 ## Failure handling
 
-- Scout timeout / refuse: report scout-failed for that repo. Other scouts still proceed.
-- Repo missing: flag in report, do not error.
-- DOSSIER.md missing: refuse w/ "no live dossier".
+- Scout timeout or refusal: report scout-failed for that repo; the other scouts continue.
+- Repo missing: flag it in the report and carry on.
+- DOSSIER.md missing: refuse with "no live dossier".
 
 ## Cite
 

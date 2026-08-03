@@ -7,16 +7,16 @@ disable-model-invocation: true
 
 # ds:grill — interrogate before you scaffold
 
-A vague goal yields vague tasks. `ds:grill` formalizes `ds:new` step 2's "clarify before freezing" lever into a bounded interrogation protocol: facts get looked up, decisions get asked, and the output is an artifact `ds:new` consumes without re-asking.
+A vague goal yields vague tasks. This formalises `ds:new` step 2's "clarify before freezing" into a bounded interrogation: facts get looked up, decisions get asked, and the output is an artifact `ds:new` consumes without re-asking.
 
 ## Inputs
 
 - `<slug>` — dossier slug this grill feeds (kebab-case, same rules as `ds:new`).
-- `--resume` — reopen an incomplete artifact (open frontier nodes resurface).
+- `--resume` — reopen an incomplete artifact; open frontier nodes resurface.
 
 ## Artifact
 
-`.scratchpad/dossier/.grill/<YYYY-MM-DD>-<slug>.md` — dated at grill START; `ds:new` rediscovers it by SLUG (newest artifact wins), so a grill spanning days (`--resume`, pending-external waits) still gates the scaffold. On consume, `ds:new` stamps a `CONSUMED: <dossier-dir-key>` line into the artifact — a consumed grill never feeds a second dossier, and a collision-bumped slug (`<slug>-2`) never inherits the base slug's artifact.
+`.scratchpad/dossier/.grill/<YYYY-MM-DD>-<slug>.md` — dated at grill START. `ds:new` rediscovers it by SLUG (newest artifact wins), so a grill spanning days (`--resume`, pending-external waits) still gates the scaffold. On consume, `ds:new` stamps a `CONSUMED: <dossier-dir-key>` line into the artifact, so one grill feeds one dossier and a collision-bumped slug (`<slug>-2`) starts fresh.
 
 ```
 FACT: <statement> cite=<file|command|url>
@@ -29,39 +29,39 @@ CONSUMED: <dossier-dir-key>          (stamped by ds:new, never by grill)
 
 Footer lines are the machine-checked half: `hooks/lib-assert-grill.sh` exits non-zero on a half-grilled slug. No hook runs it — `ds:new` invoking the script and refusing on its exit is model-judgment, the same split as the tiger route: the verdict is computed, arriving at it is not.
 
-**One entry per paragraph — blank line between every FACT/DECISION/footer line.** Markdown formatters join adjacent bare lines into one paragraph, which un-anchors the `^FRONTIER:`/`^CONFIRMED:` greps and turns a complete artifact into a false "incomplete" (same failure class FORMAT.md §11 solves for §S).
+**One entry per paragraph — blank line between every FACT/DECISION/footer line.** Markdown formatters join adjacent bare lines into one paragraph, which un-anchors the `^FRONTIER:`/`^CONFIRMED:` greps and turns a complete artifact into a false "incomplete" (the failure class FORMAT.md §11 solves for §S).
 
 ## Steps
 
 ### 0. Detect host env
 
-Per ADAPTERS.md. Never error if an adapter is absent.
+Per ADAPTERS.md. An absent adapter is a skip.
 
 ### 1. Build the tree
 
 Read what the operator has said so far plus the repo state (existing dossiers, git log, configs). Tag every open node:
 
-- `FACT` — answerable by lookup. Look it up NOW, record with `cite=`. Never ask the operator for a fact the repo answers.
-- `DECISION` — genuinely the operator's call. Never assume.
+- `FACT` — answerable by lookup. Look it up now and record `cite=`. The operator's time goes to what the repo cannot answer.
+- `DECISION` — genuinely the operator's call. Ask it.
 
 ### 2. Serial phase
 
-While decisions are dependency-chained (an answer changes which questions exist): ask ONE at a time, always with a recommended answer. Wait for confirm/override. Batching chained questions bewilders — don't.
+While decisions are dependency-chained (an answer changes which questions exist): ask ONE at a time, always with a recommended answer, and wait for confirm or override. Chained questions asked as a batch bewilder.
 
 ### 3. Batch phase
 
-Once remaining decisions are mutually independent: ask the whole frontier as one numbered block (recommended answer each), recompute the frontier from the answers, repeat until empty.
+Once the remaining decisions are mutually independent: ask the whole frontier as one numbered block (recommended answer each), recompute the frontier from the answers, repeat until empty.
 
 ### 4. Stakeholder fork
 
-A decision the operator cannot answer (needs someone outside the room) does NOT block and is NOT guessed: write `.scratchpad/dossier/.grill/<date>-<slug>-questionnaire.md` (purpose / from-to / context / how-to-answer / question sections / answer stubs), mark the node `answer=pending-external`. The frontier may close around it as `empty-except-external n=<k>` — every pending node MUST surface as a §C bullet in the draft so the gap stays auditable.
+A decision the operator cannot answer (it needs someone outside the room) keeps its own slot rather than a guess: write `.scratchpad/dossier/.grill/<date>-<slug>-questionnaire.md` (purpose / from-to / context / how-to-answer / question sections / answer stubs) and mark the node `answer=pending-external`. The frontier may close around it as `empty-except-external n=<k>` — every pending node MUST surface as a §C bullet in the draft, so the gap stays auditable.
 
 ### 5. Stop gate
 
 Two-part, both required:
 
 1. Frontier empty (or empty-except-external with every pending node §C-surfaced).
-1. Explicit operator confirmation — verbatim, recorded in the `CONFIRMED:` footer. Silence or an unanswered recommendation is NOT acceptance.
+1. Explicit operator confirmation — verbatim, recorded in the `CONFIRMED:` footer. Acceptance is something the operator typed; silence and an unanswered recommendation are neither.
 
 ### 6. Synthesize
 
