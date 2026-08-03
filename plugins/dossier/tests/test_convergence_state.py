@@ -171,8 +171,9 @@ def test_a_contract_with_no_criteria_says_nothing() -> None:
 
 
 def test_an_unreadable_contract_never_breaks_the_prompt() -> None:
-    """The `except OSError` in `_report` exists for a file the process cannot
-    read. A readable fixture exercises the empty-table path instead."""
+    """`main()`'s per-contract `except (OSError, ValueError, UnicodeError)` exists
+    for a file the process cannot read. A readable fixture takes the empty-table
+    path instead and never reaches it."""
     if os.geteuid() == 0:
         return
     with tempfile.TemporaryDirectory() as t:
@@ -333,8 +334,8 @@ def test_no_live_wave_means_silence() -> None:
 
 
 def test_it_finishes_fast_enough_to_sit_on_every_prompt() -> None:
-    """The hooks.json budget is 10 s; a hook that ate half of it on a two-commit
-    repo passed the earlier version of this test, which bounded nothing."""
+    """The hooks.json budget is 10 s. The earlier version of this test bounded only
+    at 5 s, so a hook eating half the budget on a two-commit repo passed it."""
     with tempfile.TemporaryDirectory() as t:
         root = Path(t)
         _repo_with_contract(root)

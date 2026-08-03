@@ -41,7 +41,7 @@ Per ADAPTERS.md. An absent adapter is a skip.
 
 Read what the operator has said so far plus the repo state (existing dossiers, git log, configs). Tag every open node:
 
-- `FACT` — answerable by lookup. Look it up now and record `cite=`. The operator's time goes to what the repo cannot answer.
+- `FACT` — answerable by lookup. Look it up now and record `cite=`. Never ask the operator for a fact the repo answers.
 - `DECISION` — genuinely the operator's call. Ask it.
 
 ### 2. Serial phase

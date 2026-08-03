@@ -75,11 +75,11 @@ jobs:
 
       - name: every test file is named in this workflow
         run: |
-          # O37: three suites existed, passed locally, and ran nowhere.
+          # Three suites once existed, passed locally, and ran nowhere.
           missing=0
-          for t in $(git ls-files 'plugins/*/tests/test_*' 'plugins/*/hooks/test_*'); do
-            grep -qF "$t" .github/workflows/ci.yml || { echo "not run in CI: $t" >&2; missing=1; }
-          done
+          while IFS= read -r t; do
+            grep -qF "$t" .github/workflows/ci.yml || { echo "not named in CI: $t" >&2; missing=1; }
+          done < <(git ls-files 'plugins/*/tests/test_*' 'plugins/*/hooks/test_*')
           test "$missing" -eq 0
 
       - name: first-party manifest + skill validation

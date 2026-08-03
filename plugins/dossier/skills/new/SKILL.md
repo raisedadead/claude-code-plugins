@@ -73,14 +73,14 @@ python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/resolve_pins.py eol:<slug>... <ecosystem>:
 
 - `eol:` results → §C bullets (current stable / EOL note).
 - package results → the §I "Pinned deps" table (FORMAT.md §6).
-- Map the libs actually named to specs (e.g. "Go backend + React UI" → `eol:go npm:react npm:react-dom go:<module>`). The model does the stack→spec mapping.
+- Map the libs actually named to specs (e.g. "Go backend + React UI" → `eol:go npm:react npm:react-dom go:<module>`). The model does the stack→spec mapping; do not blind-parse §C prose into specs.
 - `{"offline": true}` / `latest: null` → record the pin as `offline` and proceed; the scaffold continues either way.
 
 These fold into the single atomic step-3 Write — no extra commit, no TDD cycle.
 
 ### 2.7. Write the contract
 
-The repo decides the home. `.dossier/` exists → the repo opted into tracked contracts: write `.dossier/<date>-<slug>.md` and commit it before the first task — citable as evidence, outliving the wave. Otherwise write `<wave-dir>/CONTRACT.md` beside the ledger and price that home out loud: untracked wherever `.scratchpad/` is gitignored (the assumed setup), archived with the wave, citable by nobody, and its criteria run as shell from a file no diff ever showed a reviewer — where a tracked contract's criteria appear in the commit that added them. Name the opt-in (`mkdir .dossier`, track it) so the choice stays the operator's. Creating `.dossier/` is theirs to do: a tracked directory appearing in a repo that did not ask for one is the artifact rule this split exists to respect.
+The repo decides the home. `.dossier/` exists → the repo opted into tracked contracts: write `.dossier/<date>-<slug>.md` and commit it before the first task — citable as evidence, outliving the wave. Otherwise write `<wave-dir>/CONTRACT.md` beside the ledger and price that home out loud: untracked wherever `.scratchpad/` is gitignored (the assumed setup), archived with the wave, citable by nobody, and its criteria run as shell from a file no diff ever showed a reviewer — where a tracked contract's criteria appear in the commit that added them. Name the opt-in (`mkdir .dossier`, track it) so the choice stays the operator's. **Never create `.dossier/` yourself** — a tracked directory appearing in a repo that did not ask for one is the artifact rule this split exists to respect.
 
 Either way the content is FORMAT.md §2.5's — `consumer`, `reached-via`, `budget`, and a `## done-when` table whose every row is a command with an expected result. `ds:converge` and the `UserPromptSubmit` hook resolve both homes, tracked first.
 

@@ -57,7 +57,7 @@ Exit 3 = section already present (a safe re-run). The helper is the only writer:
 
 ### 6. Recommend (semver mode only)
 
-Print `recommend: <BUMP> (<n> feat, <n> fix; <BREAKING?>)` — advisory text. The bump stays text here: `git tag`, a `plugin.json` version edit and `git push` are separate operator-explicit actions (Tenet 05).
+Print `recommend: <BUMP> (<n> feat, <n> fix; <BREAKING?>)` — advisory text. The bump stays text here: NEVER `git tag`, NEVER a `plugin.json` version edit, NEVER `git push` — each is a separate operator-explicit action (Tenet 05).
 
 ### 7. Breadcrumb
 

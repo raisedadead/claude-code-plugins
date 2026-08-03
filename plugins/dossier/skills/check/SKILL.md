@@ -109,7 +109,7 @@ ds:check <slug>: <N> critical, <M> warnings, <K> info
 Vm summary:
   Vm.1 ✓ Vm.2 ✓ Vm.3 ✗ (2 rows) Vm.4 ✓ ...
 
-Suggested remediations (operator applies):
+Suggested remediations (do NOT auto-apply):
   - <T-id> cite=<sha> missing → ds:backprop or rebase
   - §X <repo> stale → ds:build --next (refresh as side-effect)
   - §V.<N> test MISSING → ds:backprop B<N>
