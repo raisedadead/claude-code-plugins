@@ -11,8 +11,8 @@ Six steps. Append-only on §B + §V. Resumable.
 ## Inputs
 
 - `<B-id>` (e.g. `B5`): existing bug row, resume / amend.
-- `<bug-description>` free text: new bug, scaffold §B row from it.
-- `--resume`: explicit override of auto-detected resume point.
+- `<bug-description>` free text: new bug, scaffold a §B row from it.
+- `--resume`: explicit override of the auto-detected resume point.
 
 ## Steps
 
@@ -20,11 +20,11 @@ Six steps. Append-only on §B + §V. Resumable.
 
 Per ADAPTERS.md. Note `HAS_CAVEMEM` (recurrence research benefits).
 
-DOSSIER.md writes use the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` flips §T/§B state cells, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` appends §S. The §S code-fence examples below show the full line — pass only the text **after** the timestamp (the script prepends it).
+DOSSIER.md writes go through the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` flips §T/§B state cells, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` appends §S. The §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends.
 
 ### 1. Locate live dossier
 
-Per `ds:status` step 1. Refuse if none.
+Per `ds:status` step 1. Refuse when there is none.
 
 ### 2. Acquire lock
 
@@ -32,7 +32,7 @@ Write `<dir>/.ds-lock` with `skill: "ds:backprop", target: "B<N-or-pending>"`.
 
 ### 3. Resume detection
 
-Read §S grep `ds:backprop <target>`:
+Read §S, grep `ds:backprop <target>`:
 
 | Last event     | Resume point                                                                                             |
 | -------------- | -------------------------------------------------------------------------------------------------------- |
@@ -47,7 +47,7 @@ Read §S grep `ds:backprop <target>`:
 
 ### 4. CLAIM + scope
 
-Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; applies to every §S append in this skill):
+Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; this holds for every §S append in this skill):
 
 ```
 <YYYY-MM-DD HH:MM> ds:backprop <B-or-pending> START
@@ -59,13 +59,13 @@ Define:
 - root cause hypothesis (≤2 lines)
 - recurrence likelihood (low / mid / high)
 
-If root cause is fuzzy or class-of-bug research needed: **spawn `dossier-scout` subagent** with mission "research <bug-label>: where does this class manifest? Prior occurrences? Test gaps?". If `HAS_CAVEMEM=1`, also query `mcp__cavemem__search` for prior observations of same class.
+A fuzzy root cause or a class-of-bug question: **spawn a `dossier-scout` subagent** with the mission "research <bug-label>: where does this class manifest? Prior occurrences? Test gaps?". With `HAS_CAVEMEM=1`, also query `mcp__cavemem__search` for prior observations of the same class.
 
 ### 4.5. FLAKE TRIAGE (failing-test bugs, whetstone compose, optional)
 
-Only when the bug IS a failing test. Resolve whetstone's runner deterministically — source checkout (`plugins/whetstone/skills/flaky-test-audit/scripts/flake_runner.sh`) or operator-set `DOSSIER_FLAKE_RUNNER` (same rule as `DOSSIER_RUN_SLICE`, ADAPTERS §whetstone). Unresolvable → skip silently, §S `flake-triage=skipped`, proceed to step 5.
+For a bug that IS a failing test. Resolve whetstone's runner deterministically — source checkout (`plugins/whetstone/skills/flaky-test-audit/scripts/flake_runner.sh`) or operator-set `DOSSIER_FLAKE_RUNNER` (the `DOSSIER_RUN_SLICE` rule, ADAPTERS §whetstone). Unresolvable → skip silently, §S `flake-triage=skipped`, proceed to step 5.
 
-Run the failing test N times (default 5) before characterizing:
+Run the failing test N times (default 5) before characterising:
 
 ```bash
 "$FLAKE_RUNNER" 5 "$(mktemp -d)/results.json" <test-command...>
@@ -73,17 +73,17 @@ Run the failing test N times (default 5) before characterizing:
 
 Rate = `fails/runs` from the results.json it writes (`{"<name>": {"runs": N, "fails": F}}`). Route:
 
-- `rate=1.0` — always fails across the observed runs: treat as reproducible, proceed to step 5. Label it OBSERVED-deterministic — N=5 can miss low-probability flakes; this is a triage read, not a proof.
-- `rate=0.0` — always passes: bug not reproduced; revisit step 4 scope (the existing "if it passes, it isn't characterized" rule).
-- `0<r<1` — FLAKY, not a bug: do NOT mint a §V invariant (an invariant for nondeterminism is noise). WRITE the closed §B row NOW — atomic write, step 6's template with closed values: `| B<N> | <bug-label> | nondeterminism (rate=<r>, n runs) | — (quarantine via whetstone:flaky-test-audit) | — (flaky, no fix) |` — then jump to step 9 close-out. Point the operator at `whetstone:flaky-test-audit` for the quarantine flow itself; it runs outside backprop, so backprop's ledger stays the only driver.
+- `rate=1.0` — fails on every observed run: reproducible, proceed to step 5. Label it OBSERVED-deterministic — N=5 can miss a low-probability flake, so this is a triage read rather than a proof.
+- `rate=0.0` — passes every time: the bug is unreproduced; revisit step 4 scope (the "if it passes, it isn't characterised" rule).
+- `0<r<1` — FLAKY rather than a bug. An invariant for nondeterminism is noise, so this branch mints no §V. Write the closed §B row now — atomic write, step 6's template with closed values: `| B<N> | <bug-label> | nondeterminism (rate=<r>, n runs) | — (quarantine via whetstone:flaky-test-audit) | — (flaky, no fix) |` — then jump to step 9 close-out. Point the operator at `whetstone:flaky-test-audit` for the quarantine flow, which runs outside backprop so this ledger stays the only driver.
 
-Append §S: `ds:backprop <B> flake=<rate> runs=<n>` (the resume row above keys on it).
+Append §S: `ds:backprop <B> flake=<rate> runs=<n>` (the resume table keys on it).
 
 ### 5. WRITE REGRESSION TEST (RED)
 
-Write test that reproduces the bug. Run → must FAIL (RED). If it passes, the bug isn't characterized correctly — revisit step 4.
+Write the test that reproduces the bug and run it — it must FAIL (RED). A passing test means the bug is characterised wrongly; revisit step 4.
 
-**Test comments stay phase-agnostic.** No `// Phase N`, `// PH<n>-B<k>`, `// V<n> (Phase <m> / A<k>)` in the test body. Test name and `Refs §B B<N>` in the commit message carry the link. The `marker_guard.py` PreToolUse hook flags these advisorily — it nudges and exits 0, so the write still lands. Treat it as a reminder, not a gate.
+**Test comments stay phase-agnostic.** The link lives in the test name and the commit's `Refs §B B<N>`; the forms `// Phase N`, `// PH<n>-B<k>` and `// V<n> (Phase <m> / A<k>)` belong in neither the test body nor anywhere else in source. `marker_guard.py` flags them advisorily — it nudges and exits 0, so the write still lands. Treat it as a reminder rather than a gate.
 
 Commit:
 
@@ -99,11 +99,11 @@ Append §S:
 <YYYY-MM-DD HH:MM> ds:backprop B<N> test=<sha>
 ```
 
-If bug is non-testable (docs drift, infra config, etc.): skip test commit. Note in §B `invariant added` = `— (non-testable)`.
+A non-testable bug (docs drift, infra config) skips the test commit; note `invariant added` = `— (non-testable)` in §B.
 
 ### 6. APPEND §B row
 
-Atomic write DOSSIER.md w/ new §B row:
+Atomic write of DOSSIER.md with the new §B row:
 
 ```
 | B<N> | <bug-label> | <root-cause> | <pending> | <test-sha-or-—> |
@@ -117,7 +117,7 @@ Append §S:
 
 ### 7. INVARIANT DECISION
 
-Question: would a new §V invariant catch recurrence?
+Question: would a new §V invariant catch a recurrence?
 
 | Recurrence | Class    | Decision              |
 | ---------- | -------- | --------------------- |
@@ -125,13 +125,13 @@ Question: would a new §V invariant catch recurrence?
 | mid        | local    | maybe — operator call |
 | low        | one-off  | NO — patch-only       |
 
-If YES: append §V row pointing at the test from step 5 (or new check):
+YES → append a §V row pointing at the test from step 5 (or a new check):
 
 ```
 | V<N> | <invariant claim> | <test-name> |
 ```
 
-Update §B `invariant added` column to `V<N>`. Atomic write.
+Update the §B `invariant added` column to `V<N>`. Atomic write.
 
 Append §S:
 
@@ -139,19 +139,19 @@ Append §S:
 <YYYY-MM-DD HH:MM> ds:backprop B<N> §V=V<N>
 ```
 
-If NO: §B `invariant added` stays `—`. Note in §S `§V=skipped:one-off`.
+NO → §B `invariant added` stays `—`, and §S notes `§V=skipped:one-off`.
 
-**Optional — graduate to a write-time guard (recurrence=high only):** if the invariant is a _forbidden code pattern_ (a regex the offending edit would contain), offer to register it so `invariant_guard.py` blocks the bug class at Edit/Write time, exit 2, for every future edit — not merely flags it at the next `ds:check`. Append an entry to `.scratchpad/dossier/.invariant-guards.json` (a JSON list):
+**Optional — graduate to a write-time guard (recurrence=high only):** when the invariant is a _forbidden code pattern_ (a regex the offending edit would contain), offer to register it so `invariant_guard.py` denies the bug class at Edit/Write time with exit 2 on every future edit, rather than surfacing it at the next `ds:check`. Append an entry to `.scratchpad/dossier/.invariant-guards.json` (a JSON list):
 
 ```json
 { "id": "V<N>", "pattern": "<forbidden-regex>", "message": "<why this is blocked>", "paths": ["<glob>"] }
 ```
 
-`paths` scopes the guard (omit = every non-dossier source file). Keep the regex **tight** — a loose pattern blocks legitimate edits, the one failure mode of a write-time guard. The guard is fail-open (missing registry / bad regex / out-of-scope path = no block) and bypassable with `DOSSIER_INVARIANT_GUARD=off` (log the rationale in §S). Only offer this for a genuinely mechanical, regex-expressible class; a semantic invariant stays a §V `check` predicate audited by `ds:check`.
+`paths` scopes the guard (omit = every non-dossier source file). Keep the regex **tight**: a loose pattern denies legitimate edits, which is the one failure mode of a write-time guard. The guard is fail-open (missing registry / bad regex / out-of-scope path = no block) and bypassable with `DOSSIER_INVARIANT_GUARD=off` (log the rationale in §S). Reserve it for a genuinely mechanical, regex-expressible class; a semantic invariant stays a §V `check` predicate audited by `ds:check`.
 
 ### 8. FIX (GREEN)
 
-Implement fix. Run regression test → GREEN. Run full test suite (or scoped) → no regressions.
+Implement the fix. Regression test → GREEN. Full suite (or scoped) → no regressions.
 
 Commit:
 
@@ -169,7 +169,7 @@ Append §S:
 <YYYY-MM-DD HH:MM> ds:backprop B<N> fix=<sha>
 ```
 
-Update §B `fix cite` column to `<sha>`. Atomic write.
+Update the §B `fix cite` column to `<sha>`. Atomic write.
 
 ### 9. DONE
 
@@ -179,7 +179,7 @@ Append §S:
 <YYYY-MM-DD HH:MM> ds:backprop B<N> DONE
 ```
 
-Release lock. Regen INDEX (B count change).
+Release the lock. Regen INDEX (the B count changed).
 
 ### 10. Report
 
@@ -191,7 +191,7 @@ test=<sha>, fix=<sha>
 
 ## Common shortcuts (and why not)
 
-Every rebuttal here is already stated once in the steps above — collected so the skip-temptation and its answer sit together.
+Each rebuttal appears once in the steps above; they are collected here so the temptation and its answer sit together.
 
 | Tempting shortcut                              | Why not                                                                                                           |
 | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
@@ -202,7 +202,7 @@ Every rebuttal here is already stated once in the steps above — collected so t
 
 ## Auto-trigger from ds:build
 
-If `ds:build` test fails: invoke `ds:backprop` with bug-description = test failure message. Then resume `ds:build` after backprop closes.
+A `ds:build` test failure invokes `ds:backprop` with bug-description = the test failure message, then `ds:build` resumes once backprop closes.
 
 ## Cite
 

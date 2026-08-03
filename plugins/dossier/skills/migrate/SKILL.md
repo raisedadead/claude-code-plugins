@@ -6,18 +6,18 @@ argument-hint: '[<repo-path> | --all | --gc]'
 
 # ds:migrate — legacy → v2 dossier conversion
 
-Walks repos that have a legacy `.scratchpad/dossier/` (PLAN+SPEC+AUDIT layout). Spawns one `dossier-scout` per repo (parallel) to inspect shape + derive content. Synthesizes single-file DOSSIER.md. Operator reviews + greenlights per repo. Mutates only after approval.
+Walks repos carrying a legacy `.scratchpad/dossier/` (PLAN+SPEC+AUDIT layout). One `dossier-scout` per repo, in parallel, inspects the shape and derives content; the skill synthesises a single-file DOSSIER.md; the operator greenlights per repo. Mutation follows approval.
 
 ## Inputs
 
 - `<repo-path>`: single repo override.
-- `--all`: walk a known/configured list of repos (operator provides at first run).
-- `--from-ck [<repo-path>]`: convert a cavekit (`ck`) root `SPEC.md` into a DOSSIER.md — see **From cavekit** below. ck shares the §G/§C/§I/§V/§T/§B schema, so it's a near-1:1 lift.
+- `--all`: walk a known/configured list of repos (operator provides it at first run).
+- `--from-ck [<repo-path>]`: convert a cavekit (`ck`) root `SPEC.md` into a DOSSIER.md — see **From cavekit** below. ck shares the §G/§C/§I/§V/§T/§B schema, so it is a near-1:1 lift.
 - `--gc`: cleanup pass — move orphan legacy files to `_archive/_legacy-pre-v2/` for already-migrated repos.
 
 ## From cavekit (ck)
 
-`--from-ck` lifts a `SPEC.md` (cavekit's single-file spec at repo root) into a dossier. ck and dossier share the section schema, so the map is near-1:1:
+`--from-ck` lifts a `SPEC.md` (cavekit's single-file spec at repo root) into a dossier. The section schema is shared, so the map is near-1:1:
 
 | ck `SPEC.md`                | dossier `DOSSIER.md`                                  |
 | --------------------------- | ----------------------------------------------------- |
@@ -27,25 +27,25 @@ Walks repos that have a legacy `.scratchpad/dossier/` (PLAN+SPEC+AUDIT layout). 
 | (no §S)                     | seed one line: `ds:migrate — from-ck SPEC.md`         |
 | (no §Z)                     | empty (written by `ds:close`)                         |
 
-Flow: scout reads `SPEC.md` → propose DOSSIER.md at `.scratchpad/dossier/<date>-<slug>/` (slug from the spec title or operator) → operator greenlights → atomic Write → regen INDEX → drop the `.migrate-v2-done` marker. Leave the original `SPEC.md` in place (operator deletes when satisfied). Idempotent via the same marker.
+Flow: scout reads `SPEC.md` → propose DOSSIER.md at `.scratchpad/dossier/<date>-<slug>/` (slug from the spec title or the operator) → operator greenlights → atomic Write → regen INDEX → drop the `.migrate-v2-done` marker. The original `SPEC.md` stays where it is, for the operator to delete when satisfied. Idempotent via the same marker.
 
 ## Steps
 
 ### 0. Detect host env
 
-Per ADAPTERS.md. `Workflow` tool is high-leverage here (parallel scout dispatch, §workflow).
+Per ADAPTERS.md. `Workflow` is high-leverage here (parallel scout dispatch, §workflow).
 
 ### 1. Gather targets
 
-If `<repo-path>` given: list = \[<repo-path>\].
+`<repo-path>` given → list = \[<repo-path>\].
 
-If `--all`:
+`--all`:
 
-- Prompt operator for list of repos to migrate (no embedded list — plugin is shareable, no personal config).
+- Ask the operator for the repos to migrate. The list stays out of the plugin, which is shareable.
 - Each repo: absolute path.
-- Cache list to `.scratchpad/.migrate-targets` (operator-local file, gitignored) for resume.
+- Cache the list to `.scratchpad/.migrate-targets` (operator-local, gitignored) for resume.
 
-If `--gc`: walk repos where marker exists, look for orphan legacy files, archive.
+`--gc`: walk repos where the marker exists, find orphan legacy files, archive them.
 
 ### 2. Per-repo marker check
 
@@ -55,11 +55,11 @@ For each target repo:
 marker=<repo>/.scratchpad/.migrate-v2-done
 ```
 
-If marker exists: skip (idempotent). Print `<repo>: skip (migrated <timestamp>)`.
+Marker present → skip, printing `<repo>: skip (migrated <timestamp>)`.
 
 ### 3. Spawn scouts (parallel)
 
-For each unmigrated repo: spawn `dossier-scout` with mission:
+For each unmigrated repo, spawn `dossier-scout` with the mission:
 
 ```
 You are a dossier-scout. Inspect <repo-path>/.scratchpad/dossier/.
@@ -85,15 +85,11 @@ Output: caveman pipe-table report.
 DO NOT MODIFY any files. Read-only.
 ```
 
-Dispatch routing: repos > 2 AND `Workflow` tool present → §workflow fan-out (ADAPTERS.md). Else parallel Agent tool calls (one per repo).
+Dispatch routing: repos > 2 and `Workflow` present → §workflow fan-out (ADAPTERS.md). Otherwise parallel Agent calls, one per repo.
 
 ### 4. Aggregate + propose
 
-For each scout report:
-
-Build proposed DOSSIER.md content per FORMAT.md. Identify ambiguities for operator.
-
-Print per-repo summary:
+Per scout report, build the proposed DOSSIER.md per FORMAT.md and name the ambiguities for the operator:
 
 ```
 <repo>:
@@ -119,32 +115,32 @@ Print per-repo summary:
 
 ### 5. Per-repo mutation (on operator y)
 
-Ordering matters for crash-safety:
+Ordering is chosen for crash-safety:
 
 1. **mkdir** `<repo>/.scratchpad/dossier/<date>-<slug>/`
-1. **Write** `<dest>/DOSSIER.md.tmp` w/ proposed content
-1. **Rename** `.tmp` → `DOSSIER.md` (atomic, POSIX rename on same FS)
-1. **Write marker** `<repo>/.scratchpad/.migrate-v2-done` w/ ISO timestamp
+1. **Write** `<dest>/DOSSIER.md.tmp` with the proposed content
+1. **Rename** `.tmp` → `DOSSIER.md` (atomic, POSIX rename on the same FS)
+1. **Write marker** `<repo>/.scratchpad/.migrate-v2-done` with an ISO timestamp
 1. **Move legacy** files → `<repo>/.scratchpad/dossier/_archive/_legacy-pre-v2/<date>-<slug>/` (mkdir then mv)
 
 Crash points:
 
-- Between 1-3: tmp orphan or empty dir. Re-run safe (overwrites).
-- Between 3-4: new dossier exists, marker missing. Re-run will re-do (idempotent — overwrite).
-- Between 4-5: marker says done, legacy files orphan. `--gc` cleans later.
+- Between 1-3: tmp orphan or empty dir. Re-run is safe (overwrites).
+- Between 3-4: new dossier exists, marker missing. Re-run redoes it idempotently.
+- Between 4-5: marker says done, legacy files orphaned. `--gc` cleans them later.
 
 ### 6. Resume
 
-If interrupted mid-batch: re-run `ds:migrate --all`. Marker-present repos skip. Unmarked re-process.
+Interrupted mid-batch → re-run `ds:migrate --all`. Marker-present repos skip; unmarked ones re-process.
 
 ### 7. --gc pass
 
-For repos with marker present: walk `<repo>/.scratchpad/dossier/` for orphan PLAN.md / SPEC.md / AUDIT.md / closeout/. If found: move to `_archive/_legacy-pre-v2/<inferred-date-slug>/`.
+For repos with the marker present: walk `<repo>/.scratchpad/dossier/` for orphan PLAN.md / SPEC.md / AUDIT.md / closeout/ and move what is found to `_archive/_legacy-pre-v2/<inferred-date-slug>/`.
 
 Caveats:
 
-- If `_archive/_legacy-pre-v2/<date-slug>/` doesn't exist: create.
-- If collision: append `-2`, `-3`.
+- Missing `_archive/_legacy-pre-v2/<date-slug>/` → create it.
+- Collision → append `-2`, `-3`.
 
 ### 8. Report
 
@@ -164,17 +160,17 @@ gc:
 
 ### 9. Operator-driven cleanup
 
-Plugin does NOT auto-uninstall. After all targets show `done`:
+Uninstalling is the operator's call. Once every target shows `done`:
 
-- Operator manually deletes `.scratchpad/.migrate-targets` if they want.
-- Plugin migration skill stays installed (idempotent re-runs are safe; future repos may need it).
+- The operator deletes `.scratchpad/.migrate-targets` when they want to.
+- The skill stays installed: re-runs are idempotent, and future repos may need it.
 
 ## Idempotency
 
-- Marker = source of truth for "this repo migrated".
+- The marker is source of truth for "this repo migrated".
 - Atomic writes throughout.
 - Re-running is safe.
-- Operator approval per repo prevents bulk mistakes.
+- Per-repo operator approval keeps a bulk mistake from being one keystroke.
 
 ## Cite
 
