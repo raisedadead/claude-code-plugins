@@ -94,15 +94,15 @@ MCP server (Upstash) serving version-current API docs. Detection: tool namespace
 
 If present: `ds:build` PIN CHECK (step 5.5) grounds the API SHAPE for a pinned lib — `resolve-library-id{libraryName:<pkg>}` then `query-docs{libraryId, query:<specific API question>}` before coding, so the model writes the current API, not a remembered one.
 
-If absent: `WebFetch` the library's official docs URL (the `ds:verify` convention). Never required.
+If absent: `WebFetch` the library's official docs URL (the `ds:verify` convention). The adapter stays optional.
 
-Do NOT use the context7 HTTP API as the default path — it requires a paid `ctx7sk-` key (no-new-secret rule). Opt-in only if the operator has exported `CONTEXT7_API_KEY`.
+The context7 HTTP API stays opt-in: it needs a paid `ctx7sk-` key (no-new-secret rule), so the route activates only where the operator has exported `CONTEXT7_API_KEY`.
 
 ## §workflow — deterministic scout fan-out
 
 Native harness tool (not MCP). Detection: tool namespace has `Workflow`.
 
-Scope: **research fan-out ONLY** — `ds:check` step 2 (§V/§T/§X scan), `ds:migrate` step 3 (repo inspection), `ds:backprop` root-cause research. NEVER the `ds:build` loop: Workflows run in background with no mid-run steer and no orchestrator FS/shell — breaks TDD-commit-per-flip + §S resume.
+Scope: **research fan-out ONLY** — `ds:check` step 2 (§V/§T/§X scan), `ds:migrate` step 3 (repo inspection), `ds:backprop` root-cause research. The `ds:build` loop stays on `/goal`: Workflows run in background with no mid-run steer and no orchestrator FS/shell, which breaks TDD-commit-per-flip and §S resume.
 
 Route:
 
@@ -172,12 +172,12 @@ Run:
 - Check available agent types for: `whetstone:whetstone-doubter`
 
 Cache results for this invocation. Route commands per ADAPTERS.md tables.
-Never error if absent. Never require any adapter.
+An absent adapter is a silent fallback; every adapter is optional.
 ```
 
 ## Non-goals
 
-- No adapter is REQUIRED. Plugin must install + work cleanly on a vanilla Claude Code with no extras.
-- `plugin.json` MUST NOT declare these as dependencies.
-- Detection failure = silent fallback. Never block.
+- Every adapter is optional. The plugin installs and works on a vanilla Claude Code with no extras.
+- `plugin.json` declares no dependencies on them.
+- Detection failure = silent fallback, and the run continues.
 - No adapter version-check. Best-effort use.

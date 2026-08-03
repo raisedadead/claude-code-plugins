@@ -37,4 +37,4 @@ Sum failures per test name across the N run reports into `{runs, fails}`. The ru
 
 ## Note
 
-Keep N high enough to surface intermittent failures (10 is a reasonable floor). A test that fails 1 in 50 needs more runs to catch than one that fails 1 in 3 — `compute_flakiness.py` reports the observed rate, not the true one, so treat a `rate` near 0 with few runs as "not yet characterized," not "clean."
+Keep N high enough to surface intermittent failures; 10 is a reasonable floor. A test failing 1 in 50 needs more runs than one failing 1 in 3, and `compute_flakiness.py` reports the observed rate rather than the true one — a `rate` near 0 over few runs reads as "not yet characterised".

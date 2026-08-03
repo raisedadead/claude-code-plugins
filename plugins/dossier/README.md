@@ -7,6 +7,7 @@ Docs live at the repository root, which is not shipped to the install path — t
 - [README](https://github.com/raisedadead/claude-code-plugins/blob/main/README.md) — install, commands, gates, configuration
 - [ARCHITECTURE.md](https://github.com/raisedadead/claude-code-plugins/blob/main/ARCHITECTURE.md) — priorities, tenets, enforcement map, testing standard
 - [RESEARCH.md](https://github.com/raisedadead/claude-code-plugins/blob/main/RESEARCH.md) — decisions and their rejected alternatives
+- [INSPIRATIONS.md](https://github.com/raisedadead/claude-code-plugins/blob/main/INSPIRATIONS.md) — sources we borrow from, what we refused, when we last looked
 
 Local to this plugin:
 

@@ -1,6 +1,6 @@
 # Test anti-patterns
 
-Three ways a test looks green but earns nothing, from Matt Pocock's tdd notes. Reject a drafted test against these **before** running `run_slice red`.
+Three ways a test looks green and earns nothing, from Matt Pocock's tdd notes. Check a drafted test against them **before** `run_slice red`.
 
 ## Implementation-coupled
 
@@ -25,4 +25,4 @@ Testing a whole layer at once ("all the validators", "the entire mapper") instea
 
 ## The check
 
-If a drafted test trips any of these, rewrite it before `run_slice red`. A test that fails for the wrong reason is worse than no test — it makes a false claim of coverage.
+If a drafted test trips any of these, rewrite it before `run_slice red`. A test that fails for the wrong reason makes a false claim of coverage, which is worse than no test.
