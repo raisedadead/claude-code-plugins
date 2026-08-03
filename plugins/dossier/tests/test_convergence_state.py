@@ -10,9 +10,11 @@ never asked for it.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parent.parent
@@ -98,19 +100,33 @@ def test_a_repo_with_a_contract_names_the_wave() -> None:
 
 
 def test_it_reports_criteria_count_without_running_them() -> None:
+    """A hook on every prompt paying a contract's shell cost is the failure this
+    guards: the criterion leaves a marker, and the marker stays absent."""
     with tempfile.TemporaryDirectory() as t:
         root = Path(t)
         _repo_with_contract(root)
+        marker = root / "ran-marker"
+        contract = root / ".dossier" / "2026-08-01-demo-wave.md"
+        contract.write_text(
+            CONTRACT.replace(
+                "| 1   | `true`  | exit 0 |", f"| 1   | `touch {marker}` | exit 0 |"
+            ),
+            encoding="utf-8",
+        )
         result = _run({"cwd": str(root)})
         assert "2 criteria" in result.stdout, result.stdout
+        assert not marker.exists(), "the hook ran a contract criterion"
 
 
 def test_it_reports_budget_usage() -> None:
     with tempfile.TemporaryDirectory() as t:
         root = Path(t)
         _repo_with_contract(root)
-        result = _run({"cwd": str(root)})
-        assert "of 4" in result.stdout, result.stdout
+        assert "commits: 0 of 4" in _run({"cwd": str(root)}).stdout
+        (root / "later.py").write_text("x = 1\n", encoding="utf-8")
+        _git(root, "add", "later.py")
+        _git(root, "commit", "-q", "-m", "feat: one more")
+        assert "commits: 1 of 4" in _run({"cwd": str(root)}).stdout
 
 
 def test_malformed_stdin_never_breaks_the_prompt() -> None:
@@ -142,7 +158,8 @@ def test_a_contract_outside_a_git_repo_still_reports() -> None:
         assert "demo-wave" in result.stdout, result.stdout
 
 
-def test_an_unreadable_contract_never_breaks_the_prompt() -> None:
+def test_a_contract_with_no_criteria_says_nothing() -> None:
+    """Readable, parseable, and carrying no done-when table."""
     with tempfile.TemporaryDirectory() as t:
         root = Path(t)
         (root / ".dossier").mkdir()
@@ -150,19 +167,54 @@ def test_an_unreadable_contract_never_breaks_the_prompt() -> None:
         _live_ledger(root, "broken")
         result = _run({"cwd": str(root)})
         assert result.returncode == 0, result.stderr
+        assert result.stdout == "", result.stdout
+
+
+def test_an_unreadable_contract_never_breaks_the_prompt() -> None:
+    """The `except OSError` in `_report` exists for a file the process cannot
+    read. A readable fixture exercises the empty-table path instead."""
+    if os.geteuid() == 0:
+        return
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        (root / ".dossier").mkdir()
+        contract = root / ".dossier" / "2026-08-01-locked.md"
+        contract.write_text(CONTRACT, encoding="utf-8")
+        contract.chmod(0o000)
+        _live_ledger(root, "locked")
+        try:
+            result = _run({"cwd": str(root)})
+        finally:
+            contract.chmod(0o600)
+        assert result.returncode == 0, result.stderr
+        assert result.stdout == "", result.stdout
 
 
 def test_it_reports_the_layer_mix_of_recent_work() -> None:
+    """The numbers, not the labels: zeroing a bucket has to fail this."""
     with tempfile.TemporaryDirectory() as t:
         root = Path(t)
         _repo_with_contract(root)
         (root / "a.py").write_text("x = 1\n", encoding="utf-8")
         (root / "README.md").write_text("hi\n", encoding="utf-8")
-        _git(root, "add", "a.py", "README.md")
+        (root / "tests").mkdir()
+        (root / "tests" / "test_a.py").write_text("y = 2\n", encoding="utf-8")
+        _git(root, "add", "a.py", "README.md", "tests/test_a.py")
         _git(root, "commit", "-q", "-m", "feat: work")
         result = _run({"cwd": str(root)})
-        assert "runtime" in result.stdout, result.stdout
-        assert "docs" in result.stdout, result.stdout
+        assert "runtime 1 · tests 1 · docs 1" in result.stdout, result.stdout
+
+
+def test_a_path_merely_containing_test_is_runtime() -> None:
+    """`latest.py` landed in the tests bucket under a substring match."""
+    with tempfile.TemporaryDirectory() as t:
+        root = Path(t)
+        _repo_with_contract(root)
+        (root / "latest.py").write_text("x = 1\n", encoding="utf-8")
+        _git(root, "add", "latest.py")
+        _git(root, "commit", "-q", "-m", "feat: latest")
+        result = _run({"cwd": str(root)})
+        assert "runtime 1 · tests 0 · docs 0" in result.stdout, result.stdout
 
 
 def test_a_contractless_live_wave_is_named() -> None:
@@ -281,11 +333,16 @@ def test_no_live_wave_means_silence() -> None:
 
 
 def test_it_finishes_fast_enough_to_sit_on_every_prompt() -> None:
+    """The hooks.json budget is 10 s; a hook that ate half of it on a two-commit
+    repo passed the earlier version of this test, which bounded nothing."""
     with tempfile.TemporaryDirectory() as t:
         root = Path(t)
         _repo_with_contract(root)
+        started = time.perf_counter()
         result = _run({"cwd": str(root)}, timeout=5.0)
+        elapsed = time.perf_counter() - started
         assert "demo-wave" in result.stdout, result.stdout
+        assert elapsed < 1.0, f"took {elapsed:.2f}s on a two-commit repo"
 
 
 def _main() -> int:

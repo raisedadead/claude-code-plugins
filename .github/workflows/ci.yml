@@ -73,6 +73,15 @@ jobs:
             exit 1
           fi
 
+      - name: every test file is named in this workflow
+        run: |
+          # O37: three suites existed, passed locally, and ran nowhere.
+          missing=0
+          for t in $(git ls-files 'plugins/*/tests/test_*' 'plugins/*/hooks/test_*'); do
+            grep -qF "$t" .github/workflows/ci.yml || { echo "not run in CI: $t" >&2; missing=1; }
+          done
+          test "$missing" -eq 0
+
       - name: first-party manifest + skill validation
         run: |
           npm install -g @anthropic-ai/claude-code@2.1.220
@@ -83,7 +92,7 @@ jobs:
       - name: ruff
         run: |
           pip install -r requirements-dev.txt
-          ruff check plugins/dossier/hooks
+          ruff check plugins/dossier
 
       - name: shellcheck
         env:

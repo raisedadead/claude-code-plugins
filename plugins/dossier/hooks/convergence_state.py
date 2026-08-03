@@ -33,6 +33,7 @@ GIT_TIMEOUT = 5
 
 RUNTIME_SUFFIXES = (".py", ".sh", ".js", ".ts", ".go", ".rs", ".rb")
 DOC_SUFFIXES = (".md", ".json", ".txt", ".yml", ".yaml")
+TEST_DIRS = {"test", "tests", "__tests__", "spec"}
 
 
 def _git(root: Path, *args: str) -> str:
@@ -67,9 +68,22 @@ def _field(text: str, name: str) -> str:
     return ""
 
 
+def _is_test(path: str) -> bool:
+    """Whether a path is test code, by name rather than by substring.
+
+    `"test" in path` put `latest.py` and `contest/main.go` in the tests bucket,
+    which is the bucket the report uses to say what a wave has been touching.
+    """
+    candidate = Path(path)
+    return (
+        any(part in TEST_DIRS for part in candidate.parts)
+        or candidate.name.startswith("test_")
+        or candidate.stem.endswith(("_test", ".test", "_spec", ".spec"))
+    )
+
+
 def _layer_mix(root: Path, since: str) -> str:
-    span = f"{since}..HEAD" if since else "HEAD"
-    raw = _git(root, "diff", "--numstat", span)
+    raw = _git(root, "diff", "--numstat", f"{since}..HEAD")
     if not raw.strip():
         return ""
     runtime = docs = tests = 0
@@ -80,7 +94,7 @@ def _layer_mix(root: Path, since: str) -> str:
         changed = int(parts[0]) + int(parts[1])
         path = parts[2]
         suffix = Path(path).suffix.lower()
-        if "test" in path:
+        if _is_test(path):
             tests += changed
         elif suffix in RUNTIME_SUFFIXES:
             runtime += changed
