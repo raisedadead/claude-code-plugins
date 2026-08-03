@@ -116,19 +116,19 @@ Use `fastedit` if `HAS_FASTEDIT=1` for surgical code edits. Else Edit tool.
 
 **Skill-lint route (whetstone compose, touched SKILL.md only):** lint before COMMIT when whetstone's linter resolves — source checkout (`plugins/whetstone/skills/skill-smith/scripts/lint_skill.py <path>`) or operator-set `DOSSIER_LINT_SKILL` (ADAPTERS §whetstone). Exit 0 gates the commit — same yardstick CI enforces repo-wide. Unresolvable → skip silently, §S `skill-lint=skipped-absent` (CI still lints on push; either plugin alone stays functional).
 
-**Source comments stay phase-agnostic.** A comment in source or test answers _why_: a workaround ref, a non-obvious invariant, an upstream-bug link. Phase and audit tracking live in DOSSIER.md §B and §S, which is the whole record of them — so `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)` and `// PH<n>-B<k>` stay out of every source and test file, and a comment that would carry one is either rewritten as a _why_ or dropped. The `marker_guard.py` PreToolUse hook watches for the audit-id forms and is advisory: it emits a nudge and exits 0, so the write proceeds, and this paragraph is what keeps them out.
+**Source comments stay phase-agnostic.** A comment in source or test answers _why_: a workaround ref, a non-obvious invariant, an upstream-bug link. Phase and audit tracking live in DOSSIER.md §B and §S, which hold the whole record — so `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)` and `// PH<n>-B<k>` stay out of every source and test file, and a comment that would carry one is rewritten as a _why_ or dropped. `marker_guard.py` watches for the audit-id forms and is advisory: it nudges and exits 0, so the write proceeds and this paragraph is what keeps them out.
 
 **Conflict route (whetstone compose, merge-class only):** a plain `git merge` conflict during WORK, with `whetstone:merge-resolve` in the available-skills list, resolves per that skill's process — hunk-by-hunk with intent, then the `verify_clean.sh` proof (baseline `-` marker-mode when no pre-conflict count exists; the step-6 full-suite GREEN gate already floors regressions). §S: `ds:build <T-id> conflict=resolved verify_clean=0`. Skill absent → resolve inline as before, §S `conflict=resolved-inline`. Routing is model-judgment (trigger-phrase match); the verify_clean exit code is the code-enforced part. Conflicts from `rebase` / `cherry-pick` are OUT of this route — their `--continue` creates commits outside step 7's task-scoped discipline: under `--auto` PAUSE (`destructive`); interactive, hand to the operator (standalone `whetstone:merge-resolve` already owns that trigger).
 
-**Stall rule:** the same identical failure twice in a row is a stuck signal, not bad luck — the second occurrence forces a strategy change before the third attempt — a different diagnosis, a different seam, or a scout spawn. Retry caps count ATTEMPTS; this rule catches the tighter loop inside them.
+**Stall rule:** an identical failure twice running is a stuck signal rather than bad luck. The second occurrence forces a strategy change before the third attempt — a different diagnosis, a different seam, or a scout spawn. Retry caps count ATTEMPTS; this rule catches the tighter loop inside them.
 
-If tests fail and root cause unclear: **spawn `dossier-scout` subagent** with mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>". Use report to guide fix. Scout output is caveman-compressed; main thread aggregates.
+Tests failing with an unclear root cause: **spawn a `dossier-scout` subagent** with the mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>", and let its caveman-compressed report guide the fix.
 
-If failure suggests a missing invariant: trigger the `ds:backprop` flow, which registers the invariant first and fixes the symptom under it.
+A failure that implies a missing invariant: run `ds:backprop`, which registers the invariant first and greens the symptom under it.
 
 ### 6.5. REVIEW (fresh-context, optional)
 
-Runs when `--review` is set, or auto for a **destructive-class** task (delete / drop / migrate / force / schema). A pre-commit gate — the context that wrote the fix does not get to be the only judge that GREEN is enough. This is the discipline the plugin's own hardening wave used ("two adversarial review rounds"), encoded for downstream builds.
+Runs when `--review` is set, or auto for a **destructive-class** task (delete / drop / migrate / force / schema). A pre-commit gate: a second context judges whether GREEN is enough, which is the discipline this plugin's own hardening wave used.
 
 Spawn one `dossier-reviewer` subagent (`Agent` tool, `subagent_type: dossier:dossier-reviewer`) with an **artifact-only** mission — no parent transcript:
 
@@ -144,7 +144,7 @@ Read its verdict line:
 
 One review cycle max — the reviewer does a single pass and the build retries at most once, so a genuine disagreement escalates instead of looping (addyosmani "doubt theater" cap).
 
-Append §S either way, the same as the doubt gate at §5.6 does — `ds:build <T-id> review=<PASS:<n>-warn | CHANGES:<n>-critical>`. Without this the artifact-only reviewer is the one composed gate whose verdict leaves no trace, which is precisely the evaporation the breadcrumb below exists to prevent.
+Append §S either way, as the doubt gate at §5.6 does — `ds:build <T-id> review=<PASS:<n>-warn | CHANGES:<n>-critical>`. The breadcrumb is what keeps this gate's verdict on the record; without it, the one artifact-only reviewer leaves no trace.
 
 Skip entirely if neither `--review` nor destructive-class — keeps the fast path fast.
 
@@ -154,7 +154,7 @@ Built-in `/review`, `/security-review`, `/simplify` sit alongside this artifact-
 
 `git add` only files touched by this task.
 
-**Tiger route (whetstone compose, every build commit).** Between the `git add` and the `git commit` — never before the `git add`, because the checker reads `git diff --cached` and an empty index always reports clean — measure the column budget of the lines this task ADDS. Resolve the checker as `tiger-check` on `PATH` — whetstone ships it in `bin/`, which Claude Code adds to the Bash tool's `PATH` while that plugin is enabled. Fall back to the source-checkout path (`plugins/whetstone/skills/tiger-style/scripts/tiger_check.py`) or an operator-set `DOSSIER_TIGER_CHECK` (ADAPTERS §whetstone). No flag, so nothing has to be opted into first — D7's failure mode, a gate the operator never turns on, does not reach this one. The other failure mode does: no hook fires on `git commit`, so running this at all is model-judgment. The verdict is computed; arriving at the point of producing one is not. Read the reach caveat below before treating it as universal.
+**Tiger route (whetstone compose, every build commit).** Measure the column budget of the lines this task ADDS, between the `git add` and the `git commit` — never before the `git add`, because the checker reads `git diff --cached` and an empty index always reports clean. Resolve the checker as `tiger-check` on `PATH`: whetstone ships it in `bin/`, which Claude Code adds to the Bash tool's `PATH` while that plugin is enabled. Fall back to the source-checkout path (`plugins/whetstone/skills/tiger-style/scripts/tiger_check.py`) or an operator-set `DOSSIER_TIGER_CHECK` (ADAPTERS §whetstone). It carries no flag, so D7's failure mode — a gate the operator never turns on — misses this one. The other failure mode lands: no hook fires on `git commit`, so running this at all is model-judgment. The verdict is computed; arriving at it is not. Read the reach caveat below before treating it as universal.
 
 **Read the verdict line before the exit code.** A missing script or a bad `DOSSIER_TIGER_CHECK` makes the interpreter itself exit 2 or 1 — the same numbers the checker uses for NAG and BLOCK — so a code-only reading reports a result for a check that never ran. Require a `TIGER:` line in stdout. No such line means unresolvable, whatever the number was.
 
