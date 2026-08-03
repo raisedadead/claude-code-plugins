@@ -16,9 +16,9 @@ Honesty > Recoverability > Leverage, in that order. Use it to settle conflicts r
 
 Describe every gate as the thing it actually is. An opt-in gate, a default-off gate and an advisory nag each get named as such; a verdict parsed from a model is model-judgment, and computation is what a script returns. `claim-check` exits 1 on a sentence that claims enforcement while naming neither an exit code nor one of those labels.
 
-`blocks`, `enforces` and `gates` are claims about runtime, and a doc cannot prove one. Run the thing and read the exit code before writing the verb. This rule was already on this page and the class still recurred three times in a single wave — a hook that nudges at exit 0 described as blocking, a correct `--cached` read justified by a false claim about what `git diff HEAD` does, and a regression test named for a case its own fixture ruled out. All three shipped. Each was found by a reviewer; none by a test.
+`blocks`, `enforces` and `gates` are claims about runtime, and a doc cannot prove one. Run the thing and read the exit code before writing the verb. This rule was already on this page when the class recurred three times in one wave; all three shipped, each found by a reviewer and none by a test.
 
-The middle one is the shape to watch: **right behaviour, wrong stated reason.** Nothing it predicted ever failed, so no test could catch it, and it survived three reviews reading as authoritative. When you write down *why* a thing is done, that sentence needs a probe too. See F25.
+The shape to watch is **right behaviour, wrong stated reason** — a correct `--cached` read justified by a false claim about what `git diff HEAD` does. Nothing the claim predicted ever failed, so no test could catch it, and it read as authoritative through three reviews. When you write down *why* a thing is done, that sentence needs a probe too. See F25.
 
 ## Evidence
 
@@ -32,6 +32,6 @@ Tests guard invariants that would silently break. They do not assert that docume
 
 ## Docs
 
-`ARCHITECTURE.md` is what we believe now. `RESEARCH.md` is why: decisions with their rejected alternatives, facts with a recheck trigger, open strides. A decision row without a rejected alternative is a description — find the alternative or drop the row.
+`ARCHITECTURE.md` is what we believe now. `RESEARCH.md` is why: decisions with their rejected alternatives, facts with a recheck trigger, open strides. A decision row without a rejected alternative is a description — find the alternative or drop the row. `INSPIRATIONS.md` is who we borrowed from, what we refused from each of them, and the date we last looked; every release re-stamps it.
 
 Neither is a history. When a position changes, rewrite the row; when a row stops changing what someone would do, delete it. Both files are read by sessions with no memory of the one that wrote them, and every line that no longer earns its place makes the lines that do harder to find. Git holds the route.

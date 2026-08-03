@@ -40,6 +40,14 @@ Everything else fires automatically or is power-user: `build` (the TDD engine, `
 
 Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes tasks, `/dossier:converge` runs the wave contract's done-when criteria ("are we done"), `/dossier:ship` writes the changelog, and `backprop` / `grill` / `verify` / `roll` / `migrate` fire at their moments. In a live wave the `UserPromptSubmit` hook prints the contract's state beside every prompt, naming `ds:converge` for the verdict.
 
+### Wave contracts
+
+A `§T` list says what to do and never what done means. A contract says it in commands: a `consumer`, and a `## done-when` table whose every row is a command with an expected result. `ds:converge` runs them and answers `MET` / `UNMET` / `PARSE` (exit 0/1/2); `ds:close` runs the same check before it archives.
+
+The home is the repo's choice. `mkdir .dossier` opts into tracked contracts at `.dossier/<date>-<slug>.md` — citable as evidence, archived to `.dossier/_archive/` at close. Without that directory, `ds:new` writes `<wave-dir>/CONTRACT.md` instead and says what the weaker home costs: untracked wherever `.scratchpad/` is gitignored, and its criteria run as shell from a file no diff ever showed a reviewer. The plugin never creates `.dossier/` for you.
+
+**A wave opened before contracts existed** keeps working — `ds:close` records `converge=absent` and archives it. The per-prompt line will read `no contract` until you write one: hand-author `.dossier/<date>-<slug>.md` (or `<wave-dir>/CONTRACT.md`) with a `consumer` row and a `done-when` table, and commit it — the budget count starts at that commit.
+
 **whetstone — invoke directly, or let dossier compose them:**
 
 | Command                       | Self-verify                                   |
@@ -51,6 +59,8 @@ Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes
 | `/whetstone:skill-smith`      | frontmatter, line budget, reference depth     |
 | `/whetstone:tiger-style`      | column budget computed from the staged diff   |
 
+Two of them also ship as commands on `PATH` while whetstone is enabled, which is how dossier's composed routes reach them in any project: `tiger-check <repo>` (column budget of the lines a commit adds) and `claim-check <path>...` (prose asserting enforcement that names nothing checkable).
+
 ## Quickstart
 
 ```
@@ -60,7 +70,7 @@ Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes
 /dossier:close --successor auth-rollout
 ```
 
-`--auto` pauses only on a real decision — blocked, ambiguous, destructive, push, retries, stale state, budget — and logs the reason. Never auto-pushes, never auto-closes.
+`--auto` pauses on a real decision — blocked, ambiguous, destructive, push, retries, stale state, budget — and logs the reason. Pushing and closing stay yours: the loop stops at the last `x`-flip.
 
 ## Quality gates
 
