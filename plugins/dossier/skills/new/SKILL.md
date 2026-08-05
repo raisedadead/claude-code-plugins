@@ -106,7 +106,7 @@ Write the file at `<dir>/DOSSIER.md` per FORMAT.md §2 section order:
 ```markdown
 # <slug>
 
-`<date>` · `live` · `P1/<P-total>`
+`<date>` · `live` · `P1/1`
 
 ## Goal
 
