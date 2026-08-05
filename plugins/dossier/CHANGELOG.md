@@ -4,6 +4,24 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-08-05 (the ledger reads by name)
+
+### Changed
+
+- **Task rows carry `who` and `needs`, and no phase.** `| id | state | who | task | needs | cite | verify |`. `who` is `A` (the agent can finish it alone) or `H` (it needs the operator), set when the row is written rather than discovered when a run stalls. `needs` lists the ids that must reach `x` first and defaults to empty, so a row states a dependency only where one exists. The frontier — every `.` row whose `needs` are all `x` — is derived on read, never stored. A phase column made the operator declare the shape of the work before the work was understood; `needs` expresses the same ordering only where it is real.
+
+- **Sections are words, not sigils.** `## Goal`, `## Tasks`, `## Status`, `## Closeout` and the rest. `hooks/lib-sections.sh` holds one pattern per section, matching both this spelling and the `## §G — Goal` … `## §Z — Closeout` form every dossier written before today carries, with a descriptive tail allowed after either. `ds:new` writes words; nothing rewrites an existing ledger, so archived dossiers stay readable indefinitely and no migration exists to run.
+
+- **Columns resolve by header name.** `lib-vm-checks.sh`, `lib-row-flip.sh`, `lib-regen-index.sh` and `session-start.sh` read the positions they need out of the header row. Three separate readers had been counting cells, each found only when something read a ledger in the new shape; `FORMAT.md` had a rule forbidding a dependency column outright because adding one would shift them. Both the rule and the class it guarded are gone. `lib-vm-checks.sh` warns, `lib-row-flip.sh` refuses at exit 1, and `lib-regen-index.sh` writes a stderr line when a Tasks header names no `state` column.
+
+### Fixed
+
+- `converge.py` matched a `stdout:` expect against stdout **and** stderr, so a wave reported MET on text the command never printed to stdout, and `stdout: (nothing)` reported UNMET against an empty stdout sitting beside a warning. The streams are separate; a failed criterion now shows its first stderr line on the report line.
+- `converge.py` resolved a contract by any hyphen-delimited suffix while its docstring claimed equality against the date-stripped slug, so `check.md` claimed wave `2026-08-01-claim-check`. It now matches what the docstring says.
+- `lib-row-flip.sh` exits 1 on a row with fewer cells than its header names, rather than writing past its end.
+- `session-start.sh` lost the whole sit-rep body to an awk range that collapsed on its own opening heading: no `just did:` lines, and the resume-context dumps shipped as bare headers. The regression was introduced and closed in the same wave; `test_session_start.sh` now reads that output.
+- All six stdlib test runners honour `-k`, refuse a bare `-k`, and exit 1 when the filter matches nothing. One honoured it; five accepted and ignored it, so a contract criterion naming a test that does not exist reported success.
+
 ## 2026-07-31 (slop gate leaves the plugin)
 
 ### Removed

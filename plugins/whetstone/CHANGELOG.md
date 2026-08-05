@@ -4,6 +4,13 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-08-05 (the checker finds the work tree)
+
+### Fixed
+
+- `tiger_check.py` used the path it was given as the git root, while git reports diff paths relative to the work-tree top. Given a subdirectory the two disagreed and every file measured zero added lines — reported as `TIGER: CLEAN <n> file`, not as a skip, so the examined count claimed a look that never happened. It now resolves `git rev-parse --show-toplevel` once and anchors the diff and the `.editorconfig` walk there.
+- `test_tiger_check.py`, `test_claim_check.py` and `test_whetstone_py.py` honour `-k`, refuse a bare `-k`, and exit 1 when the filter matches nothing — previously they accepted the flag and ran everything.
+
 ## 2026-08-02 (claims name their backing)
 
 ### Added
