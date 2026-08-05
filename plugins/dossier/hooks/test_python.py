@@ -25,6 +25,7 @@ import marker_guard
 import roll_lib
 import verify_hook
 import verify_lib
+import verify_sweep
 
 
 def test_tlr_round_trip() -> None:
@@ -584,15 +585,26 @@ _PROBE_RULE = {
 
 
 @contextlib.contextmanager
-def _only_probe_rule():
+def _only_probe_rule(rules: list | None = None):
     import verify_patterns
 
-    saved = verify_patterns.VERIFY_PATTERNS
-    verify_patterns.VERIFY_PATTERNS = [_PROBE_RULE]
+    active = [_PROBE_RULE] if rules is None else rules
+    saved_registry = verify_patterns.VERIFY_PATTERNS
+    saved_sweep = verify_sweep.VERIFY_PATTERNS
+    verify_patterns.VERIFY_PATTERNS = active
+    verify_sweep.VERIFY_PATTERNS = active
     try:
         yield
     finally:
-        verify_patterns.VERIFY_PATTERNS = saved
+        verify_patterns.VERIFY_PATTERNS = saved_registry
+        verify_sweep.VERIFY_PATTERNS = saved_sweep
+
+
+def _probe_hits(hook_stdout: str) -> int:
+    if not hook_stdout:
+        return 0
+    ctx = json.loads(hook_stdout)["hookSpecificOutput"]["additionalContext"]
+    return sum(1 for line in ctx.splitlines() if "probe ABC" in line)
 
 
 def _dossier_workspace(root: str) -> Path:
@@ -647,6 +659,120 @@ def test_verify_hook_honours_an_inline_skip_marker() -> None:
         with _only_probe_rule():
             rc, out = _drive_in(verify_hook, _verify_payload(ws, body), ws)
         assert rc == 0 and out == "", (rc, out)
+
+
+def test_verify_hook_skip_marker_covers_matches_above_it() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        ws = _dossier_workspace(d)
+        body = "x = 'PROBE-ABC'\n# verify-skip: probe-freshness\ny = 'PROBE-ABC'\n"
+        with _only_probe_rule():
+            rc, out = _drive_in(verify_hook, _verify_payload(ws, body), ws)
+        assert rc == 0 and out == "", (rc, out)
+
+
+def test_verify_hook_dedups_a_repeat_inside_one_call() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        ws = _dossier_workspace(d)
+        body = "a = 'PROBE-ABC'\nb = 'PROBE-ABC'\nc = 'PROBE-ABC'\n"
+        with _only_probe_rule():
+            _, out = _drive_in(verify_hook, _verify_payload(ws, body), ws)
+        assert _probe_hits(out) == 1, out
+
+
+def test_verify_hook_keeps_distinct_findings_from_one_call() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        ws = _dossier_workspace(d)
+        body = "a = 'PROBE-ABC'\nb = 'PROBE-XYZ'\n"
+        with _only_probe_rule():
+            _, out = _drive_in(verify_hook, _verify_payload(ws, body), ws)
+        ctx = json.loads(out)["hookSpecificOutput"]["additionalContext"]
+        assert "probe ABC" in ctx and "probe XYZ" in ctx, ctx
+
+
+def test_verify_sweep_reports_a_stale_claim_on_disk() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        target = Path(d) / "app.py"
+        target.write_text("x = 'PROBE-ABC'\n", encoding="utf-8")
+        with _only_probe_rule():
+            findings = verify_sweep.scan(str(target))
+        assert len(findings) == 1, findings
+        assert "probe ABC" in findings[0], findings
+
+
+def test_verify_sweep_stays_silent_on_benign_content() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        target = Path(d) / "app.py"
+        target.write_text("x = 1\n", encoding="utf-8")
+        with _only_probe_rule():
+            findings = verify_sweep.scan(str(target))
+        assert findings == [], findings
+
+
+def test_verify_sweep_honours_an_inline_skip_marker() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        target = Path(d) / "app.py"
+        target.write_text(
+            "x = 'PROBE-ABC'\n# verify-skip: probe-freshness\n", encoding="utf-8"
+        )
+        with _only_probe_rule():
+            findings = verify_sweep.scan(str(target))
+        assert findings == [], findings
+
+
+def test_verify_sweep_scopes_a_yaml_rule_off_a_python_file() -> None:
+    yaml_only = dict(_PROBE_RULE, scope="yaml")
+    with tempfile.TemporaryDirectory() as d:
+        py_file = Path(d) / "app.py"
+        py_file.write_text("x = 'PROBE-ABC'\n", encoding="utf-8")
+        yaml_file = Path(d) / "app.yaml"
+        yaml_file.write_text("x: PROBE-ABC\n", encoding="utf-8")
+        with _only_probe_rule([yaml_only]):
+            assert verify_sweep.scan(str(py_file)) == [], py_file
+            assert len(verify_sweep.scan(str(yaml_file))) == 1, yaml_file
+
+
+def test_verify_sweep_ignores_a_missing_file() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        with _only_probe_rule():
+            assert verify_sweep.scan(str(Path(d) / "absent.py")) == []
+
+
+def test_verify_sweep_and_hook_agree_on_a_repeated_claim() -> None:
+    body = "a = 'PROBE-ABC'\nb = 'PROBE-ABC'\nc = 'PROBE-ABC'\n"
+    with tempfile.TemporaryDirectory() as d:
+        ws = _dossier_workspace(d)
+        target = ws / "app.py"
+        target.write_text(body, encoding="utf-8")
+        with _only_probe_rule():
+            _, out = _drive_in(verify_hook, _verify_payload(ws, body), ws)
+            findings = verify_sweep.scan(str(target))
+        assert _probe_hits(out) == len(findings), (out, findings)
+
+
+def test_tlr_header_carries_every_documented_trigger() -> None:
+    for trig in ("explicit", "precompact", "sessionend"):
+        body = roll_lib.render_tlr([], "sess-9", trig)
+        assert roll_lib.parse_tlr_header(body).get("trig") == trig, body
+
+
+def test_verify_lib_ships_no_unreferenced_check_helper() -> None:
+    import re
+
+    hooks_dir = Path(__file__).resolve().parent
+    lib_src = (hooks_dir / "verify_lib.py").read_text(encoding="utf-8")
+    defined = re.findall(r"^def (check_\w+)", lib_src, re.MULTILINE)
+    assert defined, "verify_lib.py defines no check_* helper"
+    sources = [
+        p.read_text(encoding="utf-8")
+        for p in sorted(hooks_dir.glob("*.py"))
+        if p.name != Path(__file__).name
+    ]
+    orphans = [
+        name
+        for name in defined
+        if sum(len(re.findall(rf"\b{name}\b", src)) for src in sources) < 2
+    ]
+    assert not orphans, f"unreferenced verify_lib helpers: {orphans}"
 
 
 def _run() -> int:

@@ -38,9 +38,9 @@ BACKED = re.compile(
     re.I,
 )
 LABELLED = re.compile(
-    r"\badvisory\b|\bmodel-judgment\b|\bmodel judgement\b|\bopt-in\b|\bnag\b"
+    r"\badvisory\b|\bmodel[\s-]judge?ment\b|\bopt-in\b|\bnag\b"
     r"|\bnon-blocking\b|\bnever blocks\b|\bblocks nothing\b|\bdoes not block\b"
-    r"|\bnot a gate\b|\bjudgement\b|\bjudgment\b"
+    r"|\bnot a gate\b"
     r"|\bcode\s*[—–-]\s*`[^`]+`",
     re.I,
 )
@@ -94,6 +94,14 @@ def _is_claim(unit: str) -> bool:
 
 
 def _is_backed(unit: str) -> bool:
+    """An exit code, a citation, or a label that names what the thing is.
+
+    The label has to be the label. A bare `judgement`/`judgment` alternative
+    once exempted every sentence containing the noun, whatever it asserted —
+    "the hook blocks a bad judgment call" passed, "the hook blocks a bad
+    write" was flagged. `model[\\s-]judge?ment` takes both spellings and both
+    joiners, and launders nothing else.
+    """
     return bool(BACKED.search(unit)) or bool(LABELLED.search(unit))
 
 

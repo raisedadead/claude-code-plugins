@@ -10,6 +10,23 @@ shift 2
 	exit 2
 }
 
+json_string() {
+	local raw="$1" out='"' index char
+	for ((index = 0; index < ${#raw}; index++)); do
+		char="${raw:index:1}"
+		case "$char" in
+		'"') out+='\"' ;;
+		$'\\') out+=$'\\\\' ;;
+		$'\n') out+='\n' ;;
+		$'\r') out+='\r' ;;
+		$'\t') out+='\t' ;;
+		[[:cntrl:]]) out+="$(printf '\\u%04x' "'$char")" ;;
+		*) out+="$char" ;;
+		esac
+	done
+	printf '%s"' "$out"
+}
+
 NAME="${FLAKE_TEST_NAME:-suite}"
 fails=0
 for ((i = 1; i <= N; i++)); do
@@ -20,4 +37,4 @@ for ((i = 1; i <= N; i++)); do
 	fi
 done
 
-printf '{"%s": {"runs": %d, "fails": %d}}\n' "$NAME" "$N" "$fails" >"$OUT"
+printf '{%s: {"runs": %d, "fails": %d}}\n' "$(json_string "$NAME")" "$N" "$fails" >"$OUT"

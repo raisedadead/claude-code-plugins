@@ -86,4 +86,76 @@ for entry in sorted(bad):
 sys.exit(1 if bad else 0)
 PY
 
+python3 - "$ROOT" <<'PY' || fail "FORMAT.md's bundled-helper count word disagrees with the roster table under it"
+import os, re, sys
+
+root = os.path.realpath(sys.argv[1])
+fmt_path = os.path.join(root, "plugins", "dossier", "FORMAT.md")
+with open(fmt_path, encoding="utf-8") as handle:
+    body = handle.read()
+
+words = {
+    "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
+    "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
+}
+lead = re.search(r"^(\w+) scripts under `\$CLAUDE_PLUGIN_ROOT/hooks/`", body, re.M)
+if not lead:
+    print("  FORMAT.md carries no 'N scripts under $CLAUDE_PLUGIN_ROOT/hooks/' sentence", file=sys.stderr)
+    sys.exit(2)
+stated = words.get(lead.group(1).lower())
+if stated is None:
+    print(f"  helper count is not a number word: {lead.group(1)}", file=sys.stderr)
+    sys.exit(2)
+
+rows, started = [], False
+for line in body[lead.end():].splitlines():
+    if line.startswith("|"):
+        started = True
+        rows.append(line)
+    elif started:
+        break
+roster = []
+for row in rows:
+    hit = re.match(r"^\| `(lib-[a-z0-9-]+\.sh)`", row)
+    if hit and hit.group(1) not in roster:
+        roster.append(hit.group(1))
+
+bad = []
+if len(roster) != stated:
+    bad.append(f"sentence says {stated}, table lists {len(roster)}: {roster}")
+for helper in roster:
+    if not os.path.isfile(os.path.join(root, "plugins", "dossier", "hooks", helper)):
+        bad.append(f"table names a helper absent from hooks/: {helper}")
+for entry in bad:
+    print(f"  {entry}", file=sys.stderr)
+sys.exit(1 if bad else 0)
+PY
+
+python3 - "$ROOT" <<'PY' || fail "a discovery command written in FORMAT.md no longer runs clean from the repo root"
+import os, re, shlex, subprocess, sys
+
+root = os.path.realpath(sys.argv[1])
+fmt_path = os.path.join(root, "plugins", "dossier", "FORMAT.md")
+with open(fmt_path, encoding="utf-8") as handle:
+    body = handle.read()
+
+bad = []
+for span in re.findall(r"`([^`\n]+)`", body):
+    cmd = span.strip()
+    if not cmd.startswith("grep ") or "plugins/dossier/" not in cmd:
+        continue
+    try:
+        argv = shlex.split(cmd)
+    except ValueError as exc:
+        bad.append(f"{cmd} -> unparseable: {exc}")
+        continue
+    done = subprocess.run(argv, cwd=root, capture_output=True, text=True, check=False)
+    if done.returncode != 0:
+        note = done.stderr.strip().splitlines()
+        bad.append(f"{cmd} -> exit {done.returncode} {note[0] if note else '(no match)'}")
+for entry in bad:
+    print(f"  a maintainer running this from FORMAT.md gets nothing: {entry}", file=sys.stderr)
+sys.exit(1 if bad else 0)
+PY
+
 printf 'ok\n'

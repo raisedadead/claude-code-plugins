@@ -175,6 +175,50 @@ def test_a_code_labelled_enforcement_row_passes() -> None:
         assert result.returncode == CLEAN, result.stdout + result.stderr
 
 
+def test_a_bare_judgment_noun_does_not_launder_a_claim() -> None:
+    """The label is `model-judgment`, not the noun `judgment` loose in a line.
+
+    A bare `judgement`/`judgment` alternative exempted any sentence that
+    happened to contain the word, whatever it asserted: "the hook blocks a bad
+    judgment call" passed while the same sentence about a write was flagged.
+    """
+    with tempfile.TemporaryDirectory() as t:
+        path = Path(t) / "laundered.md"
+        path.write_text(
+            "The `foo_guard.py` hook blocks a bad judgment call.\n\n"
+            "The `foo_guard.py` hook blocks a judgement error.\n",
+            encoding="utf-8",
+        )
+        result = _run(path)
+        assert _verdict(result) == "CLAIMS: FLAGGED 2", result.stdout + result.stderr
+        assert result.returncode == FLAGGED, result.stdout
+
+
+def test_every_spelling_of_the_model_judgment_label_passes() -> None:
+    """Both spellings and both joiners are the same honest label.
+
+    The sentence carries an enforcement claim and no exit code, no citation
+    and no second label, so it passes on the model-judgment label alone.
+    """
+    for label in (
+        "model-judgment",
+        "model judgement",
+        "model judgment",
+        "model-judgement",
+    ):
+        with tempfile.TemporaryDirectory() as t:
+            path = Path(t) / "labelled.md"
+            path.write_text(
+                f"The `foo_guard.py` hook blocks the write, "
+                f"but honoring the reminder is {label}.\n",
+                encoding="utf-8",
+            )
+            result = _run(path)
+            assert result.returncode == CLEAN, (
+                f"{label}: {result.stdout}{result.stderr}"
+            )
+
+
 def test_an_unknown_option_is_a_usage_error() -> None:
     """Silently dropping `--help` reported CLEAN for a file list the caller
     never gave — the silent-ignore class `tiger_check` already names aloud."""

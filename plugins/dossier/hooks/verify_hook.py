@@ -6,10 +6,16 @@ Matcher: Edit | Write | MultiEdit.
 Reads stdin tool_use JSON, scans tool_input content against VERIFY_PATTERNS,
 emits stderr reminders for findings. Non-blocking by default (exit 0).
 
-Session-dedup: same finding fires once per CLAUDE_SESSION_ID.
-Operator escape: `# verify-skip: <ruleName>` on a line suppresses that rule
-                 on the next match for the same fingerprint.
+Dedup: a `<ruleName>:<claim>` fingerprint is reported once per state file, and
+       state_file() names that file from CLAUDE_SESSION_ID (falling back to
+       `pid-<ppid>` when unset). Repeats within one payload collapse to one
+       reminder; a later call in the same session stays silent.
+Operator escape: a `# verify-skip: <ruleName>` marker anywhere in the scanned
+                 content — own line or trailing a code line — drops that rule
+                 for the whole tool call. Position does not matter: matches
+                 above the marker are silenced too.
 """
+
 from __future__ import annotations
 
 import json
@@ -47,7 +53,11 @@ def _scope_ok(scope: str, path: str) -> bool:
 
 def _is_dossier_path(path: str) -> bool:
     posix = Path(path).as_posix()
-    return ".scratchpad/" in posix or Path(path).name in {"DOSSIER.md", "PLAN.md", "SPEC.md"}
+    return ".scratchpad/" in posix or Path(path).name in {
+        "DOSSIER.md",
+        "PLAN.md",
+        "SPEC.md",
+    }
 
 
 _SKIP_LINE = re.compile(r"#\s*verify-skip:\s*([\w,-]+)")
@@ -74,7 +84,11 @@ def main() -> int:
         return 0
 
     cwd = payload.get("cwd")
-    if isinstance(cwd, str) and cwd and not (Path(cwd) / ".scratchpad" / "dossier").is_dir():
+    if (
+        isinstance(cwd, str)
+        and cwd
+        and not (Path(cwd) / ".scratchpad" / "dossier").is_dir()
+    ):
         return 0
 
     sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -132,15 +146,23 @@ def main() -> int:
                 continue
             claim, truth, src = finding
             fingerprint = f"{name}:{claim}"
-            if fingerprint in fired:
+            if fingerprint in fired or fingerprint in new_fps:
                 continue
             new_fps.add(fingerprint)
-            reminders.append(f"{rule['icon']} verify[{name}] {claim} → {truth} · src: {src}")
+            reminders.append(
+                f"{rule['icon']} verify[{name}] {claim} → {truth} · src: {src}"
+            )
 
     if reminders:
         save_state(fired | new_fps)
-        body = "\n".join(reminders) + "\nskip a rule: `# verify-skip: <ruleName>` near the line."
-        sys.stderr.write(f"verify: {len(reminders)} freshness finding(s); see context.\n")
+        body = (
+            "\n".join(reminders)
+            + "\nsilence a rule for this write: `# verify-skip: <ruleName>`"
+            " anywhere in the content."
+        )
+        sys.stderr.write(
+            f"verify: {len(reminders)} freshness finding(s); see context.\n"
+        )
         out = {
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",

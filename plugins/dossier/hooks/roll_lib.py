@@ -11,7 +11,7 @@ Stdlib-only. Python 3.10+.
     sid: <session-id>
     doss: <live-dossier-slug or —>
     ts: <ISO-timestamp>
-    trig: precompact | explicit
+    trig: explicit | precompact | sessionend
 
     | i | st | subject | desc | actv | dep |
     |---|----|---------|------|------|-----|
@@ -25,6 +25,7 @@ State legend (matches dossier §T):
 `—` cell = absent / default (restore: desc/actv default to subject).
 `dep` = comma-sep `i` of blocking tasks (none = `—`).
 """
+
 from __future__ import annotations
 
 import json
@@ -161,7 +162,16 @@ def render_tlr(tasks: list[dict], sid: str, trig: str, doss: str = "") -> str:
     can warn on a cross-dossier mismatch; omitted renders `—`.
     """
     ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-    lines = ["# tlr v1", f"sid: {sid or '?'}", f"doss: {doss or '—'}", f"ts: {ts}", f"trig: {trig}", "", "| i | st | subject | desc | actv | dep |", "|---|----|---------|------|------|-----|"]
+    lines = [
+        "# tlr v1",
+        f"sid: {sid or '?'}",
+        f"doss: {doss or '—'}",
+        f"ts: {ts}",
+        f"trig: {trig}",
+        "",
+        "| i | st | subject | desc | actv | dep |",
+        "|---|----|---------|------|------|-----|",
+    ]
     for t in tasks:
         i = t.get("id", "?")
         st = _STATUS_TO_GLYPH.get(t.get("status", "pending"), ".")
@@ -204,14 +214,16 @@ def parse_tlr(text: str) -> list[dict]:
         actv = _unescape_cell(cells[4]) if len(cells) > 4 else ""
         dep_raw = cells[5] if len(cells) > 5 else "—"
         dep = [d.strip() for d in dep_raw.split(",") if d.strip() and d.strip() != "—"]
-        out.append({
-            "id": i,
-            "subject": sub,
-            "description": desc or sub,
-            "activeForm": actv or sub,
-            "status": st,
-            "blockedBy": dep,
-        })
+        out.append(
+            {
+                "id": i,
+                "subject": sub,
+                "description": desc or sub,
+                "activeForm": actv or sub,
+                "status": st,
+                "blockedBy": dep,
+            }
+        )
     return out
 
 

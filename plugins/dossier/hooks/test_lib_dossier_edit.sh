@@ -104,6 +104,32 @@ if "$FLIP" "$D5" T3 x 2>/dev/null; then fail "flip .->x with empty cite must ref
 "$FLIP" "$D5" T3 x '[c0ffee]'
 [[ "$(state_of "$DF5" T3)" == "x" ]] || fail "cite-for-x with cite must succeed"
 
+VM="$SCRIPT_DIR/lib-vm-checks.sh"
+VM3_FLIP=norun
+vm3_parity() {
+	local label="$1" cite="$2" slug="2026-06-01-vm3" ws
+	ws="$TMP/vm3-$label"
+	rm -rf "$ws"
+	make_fixture "$ws/.scratchpad/dossier/$slug"
+	VM3_FLIP=refused
+	if "$FLIP" "$ws/.scratchpad/dossier/$slug" T3 x "$cite" 2>/dev/null; then
+		VM3_FLIP=accepted
+		"$VM" "$ws/.scratchpad" >/dev/null 2>&1 ||
+			fail "flip wrote cite '$cite' on a ->x row that lib-vm-checks.sh reports as a Vm.3 violation"
+	elif [[ "$(state_of "$ws/.scratchpad/dossier/$slug/DOSSIER.md" T3)" != "." ]]; then
+		fail "flip refused cite '$cite' but still mutated the T3 state cell"
+	fi
+}
+
+vm3_parity emdash '—'
+[[ "$VM3_FLIP" == refused ]] || fail "flip must refuse an em-dash cite on ->x (Vm.3)"
+vm3_parity hyphen '-'
+[[ "$VM3_FLIP" == refused ]] || fail "flip must refuse an ASCII-hyphen cite on ->x (lib-vm-checks.sh counts it empty)"
+vm3_parity padded-hyphen '  -  '
+[[ "$VM3_FLIP" == refused ]] || fail "flip must refuse a whitespace-padded ASCII-hyphen cite on ->x"
+vm3_parity sha '[c0ffee]'
+[[ "$VM3_FLIP" == accepted ]] || fail "flip must accept a real cite on ->x, and leave the file Vm.3-clean"
+
 D6="$TMP/scope"
 make_fixture "$D6"
 DF6="$D6/DOSSIER.md"

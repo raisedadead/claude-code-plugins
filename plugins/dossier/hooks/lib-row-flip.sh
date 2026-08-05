@@ -74,8 +74,8 @@ fi
 if [[ "$STATE" == "x" ]]; then
 	eff_cite="${CITE:-$cur_cite}"
 	eff_norm=$(printf '%s' "$eff_cite" | tr -d '[:space:]')
-	if [[ -z "$eff_norm" || "$eff_norm" == "—" ]]; then
-		printf 'lib-row-flip: %s -> x requires a cite (Vm.3); pass one or set the row cite first\n' "$ID" >&2
+	if [[ -z "$eff_norm" || "$eff_norm" == "—" || "$eff_norm" == "-" ]]; then
+		printf 'lib-row-flip: %s -> x requires a cite (Vm.3); lib-vm-checks.sh reads "", "—" and "-" alike as empty, so pass a real cite or set the row cite first\n' "$ID" >&2
 		exit 1
 	fi
 fi

@@ -18,14 +18,29 @@ NAG = 2
 USAGE = 64
 
 
+def _git_env() -> dict[str, str]:
+    """An environment where git reads no config the contributor happens to set.
+
+    A fixture repo otherwise inherits the global and system files whole:
+    `commit.gpgsign`, `core.hooksPath`, `init.templateDir` and `gpg.format` all
+    reach it that way, and a signing key git cannot load turns every seed
+    commit into exit 128. CI's bare runner has none of them, so the breakage
+    lands only on the contributor and never on the pipeline that would report
+    it.
+    """
+    env = dict(os.environ)
+    env["GIT_CONFIG_GLOBAL"] = os.devnull
+    env["GIT_CONFIG_SYSTEM"] = os.devnull
+    return env
+
+
 def _git(repo: Path, *args: str) -> None:
-    subprocess.run(
-        ["git", *args],
-        cwd=repo,
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+    done = subprocess.run(
+        ["git", *args], cwd=repo, capture_output=True, text=True, env=_git_env()
     )
+    if done.returncode != 0:
+        detail = done.stderr.strip() or done.stdout.strip() or "no output"
+        raise AssertionError(f"git {' '.join(args)} exited {done.returncode}: {detail}")
 
 
 def _init(repo: Path) -> None:
@@ -45,7 +60,7 @@ def _write(repo: Path, rel: str, body: str) -> None:
 
 
 def _run(repo: Path, **env_overrides: str) -> subprocess.CompletedProcess[str]:
-    env = dict(os.environ)
+    env = _git_env()
     env.pop("WHETSTONE_TIGER_COLS", None)
     env.update(env_overrides)
     return subprocess.run(
@@ -69,6 +84,52 @@ def _verdict(result: subprocess.CompletedProcess[str]) -> str:
     """
     lines = [line for line in result.stdout.splitlines() if line.startswith("TIGER:")]
     return lines[-1] if lines else ""
+
+
+def test_fixture_git_runs_ignore_a_hostile_global_config() -> None:
+    """Every fixture repo below inherited whatever `~/.gitconfig` holds.
+
+    `commit.gpgsign = true` is ordinary on a signing setup and makes the seed
+    commit exit 128, so a third of this suite is unrunnable for that
+    contributor while CI's bare runner stays green and never shows why.
+    """
+    with tempfile.TemporaryDirectory() as t:
+        hostile = Path(t) / "gitconfig"
+        hostile.write_text(
+            "[commit]\n\tgpgsign = true\n"
+            "[gpg]\n\tformat = ssh\n"
+            f"[user]\n\tsigningkey = {t}/absent.pub\n",
+            encoding="utf-8",
+        )
+        repo = Path(t) / "repo"
+        repo.mkdir()
+        restore = os.environ.get("GIT_CONFIG_GLOBAL")
+        os.environ["GIT_CONFIG_GLOBAL"] = str(hostile)
+        try:
+            _init(repo)
+            _write(repo, "a.py", _line(10))
+            _git(repo, "add", "a.py")
+            _commit(repo, "chore: seed")
+            result = _run(repo)
+        finally:
+            if restore is None:
+                os.environ.pop("GIT_CONFIG_GLOBAL", None)
+            else:
+                os.environ["GIT_CONFIG_GLOBAL"] = restore
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+
+
+def test_a_failed_fixture_git_call_carries_gits_own_stderr() -> None:
+    """stderr went to DEVNULL, so the signing failure read as a bare 128."""
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        try:
+            _git(repo, "checkout", "no-such-branch")
+        except AssertionError as exc:
+            assert "no-such-branch" in str(exc), str(exc)
+        else:
+            raise AssertionError("a failing git call was reported as success")
 
 
 def test_clean_under_default() -> None:
@@ -665,6 +726,7 @@ SKIPPED_FIXTURES = (
     "a.snap",
     "go.sum",
     "yarn.lock",
+    "pnpm-lock.yaml",
     "poetry.lock",
     "Cargo.lock",
 )
@@ -689,6 +751,37 @@ def test_every_skipped_kind_is_actually_skipped() -> None:
         assert result.returncode == CLEAN, result.stdout + result.stderr
         expected = f"TIGER: CLEAN 0 files, {len(SKIPPED_FIXTURES)} skipped"
         assert _verdict(result) == expected, result.stdout
+
+
+def test_a_pnpm_lockfile_bump_under_a_declared_limit_is_skipped() -> None:
+    """`pnpm-lock.yaml` ends in `.yaml`, so only an exact-name entry saves it.
+
+    Its `resolution: {integrity: sha512-...}` records run past 190 columns and
+    a repo that declared a limit blocked the bump — exit 1 on a generated file
+    nobody wrote, in the case the skill documents as reaching CLEAN.
+    """
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, ".editorconfig", "[*]\nmax_line_length = 100\n")
+        _write(repo, "pnpm-lock.yaml", _line(300))
+        _git(repo, "add", ".editorconfig", "pnpm-lock.yaml")
+        result = _run(repo)
+        assert result.returncode == CLEAN, result.stdout + result.stderr
+        assert "pnpm-lock.yaml" not in result.stdout, result.stdout
+
+
+def test_a_lockfile_name_on_neither_list_is_measured_like_source() -> None:
+    """The skip is two literal lists, not a guess at what looks generated."""
+    with tempfile.TemporaryDirectory() as t:
+        repo = Path(t)
+        _init(repo)
+        _write(repo, ".editorconfig", "[*]\nmax_line_length = 100\n")
+        _write(repo, "gradle.lockfile", _line(300))
+        _git(repo, "add", ".editorconfig", "gradle.lockfile")
+        result = _run(repo)
+        assert result.returncode == BLOCK, result.stdout + result.stderr
+        assert _verdict(result) == "TIGER: BLOCK 1", result.stdout
 
 
 def test_combining_marks_do_not_widen_a_line() -> None:

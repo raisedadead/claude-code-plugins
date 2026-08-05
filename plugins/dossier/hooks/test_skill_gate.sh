@@ -63,6 +63,26 @@ out="$(run_gate "$(payload whetstone:doubt-pass ${SP}-i)")" || fail "gate must e
 printf '%s' "$out" | grep -q 'additionalContext' || fail "whetstone skill + live dossier must fire breadcrumb reminder without a lock"
 printf '%s' "$out" | grep -q '§S' || fail "breadcrumb reminder must point at §S"
 
+shipped=()
+for skill_dir in "$SCRIPT_DIR"/../../whetstone/skills/*/; do
+	[[ -f "$skill_dir/SKILL.md" ]] || continue
+	shipped+=("whetstone:$(basename "$skill_dir")")
+done
+[[ ${#shipped[@]} -gt 0 ]] || fail "whetstone must ship at least one skill to compare against"
+
+for skill in "${shipped[@]}"; do
+	out="$(run_gate "$(payload "$skill" "${SP}-ship-${skill//:/-}")")" || fail "gate must exit 0 on $skill"
+	printf '%s' "$out" | grep -q 'additionalContext' ||
+		fail "every shipped whetstone skill must fire the §S breadcrumb — $skill stayed silent"
+done
+
+gated="$(python3 -c 'import pathlib, sys; sys.path.insert(0, str(pathlib.Path(sys.argv[1]).parent)); import skill_gate; print("\n".join(sorted(skill_gate.WHETSTONE)))' "$GATE")"
+[[ "$gated" == "$(printf '%s\n' "${shipped[@]}" | sort)" ]] ||
+	fail "WHETSTONE must equal the shipped whetstone skill set — got [$gated], shipped [${shipped[*]}]"
+
+out="$(run_gate "$(payload whetstone:not-a-shipped-skill ${SP}-l)")" || fail "gate must exit 0 on unknown whetstone name"
+[[ -z "$out" ]] || fail "an unshipped whetstone: name must stay silent — the gate is an allowlist, not a prefix match"
+
 printf '| 2026-07-21 | newer | live | P1/1 | 0/1 | 0 | x | — |\n| 2026-07-20 | wave | live | P1/1 | 0/1 | 0 | x | — |\n' >"$TMP/.scratchpad/INDEX.md"
 out="$(run_gate "$(payload whetstone:doubt-pass ${SP}-k)")" || fail "gate must exit 0 on multi-live"
 printf '%s' "$out" | grep -q '2026-07-21-newer' || fail "multi-live must target the first live row"

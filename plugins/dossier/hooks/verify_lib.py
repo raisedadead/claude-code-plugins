@@ -18,6 +18,7 @@ Check functions (each returns (claim, truth, source_url) or None):
     check_k8s_apiversion(matched)             # k8s deprecated apiVersion (static map)
     check_ai_model(model_name)                # AI model deprecation (static map)
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -101,7 +102,13 @@ def http_cached(url: str, ttl_s: int = CACHE_TTL_DEFAULT):
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
         with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
             data = json.loads(resp.read().decode())
-    except (urllib.error.URLError, urllib.error.HTTPError, json.JSONDecodeError, TimeoutError, OSError) as exc:
+    except (
+        urllib.error.URLError,
+        urllib.error.HTTPError,
+        json.JSONDecodeError,
+        TimeoutError,
+        OSError,
+    ) as exc:
         print(f"verify offline: {url} ({type(exc).__name__})", file=sys.stderr)
         return None
 
@@ -151,7 +158,17 @@ def latest_eol(slug: str):
 def _strip_image_tag(tag: str) -> str:
     """`1.20-alpine` → `1.20`, `22-slim-bullseye` → `22`, `lts` → `lts`."""
     # Split off common suffixes
-    for sep in ("-alpine", "-slim", "-bullseye", "-bookworm", "-buster", "-jammy", "-noble", "-focal", "-trusty"):
+    for sep in (
+        "-alpine",
+        "-slim",
+        "-bullseye",
+        "-bookworm",
+        "-buster",
+        "-jammy",
+        "-noble",
+        "-focal",
+        "-trusty",
+    ):
         if tag.endswith(sep):
             tag = tag[: -len(sep)]
             break
@@ -203,7 +220,11 @@ def check_eol(slug: str, version_str: str):
     # Find best-match release (most-specific prefix match).
     candidates = [r for r in releases if str(r.get("name", "")).startswith(major)]
     if minor:
-        narrowed = [r for r in candidates if str(r.get("name", "")).startswith(f"{major}.{minor}")]
+        narrowed = [
+            r
+            for r in candidates
+            if str(r.get("name", "")).startswith(f"{major}.{minor}")
+        ]
         if narrowed:
             candidates = narrowed
     if not candidates:
@@ -260,8 +281,14 @@ def latest_version(ecosystem: str, pkg: str):
 
 def check_pkg_outdated(ecosystem: str, pkg: str, version_str: str):
     """Pinned package version vs registry latest. Flags only if ≥2 majors behind."""
-    v = version_str.lstrip().strip('"\'')
-    if v.startswith(("^", "~", ">", "<", "*")) or v in {"latest", "next", "main", "master", "edge"}:
+    v = version_str.lstrip().strip("\"'")
+    if v.startswith(("^", "~", ">", "<", "*")) or v in {
+        "latest",
+        "next",
+        "main",
+        "master",
+        "edge",
+    }:
         return None
     pinned_major = _semver_major(v)
     if pinned_major is None:
@@ -316,7 +343,11 @@ def check_action_sha(repo: str, ref: str):
     api = f"https://api.github.com/repos/{repo}/git/refs/tags/{ref}"
     data = http_cached(api, ttl_s=CACHE_TTL_IMMUTABLE)
     sha = data.get("object", {}).get("sha", "") if isinstance(data, dict) else ""
-    suggestion = f"uses: {repo}@{sha}  # {ref}" if sha else f"resolve: gh api repos/{repo}/git/refs/tags/{ref}"
+    suggestion = (
+        f"uses: {repo}@{sha}  # {ref}"
+        if sha
+        else f"resolve: gh api repos/{repo}/git/refs/tags/{ref}"
+    )
     return (
         f"uses: {repo}@{ref}",
         suggestion,
@@ -367,28 +398,3 @@ def check_ai_model(model_name: str):
         f"{status} ({when}). use: {replacement}",
         src,
     )
-
-
-# ─── Legacy shims for older imports ────────────────────────────────────
-
-
-def check_node_lts(major_str: str):
-    """Backward-compat shim — delegates to check_eol('nodejs', ...).
-
-    Kept so older verify_patterns.py imports still work during migration.
-    """
-    finding = check_eol("nodejs", major_str)
-    if finding:
-        _, truth, src = finding
-        return (f"Node v{major_str}", truth, src)
-    return None
-
-
-def check_k8s_api(matched: str):
-    """Backward-compat shim → check_k8s_apiversion."""
-    return check_k8s_apiversion(matched)
-
-
-def check_npm_outdated(pkg: str, version: str):
-    """Backward-compat shim → check_pkg_outdated('npm', ...)."""
-    return check_pkg_outdated("npm", pkg, version)

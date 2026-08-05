@@ -155,18 +155,39 @@ def _fail(reason: str) -> int:
 
 
 LEDGER_GLOB = ".scratchpad/dossier/*/DOSSIER.md"
+LIVE_STATE = "live"
+_HEADER = re.compile(r"^`\d[^`]*`\s+·\s+`([^`]*)`\s+·\s+`")
+
+
+def _header_state(ledger: Path) -> str:
+    """A ledger's header state token, or "" when it carries no header line.
+
+    FORMAT.md §2 makes this token the wave's state, flipped by
+    `lib-header-state.sh`. Deciding liveness with `"`live`" in head` over the file's
+    first 400 characters was a substring test instead: a `paused` ledger whose
+    Goal prose said `live` came back live, and since `ds:converge` with no
+    argument resolves its contract from this list, that wave's criteria reached
+    a shell. The pattern is `marker_guard.py`'s `HEADER_RE`, so the line whose
+    state token the write guard polices is the line this reads. First matching
+    line wins and ends the read, as `lib-regen-index.sh`'s awk does; a ledger
+    with no header line is unreadable state, which is not live.
+    """
+    try:
+        with ledger.open(encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                if match := _HEADER.match(line):
+                    return match.group(1).strip()
+    except OSError:
+        return ""
+    return ""
 
 
 def _live_slugs(root: Path) -> list[str]:
-    found: list[str] = []
-    for ledger in sorted(root.glob(LEDGER_GLOB)):
-        try:
-            head = ledger.read_text(encoding="utf-8", errors="replace")[:400]
-        except OSError:
-            continue
-        if "`live`" in head:
-            found.append(ledger.parent.name)
-    return found
+    return [
+        ledger.parent.name
+        for ledger in sorted(root.glob(LEDGER_GLOB))
+        if _header_state(ledger) == LIVE_STATE
+    ]
 
 
 def _contract_for(root: Path, slug: str) -> Path | None:

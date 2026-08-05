@@ -5,9 +5,12 @@ PreToolUse (Skill) + UserPromptExpansion hook, two branches:
 - Built-ins (/review, /security-review, /simplify): fire only while a live
   dossier has a ds:build in flight (.ds-lock present) — reminder routes the
   verdict into the step 6.5 artifact trail + §S.
-- Whetstone-namespaced skills: fire on ANY live dossier, lock or not —
-  reminder: record ONE §S line via lib-s-append.sh (first live row = current;
-  main thread writes, never subagents).
+- Whetstone skills: fire on ANY live dossier, lock or not — reminder: record
+  the §S line that skill's own rule calls for via lib-s-append.sh (first live
+  row = current; main thread writes, never subagents). Matched against the
+  WHETSTONE allowlist below, not the `whetstone:` prefix, so an unlisted
+  whetstone: name is a no-op; test_skill_gate.sh pins that allowlist to one
+  entry per directory under plugins/whetstone/skills/.
 Always exit 0; fail-open on any parse or filesystem error. Payload field names are INFERRED by composition — the
 assistant-side tool_use transcript shape ({"skill", "args"}) plus the
 tool_name/tool_input wrapper convention the sibling Edit/Write hooks receive —
@@ -30,6 +33,7 @@ WHETSTONE = {
     "whetstone:merge-resolve",
     "whetstone:skill-smith",
     "whetstone:tdd-cycle",
+    "whetstone:tiger-style",
 }
 
 
@@ -110,9 +114,10 @@ def main() -> int:
         )
     else:
         body = (
-            f"live dossier ({live_first}) — after this skill's verdict, record ONE "
-            "§S line via dossier's lib-s-append.sh (first live row = current; "
-            "main thread writes, never subagents). Reminder only, never blocking."
+            f"live dossier ({live_first}) — after this skill's verdict, record the "
+            "§S line this skill's own rule calls for via dossier's lib-s-append.sh "
+            "(first live row = current; main thread writes, never subagents). "
+            "Reminder only, never blocking."
         )
     sys.stdout.write(
         json.dumps(

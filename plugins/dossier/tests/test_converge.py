@@ -261,11 +261,22 @@ def test_the_default_contract_is_the_live_wave_not_the_last_sorted() -> None:
         assert "zzz-closed" not in result.stdout, result.stdout
 
 
-def _wave(root: Path, dirname: str, state: str = "live") -> None:
+def _wave(root: Path, dirname: str, state: str = "live", goal: str = "") -> None:
     wave = root / ".scratchpad" / "dossier" / dirname
     wave.mkdir(parents=True, exist_ok=True)
     (wave / "DOSSIER.md").write_text(
-        "\n".join([f"# {dirname[11:]}", "", f"`2026-08-01` · `{state}` · `P1/1`", ""]),
+        "\n".join(
+            [
+                f"# {dirname[11:]}",
+                "",
+                f"`2026-08-01` · `{state}` · `P1/1`",
+                "",
+                "## Goal",
+                "",
+                goal,
+                "",
+            ]
+        ),
         encoding="utf-8",
     )
 
@@ -339,6 +350,39 @@ def test_a_live_wave_without_a_contract_is_a_parse() -> None:
         assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
         assert "2026-08-01-bare" in _verdict(result), result.stdout
         assert result.returncode == PARSE, result.stdout
+
+
+def test_a_paused_wave_whose_prose_says_live_is_not_live() -> None:
+    """Liveness is the header state token, never a substring of the ledger.
+
+    `"`live`" in head` returned a paused wave whose Goal happened to say
+    `live`, and no-arg converge then ran that wave's criteria as shell.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-05-rails", "paused", "Get the `live` count right.")
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "2026-08-05-rails.md").write_text(
+            _contract_text(), encoding="utf-8"
+        )
+        result = _run_noarg(root)
+        assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
+        assert "live wave" in _verdict(result), result.stdout
+        assert result.returncode == PARSE, result.stdout
+
+
+def test_a_live_wave_whose_prose_says_paused_still_converges() -> None:
+    """The other direction: prose naming another state does not unmake a wave."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-05-rails", "live", "Stop reading `paused` as prose.")
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "2026-08-05-rails.md").write_text(
+            _contract_text(), encoding="utf-8"
+        )
+        result = _run_noarg(root)
+        assert "CONVERGE: MET 1/1" in result.stdout, result.stdout + result.stderr
+        assert result.returncode == MET, result.stdout
 
 
 def test_a_same_slug_successor_selects_the_live_wave() -> None:

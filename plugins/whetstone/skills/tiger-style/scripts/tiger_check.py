@@ -46,7 +46,7 @@ SKIP_SUFFIXES = frozenset(
         ".snap",
     }
 )
-SKIP_NAMES = frozenset({"go.sum", "yarn.lock", "poetry.lock", "Cargo.lock"})
+SKIP_NAMES = frozenset({"go.sum", "pnpm-lock.yaml"})
 
 _HUNK = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
 
@@ -431,6 +431,16 @@ def _display_width(text: str) -> int:
 
 
 def _skipped(rel: str) -> bool:
+    """Prose and generated records, matched by suffix or by exact name.
+
+    SKIP_NAMES holds only the two the suffix list cannot reach. `.lock` already
+    covers `yarn.lock`, `poetry.lock`, `Cargo.lock`, `composer.lock` and
+    `flake.lock`, so naming any of those again would be redundant. `go.sum`
+    shares its suffix with nothing, and `pnpm-lock.yaml` shares `.yaml` with
+    hand-written workflow files, so skipping every `.yaml` to reach it would
+    stop measuring those. Left off the name list, a pnpm bump against a
+    declared limit exits BLOCK on a file nobody typed.
+    """
     path = Path(rel)
     return path.suffix.lower() in SKIP_SUFFIXES or path.name in SKIP_NAMES
 

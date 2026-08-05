@@ -7,15 +7,22 @@ No code change needed.
 Pattern dict shape:
     {
       "ruleName":   str
-      "scope":      "all"|"yaml"|"json"|"toml"|"py-req"|"go-mod"|"ruby-gemfile"|"dockerfile"|"md"
+      "scope":      "all"|"yaml"|"json"|"md"                # nothing else is read
       "path_check": callable(path: str) -> bool | None     # None = scope-only
       "regex":      str                                     # compiled at load time
+      "_flags":     int                                     # re flags, default 0
       "check":      callable(...args) -> tuple|None        # from verify_lib
       "check_args": list[int]                               # 1-based regex group indices
-      "extra_args": list                                     # constants prepended before regex args
       "icon":       str
     }
+
+Those four scope values are the only ones `_scope_ok` branches on, in both
+verify_hook.py and verify_sweep.py; every other value falls through to True and
+so matches every file. Narrow by file type with path_check instead — the
+Dockerfile, Cargo.toml, go.mod and Gemfile rules below all pair scope "all"
+with a path_check for exactly that reason.
 """
+
 from __future__ import annotations
 
 import re
@@ -35,7 +42,9 @@ from verify_lib import (
 _ALIASES_SORTED = sorted(EOL_ALIAS_TO_SLUG.keys(), key=lambda s: (-len(s), s))
 _ALIAS_ALTERNATION = "|".join(re.escape(a) for a in _ALIASES_SORTED)
 # `<alias> v?<digits>[.<digits>[.<digits>]]` — case-insensitive at use site.
-_FREETEXT_RE = rf"(?<![A-Za-z0-9._-])({_ALIAS_ALTERNATION})\s*[vV]?(\d+(?:\.\d+){{0,3}})\b"
+_FREETEXT_RE = (
+    rf"(?<![A-Za-z0-9._-])({_ALIAS_ALTERNATION})\s*[vV]?(\d+(?:\.\d+){{0,3}})\b"
+)
 
 
 def _p_workflow(p: str) -> bool:
@@ -52,7 +61,11 @@ def _p_pkg_json(p: str) -> bool:
 
 def _p_requirements(p: str) -> bool:
     name = p.rsplit("/", 1)[-1]
-    return name == "requirements.txt" or name.startswith("requirements-") and name.endswith(".txt")
+    return (
+        name == "requirements.txt"
+        or name.startswith("requirements-")
+        and name.endswith(".txt")
+    )
 
 
 def _p_pyproject(p: str) -> bool:
@@ -74,12 +87,22 @@ def _p_gemfile(p: str) -> bool:
 
 def _p_dockerfile(p: str) -> bool:
     name = p.rsplit("/", 1)[-1]
-    return name == "Dockerfile" or name.startswith("Dockerfile.") or name.endswith(".dockerfile") or name.endswith(".Dockerfile")
+    return (
+        name == "Dockerfile"
+        or name.startswith("Dockerfile.")
+        or name.endswith(".dockerfile")
+        or name.endswith(".Dockerfile")
+    )
 
 
 def _p_compose(p: str) -> bool:
     name = p.rsplit("/", 1)[-1]
-    return name in {"docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"}
+    return name in {
+        "docker-compose.yml",
+        "docker-compose.yaml",
+        "compose.yml",
+        "compose.yaml",
+    }
 
 
 # Wrappers to bind ecosystem string into check_pkg_outdated (which expects ecosystem as first arg).
@@ -120,7 +143,6 @@ VERIFY_PATTERNS = [
         "check_args": [1, 2],
         "icon": "⚠",
     },
-
     # ── Dockerfile / compose / k8s `image:` ─────────────────────────────
     # `FROM <image>:<tag>` — image is repo path; tag often suffixed (-alpine, -slim).
     {
@@ -133,7 +155,6 @@ VERIFY_PATTERNS = [
         "check_args": [1, 2],
         "icon": "⚠",
     },
-
     # ── GitHub Action unpinned ─────────────────────────────────────────
     {
         "ruleName": "github_action_unpinned",
@@ -144,7 +165,6 @@ VERIFY_PATTERNS = [
         "check_args": [1, 2],
         "icon": "⚠",
     },
-
     # ── k8s deprecated apiVersion ──────────────────────────────────────
     {
         "ruleName": "k8s_deprecated_api",
@@ -155,7 +175,6 @@ VERIFY_PATTERNS = [
         "check_args": [1],
         "icon": "⚠",
     },
-
     # ── npm package.json deps (any of dependencies / devDependencies / peerDeps) ─
     {
         "ruleName": "npm_outdated",
@@ -166,7 +185,6 @@ VERIFY_PATTERNS = [
         "check_args": [1, 2],
         "icon": "ℹ",
     },
-
     # ── PyPI requirements.txt: `<pkg>==<ver>` ──────────────────────────
     {
         "ruleName": "pypi_outdated_reqs",
@@ -178,7 +196,6 @@ VERIFY_PATTERNS = [
         "check_args": [1, 2],
         "icon": "ℹ",
     },
-
     # ── pyproject.toml [project.dependencies]: `<pkg>==<ver>` or PEP 621 ─
     {
         "ruleName": "pypi_outdated_pyproject",
@@ -189,7 +206,6 @@ VERIFY_PATTERNS = [
         "check_args": [1, 2],
         "icon": "ℹ",
     },
-
     # ── Cargo.toml `<pkg> = "<ver>"` (very loose; ignored if version is a range)
     {
         "ruleName": "crates_outdated",
@@ -201,7 +217,6 @@ VERIFY_PATTERNS = [
         "check_args": [1, 2],
         "icon": "ℹ",
     },
-
     # ── Gemfile: `gem 'name', '~> 1.2'` or `gem "name", "1.2"`
     {
         "ruleName": "rubygems_outdated",
@@ -212,7 +227,6 @@ VERIFY_PATTERNS = [
         "check_args": [1, 2],
         "icon": "ℹ",
     },
-
     # ── go.mod: `<module> v<ver>` lines under require()
     {
         "ruleName": "go_module_outdated",
@@ -224,7 +238,6 @@ VERIFY_PATTERNS = [
         "check_args": [1, 2],
         "icon": "ℹ",
     },
-
     # ── AI model identifiers ───────────────────────────────────────────
     # Matches: model: "X" | model="X" | model_name = "X" | "model": "X"
     {
