@@ -4,6 +4,18 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-08-05 (a read of every tracked file)
+
+Every tracked file was read on its own, then five lenses hunted the assembled graph and each finding was handed to a separate agent told to refute it. Contract: `.dossier/2026-08-05-audit-debt.md`.
+
+### Fixed
+
+- `converge.py` decided a wave's liveness with a substring test over the ledger's first 400 characters, so a `paused` wave whose Goal prose contained the word `live` came back live — and since a no-argument `ds:converge` resolves its contract from that list, the paused wave's criteria reached a shell. It reads the header's state token now, with `marker_guard.py`'s own pattern, so the line the write guard polices is the line this reads.
+- `lib-row-flip.sh` accepted an ASCII hyphen as a cite when flipping a row to `x`, while `lib-vm-checks.sh` reads `""`, `—` and `-` alike as empty. The flip wrote a row its own checker calls a Vm.3 violation; it refuses all three now, and `test_lib_dossier_edit.sh` asserts the parity for each.
+- `skill_gate.py` never matched `whetstone:tiger-style` — the allowlist named five of the six directories under `plugins/whetstone/skills/`, so a tiger-style run under a live dossier got no §S reminder. `test_skill_gate.sh` pins the allowlist to one entry per directory.
+- `verify_hook.py` recorded a fingerprint only after the whole payload was scanned, so a claim repeated inside one tool call fired one reminder per occurrence. Repeats within a call collapse to one.
+- `.github/workflows/ci.yml` shellchecked `plugins/whetstone/skills/*/scripts/*.sh` and `plugins/whetstone/tests/*.sh` but never `plugins/whetstone/bin/*`, which carry no `.sh` suffix.
+
 ## 2026-08-05 (the ledger reads by name)
 
 ### Changed

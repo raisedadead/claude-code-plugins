@@ -4,6 +4,17 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-08-05 (a read of every tracked file)
+
+Every tracked file was read on its own, then five lenses hunted the assembled graph and each finding was handed to a separate agent told to refute it. Contract: `.dossier/2026-08-05-audit-debt.md`.
+
+### Fixed
+
+- `compute_flakiness.py` returned an empty mapping for a results file that was missing, unparseable or wrongly shaped, so a sweep that never parsed printed nothing and exited 0 — a clean sweep. Bad input exits 252 and a quarantine.json that cannot be written exits 253; neither is a count, and neither writes an artifact. A baseline path that does not exist stays the first-sweep case.
+- `flake_runner.sh` interpolated the test name straight into its JSON, so a name carrying a quote, a backslash or a control character wrote a file `compute_flakiness.py` then refused to parse. It escapes now.
+- `claim_check.py` exempted any sentence containing the noun `judgment` or `judgement`, whatever else that sentence asserted, so the exemption turned on a word rather than on the label naming what the thing is. The alternative is `model[\s-]judge?ment` now, which takes both spellings and both joiners and launders nothing else.
+- `tiger_check.py` named `yarn.lock`, `poetry.lock` and `Cargo.lock` in its skip list although `.lock` already reaches all three, and did not name `pnpm-lock.yaml` — so a pnpm bump could exit BLOCK on a file nobody typed. The name list holds only `go.sum` and `pnpm-lock.yaml`, the two the suffix list cannot reach.
+
 ## 2026-08-05 (the checker finds the work tree)
 
 ### Fixed
