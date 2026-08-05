@@ -58,12 +58,14 @@ Read §S, grep `ds:close`:
 
 Pre-flight gates (`--abandon` skips §T all-x, §T cites and §B all-fixed; the §X pushed warning still runs):
 
-| Gate         | Rule                               | On fail                                                     |
-| ------------ | ---------------------------------- | ----------------------------------------------------------- |
-| §T all-x     | every row state=`x`                | refuse, list non-`x` rows                                   |
-| §T cites     | every `x` row has `cite`           | refuse, list rows missing cite                              |
-| §B all-fixed | every row has non-empty `fix cite` | refuse OR allow w/ `--accept-open-bugs` (operator override) |
-| §X pushed    | every repo `pushed=yes`            | warn, allow operator decision (push or close anyway)        |
+| Gate         | Rule                               | On fail                                                       |
+| ------------ | ---------------------------------- | ------------------------------------------------------------- |
+| §T all-x     | every row state=`x`                | refuse, list non-`x` rows                                     |
+| §T cites     | every `x` row has `cite`           | refuse, list rows missing cite                                |
+| §B all-fixed | every row has non-empty `fix cite` | refuse, list the open rows; the escape is `--abandon` (below) |
+| §X pushed    | every repo `pushed=yes`            | warn, allow operator decision (push or close anyway)          |
+
+**No gate has a per-gate override flag.** These gates are model-judgment — no hook fires on close, so what holds them is this page. Step 2's argument rule admits `--complete`, `--successor <slug>` and `--abandon "<reason>"` and nothing else, which leaves `--abandon "<reason>"` as the only route past §T all-x, §T cites or §B all-fixed — and it records the wave as dropped in §Z rather than completing it. Offering the operator a narrower flag means adding it to the argument-hint, the Inputs list and step 2 first.
 
 Advisory (non-blocking; `--complete`/`--successor` only — an abandoned wave's incomplete §T would make the suggestion a dead end): §T all-`x` with no §X repo changelog carrying this wave's range-cite section → print `consider ds:ship first`. Prints once, refuses nothing.
 

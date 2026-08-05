@@ -24,10 +24,10 @@ Two numbers make "done" checkable: zero conflict markers left, and a test pass-c
    "${CLAUDE_PLUGIN_ROOT}"/skills/merge-resolve/scripts/verify_clean.sh <root> <baseline-count> <count-command...>
    ```
 
-   It exits non-zero when a conflict marker (`<<<<<<< `, `>>>>>>> `, `||||||| `) remains under `<root>`, or when `<count-command>` (a pipeline that prints the current passing-test count as a bare integer) reports fewer passes than `<baseline-count>`. Pass `-` as the baseline to check markers only.
+   It exits 1 with a diagnostic on stderr in three cases: a conflict marker (`<<<<<<< `, `>>>>>>> `, `||||||| `) remains under `<root>`; `<count-command>` prints anything but a bare integer; or that integer is below `<baseline-count>`. There is a fourth, silent exit — the script reads the count through a command substitution under `set -euo pipefail`, so a `<count-command>` that itself exits non-zero aborts the script at that same status with nothing on stdout and no diagnostic of its own — whatever the count command wrote to stderr still passes through, so a silent count command means a silent abort. A bare `grep` pipeline does exactly that on a suite that printed no `N passed`, which is why the count command below ends in `|| echo 0`: the run then lands in the regression arm with a message instead of vanishing into an exit code that looks like every other failure. Pass `-` as the baseline to check markers only.
 
    ```bash
-   verify_clean.sh . 128 sh -c 'pytest -q 2>/dev/null | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+"'
+   verify_clean.sh . 128 sh -c 'pytest -q 2>/dev/null | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" || echo 0'
    ```
 
 1. **Hand off to commit.** Staging and the commit stay the operator's call, along with any git-safety rules the host enforces.

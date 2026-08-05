@@ -71,7 +71,9 @@ TaskList auto-rolled to .scratchpad/.tasklist-roll/<file> (<N> tasks, <P> pendin
 Run /dossier:roll restore to resume.
 ```
 
-SessionEnd and PreCompact carry no `hookSpecificOutput` branch in the CC hook schema, so they cannot inject model context — restore reads the newest `.tlr` from disk, or `session-start.sh` surfaces it next session. Best-effort: any failure is a silent skip and the compaction proceeds.
+SessionEnd and PreCompact carry no `hookSpecificOutput` branch in the CC hook schema, so they cannot inject model context, and **nothing surfaces the roll in the next session either**: `session-start.sh` has no reference to rolls, `.tlr` files or the TaskList — `grep -ciE 'tlr|tasklist|roll' hooks/session-start.sh` prints `0`. The breadcrumb above reaches the operator only inside the dying session's `systemMessage`, and a compaction they did not watch leaves no trace in the new context.
+
+So recovery is manual and the operator has to know to ask. Next session: `/dossier:roll list` to see what was dumped, then `/dossier:roll restore` for the newest. Best-effort: any failure is a silent skip and the compaction proceeds.
 
 ## Conventions
 

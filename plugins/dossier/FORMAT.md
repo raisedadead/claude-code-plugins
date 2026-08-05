@@ -67,7 +67,17 @@ Headings are fixed. Order is fixed.
 
 Readers match headings through `hooks/lib-sections.sh`, which holds one pattern per section and accepts both this spelling and the `## §G — Goal` … `## §Z — Closeout` sigils every dossier written before 2026-08-05 carries. A descriptive tail is allowed after either form. `ds:new` writes the worded spelling; nothing rewrites an existing ledger, so the sigil form stays readable indefinitely.
 
-The third field is **required, and its value is never read**. `lib-header-state.sh`, `lib-regen-index.sh` and `lib-reconcile-state.sh` identify this line with a pattern ending in `` · `` — a two-field header does not match, so the state token becomes unreadable and `ds:close`, pause/resume and drift reconciliation all fail. They then read field two. Field three's contents are never examined: it is always `P1/1` because Tasks carries no phase column. Dropping it means relaxing those three patterns in the same commit, not deleting a spare field.
+The third field is **required, and its value is never read**. Five parsers demand it. `lib-header-state.sh`, `lib-regen-index.sh` and `lib-reconcile-state.sh` each carry the awk pattern `` /^`.*` · `.*` · / ``; `marker_guard.py` (`HEADER_RE`) and `converge.py` (`_HEADER`) carry the same regex, transcribed twice, which wants those two `·` separators plus a first field that is backticked *and* starts with a digit. A two-field header matches none of the five. Two of them say so out loud, a third leaves a visible mark, and two go quiet:
+
+| parser                   | two-field header                                                            |
+| ------------------------ | --------------------------------------------------------------------------- |
+| `lib-header-state.sh`    | exit 1, `header metadata line not found` — `ds:close` + pause/resume fail   |
+| `lib-regen-index.sh`     | exit 0, writes `drift!` as that dossier's INDEX state                       |
+| `lib-reconcile-state.sh` | exit 0, leaves an archived §Z-closed dossier still reading `live`           |
+| `marker_guard.py`        | exit 0, its exit-2 refusal of a non-canonical state token never fires       |
+| `converge.py`            | exit 2, `CONVERGE: PARSE — no live wave`: the wave never joins the live set |
+
+All five then read field two. Field three's contents are never examined: it is always `P1/1` because Tasks carries no phase column. Dropping it means relaxing all five patterns in the same commit, not deleting a spare field — miss `marker_guard.py` and the exit-2 header gate goes permanently quiet with no other signal. The digit anchor those last two share already means `` `v1` · `sealed` · `P1/1` `` passes `marker_guard.py` at exit 0 while `` `2026-08-05` · `sealed` · `P1/1` `` is blocked at exit 2.
 
 State values: `live` | `done` | `paused`. Default at `ds:new` = `live`. The header state token is flipped atomically by `lib-header-state.sh` (§15): `ds:close` sets `done`; the `ds:status` pause/resume actions toggle `live` ↔ `paused`. A `paused` dossier stays a direct child of `dossier/` (not archived — pause is reversible) and is excluded from the live-count + the SessionStart "current live" pick.
 
@@ -212,7 +222,7 @@ The **frontier** is every `.` row whose `needs` are all `x`. It is derived on re
 
 Phases are gone. A `P<N>` column made the operator name the shape of the work before the work was understood, which is the pressure the Fog section exists to remove; a wave that genuinely runs in stages expresses that as `needs` edges between its first rows.
 
-**Columns resolve by header name.** Four readers take the positions they need from the header row rather than counting cells, so both this layout and the legacy `id|P|state|task|cite|verify` one are read correctly: `lib-vm-checks.sh`, `lib-row-flip.sh`, `lib-regen-index.sh` and `session-start.sh`. A header naming no `state` column is reported by the first three — `WARN Vm.3`, a refusal at exit 1, and a stderr line respectively. `session-start.sh` emits JSON and so degrades quietly, showing no task summary. Find the converted set with `grep -l 'trim(f\[i\])' plugins/dossier/hooks/`; anything else that counts cells is still positional.
+**Columns resolve by header name.** Four readers take the positions they need from the header row rather than counting cells, so both this layout and the legacy `id|P|state|task|cite|verify` one are read correctly: `lib-vm-checks.sh`, `lib-row-flip.sh`, `lib-regen-index.sh` and `session-start.sh`. A header naming no `state` column is reported by the first three — `WARN Vm.3`, a refusal at exit 1, and a stderr line respectively. `session-start.sh` emits JSON and so degrades quietly, showing no task summary. Find the converted set with `grep -rlE 'trim\([^)]*\) *== *"state"' plugins/dossier/hooks/` — it returns exactly those four files. Match the comparison, not the array name: the awk spelling differs per reader (`f[i]` in `lib-row-flip.sh` and `lib-regen-index.sh`, `a[i]` in `lib-vm-checks.sh`, `$i` in `session-start.sh`), so a name-shaped pattern like `trim(f[i])` returns two of the four and mislabels the other two as positional. Anything under `hooks/` that reads a §T cell without matching this is still positional.
 
 Vm.3: every row with `state=x` MUST have non-empty `cite`.
 
@@ -411,7 +421,7 @@ Vm.8: no skill writes a real file directly. Always tmp + rename.
 
 ### Bundled mutation helpers
 
-Three scripts under `$CLAUDE_PLUGIN_ROOT/hooks/` own the common DOSSIER.md mutations. All atomic (tmp + rename), all ship with the plugin — always available, no adapter detection, no fastedit dependency (fastedit cannot edit `.md`; see ADAPTERS.md §fastedit).
+Six scripts under `$CLAUDE_PLUGIN_ROOT/hooks/` own the common DOSSIER.md mutations — the six rows below are the whole roster. The five that rewrite a file are atomic by tmp + rename; `lib-archive-move.sh` mutates no file, so it is a bare directory `mv` with no temp. All ship with the plugin — always available, no adapter detection, no fastedit dependency (fastedit cannot edit `.md`; see ADAPTERS.md §fastedit).
 
 | helper                | mutates                                                    | usage                                                       |
 | --------------------- | ---------------------------------------------------------- | ----------------------------------------------------------- |

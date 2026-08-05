@@ -20,7 +20,9 @@ Six steps. Append-only on §B + §V. Resumable.
 
 Per ADAPTERS.md. Note `HAS_CAVEMEM` (recurrence research benefits).
 
-DOSSIER.md writes go through the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` flips §T/§B state cells, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` appends §S. The §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends.
+DOSSIER.md writes go through the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` flips a **§T** state cell, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` appends §S. The §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends.
+
+**There is no row-flip for §B.** `lib-row-flip.sh <dir> B<N> <state>` exits 1 printing `lib-row-flip: refuses Bugs rows (no state column — would destroy cells); use ds:backprop` — §B carries `id | bug | root cause | invariant added | fix cite` and no state column at all (FORMAT.md §9, §15). Every §B mutation in this skill is therefore an atomic whole-file write: the row append in step 6, the `invariant added` update in step 7, the `fix cite` update in step 8.
 
 ### 1. Locate live dossier
 
@@ -83,7 +85,16 @@ Append §S: `ds:backprop <B> flake=<rate> runs=<n>` (the resume table keys on it
 
 Write the test that reproduces the bug and run it — it must FAIL (RED). A passing test means the bug is characterised wrongly; revisit step 4.
 
-**Test comments stay phase-agnostic.** The link lives in the test name and the commit's `Refs §B B<N>`; the forms `// Phase N`, `// PH<n>-B<k>` and `// V<n> (Phase <m> / A<k>)` belong in neither the test body nor anywhere else in source. `marker_guard.py` flags them advisorily — it nudges and exits 0, so the write still lands. Treat it as a reminder rather than a gate.
+**Test comments stay phase-agnostic.** The link lives in the test name and the commit's `Refs §B B<N>`; the forms `// Phase N`, `// PH<n>-B<k>` and `// V<n> (Phase <m> / A<k>)` belong in neither the test body nor anywhere else in source. That is a convention you keep, and `marker_guard.py` covers only part of it:
+
+| comment line           | `marker_guard.py`                                           |
+| ---------------------- | ----------------------------------------------------------- |
+| `// PH3-B7`            | nudges — `additionalContext`, exit 0, the write still lands |
+| `// §V26`, `# §B3`     | nudges — same                                               |
+| `// Phase 2`           | silent, exit 0, no output                                   |
+| `// V3 (Phase 2 / A1)` | silent, exit 0, no output                                   |
+
+Its `MARKER_PATTERNS` are exactly two: a comment line containing `PH\d+-[A-Z]\d+`, or one carrying a `§[VBTSXGZ]\d+` sigil. A bare `Phase|Stage|Step N` is deliberately unmatched — it collides with legitimate `# Step 1: dump` comments — and the V-form carries no `§`, so neither of those two is reported by anything. It is also scoped: a `cwd` whose `.scratchpad/dossier` is not a directory returns 0 before any scan, so the guard is silent on all four forms outside a dossier repo. Treat it as a partial reminder, never a gate.
 
 Commit:
 

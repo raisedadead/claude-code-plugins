@@ -26,7 +26,7 @@ What it checks, deterministically:
 - **name** — present, matches the parent directory, and uses the kebab charset (lowercase / digits / single hyphens, no leading, trailing, or doubled hyphen).
 - **description** — present, ≤ 1024 chars, carries a `Use when` / `Invoke when` trigger clause, and reads third-person (a first-person `I …` is flagged).
 - **body** — under the 500-line budget (a warning fires past 400).
-- **reference depth** — every bundled file (`reference/…`, `scripts/…`) stays one level deep; a file nested deeper is flagged.
+- **reference depth** — every bundled file (`reference/…`, `scripts/…`) stays one level deep; a file nested deeper is a `WARN`, so the run still exits 0 and the rule is yours to hold.
 
 ## The loop
 
@@ -59,6 +59,6 @@ In a repo with a live dossier ledger, record the verdict as one §S line through
 | 1    | `CLAIMS: FLAGGED <n>`       | `<n>` claims name none of those                        |
 | 64   | —                           | no paths given, or a path that does not exist          |
 
-A claim passes by naming an exit code, carrying a citation, or labelling itself advisory / model-judgment / opt-in / a nag. It decides **shape, never fact**: whether the exit code named is the real one stays a reader's question. That is the mechanical half of a defect class this repo has shipped nine times (`RESEARCH.md` F19, F25).
+A claim passes by naming an exit code, carrying a citation, or labelling itself advisory / model-judgment / opt-in / a nag. It decides **shape, never fact**: whether the exit code named is the real one stays a reader's question. That is the mechanical half of a defect class this repo keeps shipping: `RESEARCH.md` F19 counts six false documented claims, F25 six instances across one wave.
 
 Deliberately narrow. The subject is a backticked name or a definite machinery noun (`the runner`, `this hook`, `the script`, `the gate`, `the check`/`checker`, `the guard`, `the linter`) followed by a finite verb; a verb trailed by a past participle reads as a noun and is left alone. Matching the bare verbs instead flagged 113 lines here, nearly all nouns and adjectives — "doubt gate", "env-gated backstops", "the three write-time gates". The narrowing trades misses for false positives on purpose: a lint that flags honest prose gets deleted, and then it catches nothing.

@@ -107,14 +107,16 @@ Locks: <none | <slug>: <skill> pid <pid> since <time>>
 
 `--full` adds the complete §T + §X tables and the §S tail — the deep-inspection dump.
 
-### 7. No mutations
+### 7. What writes, and when
 
-The skill writes exactly two things:
+The **sit-rep path — steps 1 through 6, which is every plain `ds:status`** — writes exactly two things, both derived and idempotent:
 
 - INDEX regen (atomic, derived)
 - Stale-lock cleanup (the session-start hook already does this; re-running is safe)
 
-No §S append. This is a read-only verb.
+It appends no §S. Reading the ledger should not leave a mark on it.
+
+The **pause / resume actions in step 1a are outside that path** and are not read-only. Each runs only on an explicit operator request, and each mutates the ledger: `lib-s-append.sh` appends one §S line, `lib-header-state.sh` rewrites the header state token in place (`` `live` `` → `` `paused` ``). Invoking one turns that invocation into a write; the sit-rep by itself never becomes one.
 
 ### 8. `--recover` mode
 
@@ -128,7 +130,8 @@ Always end with `recovery source: cavemem | transcripts | none`. Worst case is `
 
 ## Exit codes
 
-- 0 always (read-only, no failure modes).
+- 0 for the sit-rep path — a missing INDEX, repo or §X row is reported, not raised.
+- A step-1a pause/resume helper can exit non-zero on its own: `lib-header-state.sh` and `lib-s-append.sh` each print `not found: <path>/DOSSIER.md` and exit 1 against a directory holding no ledger. Surface that instead of reporting the sit-rep clean.
 
 ## Cite
 

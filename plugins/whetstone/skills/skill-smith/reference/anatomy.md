@@ -1,6 +1,6 @@
 # SKILL.md anatomy
 
-The shape a well-formed skill converges on. `lint_skill.py` enforces the mechanical parts at exit 1; this is the structure to diff a new skill against by hand.
+The shape a well-formed skill converges on. `lint_skill.py` fails the frontmatter contract and the 500-line body budget at exit 1; reference depth is a `WARN` that exits 0, and the section order below is read by no check at all. Everything on this page is the structure to diff a new skill against by hand.
 
 ## Frontmatter
 
@@ -26,11 +26,11 @@ A reliable default, adapted from Anthropic's skill-anatomy guidance:
 1. **Red flags** — signs the process is going wrong.
 1. **Verification** — the checkable exit criterion. Never "looks right"; a command, an exit code, a count, a screenshot.
 
-Not every skill needs all seven. Every skill needs an Overview, a Core process, and a Verification.
+Not every skill needs all seven. Every skill needs an Overview, a Core process, and a Verification. No script reads this order — a `SKILL.md` with the sections reversed and no Core process at all lints clean at exit 0, so the whole section is yours to hold.
 
 ## Progressive disclosure
 
-Keep `SKILL.md` under ~500 lines. Push detail one level deep into siblings — `reference/<topic>.md` for prose, `scripts/<name>` for executables — reached only when that branch fires. One level, never two: `reference/foo.md`, not `reference/foo/bar.md`.
+Keep `SKILL.md` under ~500 lines. Push detail one level deep into siblings — `reference/<topic>.md` for prose, `scripts/<name>` for executables — reached only when that branch fires. One level, never two: `reference/foo.md`, not `reference/foo/bar.md`. A deeper file prints `WARN … reference nested too deep` and the run still exits 0, so this rule is an author's, not the script's.
 
 ## Leading words
 

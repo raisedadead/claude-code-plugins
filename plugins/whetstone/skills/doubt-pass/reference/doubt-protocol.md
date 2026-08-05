@@ -18,7 +18,9 @@ Security note: an artifact bound for an external tool or CLI goes in via stdin, 
 
 ## 3. DOUBT
 
-Spawn a **fresh-context** reviewer (`Agent`, `subagent_type: general-purpose`) with only the extracted artifact and the adversarial prompt (see `adversarial-prompt-template.md`). Fresh context is the point: an agent carrying the plan's own justification rationalises it. A tight word budget buys the sharpest failure instead of a laundry list.
+Spawn the **fresh-context** doubter — `Agent`, `subagent_type: whetstone:whetstone-doubter` — with only the extracted artifact and contract as its mission; `adversarial-prompt-template.md` is the text to fill and send. Fresh context is the point: an agent carrying the plan's own justification rationalises it.
+
+The shipped agent already carries the adversarial framing, a ≤ 250-word budget on findings, and a read-only `tools: Read, Grep, Glob` grant. It answers with `DOUBT: FAILURES` or `DOUBT: NO FAILURE FOUND` as its own first line, and callers read that line deterministically (`plugins/dossier/skills/build/SKILL.md`, step 5.6). Spawning a generic agent instead drops all four at once — method, budget, read-only grant, and the `DOUBT:` verdict token.
 
 ## 4. RECONCILE
 

@@ -8,15 +8,15 @@ ______________________________________________________________________
 
 ## Adapter matrix
 
-| Adapter            | Detection                                                        | If present                                                    | If absent              |
-| ------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------- |
-| `rtk` CLI          | `command -v rtk`                                                 | see §rtk below                                                | emit raw commands      |
-| `cavemem` MCP      | tool namespace has `mcp__cavemem__search`                        | augment §S tail with cross-session observations               | §S only                |
-| `caveman` skill    | available-skills list has `caveman:caveman` or `ck:caveman`      | encourage caveman encoding in writes                          | plain markdown         |
-| `fastedit` MCP     | tool namespace has `mcp__fastedit__fast_edit`                    | surgical edits to SOURCE task files; read via fast_search     | Edit tool              |
-| `context7` MCP     | tool namespace has `mcp__claude_ai_Context7__resolve-library-id` | ground CURRENT library API docs before coding (see §context7) | WebFetch official docs |
-| `Workflow` tool    | tool namespace has `Workflow` (native harness)                   | scout fan-out when targets > 2 (see §workflow)                | parallel Agent spawns  |
-| `whetstone` plugin | available agent types list has `whetstone:whetstone-doubter`     | doubt gate at design-class `ds:build` (see §whetstone)        | graceful skip          |
+| Adapter            | Detection                                                    | If present                                                    | If absent              |
+| ------------------ | ------------------------------------------------------------ | ------------------------------------------------------------- | ---------------------- |
+| `rtk` CLI          | `command -v rtk`                                             | see §rtk below                                                | emit raw commands      |
+| `cavemem` MCP      | tool namespace has `mcp__cavemem__search`                    | augment §S tail with cross-session observations               | §S only                |
+| `caveman` skill    | available-skills list has `caveman:caveman` or `ck:caveman`  | encourage caveman encoding in writes                          | plain markdown         |
+| `fastedit` MCP     | tool namespace has `mcp__fastedit__fast_edit`                | surgical edits to SOURCE task files; read via fast_search     | Edit tool              |
+| `context7` MCP     | tool namespace has `mcp__context7__resolve-library-id`       | ground CURRENT library API docs before coding (see §context7) | WebFetch official docs |
+| `Workflow` tool    | tool namespace has `Workflow` (native harness)               | scout fan-out when targets > 2 (see §workflow)                | parallel Agent spawns  |
+| `whetstone` plugin | available agent types list has `whetstone:whetstone-doubter` | doubt gate at design-class `ds:build` (see §whetstone)        | graceful skip          |
 
 ## §rtk — token-compression wrapper
 
@@ -90,13 +90,13 @@ If fastedit absent: use the Edit tool for source files.
 
 ## §context7 — current library API docs
 
-MCP server (Upstash) serving version-current API docs. Detection: tool namespace has `mcp__claude_ai_Context7__resolve-library-id` (+ `__query-docs`).
+MCP server (Upstash) serving version-current API docs. Detection: tool namespace has `mcp__context7__resolve-library-id` (+ `mcp__context7__query-docs`). The middle segment is the server's locally registered name, which `claude mcp list` prints as the first field of each line — an operator who registered it under another name gets that name in the namespace, so match the `__resolve-library-id` / `__query-docs` suffix when the prefix does not.
 
 If present: `ds:build` PIN CHECK (step 5.5) grounds the API SHAPE for a pinned lib — `resolve-library-id{libraryName:<pkg>}` then `query-docs{libraryId, query:<specific API question>}` before coding, so the model writes the current API, not a remembered one.
 
 If absent: `WebFetch` the library's official docs URL (the `ds:verify` convention). The adapter stays optional.
 
-The context7 HTTP API stays opt-in: it needs a paid `ctx7sk-` key (no-new-secret rule), so the route activates only where the operator has exported `CONTEXT7_API_KEY`.
+The route carries no secret of its own. Nothing this plugin ships reads a context7 key — `grep -rn 'CONTEXT7_API_KEY\|ctx7sk' plugins/` matches only this sentence — and `resolve-library-id` answers over the registered MCP server with that variable unset. Whether the server is registered at all stays the operator's call, which is the only opt-in the adapter has.
 
 ## §workflow — deterministic scout fan-out
 
@@ -160,20 +160,25 @@ The checker's own limit knob is `WHETSTONE_TIGER_COLS`, deliberately NOT a `DOSS
 
 ## Detection scaffold (skill body preamble)
 
-Each `ds:*` skill begins with:
+The heading is `### 0. Detect host env`, first in the skill's step list. Most bodies delegate here in one line — `Per ADAPTERS.md.` — and add only the flags that skill branches on: `ds:build` names `HAS_RTK` and `HAS_FASTEDIT`, `ds:backprop` names `HAS_CAVEMEM`, `ds:check` and `ds:migrate` name `Workflow`. `ds:new` inlines its own checklist instead of delegating, and that copy omits `Workflow` and `whetstone:whetstone-doubter`.
 
-```markdown
-### Step 0 — Detect host env (once)
+It is not universal, so read the split rather than trusting this paragraph:
 
-Run:
-- `command -v rtk &>/dev/null && echo HAS_RTK=1`
-- Check tool namespace for: `mcp__cavemem__search`, `mcp__fastedit__fast_edit`, `Workflow`
-- Check available skills for: `caveman:caveman`, `ck:caveman`
-- Check available agent types for: `whetstone:whetstone-doubter`
-
-Cache results for this invocation. Route commands per ADAPTERS.md tables.
-An absent adapter is a silent fallback; every adapter is optional.
+```bash
+grep -rn '^### 0\. Detect host env' plugins/dossier/skills/*/SKILL.md
+grep -L 'Detect host env' plugins/dossier/skills/*/SKILL.md
 ```
+
+The second command lists `ds:converge`, `ds:roll` and `ds:verify` — they carry no step 0, and `grep -l 'rtk\|fastedit\|cavemem\|caveman\|Workflow\|context7\|whetstone'` over those three exits 1, so none of the three names an adapter to route on.
+
+A skill that does route resolves, once per invocation:
+
+- `command -v rtk &>/dev/null && echo HAS_RTK=1`
+- tool namespace: `mcp__cavemem__search`, `mcp__fastedit__fast_edit`, `mcp__context7__resolve-library-id`, `Workflow`
+- available skills: `caveman:caveman`, `ck:caveman`
+- available agent types: `whetstone:whetstone-doubter`
+
+Cache for the invocation, then route per the matrix above. An absent adapter is a silent fallback; every adapter is optional.
 
 ## Non-goals
 

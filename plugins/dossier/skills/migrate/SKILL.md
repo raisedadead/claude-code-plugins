@@ -19,13 +19,13 @@ Walks repos carrying a legacy `.scratchpad/dossier/` (PLAN+SPEC+AUDIT layout). O
 
 `--from-ck` lifts a `SPEC.md` (cavekit's single-file spec at repo root) into a dossier. The section schema is shared, so the map is near-1:1:
 
-| ck `SPEC.md`                | dossier `DOSSIER.md`                                  |
-| --------------------------- | ----------------------------------------------------- |
-| §G / §C / §I / §V / §T / §B | same sections, copied verbatim                        |
+| ck `SPEC.md`                | dossier `DOSSIER.md`                                        |
+| --------------------------- | ----------------------------------------------------------- |
+| §G / §C / §I / §V / §T / §B | same sections, copied verbatim                              |
 | (no header state line)      | add `` `<date>` · `live` · `P1/1` `` — §T carries no phases |
-| (no §X)                     | seed §X from repos the spec touches (ask operator)    |
-| (no §S)                     | seed one line: `ds:migrate — from-ck SPEC.md`         |
-| (no §Z)                     | empty (written by `ds:close`)                         |
+| (no §X)                     | seed §X from repos the spec touches (ask operator)          |
+| (no §S)                     | seed one line: `ds:migrate — from-ck SPEC.md`               |
+| (no §Z)                     | empty (written by `ds:close`)                               |
 
 Flow: scout reads `SPEC.md` → propose DOSSIER.md at `.scratchpad/dossier/<date>-<slug>/` (slug from the spec title or the operator) → operator greenlights → atomic Write → regen INDEX → drop the `.migrate-v2-done` marker. The original `SPEC.md` stays where it is, for the operator to delete when satisfied. Idempotent via the same marker.
 
@@ -68,17 +68,32 @@ Detect files present (PLAN.md, SPEC.md, AUDIT.md, closeout/*.md, others).
 Derive:
 1. <date>: prefer closeout/*.md filename pattern (YYYY-MM-DD-*), else PLAN mtime, else AUDIT mtime.
 2. <slug>: prefer closeout filename slug, else first §G heading from PLAN, else dir-name.
-3. Phase count: scan PLAN/SPEC/closeout for "Phase N" mentions, count distinct.
+3. Phase groupings: any "Phase N" / "G1,G2,G3" shorthand in PLAN/SPEC/closeout,
+   reported as the ORDERED LIST OF TASK IDS in each group — not a count. There is
+   no phase column to migrate into (FORMAT.md §8: "Phases are gone"), so the groups
+   are only raw material for `needs` edges in step 4.
 4. Section map: which legacy file holds which DOSSIER.md section.
    - §G ← PLAN §G or first goal-like heading
    - §C ← PLAN constraints / locked decisions
    - §I ← SPEC §I or interface section
    - §V ← SPEC §V or invariants table
-   - §T ← PLAN §T or task table
+   - §T ← PLAN §T or task table, re-shaped to the current header
+     `| id | state | who | task | needs | cite | verify |`. Report per row:
+     · id      — renumbered T1..Tn, flat and monotonic; any phase prefix dropped
+     · state   — the legacy glyph, one of `. ~ x ! ?`
+     · who     — `A`, or `H` when the row names an operator-only step
+                 (ops review, credential, manual approval, physical access)
+     · needs   — the row's own stated dependency; failing that, for the FIRST row
+                 of each phase group from item 3, the LAST id of the group before
+                 it; otherwise `—`
+     · cite    — legacy commit/PR ref, else `—`
+     · verify  — legacy verify/test cell, else `—`
    - §B ← AUDIT §B or bug ledger
    - §S ← closeout dates (synthesize timeline)
    - §Z ← closeout content (postscript)
-5. Ambiguities: list anything you can't auto-derive (custom files, multi-phase shorthand collisions, missing sections).
+5. Ambiguities: list anything you can't auto-derive (custom files, missing sections,
+   a phase group whose ordering does not imply a real dependency, a row you cannot
+   classify `A` vs `H`).
 
 Output: caveman pipe-table report.
 
@@ -89,22 +104,23 @@ Dispatch routing: repos > 2 and `Workflow` present → §workflow fan-out (ADAPT
 
 ### 4. Aggregate + propose
 
-Per scout report, build the proposed DOSSIER.md per FORMAT.md and name the ambiguities for the operator:
+Per scout report, build the proposed DOSSIER.md per FORMAT.md and name the ambiguities for the operator. The header line is `` `<date>` · `live` · `P1/1` `` — all three fields, the third always the literal `P1/1`, because §T carries no phase column and the readers still need the field to match their pattern (FORMAT.md §2).
 
 ```
 <repo>:
   detected: PLAN.md SPEC.md AUDIT.md closeout/phase-2-<slug>.md
-  derived: date=<YYYY-MM-DD>, slug=<slug>, phases=<N>
+  derived: date=<YYYY-MM-DD>, slug=<slug>
   section map:
     §G ← PLAN.md §1
     §C ← PLAN.md §3
     §V ← SPEC.md (12 rows)
-    §T ← PLAN.md (8 rows, 6 x / 2 .)
+    §T ← PLAN.md (8 rows, 6 x / 2 .; 7 who=A / 1 who=H; 3 needs edges)
     §B ← AUDIT.md (4 rows)
     §S ← synthesized from closeout dates (3 entries)
     §Z ← closeout postscript
   ambiguities:
-    - "Phase G1/G2/G3" shorthand → mapping to P1/P2/P3
+    - "Phase G1/G2/G3" shorthand → needs edges T3←T2, T6←T5 (no phase column exists)
+    - T5 "rolling restart strategy" → who=H? (names ops review)
     - 2 stray .md files: notes.md, hand-off.md → include in §S verbatim?
 
   proposed dest: <repo>/.scratchpad/dossier/<date>-<slug>/DOSSIER.md
@@ -112,6 +128,8 @@ Per scout report, build the proposed DOSSIER.md per FORMAT.md and name the ambig
 
   Approve? [y/n/skip]
 ```
+
+**Get `needs` and `who` right here, because nothing downstream will catch them.** A migration that emits the legacy `id | P | state | task | cite | verify` header still regenerates a clean INDEX row and still exits 0 from `lib-vm-checks.sh` — the readers resolve columns by name (FORMAT.md §8) and simply find neither column, reporting nothing. The cost lands later and silently: `ds:build --next` selects the frontier as "`state=.`, every id in its `needs` cell already `x`, and `who=A`" (build/SKILL.md step 1), so a ledger with no `needs` has no edges to honour and one with no `who` cannot leave operator-only rows alone. Review these two columns per row before approving.
 
 ### 5. Per-repo mutation (on operator y)
 

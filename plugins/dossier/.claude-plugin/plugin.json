@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "dossier",
-  "description": "Phase-scoped engineering workflow with single-file DOSSIER.md, resumable builds, drift detection, evidence log, cross-repo state, and an opt-in scout subagent.",
+  "description": "Engineering workflow in one resumable DOSSIER.md: dependency-ordered tasks, invariants, drift detection, cross-repo state, a rolling status log, and scout + reviewer subagents.",
   "author": {
     "name": "Mrugesh Mohapatra",
     "email": "noreply@mrugesh.dev",

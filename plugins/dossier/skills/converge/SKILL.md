@@ -69,7 +69,14 @@ The unmet rows are the remaining work, in order, and the only justified work on 
 
 ## When asked for more work anyway
 
-Report the state first: criteria met, budget spent, what the recent commits changed. The `UserPromptSubmit` hook already puts that beside the prompt. An instruction to keep going is cheap to satisfy and expensive to satisfy blindly — make the trade visible, then follow the operator's call.
+Report the state first: how many criteria the contract carries, budget spent, what the recent commits changed. The `UserPromptSubmit` hook already puts those beside the prompt, in the shape
+
+```
+wave <slug> · <n> criteria · run ds:converge for the verdict
+  commits: <spent> of <budget>
+```
+
+**Which criteria are met is the one thing that line does not carry.** Running them on every prompt would put their whole cost there, so `convergence_state.py` reports only what is cheap and leaves the verdict to this verb — the count is a pointer, not a result. When the answer turns on met/unmet, run the runner above and quote its `CONVERGE:` line. An instruction to keep going is cheap to satisfy and expensive to satisfy blindly — make the trade visible, then follow the operator's call.
 
 ## Dossier breadcrumb
 

@@ -1,12 +1,12 @@
 ---
 name: check
-description: Drift detector. Read-only — writes nothing. Invoke when the user says "ds:check", "check drift", "audit dossier", "does code still match spec", "verify invariants", or before opening a PR.
+description: Drift detector. Mutates no DOSSIER.md and no repo; it writes only derived caches. Invoke when the user says "ds:check", "check drift", "audit dossier", "does code still match spec", "verify invariants", or before opening a PR.
 disallowed-tools: Edit, Write, NotebookEdit
 ---
 
 # ds:check — drift detector
 
-Validates DOSSIER.md against reality and returns a severity-tagged violation list. Read-only.
+Validates DOSSIER.md against reality and returns a severity-tagged violation list. It changes no DOSSIER.md content and no repo. Two derived paths are written: `INDEX.md`, which `lib-ds-check.sh` regenerates on every run (step 3), and `.scratchpad/.verify-cache/`, which `verify_sweep.py` populates at step 2a through `verify_lib.cache_dir()`. Both are caches rebuilt from source, never source themselves — the carve-out step 6 states.
 
 ## Steps
 
@@ -30,11 +30,16 @@ You are a dossier-scout. Read-only.
 Dossier: <path-to-DOSSIER.md> (full file pasted below)
 Repo to scan: <repo-path>
 
+Headings are dual-spelled and the pasted file may use either. A ds:new
+scaffold writes the plain names (`## Invariants`, `## Tasks`, `## Repos`);
+older files write the sigils (`## §V`, `## §T`, `## §X`). The §-names below
+are the section, not the literal heading — match whichever the file carries.
+
 Tasks:
-1. For each §V row with `check` = shell predicate: run the predicate, report PASS/FAIL.
-2. For each §V row with `check` = test name: locate test in <repo-path>, run if executable, report PASS/FAIL/MISSING.
-3. For each §T row with state=`x` + `cite=<sha>`: verify <sha> exists in <repo-path> git log. Report VALID/MISSING.
-4. Refresh §X for <repo>: git status -sb, ahead-count, latest tag, push state. Report current values; do NOT modify DOSSIER.md.
+1. For each Invariants (§V) row with `check` = shell predicate: run the predicate, report PASS/FAIL.
+2. For each Invariants (§V) row with `check` = test name: locate test in <repo-path>, run if executable, report PASS/FAIL/MISSING.
+3. For each Tasks (§T) row with state=`x` + `cite=<sha>`: verify <sha> exists in <repo-path> git log. Report VALID/MISSING.
+4. Refresh Repos (§X) for <repo>: git status -sb, ahead-count, latest tag, push state. Report current values; do NOT modify DOSSIER.md.
 
 Output: caveman pipe-table. One row per finding.
 
@@ -117,7 +122,7 @@ Suggested remediations (do NOT auto-apply):
 
 ### 6. No mutations
 
-`ds:check` leaves DOSSIER.md content and every repo untouched. The one exception is the derived, idempotent INDEX.md regen inside `lib-ds-check.sh` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7) rather than source of truth, so re-deriving it is the same carve-out `ds:status` has. The Vm.7 dry-check regen falls under it too.
+`ds:check` leaves DOSSIER.md content and every repo untouched. Two derived writes are carved out. The idempotent INDEX.md regen inside `lib-ds-check.sh` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7) rather than source of truth, so re-deriving it is the same carve-out `ds:status` has, and the Vm.7 dry-check regen falls under it. And `.scratchpad/.verify-cache/`, where step 2a's `verify_sweep.py` stores fetched freshness answers for `${DS_VERIFY_TTL:-86400}` seconds — probe with `python3 -c "import sys;sys.path.insert(0,'plugins/dossier/hooks');import verify_lib;print(verify_lib.cache_dir())"`. Deleting either costs a re-derivation, nothing more.
 
 No §S append — this is a read-only verb, and the log stays free of the noise.
 

@@ -22,16 +22,20 @@ Composition depth, not fusion. Merging them has been proposed and rejected twice
 
 One wave of work is one file: `.scratchpad/dossier/<date>-<slug>/DOSSIER.md`. Directory names sort chronologically; `.scratchpad/INDEX.md` is the generated dashboard across all of them.
 
-| concept      | what it is                                                            |
-| ------------ | --------------------------------------------------------------------- |
-| Dossier      | A phase-wave. One file, one goal, one lifetime.                       |
-| Phase        | A sub-wave inside a dossier.                                          |
-| Task         | An atomic unit of work, flat-numbered and phase-tagged.               |
-| Bug          | A caught defect. May be promoted to an invariant.                     |
-| Invariant    | A testable rule that must hold.                                       |
-| Repo         | A touched repository, with ahead-count, tag and push state.           |
-| Status entry | An append-only, timestamped timeline line.                            |
-| Closeout     | The final postscript. Requires a successor or an explicit completion. |
+| concept      | what it is                                                                         |
+| ------------ | ---------------------------------------------------------------------------------- |
+| Dossier      | A wave of work. One file, one goal, one lifetime.                                  |
+| Task         | An atomic unit of work. `id` = `T<N>` flat, monotonic, never reused.               |
+| `who`        | A task's owner: `A` the agent can finish it alone · `H` it needs the operator.     |
+| `needs`      | A task's own dependency cell — the ids that must reach `x` first, or `—` for none. |
+| Frontier     | Every `.` row whose `needs` are all `x`. Derived on read, never stored.            |
+| Bug          | A caught defect. May be promoted to an invariant.                                  |
+| Invariant    | A testable rule that must hold.                                                    |
+| Repo         | A touched repository, with ahead-count, tag and push state.                        |
+| Status entry | An append-only, timestamped timeline line.                                         |
+| Closeout     | The final postscript. Requires a successor or an explicit completion.              |
+
+Ordering is per-row, not per-phase: `ds:build --auto` selects the first frontier row with `who=A`, which is what those two columns buy. Tasks carries no phase column, so a wave that runs in stages says so in `needs`.
 
 Encoding lives in [`plugins/dossier/FORMAT.md`](./plugins/dossier/FORMAT.md), which every skill reads and every writer obeys. It is compressed, pipe-tabled, append-only and written atomically — all in service of the next property.
 

@@ -34,7 +34,7 @@ Each offence prints as `path:line: <width> cols (limit <n>)` before the verdict 
 
 `CLEAN 0 files` and `CLEAN 3 files` are both exit 0, and the difference matters: the first means nothing was measured. A caller that reads only the exit code cannot tell "checked, fine" from "checked nothing" — which is how a mis-typed `git add` reads as a pass.
 
-`CLEAN 0 files, 2 skipped` is a commit whose every file was prose, data, or declared `off` — a docs-only or lockfile-bump commit reaches it correctly, and it is not a mistake. A bare `CLEAN 0 files` means no added, copied, modified, renamed or type-changed path was staged at all, which has two causes: an empty index, or a commit that stages only deletions. Deletions have no added lines to measure, so they reach neither counter. Check your `git add` over the bare form when the commit was meant to change a file.
+`CLEAN 0 files, 2 skipped` is a commit whose every file was prose, data, or declared `off` — a docs-only commit, or a bump of a lockfile the skip lists below name, reaches it correctly, and it is not a mistake. A bare `CLEAN 0 files` means no added, copied, modified, renamed or type-changed path was staged at all, which has two causes: an empty index, or a commit that stages only deletions. Deletions have no added lines to measure, so they reach neither counter. Check your `git add` over the bare form when the commit was meant to change a file.
 
 One run can turn up both kinds at once — a declared-limit offence in one file and a fallback offence in another. Every offence is printed either way, but `<n>` in the verdict counts only the kind the verdict names. A fallback offence is never counted into a `BLOCK` and never blocks a commit, whatever else the run found.
 
@@ -53,7 +53,9 @@ A later section only wins if its value parses. `max_line_length = 0` in the more
 
 The distinction is the point: a repo that has stated its limit gets it enforced, and a repo that has not gets told, never stopped. The env var carries whetstone's own prefix rather than a `DOSSIER_` one — this is whetstone's behaviour, and it must be configurable by someone who has never installed the dossier plugin.
 
-Prose and data formats are skipped outright (`.md`, `.markdown`, `.rst`, `.txt`, `.json`, `.jsonl`, `.csv`, `.tsv`, `.svg`, `.lock`, `.snap`, and the common lockfile names). A column limit describes a statement, not a record.
+Prose and data formats are skipped outright by suffix — `.md`, `.markdown`, `.rst`, `.txt`, `.json`, `.jsonl`, `.csv`, `.tsv`, `.svg`, `.lock`, `.snap` — and by exact name: `go.sum`, `yarn.lock`, `pnpm-lock.yaml`, `poetry.lock`, `Cargo.lock`. A column limit describes a statement, not a record.
+
+The name list carries only the lockfiles the suffix list misses. `pnpm-lock.yaml` is generated and `.github/workflows/ci.yaml` is written by hand, so skipping every `.yaml` to reach the first is not on offer. Both lists are literal, not a guess at what looks generated: a lockfile named anything else — `gradle.lockfile`, say — is measured like source, and one of its added lines over a declared limit exits 1.
 
 ## The manual pass — what the script cannot judge
 
