@@ -99,7 +99,7 @@ title = <slug>
 header_line = `<date>` · `live` · `P1/1`
 ```
 
-The counter is vestigial: Tasks carries no phase column, so `lib-regen-index.sh` derives `P1/1` for every wave it writes. Stamping anything else would drift from what regen recomputes.
+Stamp all three fields. The third is required — the header parsers match a pattern ending in `` · `` — while its value is never read, and is always `P1/1` because Tasks carries no phase column. A two-field header parses as no header at all.
 
 Write the file at `<dir>/DOSSIER.md` per FORMAT.md §2 section order:
 

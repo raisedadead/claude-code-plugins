@@ -67,7 +67,7 @@ Headings are fixed. Order is fixed.
 
 Readers match headings through `hooks/lib-sections.sh`, which holds one pattern per section and accepts both this spelling and the `## §G — Goal` … `## §Z — Closeout` sigils every dossier written before 2026-08-05 carries. A descriptive tail is allowed after either form. `ds:new` writes the worded spelling; nothing rewrites an existing ledger, so the sigil form stays readable indefinitely.
 
-The `P1/1` counter is vestigial — Tasks carries no phase column, so `lib-regen-index.sh` derives `P1/1` for every wave.
+The third field is **required, and its value is never read**. `lib-header-state.sh`, `lib-regen-index.sh` and `lib-reconcile-state.sh` identify this line with a pattern ending in `` · `` — a two-field header does not match, so the state token becomes unreadable and `ds:close`, pause/resume and drift reconciliation all fail. They then read field two. Field three's contents are never examined: it is always `P1/1` because Tasks carries no phase column. Dropping it means relaxing those three patterns in the same commit, not deleting a spare field.
 
 State values: `live` | `done` | `paused`. Default at `ds:new` = `live`. The header state token is flipped atomically by `lib-header-state.sh` (§15): `ds:close` sets `done`; the `ds:status` pause/resume actions toggle `live` ↔ `paused`. A `paused` dossier stays a direct child of `dossier/` (not archived — pause is reversible) and is excluded from the live-count + the SessionStart "current live" pick.
 
