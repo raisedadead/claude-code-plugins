@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+HERE="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib-sections.sh disable=SC1091
+source "${HERE}/lib-sections.sh"
+
 DIR="${1:?usage: lib-x-refresh.sh <dossier-dir> <repo-label> <repo-path>}"
 LABEL="${2:?repo-label required (matches §X col 1)}"
 RP="${3:?repo-path required}"
@@ -15,9 +19,9 @@ git -C "$RP" rev-parse --git-dir >/dev/null 2>&1 || {
 	exit 1
 }
 
-if ! awk -v repo="$LABEL" '
-  /^## §X/ { x = 1; next }
-  /^## §[^X]/ { x = 0 }
+if ! awk -v repo="$LABEL" -v any="$DS_SEC_ANY" -v sec_x="$DS_SEC_REPOS" '
+  $0 ~ sec_x { x = 1; next }
+  $0 ~ any   { x = 0 }
   x && /^\|/ {
     n = split($0, f, "|")
     c = f[2]; gsub(/^[ \t]+|[ \t]+$/, "", c)
@@ -43,13 +47,13 @@ TMP="$(mktemp "${FILE}.XXXXXX")"
 cleanup() { rm -f "$TMP"; }
 trap cleanup EXIT
 
-DS_REPO="$LABEL" DS_BRANCH="$BRANCH" DS_AHEAD="$AHEAD" DS_TAG="$TAG" DS_PUSHED="$PUSHED" awk '
+DS_REPO="$LABEL" DS_BRANCH="$BRANCH" DS_AHEAD="$AHEAD" DS_TAG="$TAG" DS_PUSHED="$PUSHED" awk -v any="$DS_SEC_ANY" -v sec_x="$DS_SEC_REPOS" '
   BEGIN {
     repo = ENVIRON["DS_REPO"]; br = ENVIRON["DS_BRANCH"]; ah = ENVIRON["DS_AHEAD"]
     tg = ENVIRON["DS_TAG"]; pu = ENVIRON["DS_PUSHED"]
   }
-  /^## §X/ { x = 1; print; next }
-  /^## §[^X]/ { x = 0 }
+  $0 ~ sec_x { x = 1; print; next }
+  $0 ~ any   { x = 0 }
   x && /^\|/ {
     nf = split($0, f, "|")
     c2 = f[2]; gsub(/^[ \t]+|[ \t]+$/, "", c2)

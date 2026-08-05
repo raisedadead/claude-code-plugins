@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+HERE="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib-sections.sh disable=SC1091
+source "${HERE}/lib-sections.sh"
+
 DIR="${1:?usage: lib-s-append.sh <dossier-dir> <event-text...>}"
 shift
 EVENT="$*"
@@ -26,9 +30,9 @@ TMP="$(mktemp "${FILE}.XXXXXX")"
 cleanup() { rm -f "$TMP"; }
 trap cleanup EXIT
 
-DS_ENTRY="$ENTRY" awk '
+DS_ENTRY="$ENTRY" awk -v sec_z="$DS_SEC_CLOSEOUT" '
   BEGIN { e = ENVIRON["DS_ENTRY"]; done = 0 }
-  /^## §Z/ && !done { printf "%s\n\n", e; done = 1 }
+  $0 ~ sec_z && !done { printf "%s\n\n", e; done = 1 }
   { print }
   END { if (!done) printf "\n%s\n", e }
 ' "$FILE" >"$TMP"

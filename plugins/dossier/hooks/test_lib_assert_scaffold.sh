@@ -75,7 +75,7 @@ write_full "$D2"
 grep -v '^## §V — Invariants$' "$D2/DOSSIER.md" >"$D2/DOSSIER.md.tmp"
 mv "$D2/DOSSIER.md.tmp" "$D2/DOSSIER.md"
 if err="$("$ASSERT" "$D2" 2>&1)"; then fail "missing §V must exit non-zero"; fi
-printf '%s' "$err" | grep -q '§V' || fail "error must name the missing §V section"
+printf '%s' "$err" | grep -q 'Invariants' || fail "error must name the missing Invariants section"
 
 D3="$TMP/2026-07-07-notitle"
 write_full "$D3"

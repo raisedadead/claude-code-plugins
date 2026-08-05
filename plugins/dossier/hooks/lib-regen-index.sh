@@ -6,6 +6,10 @@
 
 set -euo pipefail
 
+HERE="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib-sections.sh disable=SC1091
+source "${HERE}/lib-sections.sh"
+
 SCRATCHPAD="${1:-.scratchpad}"
 DOSSIER_DIR="${SCRATCHPAD}/dossier"
 INDEX_FILE="${SCRATCHPAD}/INDEX.md"
@@ -31,28 +35,37 @@ parse_dossier() {
 	# Parse §T: count rows, count x-state rows.
 	# Tolerate prettier-padded tables: `| T1  |` (multi-space) and `| T10 |`.
 	local t_total t_done
-	t_total=$(awk '
-    /^## §T/ { in_t=1; next }
-    /^## §[^T]/ { in_t=0 }
+	t_total=$(awk -v any="$DS_SEC_ANY" -v sec_t="$DS_SEC_TASKS" '
+    $0 ~ sec_t { in_t=1; next }
+    $0 ~ any { in_t=0 }
     in_t && /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/ { n++ }
     END { print n+0 }
   ' "${file}")
-	t_done=$(awk '
-    /^## §T/ { in_t=1; next }
-    /^## §[^T]/ { in_t=0 }
-    in_t && /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/ {
-      n_fields = split($0, f, "|")
-      gsub(/^[ \t]+|[ \t]+$/, "", f[4])
-      if (f[4] == "x") n++
+	t_done=$(awk -v fname="${file}" -v any="$DS_SEC_ANY" -v sec_t="$DS_SEC_TASKS" '
+    function trim(s){ gsub(/^[ \t]+|[ \t]+$/,"",s); return s }
+    $0 ~ sec_t { in_t=1; hdr=0; cs=0; next }
+    $0 ~ any { in_t=0 }
+    in_t && /^\|/ {
+      if ($0 ~ /^[-| :+]*$/) next
+      nf = split($0, f, "|")
+      if (!hdr) {
+        hdr = 1
+        for (i = 2; i < nf; i++) if (trim(f[i]) == "state") cs = i
+        if (!cs) printf "lib-regen-index: %s: Tasks header names no state column, so its rows count as not-done\n", fname > "/dev/stderr"
+        next
+      }
+      if (!cs) next
+      if ($0 !~ /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/) next
+      if (trim(f[cs]) == "x") n++
     }
     END { print n+0 }
   ' "${file}")
 
 	# Parse §B: count rows.
 	local b_total
-	b_total=$(awk '
-    /^## §B/ { in_b=1; next }
-    /^## §[^B]/ { in_b=0 }
+	b_total=$(awk -v any="$DS_SEC_ANY" -v sec_b="$DS_SEC_BUGS" '
+    $0 ~ sec_b { in_b=1; next }
+    $0 ~ any { in_b=0 }
     in_b && /^\|[[:space:]]*B[0-9]+[[:space:]]*\|/ { n++ }
     END { print n+0 }
   ' "${file}")
@@ -60,29 +73,47 @@ parse_dossier() {
 	# Phase count: max P<N> seen in §T column. Tolerate padded cells.
 	# Use split (BSD-awk-compatible) instead of match-with-array (gawk-only).
 	local p_max p_current
-	p_max=$(awk '
-    /^## §T/ { in_t=1; next }
-    /^## §[^T]/ { in_t=0 }
-    in_t && /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/ {
-      n_fields = split($0, f, "|")
-      gsub(/^[ \t]+|[ \t]+$/, "", f[3])
-      if (f[3] ~ /^P[0-9]+$/) {
-        p = substr(f[3], 2) + 0
+	p_max=$(awk -v any="$DS_SEC_ANY" -v sec_t="$DS_SEC_TASKS" '
+    function trim(s){ gsub(/^[ \t]+|[ \t]+$/,"",s); return s }
+    $0 ~ sec_t { in_t=1; hdr=0; cp=0; next }
+    $0 ~ any { in_t=0 }
+    in_t && /^\|/ {
+      if ($0 ~ /^[-| :+]*$/) next
+      nf = split($0, f, "|")
+      if (!hdr) {
+        hdr = 1
+        for (i = 2; i < nf; i++) if (trim(f[i]) == "P") cp = i
+        next
+      }
+      if (!cp) next
+      if ($0 !~ /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/) next
+      if (trim(f[cp]) ~ /^P[0-9]+$/) {
+        p = substr(trim(f[cp]), 2) + 0
         if (p > max) max = p
       }
     }
     END { print (max ? max : 1) }
   ' "${file}")
 	# Current phase = lowest P with at least one non-x row, or p_max if all done.
-	p_current=$(awk -v pmax="${p_max}" '
-    /^## §T/ { in_t=1; next }
-    /^## §[^T]/ { in_t=0 }
-    in_t && /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/ {
-      n_fields = split($0, f, "|")
-      gsub(/^[ \t]+|[ \t]+$/, "", f[3])
-      gsub(/^[ \t]+|[ \t]+$/, "", f[4])
-      if (f[4] != "x" && f[3] ~ /^P[0-9]+$/) {
-        p = substr(f[3], 2) + 0
+	p_current=$(awk -v pmax="${p_max}" -v any="$DS_SEC_ANY" -v sec_t="$DS_SEC_TASKS" '
+    function trim(s){ gsub(/^[ \t]+|[ \t]+$/,"",s); return s }
+    $0 ~ sec_t { in_t=1; hdr=0; cp=0; cs=0; next }
+    $0 ~ any { in_t=0 }
+    in_t && /^\|/ {
+      if ($0 ~ /^[-| :+]*$/) next
+      nf = split($0, f, "|")
+      if (!hdr) {
+        hdr = 1
+        for (i = 2; i < nf; i++) {
+          if (trim(f[i]) == "P") cp = i
+          if (trim(f[i]) == "state") cs = i
+        }
+        next
+      }
+      if (!cp || !cs) next
+      if ($0 !~ /^\|[[:space:]]*T[0-9]+[[:space:]]*\|/) next
+      if (trim(f[cs]) != "x" && trim(f[cp]) ~ /^P[0-9]+$/) {
+        p = substr(trim(f[cp]), 2) + 0
         if (cur == 0 || p < cur) cur = p
       }
     }
@@ -97,7 +128,7 @@ parse_dossier() {
 	# Tolerate prose-joined formatter output (prettier merges multi-line
 	# paragraphs into one) — match substring, not just line-anchored.
 	local z_section z_state z_closed=0
-	z_section=$(awk '/^## §Z/,EOF { print }' "${file}" 2>/dev/null || true)
+	z_section=$(awk -v sec_z="$DS_SEC_CLOSEOUT" '$0 ~ sec_z { z=1 } z { print }' "${file}" 2>/dev/null || true)
 	if echo "${z_section}" | grep -qE '(^|[[:space:]])complete:[[:space:]]+true'; then
 		z_state="complete"
 		z_closed=1

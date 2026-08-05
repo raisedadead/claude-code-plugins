@@ -193,11 +193,50 @@ def test_the_wrapper_agrees_with_the_module() -> None:
     assert shell.returncode == direct.returncode, shell.stdout + shell.stderr
 
 
+WHETSTONE_RUNNERS = (
+    Path(__file__).resolve().parent / "test_whetstone_py.py",
+    Path(__file__).resolve().parent / "test_tiger_check.py",
+    Path(__file__).resolve().parent / "test_claim_check.py",
+)
+
+
+def _runner(path: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(path), *args], capture_output=True, text=True
+    )
+
+
+def test_every_runner_refuses_a_k_filter_matching_nothing() -> None:
+    """The filter matches nothing on purpose, or a runner spawned here
+    re-enters this test once per runner."""
+    for runner in WHETSTONE_RUNNERS:
+        done = _runner(runner, "-k", "zzz_matches_no_test")
+        assert done.returncode == 1, f"{runner.name}: {done.stdout}{done.stderr}"
+
+
+def test_a_bare_k_is_refused_rather_than_ignored() -> None:
+    for runner in WHETSTONE_RUNNERS:
+        done = _runner(runner, "-k")
+        assert done.returncode == 1, f"{runner.name}: {done.stdout}{done.stderr}"
+
+
 def _main() -> int:
+    wanted = ""
+    argv = sys.argv[1:]
+    if "-k" in argv:
+        index = argv.index("-k")
+        if index + 1 == len(argv):
+            print("-k needs a substring", file=sys.stderr)
+            return 1
+        wanted = argv[index + 1]
     failures = 0
+    selected = 0
     for name, fn in sorted(globals().items()):
         if not name.startswith("test_") or not callable(fn):
             continue
+        if wanted and wanted not in name:
+            continue
+        selected += 1
         try:
             fn()
         except Exception as exc:
@@ -207,6 +246,9 @@ def _main() -> int:
             print(f"ok {name}")
     if failures:
         print(f"{failures} failing", file=sys.stderr)
+        return 1
+    if wanted and not selected:
+        print(f"no test matched {wanted!r}", file=sys.stderr)
         return 1
     print("ok")
     return 0

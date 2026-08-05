@@ -60,11 +60,23 @@ def _run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.CompletedProcess(list(args), 127, "", "git unavailable")
 
 
-def _is_work_tree(root: Path) -> bool:
+def _work_tree_top(root: Path) -> Path | None:
+    """The work-tree top for a path inside a repository, or None.
+
+    git reports diff paths relative to the top, and `_added_lines` hands them
+    straight back as pathspecs. Anchored below the top the two disagree and
+    every file measures zero added lines — reported as `CLEAN <n> file`, not as
+    a skip, so the examined count claimed a look that never happened. The
+    `.editorconfig` chain walks up to this same path, so a declared limit at
+    the top reaches a file staged anywhere beneath it.
+    """
     if not root.is_dir():
-        return False
-    probe = _run_git(root, "rev-parse", "--is-inside-work-tree")
-    return probe.returncode == 0 and probe.stdout.strip() == "true"
+        return None
+    probe = _run_git(root, "rev-parse", "--show-toplevel")
+    if probe.returncode != 0:
+        return None
+    top = probe.stdout.strip()
+    return Path(top) if top else None
 
 
 def _staged_entries(root: Path) -> list[tuple[str, list[str]]]:
@@ -461,9 +473,10 @@ def _offences(root: Path) -> tuple[list[str], int, int, int]:
 
 
 def main(argv: list[str]) -> int:
-    root = Path(argv[1] if len(argv) > 1 else ".")
-    if not _is_work_tree(root):
-        print(f"tiger_check: not a git work tree: {root}", file=sys.stderr)
+    given = Path(argv[1] if len(argv) > 1 else ".")
+    root = _work_tree_top(given)
+    if root is None:
+        print(f"tiger_check: not a git work tree: {given}", file=sys.stderr)
         return USAGE
     reported, declared_count, examined, skipped = _offences(root)
     for entry in reported:

@@ -128,4 +128,48 @@ EOF
 (cd "$WS3" && "$REGEN" .scratchpad)
 [[ "$(state_of punct)" == "drift!" ]] || fail "§Z 'complete: true.' (trailing punctuation) must read closed → drift! (regen/reconcile predicate parity)"
 
+layout_row() {
+	local ws="$1" header="$2" sep="$3" r1="$4" r2="$5"
+	local dir="$ws/.scratchpad/dossier/2026-08-04-shape"
+	mkdir -p "$dir"
+	{
+		# shellcheck disable=SC2016
+		printf '`2026-08-04` · `live` · `P1/1`\n\n'
+		printf '## §T — Task ledger\n\n%s\n%s\n%s\n%s\n\n' "$header" "$sep" "$r1" "$r2"
+		printf '## §Z — Closeout\n\n_(empty)_\n'
+	} >"$dir/DOSSIER.md"
+	(cd "$ws" && "$REGEN" .scratchpad >/dev/null 2>&1)
+	grep 'shape' "$ws/.scratchpad/INDEX.md" | awk -F'|' '{gsub(/ /,"",$6); print $6}'
+}
+
+WS4="$TMP/ws4"
+legacy_count=$(layout_row "$WS4" \
+	'| id  | P   | state | task | cite | verify |' \
+	'| --- | --- | ----- | ---- | ---- | ------ |' \
+	'| T1  | P1  | x     | a    | [a1] | V1     |' \
+	'| T2  | P1  | .     | b    | —    | —      |')
+
+WS5="$TMP/ws5"
+shaped_count=$(layout_row "$WS5" \
+	'| id  | state | who | task | needs | cite | verify |' \
+	'| --- | ----- | --- | ---- | ----- | ---- | ------ |' \
+	'| T1  | x     | A   | a    | —     | [a1] | V1     |' \
+	'| T2  | .     | A   | b    | T1    | —    | —      |')
+
+[[ "$legacy_count" == "$shaped_count" ]] ||
+	fail "the done count is read by header name, so both §T layouts must agree; legacy=$legacy_count who/needs=$shaped_count"
+[[ "$shaped_count" == "1/2" ]] ||
+	fail "one of two rows is x, so the who/needs layout must count 1/2, got $shaped_count"
+
+WS6="$TMP/ws6"
+mkdir -p "$WS6/.scratchpad/dossier/2026-08-05-nostate"
+{
+	# shellcheck disable=SC2016
+	printf '`2026-08-05` · `live` · `P1/1`\n\n'
+	printf '## Tasks\n\n| id | status | owner | task |\n|----|--------|-------|------|\n| T1 | x      | A     | a    |\n'
+} >"$WS6/.scratchpad/dossier/2026-08-05-nostate/DOSSIER.md"
+nostate_err=$( (cd "$WS6" && "$REGEN" .scratchpad 2>&1 >/dev/null) || true)
+printf '%s' "$nostate_err" | grep -q 'names no state column' ||
+	fail "a Tasks header naming no state column must be reported, not silently counted as zero; got: $nostate_err"
+
 printf 'ok\n'

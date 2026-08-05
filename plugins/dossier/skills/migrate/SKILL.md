@@ -22,7 +22,7 @@ Walks repos carrying a legacy `.scratchpad/dossier/` (PLAN+SPEC+AUDIT layout). O
 | ck `SPEC.md`                | dossier `DOSSIER.md`                                  |
 | --------------------------- | ----------------------------------------------------- |
 | §G / §C / §I / §V / §T / §B | same sections, copied verbatim                        |
-| (no header state line)      | add `` `<date>` · `live` · `P1/<n>` `` from §T phases |
+| (no header state line)      | add `` `<date>` · `live` · `P1/1` `` — §T carries no phases |
 | (no §X)                     | seed §X from repos the spec touches (ask operator)    |
 | (no §S)                     | seed one line: `ds:migrate — from-ck SPEC.md`         |
 | (no §Z)                     | empty (written by `ds:close`)                         |

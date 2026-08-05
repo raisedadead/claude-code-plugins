@@ -207,4 +207,55 @@ if "$XREFRESH" "$DX" "myorg/absent" "$REPO" 2>/dev/null; then fail "x-refresh mi
 
 [[ -z "$(find "$DX" -name 'DOSSIER.md.*' 2>/dev/null)" ]] || fail "x-refresh left .tmp orphan"
 
+shaped_dir() {
+	local dir="$1" header="$2" sep="$3" row="$4"
+	local heading="${5:-## §T — Task ledger}" tail_heading="${6:-## §S — log}"
+	mkdir -p "$dir"
+	printf '# s\n\n%s\n\n%s\n%s\n%s\n\n%s\n\n| T1 | decoy | outside | the | tasks | section | — |\n' \
+		"$heading" "$header" "$sep" "$row" "$tail_heading" >"$dir/DOSSIER.md"
+}
+
+DW="$TMP/whoneeds"
+shaped_dir "$DW" \
+	'| id | state | who | task | needs | cite | verify |' \
+	'|----|-------|-----|------|-------|------|--------|' \
+	'| T1 | .     | A   | one  | —     | —    | —      |'
+"$FLIP" "$DW" T1 x abc123 || fail "flip must succeed on the who/needs layout"
+row="$(grep -E '^\| *T1 ' "$DW/DOSSIER.md")"
+printf '%s' "$row" | awk -F'|' '{exit ($3 ~ /x/) ? 0 : 1}' ||
+	fail "state is written to the cell the header names, got: $row"
+printf '%s' "$row" | awk -F'|' '{exit ($7 ~ /abc123/) ? 0 : 1}' ||
+	fail "cite is written to the cell the header names, got: $row"
+printf '%s' "$row" | grep -q ' A ' || fail "flip clobbered the who cell, got: $row"
+
+DWORD="$TMP/worded"
+shaped_dir "$DWORD" \
+	'| id | state | who | task | needs | cite | verify |' \
+	'|----|-------|-----|------|-------|------|--------|' \
+	'| T1 | .     | A   | one  | —     | —    | —      |' \
+	'## Tasks' '## Status'
+"$FLIP" "$DWORD" T1 x abc123 || fail "flip must succeed under the worded Tasks heading"
+grep -E '^\| *T1 ' "$DWORD/DOSSIER.md" | head -1 | awk -F'|' '{exit ($3 ~ /x/ && $7 ~ /abc123/) ? 0 : 1}' ||
+	fail "worded heading must reach the same cells as the sigil heading"
+grep -q 'outside | the | tasks | section' "$DWORD/DOSSIER.md" ||
+	fail "the worded tail heading must end the Tasks section, leaving a later T1 row untouched"
+
+DN="$TMP/noheader"
+shaped_dir "$DN" \
+	'| id | status | owner | task |' \
+	'|----|--------|-------|------|' \
+	'| T1 | .      | A     | one  |'
+if "$FLIP" "$DN" T1 x abc123 2>/dev/null; then
+	fail "a §T header naming neither state nor cite must be refused, not edited by position"
+fi
+grep -qE '^\| T1 \| \. ' "$DN/DOSSIER.md" || fail "refused flip must leave the ledger untouched"
+
+DRAG="$TMP/ragged"
+mkdir -p "$DRAG"
+printf '# r\n\n## Tasks\n\n| id | state | who | task | needs | cite | verify |\n|----|-------|-----|------|-------|------|--------|\n| T1 | .     | A   | one  |\n' >"$DRAG/DOSSIER.md"
+if "$FLIP" "$DRAG" T1 x ab12 2>/dev/null; then
+	fail "a row with fewer cells than the header names must be refused, not written past its end"
+fi
+grep -qE '^\| T1 \| \. ' "$DRAG/DOSSIER.md" || fail "a refused ragged flip must leave the row untouched"
+
 printf 'ok\n'

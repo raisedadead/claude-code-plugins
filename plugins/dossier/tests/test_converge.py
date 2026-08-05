@@ -599,11 +599,150 @@ def test_every_command_is_named_before_the_first_one_runs() -> None:
     assert max(planned) < min(ran), result.stdout
 
 
+def test_stderr_does_not_satisfy_a_stdout_expect() -> None:
+    """`stdout:` names stdout. The runner merged both streams, so a command
+    that printed only to stderr reported MET and declared a wave over on text
+    it never wrote to stdout."""
+    result = _run(FIXTURES / "stderr-only.md")
+    assert _verdict(result) == "CONVERGE: UNMET 1 of 1", result.stdout + result.stderr
+    assert result.returncode == UNMET, result.stdout + result.stderr
+
+
+def test_stdout_nothing_ignores_a_noisy_stderr() -> None:
+    """The negative space of the same defect: a command whose stdout is empty
+    satisfies `stdout: (nothing)` however loud its stderr was. Merging the
+    streams failed this one in the opposite direction."""
+    with tempfile.TemporaryDirectory() as tmp:
+        contract = Path(tmp) / "noisy-but-silent.md"
+        contract.write_text(
+            "# c\n\n| field    | value |\n| -------- | ----- |\n| consumer | tests |\n\n"
+            "## done-when\n\n"
+            "| id  | command                   | expect            |\n"
+            "| --- | ------------------------- | ----------------- |\n"
+            "| 1   | `sh -c 'echo noise >&2'`  | stdout: (nothing) |\n",
+            encoding="utf-8",
+        )
+        result = _run(contract)
+        assert _verdict(result) == "CONVERGE: MET 1/1", result.stdout + result.stderr
+        assert result.returncode == MET, result.stdout + result.stderr
+
+
+def test_a_failed_criterion_reports_its_stderr() -> None:
+    """Separating the streams must not lose the diagnostic.
+
+    The expected text must not appear in the command, or the assertion passes
+    on the `will run` echo alone — the first draft asserted a marker it had put
+    in the command itself and passed against no implementation.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        contract = Path(tmp) / "diagnostic.md"
+        contract.write_text(
+            "# c\n\n| field    | value |\n| -------- | ----- |\n| consumer | tests |\n\n"
+            "## done-when\n\n"
+            "| id  | command                       | expect |\n"
+            "| --- | ----------------------------- | ------ |\n"
+            "| 1   | `cat /nonexistent-xyz-marker` | exit 0 |\n",
+            encoding="utf-8",
+        )
+        result = _run(contract)
+        reported = [ln for ln in result.stdout.splitlines() if ln.startswith("  UNMET")]
+        assert len(reported) == 1, result.stdout
+        assert "No such file" in reported[0], result.stdout
+
+
+def test_a_hyphen_boundary_does_not_match_across_slugs() -> None:
+    """`check.md` is not the contract of wave 2026-08-01-claim-check. The
+    resolver accepted any hyphen-delimited suffix while its docstring claimed
+    equality against the date-stripped slug, so unrelated waves resolved to one
+    contract."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-01-claim-check")
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "check.md").write_text(_contract_text(), encoding="utf-8")
+        result = _run_noarg(root)
+        assert _verdict(result).startswith("CONVERGE: PARSE"), result.stdout
+        assert result.returncode == PARSE, result.stdout
+
+
+def test_a_date_stripped_name_still_matches_its_own_wave() -> None:
+    """The positive space of the same rule: the stem equal to the slug with its
+    date prefix dropped is exactly the match the docstring promises."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-01-claim-check")
+        (root / ".dossier").mkdir()
+        (root / ".dossier" / "claim-check.md").write_text(
+            _contract_text(), encoding="utf-8"
+        )
+        result = _run_noarg(root)
+        assert "CONVERGE: MET 1/1" in result.stdout, result.stdout
+
+
+DOSSIER_RUNNERS = (
+    PLUGIN / "hooks" / "test_python.py",
+    PLUGIN / "tests" / "test_converge.py",
+    PLUGIN / "tests" / "test_convergence_state.py",
+)
+
+
+def _runner(path: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(path), *args],
+        capture_output=True,
+        text=True,
+        cwd=REPO,
+        env=_clean_env(),
+    )
+
+
+def test_every_runner_refuses_a_k_filter_matching_nothing() -> None:
+    """One runner honoured `-k` and the rest accepted and ignored it, so a
+    contract criterion naming a test that does not exist reported success.
+
+    The filter matches nothing on purpose: a runner spawned here must select no
+    tests, or this test re-enters itself once per runner.
+    """
+    for runner in DOSSIER_RUNNERS:
+        done = _runner(runner, "-k", "zzz_matches_no_test")
+        assert done.returncode == 1, f"{runner.name}: {done.stdout}{done.stderr}"
+
+
+def test_a_k_filter_that_matches_runs_only_the_named_test() -> None:
+    """The shape a shipped contract already uses."""
+    done = _runner(DOSSIER_RUNNERS[2], "-k", "contractless")
+    assert done.returncode == 0, done.stdout + done.stderr
+    ran = [line for line in done.stdout.splitlines() if line.startswith("ok test_")]
+    assert ran, done.stdout
+    assert all("contractless" in line for line in ran), done.stdout
+    everything = _runner(DOSSIER_RUNNERS[2])
+    all_ran = [ln for ln in everything.stdout.splitlines() if ln.startswith("ok test_")]
+    assert len(ran) < len(all_ran), f"filtered={len(ran)} unfiltered={len(all_ran)}"
+
+
+def test_a_bare_k_is_refused_rather_than_ignored() -> None:
+    for runner in DOSSIER_RUNNERS:
+        done = _runner(runner, "-k")
+        assert done.returncode == 1, f"{runner.name}: {done.stdout}{done.stderr}"
+
+
 def _main() -> int:
+    wanted = ""
+    argv = sys.argv[1:]
+    if "-k" in argv:
+        index = argv.index("-k")
+        if index + 1 == len(argv):
+            print("-k needs a substring", file=sys.stderr)
+            return 1
+        wanted = argv[index + 1]
     failures = 0
+    selected = 0
     for name, fn in sorted(globals().items()):
         if not name.startswith("test_") or not callable(fn):
             continue
+        if wanted and wanted not in name:
+            continue
+        selected += 1
         try:
             fn()
         except Exception as exc:
@@ -613,6 +752,9 @@ def _main() -> int:
             print(f"ok {name}")
     if failures:
         print(f"{failures} failing", file=sys.stderr)
+        return 1
+    if wanted and not selected:
+        print(f"no test matched {wanted!r}", file=sys.stderr)
         return 1
     print("ok")
     return 0

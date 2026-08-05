@@ -350,7 +350,11 @@ def _main() -> int:
     wanted = ""
     argv = sys.argv[1:]
     if "-k" in argv:
-        wanted = argv[argv.index("-k") + 1]
+        index = argv.index("-k")
+        if index + 1 == len(argv):
+            print("-k needs a substring", file=sys.stderr)
+            return 1
+        wanted = argv[index + 1]
     failures = 0
     selected = 0
     for name, fn in sorted(globals().items()):

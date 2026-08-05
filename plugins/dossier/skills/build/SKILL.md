@@ -11,7 +11,7 @@ TDD covenant: RED → GREEN → refactor. One commit per `x`-flip. Resumable.
 ## Inputs
 
 - `<T-id>` (e.g. `T3`): explicit target.
-- `--next`: pick first `state=.` row in §T.
+- `--next`: pick the first frontier row — `state=.`, `needs` all `x`, `who=A`.
 - `--auto`: autonomous mode — loop over actionable §T rows to completion, pausing only on a real decision. See **Autonomous mode** below. Best driven by native `/goal`.
 - `--resume`: re-enter incomplete op for the same target (auto-detected from §S; flag is explicit override).
 - `--review`: spawn a fresh-context `dossier-reviewer` gate before COMMIT (step 6.5). Auto-on for destructive-class tasks.
@@ -32,8 +32,8 @@ Per `ds:status` step 1. If none: refuse w/ "no live dossier. ds:new first."
 ### 2. Resolve target
 
 - `<T-id>` provided: locate row in §T. Refuse if missing or already `x`.
-- `--next`: pick the first **actionable** `state=.` row — phase prerequisites satisfied (every row in a lower `P<n>` is `x`). Skip `!`/`?`. Refuse if none actionable (suggest resolving a blocked row).
-- Read row: `id`, `P`, `state`, `task`, `cite`, `verify`.
+- `--next`: pick the first **frontier** row — `state=.`, every id in its `needs` cell already `x`, and `who=A`. Skip `!`/`?`, and leave `who=H` to the operator. Refuse if none actionable (suggest resolving a blocked row).
+- Read row: `id`, `state`, `who`, `task`, `needs`, `cite`, `verify`.
 
 ### 3. Acquire lock
 
@@ -260,7 +260,7 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 
 **Loop — one iteration = one task** (each its own commit + §S DONE, so a crash resumes cleanly):
 
-1. SELECT next actionable row: first `state=.` whose phase prerequisites are satisfied (every row in lower `P<n>` is `x`). Resume any crashed `~` first (step 4). Skip `!` and `?`.
+1. SELECT next actionable row: the first frontier row with `who=A` — `state=.`, every id in its `needs` cell already `x`, and the agent able to finish it alone. Resume any crashed `~` first (step 4). Leave `who=H` rows, and `!` and `?`, to the operator.
 1. No actionable row → §S `ds:build — auto-stop=no-unblocked`, print `DONE`, stop.
 1. A PAUSE condition (below) holds → §S `ds:build <id> PAUSE reason=<class>:<detail>`, print `PAUSE: <reason>`, release lock, stop.
 1. Else run steps 5–12 verbatim (full covenant + TaskList mirror), then print `CONTINUE` (more `.` remain) or `DONE`.

@@ -47,23 +47,27 @@ ______________________________________________________________________
 
 ## 2. DOSSIER.md section order
 
-Headings are fixed. Order is fixed. Skills parse positionally.
+Headings are fixed. Order is fixed.
 
 ```markdown
 # <slug>
 
-`<YYYY-MM-DD>` · `<state>` · `<phase-current>/<phase-total>`
+`<YYYY-MM-DD>` · `<state>` · `P1/1`
 
-## §G — Goal
-## §C — Constraints
-## §I — Interfaces
-## §V — Invariants
-## §T — Task ledger
-## §B — Bug ledger
-## §X — Cross-repo state
-## §S — Rolling status log
-## §Z — Closeout
+## Goal
+## Constraints
+## Interfaces
+## Invariants
+## Tasks
+## Bugs
+## Repos
+## Status
+## Closeout
 ```
+
+Readers match headings through `hooks/lib-sections.sh`, which holds one pattern per section and accepts both this spelling and the `## §G — Goal` … `## §Z — Closeout` sigils every dossier written before 2026-08-05 carries. A descriptive tail is allowed after either form. `ds:new` writes the worded spelling; nothing rewrites an existing ledger, so the sigil form stays readable indefinitely.
+
+The `P1/1` counter is vestigial — Tasks carries no phase column, so `lib-regen-index.sh` derives `P1/1` for every wave.
 
 State values: `live` | `done` | `paused`. Default at `ds:new` = `live`. The header state token is flipped atomically by `lib-header-state.sh` (§15): `ds:close` sets `done`; the `ds:status` pause/resume actions toggle `live` ↔ `paused`. A `paused` dossier stays a direct child of `dossier/` (not archived — pause is reversible) and is excluded from the live-count + the SessionStart "current live" pick.
 
@@ -180,28 +184,35 @@ Format rules:
 
 ## 8. §T — Task ledger
 
-Multi-phase tasks in one pipe-table. Phase column tags which `P<N>` each task belongs to.
+Every task in one pipe-table, ordered by id and related by `needs`.
 
 ```markdown
 ## §T — Task ledger
 
-| id  | P   | state | task                      | cite      | verify                 |
-| --- | --- | ----- | ------------------------- | --------- | ---------------------- |
-| T1  | P1  | x     | scaffold auth/cache pkg   | [a96987b] | `go test ./auth/cache` |
-| T2  | P1  | x     | wire Valkey client        | [b7c8d12] | V1                     |
-| T3  | P1  | ~     | TTL clamp logic           | —         | V3                     |
-| T4  | P2  | .     | rollout to gxy-management | —         | smoke test             |
-| T5  | P2  | !     | rolling restart strategy  | —         | needs ops review       |
+| id  | state | who | task                      | needs  | cite      | verify                 |
+| --- | ----- | --- | ------------------------- | ------ | --------- | ---------------------- |
+| T1  | x     | A   | scaffold auth/cache pkg   | —      | [a96987b] | `go test ./auth/cache` |
+| T2  | x     | A   | wire Valkey client        | T1     | [b7c8d12] | V1                     |
+| T3  | ~     | A   | TTL clamp logic           | T2     | —         | V3                     |
+| T4  | .     | A   | rollout to gxy-management | T3     | —         | smoke test             |
+| T5  | .     | H   | rolling restart strategy  | T3     | —         | needs ops review       |
 ```
 
 Format rules:
 
 - `id` = `T<N>` flat, monotonic, never reused across dossier lifetime.
-- `P` = phase label `P<N>`. Local to dossier. No cross-dossier collision.
 - `state` = single char from §3 symbols.
+- `who` = `A` the agent can finish it alone · `H` it needs the operator. Set when the row is written, not discovered when the run stalls, so `ds:build --auto` can select against it rather than starting a task it will have to abandon.
 - `task` = imperative one-liner.
+- `needs` = the ids that must reach `x` first, comma-separated, or `—`. Defaults to nothing, so a row states a dependency only where one exists.
 - `cite` = commit SHA, PR ref, or `—` if no artifact yet.
 - `verify` = §V reference, test name, or shell predicate.
+
+The **frontier** is every `.` row whose `needs` are all `x`. It is derived on read, never stored, so no row goes stale by being forgotten.
+
+Phases are gone. A `P<N>` column made the operator name the shape of the work before the work was understood, which is the pressure the Fog section exists to remove; a wave that genuinely runs in stages expresses that as `needs` edges between its first rows.
+
+**Columns resolve by header name.** Four readers take the positions they need from the header row rather than counting cells, so both this layout and the legacy `id|P|state|task|cite|verify` one are read correctly: `lib-vm-checks.sh`, `lib-row-flip.sh`, `lib-regen-index.sh` and `session-start.sh`. A header naming no `state` column is reported by the first three — `WARN Vm.3`, a refusal at exit 1, and a stderr line respectively. `session-start.sh` emits JSON and so degrades quietly, showing no task summary. Find the converted set with `grep -l 'trim(f\[i\])' plugins/dossier/hooks/`; anything else that counts cells is still positional.
 
 Vm.3: every row with `state=x` MUST have non-empty `cite`.
 
@@ -210,8 +221,8 @@ Vm.3: every row with `state=x` MUST have non-empty `cite`.
 §T is source of truth; the Claude Code TaskList is a derived, in-session steering surface (hydrated by `ds:status`). Contract:
 
 - **Join key** = task subject `"<T-id> <task>"`. Glyph map: `.`=pending, `~`=in_progress, `x`=completed.
-- Hydrate projects rows in `{., ~}`; `!`/`?` rows are excluded (TaskList has no "blocked-on-human" status) and surface as BLOCKERS in the sit-rep.
-- `blockedBy` derived from phase order (`P<k+1>` after `P<k>`). The §T schema gains NO `dep` column — that would shift `lib-row-flip.sh`'s positional `state`/`cite` cells and break the helper.
+- Hydrate projects rows in `{., ~}`; `!`/`?` rows are excluded (TaskList has no "blocked-on-human" status) and surface as BLOCKERS in the sit-rep. A `who=H` row is projected but reported separately, since it is takeable — just not by the agent.
+- `blockedBy` is the row's own `needs` cell, mapped id to task. Derived, never inferred: the earlier rule read it off phase order, so every task in a phase blocked on the whole phase before it whether or not it depended on any of it.
 - **§T → TaskList is eager** (`ds:build` mirrors at CLAIM→in_progress, FLIP→completed). **TaskList → §T is advisory only** — `ds:status` warns if a TaskList task is `completed` but its §T row lacks `x`+cite; it never auto-flips (Vm.3 needs a commit cite).
 
 ## 9. §B — Bug ledger

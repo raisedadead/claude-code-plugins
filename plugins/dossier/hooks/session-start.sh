@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+HERE="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib-sections.sh disable=SC1091
+source "${HERE}/lib-sections.sh"
+
 SCRATCHPAD=".scratchpad"
 DOSSIER_DIR="${SCRATCHPAD}/dossier"
 INDEX_FILE="${SCRATCHPAD}/INDEX.md"
@@ -82,9 +86,9 @@ if [[ -d "${DOSSIER_DIR}" ]]; then
 		ddbase=$(basename "${dd}")
 		[[ "${ddbase}" == "_archive" ]] && continue
 		[[ -f "${dd}DOSSIER.md" ]] || continue
-		inc=$(awk -v b="${ddbase}" '
-      /^## §S/ { in_s = 1; next }
-      /^## §/  { in_s = 0 }
+		inc=$(awk -v b="${ddbase}" -v any="$DS_SEC_ANY" -v sec_s="$DS_SEC_STATUS" '
+      $0 ~ sec_s { in_s = 1; next }
+      $0 ~ any   { in_s = 0 }
       in_s {
         ev = $5
         if (ev == "START") { op[$3 ":" $4] = $0; if ($4 == "pending") pend[$3] = $3 ":" $4 }
@@ -118,7 +122,7 @@ if [[ "${drift_count}" -gt 0 ]]; then
 	dmsg="⚠ dossier: ${drift_count} in conflicting state (drift) — ${drift_slugs}. Run /dossier:status to reconcile."
 	if [[ -n "${sys_msg}" ]]; then sys_msg="${sys_msg} ${dmsg}"; else sys_msg="${dmsg}"; fi
 	ctx_lines+=("")
-	ctx_lines+=("⚠ drift (${drift_count}): ${drift_slugs} — header/§Z/location disagreement, reconcile via ds:status")
+	ctx_lines+=("⚠ drift (${drift_count}): ${drift_slugs} — header/Closeout/location disagreement, reconcile via ds:status")
 fi
 if [[ -n "${resume_hints}" ]]; then
 	ctx_lines+=("")
@@ -141,19 +145,29 @@ if [[ -n "${live_slug}" && -d "${DOSSIER_DIR}/${live_slug}" ]]; then
 
 		while IFS= read -r line; do
 			ctx_lines+=("${line}")
-		done < <(awk -F'|' '
-      /^\| *T[0-9]+ *\|/ {
-        st=$4; task=$5; ph=$3
-        gsub(/^[ \t]+|[ \t]+$/,"",st); gsub(/^[ \t]+|[ \t]+$/,"",task); gsub(/^[ \t]+|[ \t]+$/,"",ph)
+		done < <(awk -F'|' -v any="$DS_SEC_ANY" -v sec_t="$DS_SEC_TASKS" '
+      function trim(s){ gsub(/^[ \t]+|[ \t]+$/,"",s); return s }
+      $0 ~ sec_t { in_t=1; hdr=0; cs=0; ck=0; next }
+      $0 ~ any   { in_t=0 }
+      in_t && /^\|/ && $0 !~ /^\|[ :|-]+$/ && !hdr {
+        hdr=1
+        for (i=2; i<=NF; i++) {
+          if (trim($i)=="state") cs=i
+                    if (trim($i)=="task")  ck=i
+        }
+        next
+      }
+      in_t && hdr && cs && ck && /^\| *T[0-9]+ *\|/ {
+        st=trim($cs); task=trim($ck)
         total++
         if(st=="x") done++
         else if(st=="~") prog++
-        else if(st=="!"){ blk++; blocker[blk]=ph" "task }
-        else if(st=="?"){ q++; research[q]=ph" "task }
+        else if(st=="!"){ blk++; blocker[blk]=task }
+        else if(st=="?"){ q++; research[q]=task }
       }
       END {
         if(!total) exit
-        ln=sprintf("§T: %d/%d done", done+0, total)
+        ln=sprintf("Tasks: %d/%d done", done+0, total)
         if(prog) ln=ln sprintf(", %d in-progress", prog)
         if(blk)  ln=ln sprintf(", %d blocked", blk)
         if(q)    ln=ln sprintf(", %d need-research", q)
@@ -165,31 +179,31 @@ if [[ -n "${live_slug}" && -d "${DOSSIER_DIR}/${live_slug}" ]]; then
 
 		while IFS= read -r line; do
 			ctx_lines+=("${line}")
-		done < <(awk -F'|' '
-      /^## §X/{x=1; next} /^## §[^X]/{x=0}
+		done < <(awk -F'|' -v any="$DS_SEC_ANY" -v sec_x="$DS_SEC_REPOS" '
+      $0 ~ sec_x {x=1; next} $0 ~ any {x=0}
       x && /^\|/ {
         if ($0 ~ /^\|[ :|-]+$/) next
         if (!hdr) { hdr=1; next }
         n++; p=$6; gsub(/^[ \t]+|[ \t]+$/,"",p); if(p=="no") unp++
       }
-      END { if(n) printf "§X: %d repos, %d unpushed\n", n, unp+0 }
+      END { if(n) printf "Repos: %d repos, %d unpushed\n", n, unp+0 }
     ' "${doss}")
 
 		while IFS= read -r line; do
 			ctx_lines+=("just did: ${line}")
-		done < <(awk '/^## §S/,/^## §[^S]/' "${doss}" | grep -v '^## §' | grep -v '^[[:space:]]*$' | tail -2)
+		done < <(awk -v any="$DS_SEC_ANY" -v s="$DS_SEC_STATUS" '$0 ~ s { insec=1; next } insec && $0 ~ any { insec=0 } insec' "${doss}" | grep -v '^[[:space:]]*$' | tail -2)
 
 		if [[ -n "${incomplete}" ]]; then
 			ctx_lines+=("")
 			ctx_lines+=("${incomplete}")
-			ctx_lines+=("### §T (full — resume context)")
+			ctx_lines+=("### Tasks (full — resume context)")
 			while IFS= read -r line; do
 				ctx_lines+=("${line}")
-			done < <(awk '/^## §T/,/^## §[^T]/' "${doss}" | grep -v '^## §' | grep -v '^[[:space:]]*$')
-			ctx_lines+=("### §X (full)")
+			done < <(awk -v any="$DS_SEC_ANY" -v s="$DS_SEC_TASKS" '$0 ~ s { insec=1; next } insec && $0 ~ any { insec=0 } insec' "${doss}" | grep -v '^[[:space:]]*$')
+			ctx_lines+=("### Repos (full)")
 			while IFS= read -r line; do
 				ctx_lines+=("${line}")
-			done < <(awk '/^## §X/,/^## §[^X]/' "${doss}" | grep -v '^## §' | grep -v '^[[:space:]]*$')
+			done < <(awk -v any="$DS_SEC_ANY" -v s="$DS_SEC_REPOS" '$0 ~ s { insec=1; next } insec && $0 ~ any { insec=0 } insec' "${doss}" | grep -v '^[[:space:]]*$')
 		fi
 
 		ctx_lines+=("(ds:status for full dashboard)")

@@ -199,9 +199,22 @@ def test_flakiness_quarantine_and_new() -> None:
 
 
 def _run() -> int:
+    wanted = ""
+    argv = sys.argv[1:]
+    if "-k" in argv:
+        index = argv.index("-k")
+        if index + 1 == len(argv):
+            print("-k needs a substring", file=sys.stderr)
+            return 1
+        wanted = argv[index + 1]
     tests = [
-        v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)
+        v
+        for k, v in sorted(globals().items())
+        if k.startswith("test_") and callable(v) and (not wanted or wanted in k)
     ]
+    if wanted and not tests:
+        print(f"no test matched {wanted!r}", file=sys.stderr)
+        return 1
     failed = 0
     for t in tests:
         try:

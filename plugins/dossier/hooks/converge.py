@@ -26,9 +26,11 @@ TIMEOUT_SECONDS = 120
 CONTRACT_DIR = ".dossier"
 DEPTH_VAR = "DS_CONVERGE_DEPTH"
 MAX_DEPTH = 2
+DETAIL_MAX = 120
 
 _ROW = re.compile(r"^\|(.+)\|\s*$")
 _SPLIT = re.compile(r"(?<!\\)\|")
+_DATE_PREFIX = re.compile(r"^\d{4}-\d{2}-\d{2}-")
 
 
 def _cells(line: str) -> list[str]:
@@ -106,7 +108,16 @@ def _met(expect: str, code: int, out: str) -> bool:
     return False
 
 
-def _run(command: str, root: Path, depth: int) -> tuple[int, str]:
+def _run(command: str, root: Path, depth: int) -> tuple[int, str, str]:
+    """Exit code, stdout and stderr, kept apart.
+
+    `_met` reads only the first two. Merging them made `stdout: <text>` match
+    text the command sent to stderr, so a wave reported MET on output it never
+    printed to stdout, and `stdout: (nothing)` reported UNMET against an empty
+    stdout that happened to sit beside a warning. The timeout notice goes in the
+    stderr slot so it never reaches a `stdout:` comparison; it still prints on
+    the criterion line, and never reaches this process's own stderr.
+    """
     child = dict(os.environ)
     child[DEPTH_VAR] = str(depth + 1)
     try:
@@ -120,8 +131,22 @@ def _run(command: str, root: Path, depth: int) -> tuple[int, str]:
             env=child,
         )
     except subprocess.TimeoutExpired:
-        return 124, f"timed out after {TIMEOUT_SECONDS}s"
-    return done.returncode, done.stdout + done.stderr
+        return 124, "", f"timed out after {TIMEOUT_SECONDS}s"
+    return done.returncode, done.stdout, done.stderr
+
+
+def _detail(stream: str) -> str:
+    """The first non-empty line of a failed criterion's stderr, bounded.
+
+    Separating the streams would otherwise throw the diagnostic away and send
+    the reader off to re-run the command by hand. The bound keeps one runaway
+    command from burying the verdict line under its own output.
+    """
+    for raw in stream.splitlines():
+        line = raw.strip()
+        if line:
+            return line[:DETAIL_MAX]
+    return ""
 
 
 def _fail(reason: str) -> int:
@@ -153,16 +178,21 @@ def _contract_for(root: Path, slug: str) -> Path | None:
     this function instead of transcribing it. The match is the full stem, or
     the stem as the slug's own name with its date prefix dropped: a bare
     suffix test let `s.md` claim wave 2026-08-05-rails and `rails.md` claim
-    2026-08-05-guardrails, each reporting MET for a contract of nothing.
+    2026-08-05-guardrails, each reporting MET for a contract of nothing. A
+    hyphen-delimited suffix test was the first correction and was still looser
+    than this sentence, since it also let `check.md` claim
+    2026-08-01-claim-check; equality against the date-stripped name is what the
+    sentence says and now what the code does.
 
     `.dossier/` is the tracked home a repo opts into by creating it; the wave
     directory's own `CONTRACT.md` is the untracked fallback, which dies with
     the wave and can be cited by nobody — its writer was told so at `ds:new`.
     """
+    undated = _DATE_PREFIX.sub("", slug)
     folder = root / CONTRACT_DIR
     if folder.is_dir():
         for candidate in sorted(p for p in folder.glob("*.md") if p.is_file()):
-            if candidate.stem == slug or slug.endswith("-" + candidate.stem):
+            if candidate.stem in (slug, undated):
                 return candidate
     fallback = root / ".scratchpad" / "dossier" / slug / "CONTRACT.md"
     if fallback.is_file():
@@ -245,10 +275,13 @@ def main(argv: list[str]) -> int:
     unmet = 0
     for ident, command, expect in rows:
         bare = command[1:-1]
-        code, out = _run(bare, root, depth)
+        code, out, err = _run(bare, root, depth)
         ok = _met(expect, code, out)
         unmet += 0 if ok else 1
-        print(f"  {'MET  ' if ok else 'UNMET'} {ident}. {bare}  [{expect}]")
+        line = f"  {'MET  ' if ok else 'UNMET'} {ident}. {bare}  [{expect}]"
+        if not ok and (detail := _detail(err)):
+            line += f"  — {detail}"
+        print(line)
 
     if unmet:
         print(f"CONVERGE: UNMET {unmet} of {len(rows)}")

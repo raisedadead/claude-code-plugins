@@ -96,11 +96,10 @@ Compute fields:
 
 ```
 title = <slug>
-P-total = max P<N> across the operator-provided initial §T rows (default 1)
-header_line = `<date>` · `live` · `P1/<P-total>`
+header_line = `<date>` · `live` · `P1/1`
 ```
 
-Stamp `P1/<P-total>` rather than a hardcoded `P1/1`, so a multi-phase seed matches what `lib-regen-index.sh` derives from §T — otherwise INDEX shows `P1/1` while §T spans `P1..P3`, a self-inflicted Vm.5 drift.
+The counter is vestigial: Tasks carries no phase column, so `lib-regen-index.sh` derives `P1/1` for every wave it writes. Stamping anything else would drift from what regen recomputes.
 
 Write the file at `<dir>/DOSSIER.md` per FORMAT.md §2 section order:
 
@@ -109,50 +108,50 @@ Write the file at `<dir>/DOSSIER.md` per FORMAT.md §2 section order:
 
 `<date>` · `live` · `P1/<P-total>`
 
-## §G — Goal
+## Goal
 
 <goal-from-step-2>
 
 Scope:
 <scope-bullets>
 
-## §C — Constraints
+## Constraints
 
 <constraint-bullets>
 
-## §I — Interfaces
+## Interfaces
 
 _(empty — populate when first contract lands)_
 
-## §V — Invariants
+## Invariants
 
 | id | invariant | check |
 |----|-----------|-------|
 
-## §T — Task ledger
+## Tasks
 
-| id | P | state | task | cite | verify |
-|----|---|-------|------|------|--------|
+| id | state | who | task | needs | cite | verify |
+|----|-------|-----|------|-------|------|--------|
 <initial-tasks-if-provided>
 
-## §B — Bug ledger
+## Bugs
 
 | id | bug | root cause | invariant added | fix cite |
 |----|-----|------------|-----------------|----------|
 
-## §X — Cross-repo state
+## Repos
 
 | repo | branch | ahead | tag | pushed | notes |
 |------|--------|-------|-----|--------|-------|
 <repo-rows-from-step-2-with-placeholders>
 
-## §S — Rolling status log
+## Status
 
 <!-- Each entry is its own paragraph (blank lines before AND after). Per FORMAT.md §11. -->
 
-<YYYY-MM-DD HH:MM> ds:new — created slug=<slug> phase=P1
+<YYYY-MM-DD HH:MM> ds:new — created slug=<slug>
 
-## §Z — Closeout
+## Closeout
 
 _(empty — written by ds:close)_
 ```

@@ -9,6 +9,9 @@ ARCHIVE="${DOSSIER_DIR}/_archive"
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 
+# shellcheck source=lib-sections.sh disable=SC1091
+source "${HERE}/lib-sections.sh"
+
 for d in "${DOSSIER_DIR}"/*/; do
 	[[ -d "${d}" ]] || continue
 	base="$(basename "${d}")"
@@ -17,7 +20,7 @@ for d in "${DOSSIER_DIR}"/*/; do
 	[[ -f "${doss}" ]] || continue
 	[[ -e "${d}.ds-lock" ]] && continue
 
-	zsec=$(awk '/^## §Z/,EOF { print }' "${doss}" 2>/dev/null || true)
+	zsec=$(awk -v sec_z="$DS_SEC_CLOSEOUT" '$0 ~ sec_z { z = 1 } z { print }' "${doss}" 2>/dev/null || true)
 
 	z_closed=0
 	if printf '%s' "${zsec}" | grep -qE '(^|[[:space:]])(complete:[[:space:]]+true|successor:[[:space:]]+[^[:space:]]|abandoned:[[:space:]]+true)'; then

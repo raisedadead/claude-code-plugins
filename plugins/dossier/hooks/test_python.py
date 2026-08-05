@@ -59,7 +59,9 @@ def test_tlr_round_trip() -> None:
     hdr = roll_lib.parse_tlr_header(body)
     assert hdr.get("doss") == "2026-07-01-foo", hdr
     assert hdr.get("sid") == "sess-1", hdr
-    assert "doss: —" in roll_lib.render_tlr(tasks, "s", "explicit"), "omitted doss renders —"
+    assert "doss: —" in roll_lib.render_tlr(tasks, "s", "explicit"), (
+        "omitted doss renders —"
+    )
     parsed = roll_lib.parse_tlr(body)
     assert len(parsed) == 3, f"expected 3 rows, got {len(parsed)}"
     assert parsed[0]["subject"] == "Fix |sort| bug", parsed[0]["subject"]
@@ -315,7 +317,10 @@ def test_marker_guard_skips_non_dossier_repo() -> None:
             {
                 "tool_name": "Edit",
                 "cwd": d,
-                "tool_input": {"file_path": "src/foo.ts", "new_string": "// PH3-B7: guard"},
+                "tool_input": {
+                    "file_path": "src/foo.ts",
+                    "new_string": "// PH3-B7: guard",
+                },
             },
         )
         assert rc == 0 and out == "", (rc, out)
@@ -398,7 +403,9 @@ def _write_skill(root: Path, name: str, description: str) -> None:
 def test_eval_routing_clean() -> None:
     with tempfile.TemporaryDirectory() as d:
         root = Path(d)
-        _write_skill(root, "alpha", 'Do alpha. Invoke when the user says "alpha", "a1".')
+        _write_skill(
+            root, "alpha", 'Do alpha. Invoke when the user says "alpha", "a1".'
+        )
         _write_skill(root, "beta", 'Do beta. Invoke when the user says "beta", "b1".')
         assert eval_skill_routing.lint(root) == [], eval_skill_routing.lint(root)
 
@@ -442,7 +449,12 @@ def _drive_in(mod: object, payload: dict, cwd: Path) -> tuple[int, str]:
         os.chdir(old)
 
 
-_GUARD_ENTRY = {"id": "V1", "pattern": r"eval\(", "message": "no eval", "paths": ["src/*.py"]}
+_GUARD_ENTRY = {
+    "id": "V1",
+    "pattern": r"eval\(",
+    "message": "no eval",
+    "paths": ["src/*.py"],
+}
 
 
 def _write_payload(path: str, content: str) -> dict:
@@ -453,7 +465,9 @@ def test_invariant_guard_blocks_registered_pattern() -> None:
     with tempfile.TemporaryDirectory() as d:
         root = Path(d)
         _invariant_registry(root, [_GUARD_ENTRY])
-        rc, _ = _drive_in(invariant_guard, _write_payload("src/app.py", "x = eval(y)"), root)
+        rc, _ = _drive_in(
+            invariant_guard, _write_payload("src/app.py", "x = eval(y)"), root
+        )
         assert rc == 2, rc
 
 
@@ -461,7 +475,9 @@ def test_invariant_guard_allows_non_match() -> None:
     with tempfile.TemporaryDirectory() as d:
         root = Path(d)
         _invariant_registry(root, [_GUARD_ENTRY])
-        rc, _ = _drive_in(invariant_guard, _write_payload("src/app.py", "x = safe(y)"), root)
+        rc, _ = _drive_in(
+            invariant_guard, _write_payload("src/app.py", "x = safe(y)"), root
+        )
         assert rc == 0, rc
 
 
@@ -469,14 +485,18 @@ def test_invariant_guard_out_of_scope_path() -> None:
     with tempfile.TemporaryDirectory() as d:
         root = Path(d)
         _invariant_registry(root, [_GUARD_ENTRY])
-        rc, _ = _drive_in(invariant_guard, _write_payload("other/app.py", "x = eval(y)"), root)
+        rc, _ = _drive_in(
+            invariant_guard, _write_payload("other/app.py", "x = eval(y)"), root
+        )
         assert rc == 0, rc
 
 
 def test_invariant_guard_dossier_pass_through() -> None:
     with tempfile.TemporaryDirectory() as d:
         root = Path(d)
-        _invariant_registry(root, [{"id": "V1", "pattern": r"eval\(", "message": "no eval"}])
+        _invariant_registry(
+            root, [{"id": "V1", "pattern": r"eval\(", "message": "no eval"}]
+        )
         rc, _ = _drive_in(
             invariant_guard,
             _write_payload(".scratchpad/dossier/x/DOSSIER.md", "eval("),
@@ -487,7 +507,9 @@ def test_invariant_guard_dossier_pass_through() -> None:
 
 def test_invariant_guard_no_registry_failopen() -> None:
     with tempfile.TemporaryDirectory() as d:
-        rc, _ = _drive_in(invariant_guard, _write_payload("src/app.py", "eval("), Path(d))
+        rc, _ = _drive_in(
+            invariant_guard, _write_payload("src/app.py", "eval("), Path(d)
+        )
         assert rc == 0, rc
 
 
@@ -504,10 +526,14 @@ def test_invariant_guard_malformed_registry_failopen() -> None:
 def test_invariant_guard_off_env() -> None:
     with tempfile.TemporaryDirectory() as d:
         root = Path(d)
-        _invariant_registry(root, [{"id": "V1", "pattern": r"eval\(", "message": "no eval"}])
+        _invariant_registry(
+            root, [{"id": "V1", "pattern": r"eval\(", "message": "no eval"}]
+        )
         os.environ["DOSSIER_INVARIANT_GUARD"] = "off"
         try:
-            rc, _ = _drive_in(invariant_guard, _write_payload("src/app.py", "eval("), root)
+            rc, _ = _drive_in(
+                invariant_guard, _write_payload("src/app.py", "eval("), root
+            )
         finally:
             os.environ.pop("DOSSIER_INVARIANT_GUARD", None)
         assert rc == 0, rc
@@ -526,7 +552,9 @@ def test_invariant_guard_leaves_no_artifact_outside_scratchpad() -> None:
         (Path(root) / ".scratchpad" / "dossier").mkdir(parents=True)
         reg = Path(root) / ".dossier"
         reg.mkdir(parents=True)
-        (reg / "invariant-guards.json").write_text(json.dumps([_GUARD_ENTRY]), encoding="utf-8")
+        (reg / "invariant-guards.json").write_text(
+            json.dumps([_GUARD_ENTRY]), encoding="utf-8"
+        )
         payload = _write_payload("src/app.py", "x = eval(y)")
         payload["cwd"] = root
         rc, out = _drive_in(invariant_guard, payload, Path(root))
@@ -534,7 +562,10 @@ def test_invariant_guard_leaves_no_artifact_outside_scratchpad() -> None:
 
 
 def test_invariant_guard_skips_a_project_with_no_dossier_tree() -> None:
-    with tempfile.TemporaryDirectory() as dossier_root, tempfile.TemporaryDirectory() as bare_root:
+    with (
+        tempfile.TemporaryDirectory() as dossier_root,
+        tempfile.TemporaryDirectory() as bare_root,
+    ):
         _invariant_registry(Path(dossier_root), [_GUARD_ENTRY])
         payload = _write_payload("src/app.py", "x = eval(y)")
         payload["cwd"] = bare_root
@@ -582,7 +613,9 @@ def test_verify_hook_emits_reminder_when_a_rule_fires() -> None:
     with tempfile.TemporaryDirectory() as d:
         ws = _dossier_workspace(d)
         with _only_probe_rule():
-            rc, out = _drive_in(verify_hook, _verify_payload(ws, "x = 'PROBE-ABC'\n"), ws)
+            rc, out = _drive_in(
+                verify_hook, _verify_payload(ws, "x = 'PROBE-ABC'\n"), ws
+            )
         assert rc == 0, rc
         assert "additionalContext" in out, out
         assert "probe ABC" in out, out
@@ -617,9 +650,22 @@ def test_verify_hook_honours_an_inline_skip_marker() -> None:
 
 
 def _run() -> int:
+    wanted = ""
+    argv = sys.argv[1:]
+    if "-k" in argv:
+        index = argv.index("-k")
+        if index + 1 == len(argv):
+            print("-k needs a substring", file=sys.stderr)
+            return 1
+        wanted = argv[index + 1]
     tests = [
-        v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)
+        v
+        for k, v in sorted(globals().items())
+        if k.startswith("test_") and callable(v) and (not wanted or wanted in k)
     ]
+    if wanted and not tests:
+        print(f"no test matched {wanted!r}", file=sys.stderr)
+        return 1
     failed = 0
     for t in tests:
         try:

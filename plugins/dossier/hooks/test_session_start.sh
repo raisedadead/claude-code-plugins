@@ -237,4 +237,34 @@ run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":"
 assert_valid_json "no-dossier"
 [ -z "$(title_of)" ] || fail "no dossier dir must not emit sessionTitle"
 
+ledger_with() {
+	local slug="$1" tasks="$2" status="$3"
+	rm -rf "$WS/.scratchpad"
+	mkdir -p "$WS/.scratchpad/dossier/$slug"
+	{
+		# shellcheck disable=SC2016
+		printf '`2026-08-05` · `live` · `P1/1`\n\n'
+		printf '%s\n\n' "$tasks"
+		printf '| id | state | who | task    | needs | cite | verify |\n'
+		printf '|----|-------|-----|---------|-------|------|--------|\n'
+		printf '| T1 | x     | A   | first   | —     | ab12 | —      |\n'
+		printf '| T2 | .     | A   | second  | T1    | —    | —      |\n\n'
+		printf '%s\n\n' "$status"
+		printf '2026-08-05 10:00 ds:new — created slug=%s\n\n' "$slug"
+		printf '2026-08-05 10:05 ds:build T1 DONE\n'
+	} >"$WS/.scratchpad/dossier/$slug/DOSSIER.md"
+}
+
+for spelling in "## §T — Task ledger|## §S — Rolling status log" "## Tasks|## Status"; do
+	tasks_h="${spelling%%|*}"
+	status_h="${spelling##*|}"
+	ledger_with "2026-08-05-sitrep" "$tasks_h" "$status_h"
+	run_hook '{"hook_event_name":"SessionStart","source":"startup"}'
+	assert_valid_json "sitrep $tasks_h"
+	ctx_of | grep -q 'Tasks: 1/2 done' ||
+		fail "$tasks_h: task summary must count by header name, got: $(ctx_of)"
+	[[ "$(ctx_of | grep -c 'just did:')" == "2" ]] ||
+		fail "$status_h: the two most recent Status entries must reach the sit-rep, got: $(ctx_of)"
+done
+
 printf 'ok\n'

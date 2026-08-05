@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+HERE="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib-sections.sh disable=SC1091
+source "${HERE}/lib-sections.sh"
+
 DIR="${1:?usage: lib-z-write.sh <dossier-dir> <complete|successor|abandoned> <value> <summary> [cites]}"
 KIND="${2:?kind required (complete|successor|abandoned)}"
 VALUE="${3:-}"
@@ -37,18 +41,19 @@ abandoned)
 	;;
 esac
 
-grep -q '^## §Z' "$FILE" || {
-	printf 'lib-z-write: no §Z heading in %s\n' "$FILE" >&2
+grep -qE "$DS_SEC_CLOSEOUT" "$FILE" || {
+	printf 'lib-z-write: no Closeout heading in %s\n' "$FILE" >&2
 	exit 1
 }
 
+Z_HEADING=$(grep -m1 -E "$DS_SEC_CLOSEOUT" "$FILE")
 TS=$(date "+%Y-%m-%d %H:%M")
 TMP="$(mktemp "${FILE}.XXXXXX")"
 trap 'rm -f "$TMP"' EXIT
 
 {
-	awk '/^## §Z/ { exit } { print }' "$FILE"
-	printf '## §Z — Closeout\n\n'
+	awk -v sec_z="$DS_SEC_CLOSEOUT" '$0 ~ sec_z { exit } { print }' "$FILE"
+	printf '%s\n\n' "$Z_HEADING"
 	printf '%s — closed\n\n' "$TS"
 	printf '%s\n\n' "$body"
 	printf 'summary: %s\n\n' "$SUMMARY"

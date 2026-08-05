@@ -934,11 +934,58 @@ def test_a_wildcard_heavy_section_glob_does_not_hang() -> None:
         assert result.returncode == NAG, result.stdout + result.stderr
 
 
+def test_a_subdirectory_root_agrees_with_the_work_tree_top() -> None:
+    """git emits diff paths relative to the work-tree top, and they are handed
+    back as pathspecs from whatever root was passed. Given a subdirectory the
+    two disagreed and every file measured zero added lines — reported not as a
+    skip but as `CLEAN 1 file`, so the examined count said it had looked."""
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp) / "repo"
+        repo.mkdir()
+        _init(repo)
+        _write(repo, "sub/wide.py", _line(150))
+        _git(repo, "add", "sub/wide.py")
+        top = _run(repo)
+        nested = _run(repo / "sub")
+        assert _verdict(top) == _verdict(nested), (
+            f"top={_verdict(top)!r} nested={_verdict(nested)!r}"
+        )
+        assert top.returncode == nested.returncode, top.stdout + nested.stdout
+
+
+def test_a_subdirectory_root_still_reads_the_repo_editorconfig() -> None:
+    """The declared limit lives at the work-tree top. Resolving the top must
+    not leave the config lookup anchored to the subdirectory, or a declared
+    limit silently degrades to the advisory fallback."""
+    with tempfile.TemporaryDirectory() as tmp:
+        repo = Path(tmp) / "repo"
+        repo.mkdir()
+        _init(repo)
+        _write(repo, ".editorconfig", "root = true\n\n[*]\nmax_line_length = 40\n")
+        _write(repo, "sub/wide.py", _line(60))
+        _git(repo, "add", "sub/wide.py")
+        nested = _run(repo / "sub")
+        assert _verdict(nested) == "TIGER: BLOCK 1", nested.stdout + nested.stderr
+        assert nested.returncode == BLOCK, nested.stdout + nested.stderr
+
+
 def _main() -> int:
+    wanted = ""
+    argv = sys.argv[1:]
+    if "-k" in argv:
+        index = argv.index("-k")
+        if index + 1 == len(argv):
+            print("-k needs a substring", file=sys.stderr)
+            return 1
+        wanted = argv[index + 1]
     failures = 0
+    selected = 0
     for name, fn in sorted(globals().items()):
         if not name.startswith("test_") or not callable(fn):
             continue
+        if wanted and wanted not in name:
+            continue
+        selected += 1
         try:
             fn()
         except Exception as exc:
@@ -948,6 +995,9 @@ def _main() -> int:
             print(f"ok {name}")
     if failures:
         print(f"{failures} failing", file=sys.stderr)
+        return 1
+    if wanted and not selected:
+        print(f"no test matched {wanted!r}", file=sys.stderr)
         return 1
     print("ok")
     return 0
