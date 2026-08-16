@@ -3,7 +3,7 @@
 | field       | value                                                                                                |
 | ----------- | ---------------------------------------------------------------------------------------------------- |
 | consumer    | the operator, for the response-length gate; anyone running whetstone, for `claim-check --stdin`      |
-| reached-via | rig: `home apply` installs the Stop hook · plugin: `whetstone/bin/claim-check --stdin` on PATH (F31) |
+| reached-via | rig: `home apply` installs the Stop hook · plugin: `whetstone/bin/claim-check --stdin`, resolved by full path from `installed_plugins.json` |
 | budget      | 12 commits                                                                                           |
 
 ## why
@@ -25,10 +25,11 @@ The operator asks for shorter replies and first-time-right code. Both are prose 
 | 7   | `shellcheck plugins/whetstone/bin/claim-check`                                                    | exit 0    |
 | 8   | `claude plugin validate plugins/whetstone`                                                        | exit 0    |
 | 9   | `python3 ~/.dotfiles-private/dot_claude/hooks/test_executable_hooks.py`                           | exit 0    |
-| 10  | `python3 ~/.dotfiles-private/dot_claude/hooks/test_executable_hooks.py -k length_gate`            | exit 0    |
+| 10  | `python3 ~/.dotfiles-private/dot_claude/hooks/test_executable_hooks.py TestLengthGate 2>&1 \| grep -c '^OK'` | stdout: 1 |
+| 12  | `python3 ~/.dotfiles-private/dot_claude/hooks/test_executable_hooks.py TestClaimGate 2>&1 \| grep -c '^OK'`  | stdout: 1 |
 | 11  | `cd ~/.dotfiles-private && git diff --name-only HEAD~1 -- ARCHI.md \| grep -c ARCHI.md`           | stdout: 1 |
 
-Criteria 2 and 3 are the pair the testing standard asks for: one proves the stdin mode fires, one proves it does not false-positive. Criterion 4 proves the file mode still works, so the new input surface has not regressed the old one. Criterion 10 names the rig's own positive/negative pair; `-k` must match both.
+Criteria 2 and 3 are the pair the testing standard asks for: one proves the stdin mode fires, one proves it does not false-positive. Criterion 4 proves the file mode still works, so the new input surface has not regressed the old one. Criteria 10 and 12 name the rig's two gate suites. They match on `^OK` rather than on an exit code because `-k length_gate` selected zero tests and still read as a pass — a criterion that proves nothing looks identical to one that passes. `NO TESTS RAN` prints no `OK`, so this form fails when selection breaks.
 
 Criterion 11 is the ARCHI tenet — a rig change and its ARCHI edit land in the same commit — expressed as a command rather than a promise.
 
@@ -53,6 +54,6 @@ That is deliberate. The 2026-08-01 claim-check wave already ruled on the wider n
 
 ## notes
 
-The rig calls `claim-check` from the installed plugin cache's `bin/`, not from this repo's source tree (F31). Until a plugin refresh reaches the cache, `--stdin` does not exist on that PATH. The rig call must fail open on exit 64 and on an unknown-flag error, per the detect-and-skip tenet.
+The rig calls `claim-check` from the installed plugin cache, not from this repo's source tree. **It resolves the full path from `~/.claude/plugins/installed_plugins.json`, because a plugin's `bin/` is added to the Bash tool's PATH and to nothing else** — not hooks, not MCP, not LSP (`code.claude.com/docs/en/plugins-reference`, read 2026-08-16). This wave's first design assumed process-wide PATH and would have produced a gate that never resolved anything, forever, with fail-open hiding it. Until a cache refresh carries `--stdin`, the installed build returns exit 64 and the gate stays inert by construction.
 
 `home apply` will restore the `model: claude-fable-5[1m]` pin currently drifted out of the live `settings.json`. That changes the default model. Flag it before applying; do not apply silently.
