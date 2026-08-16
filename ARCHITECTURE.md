@@ -73,6 +73,10 @@ A gate that blocks on a signal it cannot back will be disabled by the operator w
 
 A consumer installs `hooks/`, `skills/` and `agents/`. They never receive `.github/`. Any rule enforced only in this repo's CI is a benefit no consuming project ever gets, and measuring its value from inside this repo will overstate it — the safety net here is not present there. When a check could live in either place, prefer the hook.
 
+**The rule is about reach, not content.** A gate encoding a fact about correctness belongs in the plugin, where it travels. A gate encoding one operator's preference belongs in that operator's harness, however well it would travel — shipping a taste to everyone who installs the plugin is the failure this rule invites when read too far. The split test is whether the threshold is a fact or a preference: an unbacked-claim lint is the first, a reply-length ceiling the second. D18 holds the worked example, where one wave built both and sent them to different homes.
+
+A plugin's `bin/` is documented as reaching the Bash tool's `PATH`. Whether it also reaches a hook, an MCP server or an LSP server is not stated either way, so a hook that calls a plugin executable resolves the full path itself rather than relying on a bare name. The cost is asymmetric: a full path works whether or not the `PATH` would have carried it. F31 carries the scope, the inference and the wave that read it too far.
+
 ## Verdict grammar
 
 Every gate ends in one of these signals. The enforcement column is the honesty tenet made concrete — it separates what is computed from what is merely parsed. This table lives here and nowhere else; it was previously duplicated across two files with a test to keep the copies identical.
