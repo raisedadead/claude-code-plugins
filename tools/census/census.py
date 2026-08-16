@@ -40,6 +40,12 @@ VERDICT_GRAMMAR = {
     "reviewer": re.compile(r"REVIEW: (PASS|CHANGES)"),
     "whetstone:whetstone-doubter": re.compile(r"(DOUBT: FAILURES|NO FAILURE FOUND)"),
 }
+OPERATOR_PUSHBACK = re.compile(
+    r"(?i)(^|\s)(no,|nope|that'?s (?:wrong|incorrect|not)"
+    r"|you (?:didn'?t|did not|failed to|missed|forgot)|why did you"
+    r"|i (?:asked|said)|stop\b|wrong\b|re-?read|you said|not what i"
+    r"|again\?|wrist-tap)"
+)
 SELF_CORRECTION = re.compile(
     r"(?i)\b(sorry|apolog\w+|i was wrong|my mistake"
     r"|i mis(?:read|stated|counted|understood)|correction:"
@@ -222,9 +228,8 @@ def census_turns() -> None:
                 if turn and turn["key"]:
                     buckets[turn["key"]].append(turn)
                 turn = {"key": None, "messages": 0, "characters": 0, "corrections": 0}
-                turn["pushback"] = bool(
-                    SELF_CORRECTION.search("\n".join(text_blocks(record)))
-                )
+                prompt = "\n".join(text_blocks(record))
+                turn["pushback"] = bool(OPERATOR_PUSHBACK.search(prompt[:1200]))
                 continue
             if turn is None:
                 continue
@@ -240,30 +245,78 @@ def census_turns() -> None:
         if turn and turn["key"]:
             buckets[turn["key"]].append(turn)
 
-    by_model: dict[str, list] = collections.defaultdict(list)
-    for (model, _day), turns in buckets.items():
-        by_model[model] += turns
-    header = (
-        f"{'model':20} {'turns':>6} {'msgs/turn':>10} "
-        f"{'chars/turn':>11} {'corr/turn':>10} {'turns w/ corr':>14}"
+    print("## whole corpus")
+    print_turn_table(flatten(buckets))
+    print_pairwise(buckets)
+    print(
+        "\nF34: a whole-corpus difference between two models is period and work, "
+        "not model — they rarely run the same days at the same effort. Only the "
+        "pairwise cut above compares like with like, and where it disagrees with "
+        "the whole-corpus table the pairwise read wins. Never quote the "
+        "whole-corpus rate alone."
     )
-    print(header)
+
+
+def print_pairwise(buckets: dict, floor: int = 25) -> None:
+    """Every model pair, restricted to the days both of them ran.
+
+    The whole-corpus table compares models that mostly ran in different weeks
+    on different work. This is the cut that compares like with like, and it is
+    the one F34 calls load-bearing — it reversed the headline once already.
+    """
+    days_by_model: dict[str, set] = collections.defaultdict(set)
+    for (model, day), _turns in buckets.items():
+        if day:
+            days_by_model[model].add(day)
+    models = sorted(days_by_model, key=lambda m: -len(flatten(buckets)[m]))
+    for index, left in enumerate(models):
+        for right in models[index + 1 :]:
+            shared = days_by_model[left] & days_by_model[right]
+            if not shared:
+                continue
+            paired = flatten(buckets, only_days=shared)
+            subset = {k: v for k, v in paired.items() if k in (left, right)}
+            if any(len(v) < floor for v in subset.values()) or len(subset) < 2:
+                continue
+            print(f"\n## {left} vs {right} — the {len(shared)} days both ran")
+            print(f"   {min(shared)} .. {max(shared)}")
+            print_turn_table(subset, floor=floor)
+
+
+def flatten(buckets: dict, only_days: set | None = None) -> dict[str, list]:
+    by_model: dict[str, list] = collections.defaultdict(list)
+    for (model, day), turns in buckets.items():
+        if only_days is None or day in only_days:
+            by_model[model] += turns
+    return by_model
+
+
+def day_overlap(buckets: dict) -> set:
+    """Days on which more than one model ran, which is the only fair cut."""
+    per_day: dict[str, set] = collections.defaultdict(set)
+    for (model, day), _turns in buckets.items():
+        if day:
+            per_day[day].add(model)
+    return {day for day, models in per_day.items() if len(models) > 1}
+
+
+def print_turn_table(by_model: dict[str, list], floor: int = 25) -> None:
+    print(
+        f"{'model':20} {'turns':>6} {'msgs/turn':>10} {'chars/turn':>11} "
+        f"{'corr/turn':>10} {'turns w/ corr':>14} {'pushback':>10}"
+    )
     for model, turns in sorted(by_model.items(), key=lambda item: -len(item[1])):
-        if len(turns) < 25:
+        if len(turns) < floor:
             continue
         with_correction = sum(1 for t in turns if t["corrections"]) / len(turns) * 100
+        pushback = sum(1 for t in turns if t["pushback"]) / len(turns) * 100
         print(
             f"{model:20} {len(turns):6d} "
             f"{statistics.mean([t['messages'] for t in turns]):10.1f} "
             f"{statistics.mean([t['characters'] for t in turns]):11.0f} "
             f"{statistics.mean([t['corrections'] for t in turns]):10.3f} "
-            f"{with_correction:13.1f}%"
+            f"{with_correction:13.1f}% {pushback:9.1f}%"
         )
-    print(
-        "\nF34: two models rarely overlap in time or effort setting here, so a "
-        "difference between rows is not attributable to the model. Cut by day "
-        "before drawing one."
-    )
 
 
 def report(title: str, counter: collections.Counter, limit: int | None = None) -> None:
