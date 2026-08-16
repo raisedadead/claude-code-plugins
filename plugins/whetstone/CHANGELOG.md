@@ -4,6 +4,20 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-08-16 (claim-check reads stdin)
+
+The wave built two gates and only one of them belongs in a plugin. Contract: `.dossier/2026-08-16-turn-gates.md`. The other — a response-length ceiling — stayed in the operator's own harness, because a line budget is one operator's taste rather than a fact about correctness; `RESEARCH.md` D18 carries that split and its rejected alternative. **A plugin cache predating this entry exits 64 on `--stdin`**, which is the unknown-option path, verified against the build at `a079de3`. Until a refresh lands, a caller wiring the flag gets an inert call, so read exit 64 as "not available yet" rather than as a failure. `[a6d6f8a..e26f081]`
+
+### Added
+
+- `claim-check --stdin` lints text that is not a file yet: a turn's own reply, a commit message, a draft. It carries the same five verbs and the same backed-or-labelled logic as the path mode, routed through one shared predicate, so the two modes cannot agree on fixtures while diverging on the case nobody wrote. A clean read prints `CLAIMS: CLEAN stdin` and exits 0. Empty input is clean — a caller with nothing to say has claimed nothing.
+- `--stdin` given together with a path is a usage error, exit 64. One input surface per invocation: reading both would let a clean file vouch for dirty stdin, and the verdict line could not say which side it came from.
+
+### Changed
+
+- The usage line now reads `claim-check --stdin | <path>...`. The previous `[--stdin] <path>...` parsed as though the flag and a path combined, which is the one thing the code refuses three lines above where it printed that string.
+- `skill-smith`'s `SKILL.md` documents the new mode, its verdict line, and the third exit-64 case.
+
 ## 2026-08-05 (a read of every tracked file)
 
 Every tracked file was read on its own, then five lenses hunted the assembled graph and each finding was handed to a separate agent told to refute it. Contract: `.dossier/2026-08-05-audit-debt.md`.
