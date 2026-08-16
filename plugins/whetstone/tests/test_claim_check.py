@@ -237,6 +237,76 @@ def test_the_wrapper_agrees_with_the_module() -> None:
     assert shell.returncode == direct.returncode, shell.stdout + shell.stderr
 
 
+def _run_stdin(text: str, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(CHECK), "--stdin", *args],
+        input=text,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_stdin_flags_an_unbacked_claim() -> None:
+    result = _run_stdin("The hook blocks the write.\n")
+    assert _verdict(result) == "CLAIMS: FLAGGED 1", result.stdout + result.stderr
+    assert result.returncode == FLAGGED, result.stdout
+
+
+def test_stdin_passes_a_backed_claim() -> None:
+    """The negative half of the pair. Without it the mode could flag
+    everything and still satisfy the test above."""
+    result = _run_stdin("The hook blocks the write, exit 2.\n")
+    assert _verdict(result) == "CLAIMS: CLEAN stdin", result.stdout + result.stderr
+    assert result.returncode == CLEAN, result.stdout
+
+
+def test_stdin_passes_a_labelled_claim() -> None:
+    result = _run_stdin("The hook blocks nothing — advisory.\n")
+    assert result.returncode == CLEAN, result.stdout + result.stderr
+
+
+def test_stdin_names_the_line_not_a_path() -> None:
+    result = _run_stdin("filler\nThe hook blocks the write.\n")
+    assert "<stdin>:2:" in result.stdout, result.stdout
+
+
+def test_stdin_and_a_path_together_are_a_usage_error() -> None:
+    """Reading both would let a clean file vouch for dirty stdin, or the
+    reverse — one input surface per invocation."""
+    result = _run_stdin(
+        "The hook blocks the write.\n", str(FIXTURES / "claims-true.md")
+    )
+    assert result.returncode == USAGE, result.stdout + result.stderr
+
+
+def test_stdin_with_no_input_is_clean_not_a_usage_error() -> None:
+    """A turn with no final text is not a failure to lint."""
+    result = _run_stdin("")
+    assert result.returncode == CLEAN, result.stdout + result.stderr
+
+
+def test_stdin_and_file_mode_agree_on_the_same_text() -> None:
+    """V1: one predicate. Two implementations that agree on fixtures still
+    diverge on the case nobody wrote — the §S pairing bug is the precedent."""
+    source = (FIXTURES / "claims-false.md").read_text(encoding="utf-8")
+    piped = _run_stdin(source)
+    direct = _run(FIXTURES / "claims-false.md")
+    assert piped.returncode == direct.returncode, piped.stdout + direct.stdout
+    assert _verdict(piped).split()[-1] == _verdict(direct).split()[-1], (
+        piped.stdout + direct.stdout
+    )
+
+
+def test_the_wrapper_passes_stdin_through() -> None:
+    shell = subprocess.run(
+        ["bash", str(WRAPPER), "--stdin"],
+        input="The hook blocks the write.\n",
+        capture_output=True,
+        text=True,
+    )
+    assert shell.returncode == FLAGGED, shell.stdout + shell.stderr
+
+
 WHETSTONE_RUNNERS = (
     Path(__file__).resolve().parent / "test_whetstone_py.py",
     Path(__file__).resolve().parent / "test_tiger_check.py",

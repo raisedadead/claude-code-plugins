@@ -105,25 +105,55 @@ def _is_backed(unit: str) -> bool:
     return bool(BACKED.search(unit)) or bool(LABELLED.search(unit))
 
 
-def _scan(path: Path) -> list[str]:
-    text = path.read_text(encoding="utf-8", errors="replace")
+def _scan_text(text: str, label: str) -> list[str]:
+    """The whole predicate. `_scan` and `--stdin` both route through here so
+    the grammar has one implementation, not two that agree on fixtures."""
     flagged: list[str] = []
     for number, unit in _units(text):
         if _is_claim(unit) and not _is_backed(unit):
             shown = unit if len(unit) <= 110 else unit[:107] + "..."
-            flagged.append(f"{path}:{number}: {shown}")
+            flagged.append(f"{label}:{number}: {shown}")
     return flagged
 
 
+def _scan(path: Path) -> list[str]:
+    return _scan_text(path.read_text(encoding="utf-8", errors="replace"), str(path))
+
+
+def _run_stdin() -> int:
+    """Lint text arriving on stdin — a turn's own output, a commit message,
+    anything not yet a file. Empty input is CLEAN: a caller with nothing to
+    say has claimed nothing.
+    """
+    flagged = _scan_text(sys.stdin.read(), "<stdin>")
+    for entry in flagged:
+        print(entry)
+    if flagged:
+        print(f"CLAIMS: FLAGGED {len(flagged)}")
+        return FLAGGED
+    print("CLAIMS: CLEAN stdin")
+    return CLEAN
+
+
 def main(argv: list[str]) -> int:
-    options = [a for a in argv[1:] if a.startswith("-")]
+    arguments = argv[1:]
+    read_stdin = "--stdin" in arguments
+    options = [a for a in arguments if a.startswith("-") and a != "--stdin"]
     if options:
         for option in options:
             print(f"claim_check: unknown option: {option}", file=sys.stderr)
         return USAGE
-    paths = [Path(a) for a in argv[1:]]
+
+    operands = [a for a in arguments if not a.startswith("-")]
+    if read_stdin:
+        if operands:
+            print("claim_check: --stdin takes no paths", file=sys.stderr)
+            return USAGE
+        return _run_stdin()
+
+    paths = [Path(a) for a in operands]
     if not paths:
-        print("claim_check: usage: claim_check.py <path>...", file=sys.stderr)
+        print("claim_check: usage: claim_check.py --stdin | <path>...", file=sys.stderr)
         return USAGE
 
     missing = [p for p in paths if not p.is_file()]
