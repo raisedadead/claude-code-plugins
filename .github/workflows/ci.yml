@@ -79,8 +79,13 @@ jobs:
           missing=0
           while IFS= read -r t; do
             grep -qF "$t" .github/workflows/ci.yml || { echo "not named in CI: $t" >&2; missing=1; }
-          done < <(git ls-files 'plugins/*/tests/test_*' 'plugins/*/hooks/test_*')
+          done < <(git ls-files 'plugins/*/tests/test_*' 'plugins/*/hooks/test_*' 'tools/test_*')
           test "$missing" -eq 0
+
+      - name: research ledger row shape
+        run: |
+          python3 tools/test_check_rows.py
+          python3 tools/check_rows.py
 
       - name: first-party manifest + skill validation
         run: |
