@@ -284,4 +284,41 @@ for spelling in "## §T — Task ledger|## §S — Rolling status log" "## Tasks
 		fail "$status_h: the two most recent Status entries must reach the sit-rep, got: $(ctx_of)"
 done
 
+rm -rf "$WS/.scratchpad"
+scaffold "2026-06-05-foo"
+run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+assert_valid_json "live-nudge"
+sys_of | grep -q '2026-06-05-foo' || fail "one live dossier must raise a systemMessage naming the slug, got: $(sys_of)"
+sys_of | grep -q 'ds:status\|/dossier:status' || fail "the live nudge must route to the sit-rep"
+sys_of | grep -q 'P1/1 · T 0/1 · B 0' || fail "the live nudge must carry the INDEX P/T/B cells in that order, got: $(sys_of)"
+
+for src in resume fork clear; do
+	run_hook "{\"hook_event_name\":\"SessionStart\",\"source\":\"$src\",\"session_title\":\"\"}"
+	assert_valid_json "live-nudge-$src"
+	sys_of | grep -q '2026-06-05-foo' || fail "$src must raise the live nudge — it is a session the operator started"
+done
+
+run_hook '{"hook_event_name":"SessionStart","source":"compact","session_title":""}'
+assert_valid_json "live-nudge-compact"
+[ -z "$(sys_of)" ] || fail "compact must not re-raise the live nudge mid-session, got: $(sys_of)"
+ctx_of | grep -q '2026-06-05-foo' || fail "compact must still hand the live dossier to the model via additionalContext"
+
+DOSSIER_LIVE_NUDGE=0 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+assert_valid_json "live-nudge-optout"
+[ -z "$(sys_of)" ] || fail "DOSSIER_LIVE_NUDGE=0 must suppress the live nudge, got: $(sys_of)"
+grep -q "additionalContext" "$TMP/out" || fail "the opt-out must not displace additionalContext"
+
+rm -rf "$WS/.scratchpad"
+scaffold "2026-06-05-foo"
+scaffold "2026-06-06-bar"
+run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+assert_valid_json "two-live"
+sys_of | grep -q '2 live' || fail "two live dossiers must still raise the consolidate warning, got: $(sys_of)"
+
+rm -rf "$WS/.scratchpad"
+mkdir -p "$WS/.scratchpad/dossier/_archive"
+run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+assert_valid_json "no-live-nudge"
+[ -z "$(sys_of)" ] || fail "no live dossier must raise no systemMessage, got: $(sys_of)"
+
 printf 'ok\n'

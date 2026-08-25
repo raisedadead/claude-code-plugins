@@ -91,7 +91,7 @@ The invariant guard is where the ratchet lands: `ds:backprop` promotes a recurri
 
 Freshness authorities live in `hooks/verify_authorities.py` — adding a product is one data row, no code change.
 
-Other knobs: `DOSSIER_FAKEIMPL_TIMEOUT` (120) is read by hook code. `DS_HEALTH_CMD`, `DS_LIGHT_LOG` (5) and `DS_RECOVER_DAYS` (3) are honoured by the `status` skill, not by any hook — they steer a model-run step, so treat them as strong defaults rather than enforcement.
+Other knobs: `DOSSIER_FAKEIMPL_TIMEOUT` (120), `DOSSIER_LIVE_NUDGE` (1) and `DOSSIER_SESSION_TITLE` (0) are read by hook code. `DOSSIER_LIVE_NUDGE=0` silences the one-line `systemMessage` that `session-start.sh` raises when exactly one dossier is live; the model still receives the same fact through `additionalContext`. `DOSSIER_SESSION_TITLE=1` restores the session rename that shipped default-on until 2026-08-25 — read the CHANGELOG entry for that date before setting it, since no hook can see a sibling hook's title. `DS_HEALTH_CMD`, `DS_LIGHT_LOG` (5) and `DS_RECOVER_DAYS` (3) are honoured by the `status` skill, not by any hook — they steer a model-run step, so treat them as strong defaults rather than enforcement.
 
 ## Docs
 

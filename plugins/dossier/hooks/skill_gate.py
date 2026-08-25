@@ -5,6 +5,8 @@ PreToolUse (Skill) + UserPromptExpansion hook, two branches:
 - Built-ins (/review, /security-review, /simplify): fire only while a live
   dossier has a ds:build in flight (.ds-lock present) — reminder routes the
   verdict into the step 6.5 artifact trail + §S.
+- ds:close: fire when the INDEX carries at least one `paused` row — reminder
+  lists them, so a wave closes without leaving paused siblings unaccounted for.
 - Whetstone skills: fire on ANY live dossier, lock or not — reminder: record
   the §S line that skill's own rule calls for via lib-s-append.sh (first live
   row = current; main thread writes, never subagents). Matched against the
@@ -27,6 +29,7 @@ import tempfile
 from pathlib import Path
 
 BUILTINS = {"review", "security-review", "simplify"}
+CLOSE = {"dossier:close"}
 WHETSTONE = {
     "whetstone:doubt-pass",
     "whetstone:flaky-test-audit",
@@ -42,11 +45,24 @@ def _state_path(session: str) -> Path:
     return Path(tempfile.gettempdir()) / f"ds-skill-gate-{safe}"
 
 
+def _paused(cwd: str) -> list[str]:
+    try:
+        index = (Path(cwd) / ".scratchpad" / "INDEX.md").read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    out: list[str] = []
+    for line in index.splitlines():
+        cells = [c.strip() for c in line.split("|")]
+        if len(cells) > 3 and cells[3] == "paused":
+            out.append(f"{cells[1]}-{cells[2]}")
+    return out
+
+
 def _dossier_state(cwd: str) -> tuple[str | None, str | None]:
     root = Path(cwd) / ".scratchpad"
     try:
         index = (root / "INDEX.md").read_text(encoding="utf-8")
-    except OSError:
+    except (OSError, UnicodeDecodeError):
         return None, None
     live: list[str] = []
     for line in index.splitlines():
@@ -61,7 +77,7 @@ def _dossier_state(cwd: str) -> tuple[str | None, str | None]:
             continue
         try:
             data = json.loads(lock.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             return live[0], key
         if not isinstance(data, dict):
             return live[0], key
@@ -83,16 +99,19 @@ def main() -> int:
         name = str(tool_input.get("skill") or tool_input.get("name") or "")
     if not name:
         name = str(payload.get("command") or "")
-    if name not in BUILTINS and name not in WHETSTONE:
+    if name not in BUILTINS and name not in WHETSTONE and name not in CLOSE:
         return 0
 
     cwd = str(payload.get("cwd") or "")
     if not cwd:
         return 0
-    live_first, flight = _dossier_state(cwd)
+    paused = _paused(cwd) if name in CLOSE else []
+    live_first, flight = (None, None) if name in CLOSE else _dossier_state(cwd)
     if name in BUILTINS and not flight:
         return 0
     if name in WHETSTONE and not live_first:
+        return 0
+    if name in CLOSE and not paused:
         return 0
 
     session = str(payload.get("session_id") or "")
@@ -106,7 +125,14 @@ def main() -> int:
             pass
 
     event = str(payload.get("hook_event_name") or "PreToolUse")
-    if name in BUILTINS:
+    if name in CLOSE:
+        body = (
+            f"{len(paused)} paused dossier(s) alongside this close: "
+            f"{', '.join(paused)}. Decide each one before the tree loses its "
+            "current reader — resume it, or close it with ds:close --abandon "
+            '"<reason>". Reminder only, never blocking.'
+        )
+    elif name in BUILTINS:
         body = (
             f"live dossier build in flight ({flight}) — fold /{name} findings into "
             "the ds:build step 6.5 artifact trail and record the verdict in §S. "

@@ -50,6 +50,7 @@ if [[ -f "${INDEX_FILE}" ]]; then
 fi
 
 live_slug=""
+live_meta=""
 if [[ -f "${INDEX_FILE}" ]]; then
 	live_slug=$(awk -F'|' '
     NR > 2 { st = $4; gsub(/^[ \t]+|[ \t]+$/, "", st) }
@@ -57,6 +58,16 @@ if [[ -f "${INDEX_FILE}" ]]; then
       gsub(/^[ \t]+|[ \t]+$/, "", $2)
       gsub(/^[ \t]+|[ \t]+$/, "", $3)
       print $2 "-" $3
+      exit
+    }
+  ' "${INDEX_FILE}" 2>/dev/null || true)
+	live_meta=$(awk -F'|' '
+    function trim(s){ gsub(/^[ \t]+|[ \t]+$/, "", s); return s }
+    NR > 2 && trim($4) == "live" {
+      out = trim($5)
+      if (trim($6) != "") out = out " · T " trim($6)
+      if (trim($7) != "") out = out " · B " trim($7)
+      print out
       exit
     }
   ' "${INDEX_FILE}" 2>/dev/null || true)
@@ -115,6 +126,12 @@ if [[ "${DOSSIER_SESSION_TITLE:-0}" == "1" ]]; then
 fi
 
 sys_msg=""
+if [[ "${live_count}" -eq 1 && -n "${live_slug}" && "${DOSSIER_LIVE_NUDGE:-1}" != "0" \
+	&& "${hook_src}" != "compact" ]]; then
+	sys_msg="dossier live: ${live_slug}"
+	[[ -n "${live_meta}" ]] && sys_msg="${sys_msg} · ${live_meta}"
+	sys_msg="${sys_msg} — /dossier:status for the sit-rep."
+fi
 if [[ "${live_count}" -gt 1 ]]; then
 	sys_msg="⚠ dossier: ${live_count} live (${live_all}) — run /dossier:status to consolidate (pause or close the stale ones)."
 	ctx_lines+=("")

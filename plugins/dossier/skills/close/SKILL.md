@@ -69,6 +69,8 @@ Pre-flight gates (`--abandon` skips §T all-x, §T cites and §B all-fixed; the 
 
 Advisory (non-blocking; `--complete`/`--successor` only — an abandoned wave's incomplete §T would make the suggestion a dead end): §T all-`x` with no §X repo changelog carrying this wave's range-cite section → print `consider ds:ship first`. Prints once, refuses nothing.
 
+Advisory (non-blocking, every close mode): read `.scratchpad/INDEX.md` and print one line per `state=paused` row — slug, `T <done>/<tot>`, and the age of its §S tail — then name the route for each: resume it through `ds:status` step 1a, or drop it with `ds:close --abandon "<reason>"`. Closing the current wave is the moment the operator has the whole tree in view; a paused sibling that nobody names here keeps its `paused` token until someone stumbles on it. This is model-judgment — this page is what holds it. `hooks/skill_gate.py` computes the same list on the `Skill` PreToolUse event and returns it as `additionalContext`, but its payload field names are inferred rather than observed (see its docstring), so it exits 0 and stays silent on a shape it does not recognise. Print the list from the INDEX regardless.
+
 Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; this holds for every §S append in this skill):
 
 ```

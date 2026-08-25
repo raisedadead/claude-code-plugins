@@ -98,6 +98,37 @@ out="$(run_gate "$(payload whetstone:doubt-pass ${SP}-j)")" || fail "gate must e
 out="$(printf 'not json' | python3 "$GATE")" || fail "malformed JSON must exit 0"
 [[ -z "$out" ]] || fail "malformed JSON must stay silent"
 
+printf '| 2026-07-20 | wave | live | P1/1 | 0/1 | 0 | x | — |\n| 2026-07-02 | older | paused | P1/1 | 1/3 | 0 | x | — |\n| 2026-06-30 | oldest | paused | P1/1 | 0/2 | 0 | x | — |\n' >"$TMP/.scratchpad/INDEX.md"
+out="$(run_gate "$(payload dossier:close ${SP}-m)")" || fail "gate must exit 0 on ds:close"
+printf '%s' "$out" | grep -q 'additionalContext' || fail "ds:close with paused rows must fire the paused reminder"
+printf '%s' "$out" | grep -q '2026-07-02-older' || fail "paused reminder must name every paused slug"
+printf '%s' "$out" | grep -q '2026-06-30-oldest' || fail "paused reminder must name every paused slug"
+printf '%s' "$out" | grep -q '2026-07-20-wave' && fail "paused reminder must leave the live row out"
+
+out="$(run_gate "$(payload dossier:close ${SP}-m)")" || fail "gate must exit 0 on ds:close dedup"
+[[ -z "$out" ]] || fail "second ds:close same session must dedup to silence"
+
+printf '| 2026-07-02 | older | paused | P1/1 | 1/3 | 0 | x | — |\n' >"$TMP/.scratchpad/INDEX.md"
+out="$(run_gate "$(payload dossier:close ${SP}-n)")" || fail "gate must exit 0 on paused-only tree"
+printf '%s' "$out" | grep -q '2026-07-02-older' || fail "paused reminder must not depend on a live row"
+
+printf '| 2026-07-20 | wave | live | P1/1 | 0/1 | 0 | x | — |\n| 2026-06-01 | gone | done | P1/1 | 2/2 | 0 | x | — |\n' >"$TMP/.scratchpad/INDEX.md"
+out="$(run_gate "$(payload dossier:close ${SP}-o)")" || fail "gate must exit 0 with no paused rows"
+[[ -z "$out" ]] || fail "ds:close with no paused row must stay silent"
+
+rm "$TMP/.scratchpad/INDEX.md"
+out="$(run_gate "$(payload dossier:close ${SP}-p)")" || fail "gate must exit 0 on ds:close without INDEX"
+[[ -z "$out" ]] || fail "ds:close without an INDEX must stay silent"
+
+out="$(run_gate "$(payload close ${SP}-q)")" || fail "gate must exit 0 on a bare close name"
+[[ -z "$out" ]] || fail "a bare 'close' must stay silent — the gate matches the namespaced name only"
+
+printf '| 2026-07-02 | \xff\xfe | paused | P1/1 | 1/3 | 0 | x | — |\n' >"$TMP/.scratchpad/INDEX.md"
+out="$(run_gate "$(payload dossier:close ${SP}-r)")" || fail "a non-UTF-8 INDEX must exit 0, not traceback"
+[[ -z "$out" ]] || fail "a non-UTF-8 INDEX must stay silent"
+out="$(run_gate "$(payload review ${SP}-s)")" || fail "a non-UTF-8 INDEX must exit 0 on the builtin path too"
+[[ -z "$out" ]] || fail "a non-UTF-8 INDEX must stay silent on the builtin path"
+
 HOOKS_JSON="$SCRIPT_DIR/hooks.json"
 grep -q '"Skill"' "$HOOKS_JSON" || fail "hooks.json must register the Skill matcher"
 grep -q 'UserPromptExpansion' "$HOOKS_JSON" || fail "hooks.json must register UserPromptExpansion"

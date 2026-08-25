@@ -6,6 +6,20 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 
 ## 2026-08-25
 
+### Added
+
+- **A live dossier now reaches the operator, not only the model.** `session-start.sh` set `systemMessage` only when the tree was in a conflicting state — more than one live row, or drift. The ordinary case, exactly one live wave, went to `additionalContext`, which the model reads and the operator never sees, so a wave stayed invisible to the person deciding about it for its whole length. One live row now raises `dossier live: <slug> · <P> · T <done>/<tot> · B <n> — /dossier:status for the sit-rep.`, computed from the INDEX row and advisory: the hook exits 0 either way. It fires on `startup`, `resume`, `fork` and `clear` — every source that means a session began for the operator — and stays silent on `compact`, which is the harness reclaiming context mid-turn and not a moment the operator asked for a status line. `additionalContext` still carries the live dossier on all five sources, so the model never loses the fact. Set `DOSSIER_LIVE_NUDGE=0` in `settings.json` `env` to turn it off; `README.md` lists it beside the other hook-read knobs. `test_session_start.sh` covers one-live, the exact `P/T/B` payload, each of the four firing sources, `compact`, the opt-out, two-live (the consolidate warning still wins) and no-live.
+
+- **Paused dossiers are named when a wave closes**, from two surfaces that fail independently:
+  - `ds:status` step 6 prints a `PAUSED` line on every full sit-rep, `(none)` when the set is empty. Step 1 already enumerated paused rows separately; nothing printed them. The LIGHT path exits before step 6, which is where no `.scratchpad/dossier/` exists to hold a paused wave.
+  - `skill_gate.py` fires on the `Skill` PreToolUse event for `dossier:close` and returns the paused slugs as `additionalContext`. Computed from `.scratchpad/INDEX.md`, deduped per session, exit 0 always.
+
+  Two surfaces rather than one because `skill_gate.py`'s payload field names are inferred by composition, not captured from a live Skill hook — its docstring has said so since it shipped — so a harness shape change disables it with no error and no failing test. `close/SKILL.md` step 5 therefore reads the INDEX itself and treats the hook as a bonus. `test_skill_gate.sh` covers paused-present, paused-absent, no INDEX, paused-without-live, per-session dedup, and that a bare `close` stays silent (the gate matches the namespaced name only).
+
+### Fixed
+
+- **`skill_gate.py` exited 1 with a traceback on a non-UTF-8 `.scratchpad/INDEX.md`.** Its docstring has claimed "Always exit 0; fail-open on any parse or filesystem error" since it shipped, but both INDEX readers and the lock reader caught `OSError` alone, and `read_text(encoding="utf-8")` raises `UnicodeDecodeError`, which is a `ValueError`. A PreToolUse hook that raises fails dark. All three now catch `UnicodeDecodeError` too, and `test_skill_gate.sh` writes a `0xff` byte into the INDEX and asserts exit 0 plus silence on both the `dossier:close` and the builtin path.
+
 ### Changed
 
 - **`session-start.sh` emits `sessionTitle` only when `DOSSIER_SESSION_TITLE=1`.** The 2026-07-31 entry promised the hook "never clobbers `--name`/`/rename` or other title-emitting hooks", and the guard it relied on reads `session_title` off the hook input. That field can only carry a title that existed *before* the event; a sibling SessionStart hook writes its title *during* the same event, and no hook can see another hook's output. So the guard held for `/rename` on resume and was dead on `startup` — the launch path — where it silently took over every session in a repo with a live dossier. Since a wave's slug does not change for the length of the wave, every launch got the same name.

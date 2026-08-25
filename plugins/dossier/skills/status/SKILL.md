@@ -18,6 +18,7 @@ Per ADAPTERS.md. Cache for the invocation.
 
 - `.scratchpad/INDEX.md` — missing → run `lib-regen-index.sh` to build it.
 - Enumerate ALL rows with `state=live`. Current dossier = the first (most-recent). `state=paused` rows are listed separately, outside the live set.
+- The paused set reaches the report as its own `PAUSED` line in step 6, printed on every full sit-rep — `(none)` when the set is empty. The LIGHT path exits at step 1 and never reaches it, which is correct: LIGHT runs where there is no `.scratchpad/dossier/` to hold a paused wave. A paused wave that no line names is a wave nobody decides about.
 
 No `.scratchpad/dossier/` in cwd → LIGHT sit-rep, the small-work path with no ceremony:
 
@@ -99,6 +100,7 @@ NOW: <slug> P<cur>/<tot> · T <done>/<tot> · TaskList <active>/<blocked>
 NEXT (auto): ds:build --auto   (or a specific ds:build <T-id>, or "BLOCKED → decision above")
   ⚠ §X stale <Nm> → confirm before flip          # only if flagged (step 4)
 [CONSOLIDATE: <N> live — pause/close the stale ones]   # only if >1 live (step 1a)
+PAUSED (<N>): <slug> · <T done/tot> · idle <Nd>          # every state=paused row (step 1); "(none)" when empty
 [⚠ resume: ds:build T<N> --resume]                     # only if incomplete op (step 3)
 Locks: <none | <slug>: <skill> pid <pid> since <time>>
 
