@@ -53,6 +53,18 @@ assert_valid_json() {
 
 scaffold "2026-06-05-foo"
 
+export DOSSIER_SESSION_TITLE=1
+
+(unset DOSSIER_SESSION_TITLE && run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}')
+assert_valid_json "flag-unset"
+[ -z "$(title_of)" ] || fail "unset DOSSIER_SESSION_TITLE must not emit sessionTitle"
+grep -q "additionalContext" "$TMP/out" || fail "opt-out must not displace additionalContext"
+
+DOSSIER_SESSION_TITLE=0 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+assert_valid_json "flag-zero"
+[ -z "$(title_of)" ] || fail "DOSSIER_SESSION_TITLE=0 must not emit sessionTitle"
+grep -q "additionalContext" "$TMP/out" || fail "flag-zero must not displace additionalContext"
+
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
 [ "$rc" -eq 0 ] || fail "startup must exit 0"
 assert_valid_json "startup"
@@ -100,6 +112,11 @@ if command -v python3 >/dev/null 2>&1; then
 	run_hook '{"hook_event_name":"SessionStart","source":"resume","session_title":"user-set"}' "$TMP/nojq-env"
 	assert_valid_json "no-jq-preset-title"
 	[ -z "$(title_of)" ] || fail "no-jq non-empty session_title must never be clobbered"
+
+	DOSSIER_SESSION_TITLE=0 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}' "$TMP/nojq-env"
+	assert_valid_json "no-jq-flag-zero"
+	[ -z "$(title_of)" ] || fail "no-jq flag-zero must not emit sessionTitle"
+	grep -q "additionalContext" "$TMP/out" || fail "no-jq flag-zero must not displace additionalContext"
 else
 	printf 'skip: python3 unavailable — no-jq pass skipped\n' >&2
 fi

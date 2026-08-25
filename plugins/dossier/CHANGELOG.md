@@ -4,6 +4,14 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-08-25
+
+### Changed
+
+- **`session-start.sh` emits `sessionTitle` only when `DOSSIER_SESSION_TITLE=1`.** The 2026-07-31 entry promised the hook "never clobbers `--name`/`/rename` or other title-emitting hooks", and the guard it relied on reads `session_title` off the hook input. That field can only carry a title that existed *before* the event; a sibling SessionStart hook writes its title *during* the same event, and no hook can see another hook's output. So the guard held for `/rename` on resume and was dead on `startup` — the launch path — where it silently took over every session in a repo with a live dossier. Since a wave's slug does not change for the length of the wave, every launch got the same name.
+
+  No guard inside the hook can fix this, because a hook reads only its own stdin. `RESEARCH.md` F6 records the multi-hook `sessionTitle` winner as undocumented upstream, and the observed winner on Claude Code 2.1.245 was the plugin: four repos with a live dossier each kept the slug and discarded the sibling hook's title. The emission is opt-in now, and off by default: set `DOSSIER_SESSION_TITLE=1` in `settings.json` `env` to restore it. `test_session_start.sh` covers the unset and `0` paths; the existing title assertions run with the flag exported.
+
 ## 2026-08-05 (a read of every tracked file)
 
 Every tracked file was read on its own, then five lenses hunted the assembled graph and each finding was handed to a separate agent told to refute it. Contract: `.dossier/2026-08-05-audit-debt.md`.

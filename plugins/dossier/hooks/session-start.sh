@@ -104,13 +104,15 @@ if [[ -d "${DOSSIER_DIR}" ]]; then
 fi
 
 session_title_out=""
-case "${hook_src}" in
-startup | resume | fork)
-	if [[ -z "${hook_cur_title}" && -n "${live_slug}" ]]; then
-		session_title_out="${live_slug}"
-	fi
-	;;
-esac
+if [[ "${DOSSIER_SESSION_TITLE:-0}" == "1" ]]; then
+	case "${hook_src}" in
+	startup | resume | fork)
+		if [[ -z "${hook_cur_title}" && -n "${live_slug}" ]]; then
+			session_title_out="${live_slug}"
+		fi
+		;;
+	esac
+fi
 
 sys_msg=""
 if [[ "${live_count}" -gt 1 ]]; then
