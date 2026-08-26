@@ -13,6 +13,11 @@ Specs (one or more args):
 
 Output: one JSON object per line on stdout. Offline / unknown => {"latest": null,
 "offline": true}; the caller records `pin=offline` and proceeds (never blocks).
+
+A `go:` spec without a `/vN` suffix names the v0/v1 module path, so the resolver
+walks the higher majors too and answers from the highest that resolves — `src`
+carries the module path the version came from. A probe the proxy left unanswered
+puts a `warning` on the object: the version is then a floor, not the ceiling.
 """
 from __future__ import annotations
 
@@ -23,7 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 try:
-    from verify_lib import latest_eol, latest_version
+    from verify_lib import latest_eol, latest_version_detail
 except Exception as exc:  # noqa: BLE001
     print(json.dumps({"error": f"load: {type(exc).__name__}: {exc}"}))
     sys.exit(0)
@@ -40,11 +45,14 @@ def resolve(spec: str) -> dict:
         return {"spec": spec, "series": series, "latest": exact, "src": src}
     if ":" in spec:
         eco, pkg = spec.split(":", 1)
-        res = latest_version(eco, pkg)
+        res = latest_version_detail(eco, pkg)
         if not res:
             return {"spec": spec, "latest": None, "offline": True}
-        latest, src = res
-        return {"spec": spec, "latest": latest, "src": src}
+        latest, src, warning = res
+        out = {"spec": spec, "latest": latest, "src": src}
+        if warning:
+            out["warning"] = warning
+        return out
     return {"spec": spec, "error": "bad spec (want <ecosystem>:<pkg> or eol:<slug>)"}
 
 

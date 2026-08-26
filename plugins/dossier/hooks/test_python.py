@@ -9,6 +9,7 @@ round-trip fidelity, transcript reconstruction, offline-safety, regex compile.
 from __future__ import annotations
 
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -255,6 +256,198 @@ def test_resolve_pins_offline() -> None:
         assert "error" in resolve_pins.resolve("nocolonspec")
     finally:
         verify_lib.http_cached = original  # type: ignore[assignment]
+
+
+def _serve_status(code: int, body: bytes = b"{}"):
+    """A localhost server that answers `code` once per request. Returns (url, counter, stop)."""
+    import http.server
+    import threading
+
+    hits = {"n": 0}
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):  # noqa: N802
+            hits["n"] += 1
+            self.send_response(code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a):  # noqa: A002
+            return
+
+    server = http.server.HTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    url = f"http://127.0.0.1:{server.server_port}/x.json"
+    return url, hits, server.shutdown
+
+
+def test_http_status_404_is_missing_and_is_cached() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = os.getcwd()
+        os.chdir(tmp)
+        url, hits, stop = _serve_status(404)
+        try:
+            assert verify_lib.http_cached_status(url) == ("missing", None)
+            assert verify_lib.http_cached_status(url) == ("missing", None)
+            assert hits["n"] == 1, f"a 404 must be cached, not re-fetched; requests={hits['n']}"
+        finally:
+            stop()
+            os.chdir(cwd)
+
+
+def test_http_status_500_is_offline_and_is_not_cached() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = os.getcwd()
+        os.chdir(tmp)
+        url, hits, stop = _serve_status(500)
+        try:
+            out = io.StringIO()
+            with contextlib.redirect_stderr(out):
+                assert verify_lib.http_cached_status(url) == ("offline", None)
+                assert verify_lib.http_cached_status(url) == ("offline", None)
+            assert hits["n"] == 2, f"a 5xx says nothing about existence, so it must re-fetch; requests={hits['n']}"
+        finally:
+            stop()
+            os.chdir(cwd)
+
+
+def test_go_walk_warns_at_the_probe_ceiling() -> None:
+    versions = {"m/big": "v1.0.0"}
+    versions.update({f"m/big/v{n}": f"v{n}.0.0" for n in range(2, verify_lib.GO_MAJOR_PROBE_MAX + 1)})
+    proxy = _FakeProxy(versions)
+    res = _with_proxy(proxy, lambda: verify_lib.latest_version_detail("go", "m/big"))
+    assert res is not None
+    assert res[0] == f"v{verify_lib.GO_MAJOR_PROBE_MAX}.0.0", res
+    assert res[2] and f"/v{verify_lib.GO_MAJOR_PROBE_MAX}" in res[2], (
+        f"an answer that sits on the ceiling must say so, got {res[2]}"
+    )
+
+
+def _with_payload(payload: dict, fn):
+    original = verify_lib.http_cached
+    verify_lib.http_cached = lambda *a, **k: payload  # type: ignore[assignment]
+    try:
+        return fn()
+    finally:
+        verify_lib.http_cached = original  # type: ignore[assignment]
+
+
+def test_crates_answers_the_highest_stable_not_the_newest_publish() -> None:
+    payload = {"crate": {"newest_version": "0.8.8", "max_stable_version": "0.10.2"}}
+    res = _with_payload(payload, lambda: verify_lib.latest_version("crates", "rand"))
+    assert res and res[0] == "0.10.2", f"a backported patch publishes last without being latest, got {res}"
+
+
+def test_crates_falls_back_when_no_stable_release_exists() -> None:
+    payload = {"crate": {"newest_version": "1.0.0-alpha.4", "max_stable_version": None}}
+    res = _with_payload(payload, lambda: verify_lib.latest_version("crates", "newcrate"))
+    assert res and res[0] == "1.0.0-alpha.4", f"a crate with no stable release still resolves, got {res}"
+
+
+def test_hex_answers_the_latest_stable_release() -> None:
+    payload = {"latest_stable_version": "1.4.5", "releases": [{"version": "1.5.0-alpha.2"}]}
+    res = _with_payload(payload, lambda: verify_lib.latest_version("hex", "jason"))
+    assert res and res[0] == "1.4.5", f"an alpha publish must not read as the current release, got {res}"
+
+
+def test_hex_falls_back_when_only_pre_releases_exist() -> None:
+    payload = {"releases": [{"version": "0.1.0-rc.1"}]}
+    res = _with_payload(payload, lambda: verify_lib.latest_version("hex", "fresh"))
+    assert res and res[0] == "0.1.0-rc.1", f"a package with no stable release still resolves, got {res}"
+
+
+class _FakeProxy:
+    """Stands in for proxy.golang.org. Records every module path asked for."""
+
+    def __init__(self, versions: dict[str, str], offline: tuple[str, ...] = ()) -> None:
+        self.versions = versions
+        self.offline = offline
+        self.asked: list[str] = []
+
+    def __call__(self, url: str, *a, **k):
+        module = url.removeprefix("https://proxy.golang.org/").removesuffix("/@latest")
+        self.asked.append(module)
+        if module in self.offline:
+            return "offline", None
+        if module in self.versions:
+            return "ok", {"Version": self.versions[module]}
+        return "missing", None
+
+
+def _with_proxy(proxy: _FakeProxy, fn):
+    original = verify_lib.http_cached_status
+    verify_lib.http_cached_status = proxy  # type: ignore[assignment]
+    try:
+        return fn()
+    finally:
+        verify_lib.http_cached_status = original  # type: ignore[assignment]
+
+
+def test_go_walk_finds_higher_major() -> None:
+    proxy = _FakeProxy({"m/chezmoi": "v1.8.11", "m/chezmoi/v2": "v2.72.0"})
+    res = _with_proxy(proxy, lambda: verify_lib.latest_version_detail("go", "m/chezmoi"))
+    assert res is not None, "walk returned nothing"
+    version, src, warning = res
+    assert version == "v2.72.0", f"unversioned path must answer from the highest major, got {version}"
+    assert src.endswith("/m/chezmoi/v2/@latest"), src
+    assert warning is None, f"every major answered, so no warning is due: {warning}"
+
+
+def test_go_walk_crosses_a_missing_major() -> None:
+    proxy = _FakeProxy({"m/lib": "v1.0.0", "m/lib/v3": "v3.1.0"})
+    res = _with_proxy(proxy, lambda: verify_lib.latest_version_detail("go", "m/lib"))
+    assert res and res[0] == "v3.1.0", f"a module that skipped /v2 must still resolve v3, got {res}"
+
+
+def test_go_walk_warns_on_an_unanswered_probe() -> None:
+    proxy = _FakeProxy({"m/lib": "v1.0.0", "m/lib/v2": "v2.0.0"}, offline=("m/lib/v5",))
+    res = _with_proxy(proxy, lambda: verify_lib.latest_version_detail("go", "m/lib"))
+    assert res is not None
+    assert res[0] == "v2.0.0", res
+    assert res[2] and "/v5" in res[2], f"an unanswered probe above the answer must warn, got {res[2]}"
+
+
+def test_go_explicit_major_is_answered_as_asked() -> None:
+    proxy = _FakeProxy({"m/lib/v2": "v2.9.0", "m/lib/v3": "v3.0.0"})
+    res = _with_proxy(proxy, lambda: verify_lib.latest_version_detail("go", "m/lib/v2"))
+    assert res and res[0] == "v2.9.0", f"a path naming its major is answered as asked, got {res}"
+    assert proxy.asked == ["m/lib/v2"], f"no walk is due for an explicit major, asked: {proxy.asked}"
+
+
+def test_go_reactive_check_does_not_walk() -> None:
+    proxy = _FakeProxy({"m/lib": "v1.0.0", "m/lib/v2": "v2.0.0"})
+    res = _with_proxy(proxy, lambda: verify_lib.latest_version("go", "m/lib"))
+    assert res and res[0] == "v1.0.0", f"latest_version answers the exact path, got {res}"
+    assert proxy.asked == ["m/lib"], f"the edit-hook path must stay one request, asked: {proxy.asked}"
+
+
+def test_go_walk_offline_is_not_a_version() -> None:
+    proxy = _FakeProxy({}, offline=("m/lib",))
+    res = _with_proxy(proxy, lambda: verify_lib.latest_version_detail("go", "m/lib"))
+    assert res is None, f"an unreachable proxy must resolve to nothing, got {res}"
+    assert proxy.asked == ["m/lib"], f"an unreachable base must not start a walk, asked: {proxy.asked}"
+
+
+def test_http_cached_status_splits_missing_from_offline() -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        cwd = os.getcwd()
+        os.chdir(tmp)
+        try:
+            os.environ["DOSSIER_VERIFY_CACHE_ONLY"] = "1"
+            status, data = verify_lib.http_cached_status("https://example.invalid/x.json")
+            assert (status, data) == ("offline", None), (status, data)
+            del os.environ["DOSSIER_VERIFY_CACHE_ONLY"]
+            url = "https://example.invalid/miss.json"
+            key = hashlib.sha1(url.encode()).hexdigest()
+            cache = verify_lib.cache_dir() / f"{key}.json"
+            cache.write_text(json.dumps({"fetched_at": 9e9, "data": None}))
+            assert verify_lib.http_cached_status(url) == ("missing", None), "a cached 404 must replay as missing"
+            assert verify_lib.http_cached(url) is None, "http_cached still answers None for a miss"
+        finally:
+            os.environ.pop("DOSSIER_VERIFY_CACHE_ONLY", None)
+            os.chdir(cwd)
 
 
 def _drive(mod: object, payload: dict) -> tuple[int, str]:

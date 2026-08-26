@@ -4,7 +4,9 @@ Data-only. No logic. New product = add a row.
 
 Two tables:
     EOL_ALIAS_TO_SLUG  : free-text/file-shape alias → endoflife.date slug
-    PKG_REGISTRY       : ecosystem → URL template + latest-version JSON path
+    PKG_REGISTRY       : ecosystem → URL template + latest-version JSON path,
+                         plus an optional fallback_path for a registry whose
+                         stable-version field is absent on some packages
 
 endoflife.date covers 455+ products: languages, OSes, distros, databases,
 frameworks, runtimes, container orchestrators, CI tools, package managers, etc.
@@ -156,16 +158,25 @@ PKG_REGISTRY: dict[str, dict] = {
         "path": ["info", "version"],
     },
     "crates": {
+        # newest_version is the most recently PUBLISHED version, which a
+        # backported patch or a pre-release makes lower than the current one:
+        # probed 2026-08-26, rand read newest 0.8.8 against max_stable 0.10.2,
+        # libc read newest 1.0.0-alpha.4 against max_stable 0.2.189.
         "url": "https://crates.io/api/v1/crates/{pkg}",
-        "path": ["crate", "newest_version"],
+        "path": ["crate", "max_stable_version"],
+        "fallback_path": ["crate", "newest_version"],
     },
     "rubygems": {
         "url": "https://rubygems.org/api/v1/gems/{pkg}.json",
         "path": ["version"],
     },
     "hex": {
+        # releases[0] is the newest publish of any kind. Probed 2026-08-26:
+        # jason 1.5.0-alpha.2 against latest_stable 1.4.5, req 0.8.0-rc.0
+        # against 0.7.3, postgrex 1.0.0-rc.1 against 0.22.4.
         "url": "https://hex.pm/api/packages/{pkg}",
-        "path": ["releases", 0, "version"],
+        "path": ["latest_stable_version"],
+        "fallback_path": ["releases", 0, "version"],
     },
     "packagist": {
         # Used as: pkg = "{vendor}/{name}".

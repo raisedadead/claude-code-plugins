@@ -29,6 +29,8 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from pathlib import Path
 
 from verify_authorities import (
@@ -82,8 +84,20 @@ def save_state(fired: set[str]) -> None:
     tmp.replace(p)
 
 
-def http_cached(url: str, ttl_s: int = CACHE_TTL_DEFAULT):
-    """JSON GET with TTL cache. Returns None on network / parse error."""
+def http_cached_status(
+    url: str,
+    ttl_s: int = CACHE_TTL_DEFAULT,
+    quiet: bool = False,
+    timeout_s: int = HTTP_TIMEOUT_S,
+):
+    """JSON GET with TTL cache. Returns (status, data).
+
+    status is "ok", "missing" (the server answered 404/410 — the resource does
+    not exist) or "offline" (no usable answer). A caller that walks a namespace
+    needs the two failures apart: "missing" ends the walk, "offline" only means
+    this run learned nothing. A miss is cached like a hit, so a walk costs one
+    round trip per probe per TTL rather than one per run.
+    """
     key = hashlib.sha1(url.encode()).hexdigest()
     cache_path = cache_dir() / f"{key}.json"
 
@@ -91,31 +105,48 @@ def http_cached(url: str, ttl_s: int = CACHE_TTL_DEFAULT):
         try:
             entry = json.loads(cache_path.read_text())
             if time.time() - entry["fetched_at"] < ttl_s:
-                return entry["data"]
+                data = entry["data"]
+                return ("ok", data) if data is not None else ("missing", None)
         except (json.JSONDecodeError, KeyError, OSError):
             pass
 
     if os.environ.get("DOSSIER_VERIFY_CACHE_ONLY"):
-        return None
+        return "offline", None
 
     try:
         req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_S) as resp:
+        with urllib.request.urlopen(req, timeout=timeout_s) as resp:
             data = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as exc:
+        if exc.code in (404, 410):
+            _cache_write(cache_path, None)
+            return "missing", None
+        if not quiet:
+            print(f"verify offline: {url} (HTTPError {exc.code})", file=sys.stderr)
+        return "offline", None
     except (
         urllib.error.URLError,
-        urllib.error.HTTPError,
         json.JSONDecodeError,
         TimeoutError,
         OSError,
     ) as exc:
-        print(f"verify offline: {url} ({type(exc).__name__})", file=sys.stderr)
-        return None
+        if not quiet:
+            print(f"verify offline: {url} ({type(exc).__name__})", file=sys.stderr)
+        return "offline", None
 
+    _cache_write(cache_path, data)
+    return "ok", data
+
+
+def _cache_write(cache_path: Path, data) -> None:
     tmp = cache_path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps({"fetched_at": time.time(), "data": data}))
     tmp.replace(cache_path)
-    return data
+
+
+def http_cached(url: str, ttl_s: int = CACHE_TTL_DEFAULT):
+    """JSON GET with TTL cache. Returns None on network / parse error."""
+    return http_cached_status(url, ttl_s)[1]
 
 
 # ─── Generic helpers ───────────────────────────────────────────────────
@@ -256,6 +287,80 @@ def check_freetext(alias: str, version_str: str):
     return (f"{alias} {version_str}", truth, src)
 
 
+GO_MAJOR_PROBE_MAX = 12
+# The proxy resolves an unknown module path against its origin before it can
+# answer 404, which overruns HTTP_TIMEOUT_S on the first ask and returns in
+# ~0.1s once it has that answer cached. Probed 2026-08-26 against
+# proxy.golang.org: github.com/twpayne/chezmoi/v9 timed out at 5s, then
+# answered 404 in 0.083s.
+GO_MAJOR_PROBE_TIMEOUT_S = 12
+_GO_MAJOR_SUFFIX = re.compile(r"/v[0-9]+$")
+
+
+def _go_probe(module: str, timeout_s: int = HTTP_TIMEOUT_S):
+    """(status, (version, url)) for one Go module path. status per http_cached_status."""
+    url = PKG_REGISTRY["go"]["url"].format(pkg=module)
+    status, data = http_cached_status(url, quiet=True, timeout_s=timeout_s)
+    if status != "ok":
+        return status, None
+    version = _dot_get(data, PKG_REGISTRY["go"]["path"])
+    if not isinstance(version, str) or not version:
+        return "missing", None
+    return "ok", (version, url)
+
+
+def _go_latest(pkg: str):
+    """(version, url, warning) for a Go module, walking its major versions.
+
+    A Go module at major 2 or above carries a `/vN` path suffix
+    (https://go.dev/ref/mod#major-version-suffixes), so the unversioned path
+    answers with the last v0/v1 release — a real version, and stale by however
+    many majors the module has since cut. Probe /v2../vN concurrently and keep
+    the highest that resolves; a path that already names its major is answered
+    as asked. The proxy fetches from origin on a cold miss and can exceed
+    HTTP_TIMEOUT_S, so a probe that times out leaves that major UNKNOWN, not
+    absent: the walk reports those in `warning` rather than treating its answer
+    as the highest. Majors above GO_MAJOR_PROBE_MAX are never probed.
+    """
+    probe = partial(_go_probe, timeout_s=GO_MAJOR_PROBE_TIMEOUT_S)
+    status, base = probe(pkg)
+    if status == "offline" or _GO_MAJOR_SUFFIX.search(pkg):
+        return (base[0], base[1], None) if base else None
+
+    majors = list(range(2, GO_MAJOR_PROBE_MAX + 1))
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        probed = list(pool.map(lambda n: probe(f"{pkg}/v{n}"), majors))
+
+    best, best_major = base, 1
+    for major, (probe_status, found) in zip(majors, probed):
+        if probe_status == "ok":
+            best, best_major = found, major
+    unknown = [
+        f"/v{major}"
+        for major, (probe_status, _) in zip(majors, probed)
+        if probe_status == "offline" and major > best_major
+    ]
+    if not best:
+        return None
+    # Exclusive by construction: `unknown` needs a major above the answer, and
+    # the answer sits on the ceiling in the other branch.
+    if unknown:
+        warning = f"the go proxy did not answer for {', '.join(unknown)} — a higher major may exist"
+    elif best_major == GO_MAJOR_PROBE_MAX:
+        warning = f"/v{GO_MAJOR_PROBE_MAX} is the highest major probed — a higher major may exist"
+    else:
+        warning = None
+    return best[0], best[1], warning
+
+
+def latest_version_detail(ecosystem: str, pkg: str):
+    """latest_version plus a warning string when the answer may not be the highest."""
+    if ecosystem == "go":
+        return _go_latest(pkg)
+    res = latest_version(ecosystem, pkg)
+    return (res[0], res[1], None) if res else None
+
+
 def latest_version(ecosystem: str, pkg: str):
     """Registry's current latest version + source URL. Returns (version, url) or None.
 
@@ -265,6 +370,10 @@ def latest_version(ecosystem: str, pkg: str):
     eco = PKG_REGISTRY.get(ecosystem)
     if not eco:
         return None
+    if ecosystem == "go":
+        # The exact path as asked. Walking a module's majors is the proactive
+        # resolver's job (latest_version_detail) — this one answers an edit hook.
+        return _go_probe(pkg)[1]
     url = eco["url"].format(pkg=pkg)
     if eco["path"] == ["__lookup_packagist_first__"]:
         data = http_cached(url)
@@ -273,7 +382,11 @@ def latest_version(ecosystem: str, pkg: str):
         rels = (data.get("packages") or {}).get(pkg) or []
         latest = rels[0].get("version") if rels else None
     else:
-        latest = _dot_get(http_cached(url), eco["path"])
+        data = http_cached(url)
+        latest = _dot_get(data, eco["path"])
+        if not isinstance(latest, str) or not latest:
+            fallback = eco.get("fallback_path")
+            latest = _dot_get(data, fallback) if fallback else None
     if not latest or not isinstance(latest, str):
         return None
     return latest, url
