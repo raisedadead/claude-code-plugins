@@ -377,7 +377,16 @@ key cites: [a96987b]
 
 Vm.4: closed dossier MUST live under `.scratchpad/dossier/_archive/`.
 
-Parser tolerance: `lib-regen-index.sh` matches `complete: true` / `successor: <slug>` as substring anywhere within §Z (not line-anchored) so dossiers that get joined by a formatter still parse. But writers MUST emit blank-line separation to keep §Z human-readable.
+Parser grammar: a closure key opens its own line. The three patterns live once, in `hooks/lib-sections.sh` as `DS_Z_COMPLETE` / `DS_Z_ABANDONED` / `DS_Z_SUCCESSOR`; `lib-regen-index.sh`, `lib-reconcile-state.sh` and `lib-z-write.sh` all read them from there. §Z carries operator prose in the same region the parser scans, which sets the rest of the grammar:
+
+- A key mid-sentence is prose, not a closure. An abandoned dossier whose summary read "carried into the successor: the age-identity exemption" rendered `→the` in the INDEX §Z column while `abandoned: true` sat two lines above it, and the same sentence in a **live** dossier moved the whole wave to `_archive/` on the next session start — `lib-reconcile-state.sh` reads one OR of the three keys and archives on a match.
+- The booleans are tested before `successor:`, whose value is free text where theirs is the literal `true`.
+- `successor:` takes only the `ds:new` slug charset (`[a-z0-9][a-z0-9-]*`).
+- `lib-z-write.sh` exits 1 rather than write a `summary`, `reason` or `key cites` whose own line opens with any of the three.
+
+A key that a formatter joins onto the end of another line is therefore no longer read as a closure. That direction is safe: `lib-reconcile-state.sh` leaves the dossier where it is, so a `done` header sitting outside `_archive/` renders `drift!` in INDEX with a drift trailer, and the operator is told. The reverse — a prose sentence read as a closure — archived a live wave and reported nothing.
+
+Writers MUST emit blank-line separation to keep §Z human-readable.
 
 ## 13. INDEX.md
 

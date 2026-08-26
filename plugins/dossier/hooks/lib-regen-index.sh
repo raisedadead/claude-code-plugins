@@ -124,21 +124,22 @@ parse_dossier() {
 	local mtime
 	mtime=$(date -r "${file}" "+%Y-%m-%d %H:%M" 2>/dev/null || stat -f "%Sm" -t "%Y-%m-%d %H:%M" "${file}" 2>/dev/null || echo "—")
 
-	# §Z column: extract successor / complete. Scan only the §Z section.
-	# Tolerate prose-joined formatter output (prettier merges multi-line
-	# paragraphs into one) — match substring, not just line-anchored.
+	# §Z column: extract complete / abandoned / successor. Scan only the §Z
+	# section, and only a key that opens its own line — §Z holds operator
+	# prose too. The two booleans rank above successor because a successor
+	# value is free text; a boolean needs the literal `true`.
 	local z_section z_state z_closed=0
 	z_section=$(awk -v sec_z="$DS_SEC_CLOSEOUT" '$0 ~ sec_z { z=1 } z { print }' "${file}" 2>/dev/null || true)
-	if echo "${z_section}" | grep -qE '(^|[[:space:]])complete:[[:space:]]+true'; then
+	if echo "${z_section}" | grep -qE "$DS_Z_COMPLETE"; then
 		z_state="complete"
 		z_closed=1
-	elif echo "${z_section}" | grep -qE '(^|[[:space:]])successor:[[:space:]]+[^[:space:]]'; then
-		local succ
-		succ=$(echo "${z_section}" | grep -oE 'successor:[[:space:]]+[^[:space:]]+' | head -1 | sed 's/successor:[[:space:]]*//')
-		z_state="→${succ}"
-		z_closed=1
-	elif echo "${z_section}" | grep -qE '(^|[[:space:]])abandoned:[[:space:]]+true'; then
+	elif echo "${z_section}" | grep -qE "$DS_Z_ABANDONED"; then
 		z_state="abandoned"
+		z_closed=1
+	elif echo "${z_section}" | grep -qE "$DS_Z_SUCCESSOR"; then
+		local succ
+		succ=$(echo "${z_section}" | grep -oE "$DS_Z_SUCCESSOR" | head -1 | sed -E 's/^.*successor:[[:space:]]*//; s/[[:space:]]+$//')
+		z_state="→${succ}"
 		z_closed=1
 	else
 		z_state="—"

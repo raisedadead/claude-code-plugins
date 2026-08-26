@@ -68,5 +68,10 @@ assert_predicates_agree "successor: 2026-07-01-next" yes "successor key"
 assert_predicates_agree "abandoned: true" yes "abandoned key"
 assert_predicates_agree "_(empty — written by ds:close)_" no "no machine key at all"
 assert_predicates_agree "we completed: true things" no "prose that merely contains the words"
+assert_predicates_agree "successor: The Big Rewrite" no "a successor value outside the slug charset"
+assert_predicates_agree "carried into the successor: the age-identity exemption" no "a lowercase prose word mid-sentence"
+assert_predicates_agree "2026-06-01 10:00 — closed complete: true" no "a formatter-joined key that no longer opens its line"
+assert_predicates_agree "- complete: true" no "a key inside a list item — hand-edit shape, fails open"
+assert_predicates_agree "successor: auth_2" no "a successor value that does not end the token"
 
 printf 'ok\n'

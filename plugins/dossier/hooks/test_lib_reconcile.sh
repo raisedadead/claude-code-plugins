@@ -46,6 +46,7 @@ make_doss "2026-06-05-zombie" "done" "complete: true"
 make_doss "2026-06-04-crashflip" "live" "successor: next-phase"
 make_doss "2026-06-03-partial" "done" "_(empty)_"
 make_doss "2026-06-02-alive" "live" "_(empty)_"
+make_doss "2026-06-02-prose" "live" "draft: if we stop early the work is carried into the successor: the age-identity exemption stays unbuilt."
 make_doss "2026-06-01-locked" "done" "complete: true"
 printf '{"pid": %d, "started": "2026-06-01T10:00:00Z", "skill": "ds:close"}' "$$" >"$DD/2026-06-01-locked/.ds-lock"
 
@@ -61,6 +62,8 @@ grep -q 'ds:reconcile' "$ARC/2026-06-05-zombie/DOSSIER.md" || fail "auto-archive
 [[ -d "$DD/2026-06-03-partial" ]] || fail "done-header with empty §Z is detect-only, must NOT be auto-moved"
 [[ -d "$DD/2026-06-02-alive" ]] || fail "concordant live dossier must be untouched"
 [[ -d "$DD/2026-06-01-locked" ]] || fail "locked (active op) dossier must not be reconciled"
+[[ -d "$DD/2026-06-02-prose" ]] || fail "§Z prose that merely contains 'successor: <word>' mid-sentence must NOT archive a live wave"
+[[ "$(hdr_of "$DD/2026-06-02-prose/DOSSIER.md")" == "live" ]] || fail "a prose-only §Z must leave the header live"
 
 "$RECON" "$SP"
 [[ -f "$ARC/2026-06-05-zombie/DOSSIER.md" ]] || fail "second reconcile must be idempotent"

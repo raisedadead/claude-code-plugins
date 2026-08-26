@@ -23,7 +23,7 @@ for d in "${DOSSIER_DIR}"/*/; do
 	zsec=$(awk -v sec_z="$DS_SEC_CLOSEOUT" '$0 ~ sec_z { z = 1 } z { print }' "${doss}" 2>/dev/null || true)
 
 	z_closed=0
-	if printf '%s' "${zsec}" | grep -qE '(^|[[:space:]])(complete:[[:space:]]+true|successor:[[:space:]]+[^[:space:]]|abandoned:[[:space:]]+true)'; then
+	if printf '%s' "${zsec}" | grep -qE "${DS_Z_COMPLETE}|${DS_Z_ABANDONED}|${DS_Z_SUCCESSOR}"; then
 		z_closed=1
 	fi
 

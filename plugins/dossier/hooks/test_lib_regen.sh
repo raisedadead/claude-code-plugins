@@ -172,4 +172,74 @@ nostate_err=$( (cd "$WS6" && "$REGEN" .scratchpad 2>&1 >/dev/null) || true)
 printf '%s' "$nostate_err" | grep -q 'names no state column' ||
 	fail "a Tasks header naming no state column must be reported, not silently counted as zero; got: $nostate_err"
 
+WS7="$TMP/ws7"
+SP7="$WS7/.scratchpad"
+INDEX="$SP7/INDEX.md"
+mkdir -p "$SP7/dossier/_archive/2026-07-29-prose" "$SP7/dossier/_archive/2026-07-28-handoff"
+cat >"$SP7/dossier/_archive/2026-07-29-prose/DOSSIER.md" <<'EOF'
+`2026-07-29` · `done` · `P1/1`
+
+## §Z — Closeout
+
+abandoned: true
+
+reason: superseded
+
+summary: carried into the successor: the age-identity exemption
+EOF
+cat >"$SP7/dossier/_archive/2026-07-28-handoff/DOSSIER.md" <<'EOF'
+`2026-07-28` · `done` · `P1/1`
+
+## §Z — Closeout
+
+successor: next-wave
+
+summary: phase 1 done
+EOF
+(cd "$WS7" && "$REGEN" .scratchpad)
+
+z_of() {
+	awk -F'|' -v slug="$1" '
+    NR>2 && $3 ~ slug {
+      s=$9; gsub(/^[ \t]+|[ \t]+$/,"",s); print s; exit
+    }' "$INDEX"
+}
+
+[[ "$(z_of prose)" == "abandoned" ]] ||
+	fail "abandoned: true outranks a prose 'successor:' in the same §Z; got '$(z_of prose)'"
+[[ "$(z_of handoff)" == "→next-wave" ]] ||
+	fail "a real successor key must still render →<slug>; got '$(z_of handoff)'"
+
+WS8="$TMP/ws8"
+SP8="$WS8/.scratchpad"
+INDEX="$SP8/INDEX.md"
+mkdir -p "$SP8/dossier/2026-08-02-joined"
+cat >"$SP8/dossier/2026-08-02-joined/DOSSIER.md" <<'EOF'
+`2026-08-02` · `done` · `P1/1`
+
+## §Z — Closeout
+
+2026-08-02 10:00 — closed complete: true
+
+summary: joined by a formatter
+EOF
+(cd "$WS8" && "$REGEN" .scratchpad)
+[[ "$(state_of joined)" == "drift!" ]] ||
+	fail "a formatter-joined key reads as unclosed, so the done header over it must surface as drift!; got '$(state_of joined)'"
+
+WS9="$TMP/ws9"
+SP9="$WS9/.scratchpad"
+INDEX="$SP9/INDEX.md"
+mkdir -p "$SP9/dossier/_archive/2026-07-02-badslug"
+cat >"$SP9/dossier/_archive/2026-07-02-badslug/DOSSIER.md" <<'EOF'
+`2026-07-02` · `done` · `P1/1`
+
+## §Z — Closeout
+
+successor: auth_2
+EOF
+(cd "$WS9" && "$REGEN" .scratchpad)
+[[ "$(z_of badslug)" == "—" ]] ||
+	fail "a successor value outside the slug charset must fall through, not truncate to a slug that names another dossier; got '$(z_of badslug)'"
+
 printf 'ok\n'

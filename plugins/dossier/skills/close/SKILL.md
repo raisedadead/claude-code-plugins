@@ -97,6 +97,8 @@ Write §Z through the bundled helper (atomic tmp+rename, guaranteeing the §12 b
 "$CLAUDE_PLUGIN_ROOT"/hooks/lib-z-write.sh <dir> abandoned  "<reason>" "<summary>" "<key cites>"
 ```
 
+Exit 1 on a `<summary>`, `<reason>` or `<key cites>` that reads as a closure key to the INDEX parser (`successor: <slug>`, `complete: true`, `abandoned: true` — FORMAT.md §12). Nothing is written; reword the prose and re-run.
+
 `--complete`:
 
 ```markdown

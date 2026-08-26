@@ -22,8 +22,8 @@ complete)
 	body="complete: true"
 	;;
 successor)
-	[[ -n "$VALUE" ]] || {
-		printf 'lib-z-write: successor requires a slug\n' >&2
+	[[ "$VALUE" =~ $DS_Z_SLUG ]] || {
+		printf 'lib-z-write: successor takes a slug (%s), got "%s"\n' "$DS_Z_SLUG" "$VALUE" >&2
 		exit 1
 	}
 	body="successor: ${VALUE}"
@@ -40,6 +40,23 @@ abandoned)
 	exit 1
 	;;
 esac
+
+# §Z free text sits in the same section the INDEX parser scans, so a line of it
+# that opens with a closure key would rewrite the §Z column. Test the rendered
+# line, not the raw value: on disk the first line carries the field prefix, so
+# only a second or later line of a multi-line value can anchor.
+reject_closure_key() {
+	local label="$1" text="$2"
+	printf '%s' "$text" | grep -qE "${DS_Z_COMPLETE}|${DS_Z_ABANDONED}|${DS_Z_SUCCESSOR}" || return 0
+	printf 'lib-z-write: %s reads as a §Z closure key and would flip the INDEX §Z column; reword it\n' "$label" >&2
+	exit 1
+}
+
+reject_closure_key "summary" "$(printf 'summary: %s' "$SUMMARY")"
+reject_closure_key "key cites" "$(printf 'key cites: %s' "$CITES")"
+if [[ "$KIND" == "abandoned" ]]; then
+	reject_closure_key "reason" "$(printf 'reason: %s' "$VALUE")"
+fi
 
 grep -qE "$DS_SEC_CLOSEOUT" "$FILE" || {
 	printf 'lib-z-write: no Closeout heading in %s\n' "$FILE" >&2
