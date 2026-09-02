@@ -4,7 +4,7 @@ Loaded on demand. The procedure lives in `../SKILL.md`; this file is the lookup 
 
 ## PreToolUse hook coverage
 
-Matches `Edit | Write | MultiEdit`, but it is **gated on the repo**: `verify_hook.py` returns 0 without loading a single pattern unless `<cwd>/.scratchpad/dossier` is a directory. The same payload that emits a finding inside a dossier repo emits nothing outside one, so existing files in a plain repo carry unexamined claims — that gap is what `ds:check` step 2a (`verify_sweep.py`) is for, and what `/dossier:verify` on demand covers, having no such gate. Advisory in both cases: a finding is an `additionalContext` nudge at exit 0, never a block.
+Matches `Edit | Write | MultiEdit`, but it is **gated on the repo**: `verify_hook.py` returns 0 without loading a single pattern unless `<payload cwd>/.scratchpad/dossier` is a directory. The same payload that emits a finding inside a dossier repo emits nothing outside one, so existing files in a plain repo carry unexamined claims — that gap is what `ds:check` step 2a (`verify_sweep.py`) is for, and what `/dossier:verify` on demand covers, having no such gate. Advisory in both cases: a finding is an `additionalContext` nudge at exit 0, never a block.
 
 Patterns in `hooks/verify_patterns.py`, catalog in `hooks/verify_authorities.py` (140 EOL aliases, 34 Docker images, 31 AI models, 7 package registries).
 

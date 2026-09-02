@@ -49,9 +49,18 @@ HTTP_TIMEOUT_S = 5
 # ─── Infra ─────────────────────────────────────────────────────────────
 
 
+def scratchpad_root() -> Path:
+    """Project root that owns `.scratchpad/`: $DOSSIER_SCRATCHPAD_ROOT, else the process cwd.
+
+    A hook sets the env var from its payload `cwd`, because the hook process may
+    run from a subdirectory of the project and would otherwise fork the tree.
+    """
+    return Path(os.environ.get("DOSSIER_SCRATCHPAD_ROOT") or Path.cwd())
+
+
 def cache_dir() -> Path:
-    """Per-project HTTP cache root: <cwd>/.scratchpad/.verify-cache/. Falls back to $TMPDIR."""
-    root = Path.cwd() / ".scratchpad" / ".verify-cache"
+    """Per-project HTTP cache root: <scratchpad_root()>/.scratchpad/.verify-cache/. Falls back to $TMPDIR."""
+    root = scratchpad_root() / ".scratchpad" / ".verify-cache"
     try:
         root.mkdir(parents=True, exist_ok=True)
         return root

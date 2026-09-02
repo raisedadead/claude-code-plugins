@@ -10,7 +10,8 @@ empty or malformed registry, a bad regex, or an out-of-scope path, it exits 0
 and the write proceeds. Only an explicit, in-scope, matching registered pattern
 blocks. Escape hatch: DOSSIER_INVARIANT_GUARD=off (log the rationale in §S).
 
-Registry: .scratchpad/dossier/.invariant-guards.json (cwd-relative), a JSON list
+Registry: .scratchpad/dossier/.invariant-guards.json, resolved against the
+payload `cwd` and against the process cwd when the payload carries none. A JSON list
 of {"id", "pattern", "message", "paths"?}. "paths" is an optional list of fnmatch
 globs scoping the guard; absent means every non-dossier source file.
 
@@ -69,10 +70,11 @@ def is_dossier_path(file_path: str) -> bool:
     return Path(file_path).name in DOSSIER_ALLOW_NAMES
 
 
-def load_registry() -> list[dict]:
-    """Read the guard registry. Returns [] on any read/parse error (fail-open)."""
+def load_registry(root: Path | None = None) -> list[dict]:
+    """Read the guard registry under `root`. Returns [] on any read/parse error (fail-open)."""
+    registry = (root or Path.cwd()) / REGISTRY_REL
     try:
-        data = json.loads(REGISTRY_REL.read_text(encoding="utf-8"))
+        data = json.loads(registry.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return []
     if not isinstance(data, list):
@@ -129,7 +131,8 @@ def main() -> int:
         return 0
 
     cwd = event.get("cwd")
-    if isinstance(cwd, str) and cwd and not (Path(cwd) / ".scratchpad" / "dossier").is_dir():
+    root = Path(cwd) if isinstance(cwd, str) and cwd else None
+    if root is not None and not (root / ".scratchpad" / "dossier").is_dir():
         return 0
 
     if os.environ.get("DOSSIER_INVARIANT_GUARD") == "off":
@@ -142,7 +145,7 @@ def main() -> int:
     if is_dossier_path(file_path):
         return 0
 
-    registry = load_registry()
+    registry = load_registry(root)
     if not registry:
         return 0
 

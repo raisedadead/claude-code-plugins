@@ -8,7 +8,7 @@ argument-hint: dump | restore [<file>] | list
 
 Three verbs, standalone: a live dossier is optional.
 
-Storage: `<cwd>/.scratchpad/.tasklist-roll/<YYYY-MM-DD_HHMMSS>.tlr`
+Storage: `<project root>/.scratchpad/.tasklist-roll/<YYYY-MM-DD_HHMMSS>.tlr` — the auto-dump hook takes that root from its payload `cwd`, so a subdirectory does not fork the tree.
 
 Format (compact pipe-table v1):
 
@@ -38,7 +38,7 @@ Snapshot the current Claude Code TaskList to a new `.tlr` file.
 1. Per task capture `id`, `subject`, `description`, `activeForm`, `status`, `blockedBy`. v1 drops `metadata` and `owner`.
 1. Read the current live dossier slug for the `doss:` header (`—` when there is none).
 1. Render the pipe-table per the format above.
-1. Write atomically to `<cwd>/.scratchpad/.tasklist-roll/<YYYY-MM-DD_HHMMSS>.tlr` — tmp + rename.
+1. Write atomically to `<project root>/.scratchpad/.tasklist-roll/<YYYY-MM-DD_HHMMSS>.tlr` — tmp + rename.
 1. Report: `rolled: <relpath> (<N> tasks, <P> pending)`.
 
 Idempotent — the timestamp namespaces the filename, so a re-run adds a file.
@@ -47,7 +47,7 @@ Idempotent — the timestamp namespaces the filename, so a re-run adds a file.
 
 Recreate the TaskList from a `.tlr` file.
 
-1. `<file>` when given, else the newest `<ts>.tlr` in `<cwd>/.scratchpad/.tasklist-roll/`.
+1. `<file>` when given, else the newest `<ts>.tlr` in `<project root>/.scratchpad/.tasklist-roll/`.
 1. No `.tlr` present → say so and suggest `dump` first.
 1. **Identity check:** read the `doss:` header. A slug (rather than `—`) that differs from the current live dossier slug (INDEX first `live` row) gets `roll is from <doss>, current live is <slug> — restore anyway? (y/N)`, defaulting to no. A cross-dossier restore is usually a mistake.
 1. Parse the pipe-table: skip header lines starting with `#` or without a leading `|`, skip `|---|` separator rows, ignore unknown trailing columns.
@@ -60,7 +60,7 @@ Restore is **idempotent by subject** — re-restoring the same roll, or restorin
 
 ### `list`
 
-Show every `.tlr` under `<cwd>/.scratchpad/.tasklist-roll/`, newest first: filename, task count, pending count, trig (explicit / precompact). Reads each header and counts pipe rows — no TaskList calls.
+Show every `.tlr` under `<project root>/.scratchpad/.tasklist-roll/`, newest first: filename, task count, pending count, trig (explicit / precompact). Reads each header and counts pipe rows — no TaskList calls.
 
 ## PreCompact / SessionEnd safety net
 

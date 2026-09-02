@@ -14,7 +14,7 @@ Wired in `hooks/hooks.json`. Fires on `Edit | Write | MultiEdit`, and only in a 
 
 Non-blocking by design — emits a stderr reminder plus `additionalContext`. Per-session dedup. Operator escape: `# verify-skip: <ruleName>` on or near the line.
 
-Cache at `<cwd>/.scratchpad/.verify-cache/` (24h TTL on registries, 30d on resolved SHAs). Offline = silent skip.
+Cache at `<project root>/.scratchpad/.verify-cache/` (24h TTL on registries, 30d on resolved SHAs). Offline = silent skip.
 
 ## Surface 2 — `/dossier:verify [<topic>]` (manual, generic)
 

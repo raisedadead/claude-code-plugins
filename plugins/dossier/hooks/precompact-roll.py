@@ -2,7 +2,8 @@
 """PreCompact / SessionEnd hook — auto-dump TaskList before context loss.
 
 Reads stdin JSON, locates transcript_path, reconstructs current TaskList
-state, writes `<cwd>/.scratchpad/.tasklist-roll/<ts>.tlr`, emits a top-level
+state, writes `<root>/.scratchpad/.tasklist-roll/<ts>.tlr` — `<root>` is the
+payload `cwd` when it names a directory and the process cwd otherwise — emits a top-level
 `systemMessage` breadcrumb. SessionEnd and PreCompact have no
 `hookSpecificOutput` output branch in the CC hook schema, so context cannot
 be injected from here — restore reads the newest .tlr from disk. Always
@@ -55,12 +56,19 @@ def main() -> int:
     trig = "sessionend" if event_name == "SessionEnd" else "precompact"
     sid = sid or parsed_sid or "unknown"
     try:
-        doss = live_slug_from_index()
+        hook_cwd = payload.get("cwd")
+        root = Path(hook_cwd) if isinstance(hook_cwd, str) and hook_cwd else Path.cwd()
+        if not root.is_dir():
+            root = Path.cwd()
+    except OSError:
+        return 0
+    try:
+        doss = live_slug_from_index(root)
     except Exception:  # noqa: BLE001
         doss = ""
     body = render_tlr(tasks, sid, trig, doss)
-    out_path = new_roll_path()
     try:
+        out_path = new_roll_path(root)
         tmp = out_path.with_suffix(out_path.suffix + ".tmp")
         tmp.write_text(body)
         tmp.replace(out_path)
@@ -70,7 +78,7 @@ def main() -> int:
 
     rel = out_path
     try:
-        rel = out_path.relative_to(Path.cwd())
+        rel = out_path.relative_to(root)
     except ValueError:
         pass
     pending = sum(1 for t in tasks if t["status"] == "pending")

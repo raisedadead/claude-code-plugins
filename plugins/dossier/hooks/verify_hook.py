@@ -84,12 +84,10 @@ def main() -> int:
         return 0
 
     cwd = payload.get("cwd")
-    if (
-        isinstance(cwd, str)
-        and cwd
-        and not (Path(cwd) / ".scratchpad" / "dossier").is_dir()
-    ):
-        return 0
+    if isinstance(cwd, str) and cwd:
+        if not (Path(cwd) / ".scratchpad" / "dossier").is_dir():
+            return 0
+        os.environ["DOSSIER_SCRATCHPAD_ROOT"] = cwd
 
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     try:

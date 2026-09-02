@@ -641,6 +641,7 @@ def _drive_in(mod: object, payload: dict, cwd: Path) -> tuple[int, str]:
             return _drive(mod, payload)
     finally:
         os.chdir(old)
+        os.environ.pop("DOSSIER_SCRATCHPAD_ROOT", None)
 
 
 _GUARD_ENTRY = {
@@ -968,7 +969,165 @@ def test_verify_lib_ships_no_unreferenced_check_helper() -> None:
     assert not orphans, f"unreferenced verify_lib helpers: {orphans}"
 
 
+def test_verify_hook_caches_under_the_payload_cwd() -> None:
+    with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
+        ws, elsewhere = _dossier_workspace(d), Path(other)
+        with _only_probe_rule():
+            rc, _ = _drive_in(verify_hook, _verify_payload(ws, "x = 1\n"), elsewhere)
+        assert rc == 0, rc
+        assert (ws / ".scratchpad" / ".verify-cache").is_dir(), "payload cwd"
+        assert not (elsewhere / ".scratchpad").exists(), "process cwd stays clean"
+
+
+def test_verify_hook_caches_under_the_process_cwd_without_a_payload_cwd() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        ws = _dossier_workspace(d)
+        payload = _verify_payload(ws, "x = 1\n")
+        del payload["cwd"]
+        with _only_probe_rule():
+            rc, _ = _drive_in(verify_hook, payload, ws)
+        assert rc == 0, rc
+        assert (ws / ".scratchpad" / ".verify-cache").is_dir(), "cwd fallback"
+
+
+def _roll_payload(root: Path, cwd: Path | None) -> dict:
+    events = [
+        {
+            "sessionId": "s7",
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_use",
+                        "name": "TaskCreate",
+                        "id": "r1",
+                        "input": {
+                            "subject": "A",
+                            "description": "A",
+                            "activeForm": "Doing A",
+                        },
+                    }
+                ]
+            },
+        },
+        {
+            "message": {
+                "content": [
+                    {
+                        "type": "tool_result",
+                        "tool_use_id": "r1",
+                        "content": "Task #1 created successfully: A",
+                    }
+                ]
+            }
+        },
+    ]
+    tpath = root / "t.jsonl"
+    tpath.write_text("\n".join(json.dumps(e) for e in events) + "\n")
+    payload = {
+        "transcript_path": str(tpath),
+        "session_id": "s7",
+        "hook_event_name": "SessionEnd",
+    }
+    if cwd is not None:
+        payload["cwd"] = str(cwd)
+    return payload
+
+
+def test_precompact_rolls_under_the_payload_cwd() -> None:
+    pr = _load_hyphen("precompact_roll_cwd", "precompact-roll.py")
+    with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
+        ws, elsewhere = Path(d), Path(other)
+        rc, _ = _drive_in(pr, _roll_payload(ws, ws), elsewhere)
+        assert rc == 0, rc
+        assert list((ws / ".scratchpad" / ".tasklist-roll").glob("*.tlr")), (
+            "roll follows payload cwd"
+        )
+        assert not (elsewhere / ".scratchpad").exists(), "process cwd stays clean"
+
+
+def test_precompact_rolls_under_the_process_cwd_without_a_payload_cwd() -> None:
+    pr = _load_hyphen("precompact_roll_nocwd", "precompact-roll.py")
+    with tempfile.TemporaryDirectory() as d:
+        ws = Path(d)
+        rc, _ = _drive_in(pr, _roll_payload(ws, None), ws)
+        assert rc == 0, rc
+        assert list((ws / ".scratchpad" / ".tasklist-roll").glob("*.tlr")), (
+            "cwd is the fallback root"
+        )
+
+
+def test_precompact_ignores_a_payload_cwd_that_is_not_a_directory() -> None:
+    pr = _load_hyphen("precompact_roll_gone", "precompact-roll.py")
+    with tempfile.TemporaryDirectory() as d:
+        ws = Path(d)
+        gone = ws / "removed-worktree"
+        payload = _roll_payload(ws, gone)
+        rc, _ = _drive_in(pr, payload, ws)
+        assert rc == 0, rc
+        assert not gone.exists(), "a removed worktree must not be resurrected"
+        assert list((ws / ".scratchpad" / ".tasklist-roll").glob("*.tlr")), (
+            "the roll falls back to the process cwd"
+        )
+
+
+def test_precompact_exits_zero_when_the_root_cannot_be_written() -> None:
+    pr = _load_hyphen("precompact_roll_ro", "precompact-roll.py")
+    with tempfile.TemporaryDirectory() as d:
+        ws = Path(d)
+        payload = _roll_payload(ws, ws)
+        locked = ws / "locked"
+        locked.mkdir()
+        payload["cwd"] = str(locked)
+        locked.chmod(0o500)
+        try:
+            rc, _ = _drive_in(pr, payload, ws)
+        finally:
+            locked.chmod(0o700)
+        assert rc == 0, "the hook always exits 0, whatever the root does"
+        assert not (locked / ".scratchpad").exists(), "an unwritable root stays untouched"
+
+
+def test_precompact_exits_zero_when_the_process_cwd_is_gone() -> None:
+    pr = _load_hyphen("precompact_roll_nocwd_gone", "precompact-roll.py")
+    with tempfile.TemporaryDirectory() as d:
+        ws = Path(d)
+        payload = _roll_payload(ws, ws / "removed-worktree")
+        vanished = ws / "vanished"
+        vanished.mkdir()
+        old = Path.cwd()
+        os.chdir(vanished)
+        try:
+            vanished.rmdir()
+            with contextlib.redirect_stderr(io.StringIO()):
+                rc, _ = _drive(pr, payload)
+        finally:
+            os.chdir(old)
+            os.environ.pop("DOSSIER_SCRATCHPAD_ROOT", None)
+        assert rc == 0, "a removed process cwd must not raise out of the hook"
+
+
+def test_invariant_guard_reads_the_registry_from_the_payload_cwd() -> None:
+    with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
+        ws = Path(d)
+        _invariant_registry(ws, [_GUARD_ENTRY])
+        payload = _write_payload("src/app.py", "x = eval(y)")
+        payload["cwd"] = str(ws)
+        rc, _ = _drive_in(invariant_guard, payload, Path(other))
+        assert rc == 2, "the guard must fire from a subdirectory too"
+
+
+def test_invariant_guard_stays_open_when_the_payload_cwd_holds_no_registry() -> None:
+    with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
+        ws = Path(d)
+        (ws / ".scratchpad" / "dossier").mkdir(parents=True)
+        payload = _write_payload("src/app.py", "x = eval(y)")
+        payload["cwd"] = str(ws)
+        rc, _ = _drive_in(invariant_guard, payload, Path(other))
+        assert rc == 0, "no registry stays fail-open"
+
+
 def _run() -> int:
+    os.environ.pop("DOSSIER_SCRATCHPAD_ROOT", None)
     wanted = ""
     argv = sys.argv[1:]
     if "-k" in argv:
