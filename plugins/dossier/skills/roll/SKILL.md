@@ -40,7 +40,7 @@ Snapshot the current Claude Code TaskList to a new `.tlr` file.
 1. Per task capture `id`, `subject`, `description`, `activeForm`, `status`, `blockedBy`. v1 drops `metadata` and `owner`.
 1. Read the current live dossier slug for the `doss:` header (`—` when there is none).
 1. Render the pipe-table per the format above.
-1. Write atomically to `<project root>/.scratchpad/.tasklist-roll/<YYYY-MM-DD_HHMMSS>.tlr` — tmp + rename.
+1. Write atomically to `<project root>/.scratchpad/.tasklist-roll/<YYYY-MM-DD_HHMMSS>.tlr` — tmp + rename. Take the filename and the `ts:` header from UTC, not local time. The hook uses UTC, the `ts:` field is `Z`-suffixed, and filename order is the ordering every verb here relies on; a local-time name sorts against the hook's by your offset.
 1. Report: `rolled: <relpath> (<N> tasks, <P> pending)`.
 
 Idempotent — the timestamp namespaces the filename, so a re-run adds a file.
@@ -51,7 +51,7 @@ Idempotent — the timestamp namespaces the filename, so a re-run adds a file.
 
 Recreate the TaskList from a `.tlr` file.
 
-1. `<file>` when given, else the newest `<ts>.tlr` in `<project root>/.scratchpad/.tasklist-roll/`.
+1. `<file>` when given. Otherwise the newest `trig: sessionend` file, which is code-written and verbatim; fall back to the newest file of any trigger only when no `sessionend` roll exists. Do not simply take the newest name — an `explicit` roll is model-transcribed (see `dump`), and on this machine `.tlr` files written before 2026-09-09 mix UTC and local-time names, so filename order is not write order across that boundary.
 1. No `.tlr` present → say so and suggest `dump` first.
 1. **Identity check:** read the `doss:` header. A slug (rather than `—`) that differs from the current live dossier slug (INDEX first `live` row) gets `roll is from <doss>, current live is <slug> — restore anyway? (y/N)`, defaulting to no. A cross-dossier restore is usually a mistake.
 1. Parse the pipe-table: skip header lines starting with `#` or without a leading `|`, skip `|---|` separator rows, ignore unknown trailing columns.

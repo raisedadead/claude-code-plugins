@@ -12,6 +12,8 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 
 - **`precompact-roll.py` is now `sessionend-roll.py`.** The old name described a registration the hook no longer has. `hooks.json`, the `roll` skill and `RESEARCH.md` F13 follow it, and its stderr prefixes move from `roll-precompact` to `roll-sessionend`. Earlier changelog entries keep the old name because that is what the file was called then.
 
+- **`restore` no longer defaults to the newest filename, and `dump` now stamps UTC.** The explicit `dump` is model-transcribed, so it paraphrases and drops descriptions, and it was also writing local-time names and `ts:` values with a `Z` suffix. On a `+0530` machine that made an explicit roll sort after a hook roll written three minutes later, so the documented newest-name default selected the paraphrase over the verbatim copy. `restore` now prefers the newest `trig: sessionend` file and falls back to any trigger only when none exists. See `RESEARCH.md` F36.
+
 ### Added
 
 - **The roll directory now prunes.** `roll_lib.prune_rolls` keeps the newest `ROLL_RETAIN` (20) `.tlr` files per project and unlinks the rest; the `SessionEnd` hook calls it after each write. `.scratchpad/.tasklist-roll/` previously only grew — no unlink, prune or cap existed anywhere in `roll_lib.py`. An explicit `/dossier:roll dump` does not prune. Three tests: pruning fires past the ceiling, does not fire at it, and the hook itself prunes.
