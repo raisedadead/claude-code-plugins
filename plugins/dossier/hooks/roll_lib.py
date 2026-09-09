@@ -269,3 +269,21 @@ def roll_dir(cwd: Path | None = None) -> Path:
 def new_roll_path(cwd: Path | None = None) -> Path:
     ts = time.strftime("%Y-%m-%d_%H%M%S", time.gmtime())
     return roll_dir(cwd) / f"{ts}.tlr"
+
+
+ROLL_RETAIN = 20
+
+
+def prune_rolls(cwd: Path | None = None) -> list[Path]:
+    try:
+        rolls = sorted(roll_dir(cwd).glob("*.tlr"))
+    except OSError:
+        return []
+    removed: list[Path] = []
+    for stale in rolls[: max(0, len(rolls) - ROLL_RETAIN)]:
+        try:
+            stale.unlink()
+        except OSError:
+            continue
+        removed.append(stale)
+    return removed

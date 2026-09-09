@@ -1126,6 +1126,55 @@ def test_invariant_guard_stays_open_when_the_payload_cwd_holds_no_registry() -> 
         assert rc == 0, "no registry stays fail-open"
 
 
+def test_prune_rolls_removes_the_oldest_beyond_the_retention() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        made = []
+        for n in range(roll_lib.ROLL_RETAIN + 5):
+            f = roll_lib.roll_dir(root) / f"2026-01-{n + 1:02d}_000000.tlr"
+            f.write_text("# tlr v1\n")
+            made.append(f)
+        removed = roll_lib.prune_rolls(root)
+        left = sorted(roll_lib.roll_dir(root).glob("*.tlr"))
+        assert len(left) == roll_lib.ROLL_RETAIN, f"kept {len(left)}"
+        assert len(removed) == 5, f"removed {len(removed)}"
+        assert left == made[5:], "retention must keep the newest, drop the oldest"
+
+
+def test_prune_rolls_keeps_everything_under_the_retention() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        for n in range(roll_lib.ROLL_RETAIN):
+            (roll_lib.roll_dir(root) / f"2026-02-{n + 1:02d}_000000.tlr").write_text("x")
+        assert roll_lib.prune_rolls(root) == [], "at the ceiling nothing is removed"
+        assert len(list(roll_lib.roll_dir(root).glob("*.tlr"))) == roll_lib.ROLL_RETAIN
+
+
+def test_sessionend_roll_prunes_the_directory() -> None:
+    pr = _load_hyphen("precompact_roll_prune", "precompact-roll.py")
+    with tempfile.TemporaryDirectory() as d:
+        ws = Path(d) / "ws"
+        ws.mkdir()
+        for n in range(roll_lib.ROLL_RETAIN + 3):
+            (roll_lib.roll_dir(ws) / f"2026-03-{n + 1:02d}_000000.tlr").write_text("x")
+        seeded = {f.name for f in roll_lib.roll_dir(ws).glob("*.tlr")}
+        rc, _ = _drive_in(pr, _roll_payload(ws, ws), ws)
+        assert rc == 0
+        left = {f.name for f in roll_lib.roll_dir(ws).glob("*.tlr")}
+        assert len(left) == roll_lib.ROLL_RETAIN, f"hook must prune; left {len(left)}"
+        assert left - seeded, "the roll just written must survive its own prune"
+
+
+def test_hooks_json_does_not_register_precompact() -> None:
+    manifest = json.loads(
+        (Path(__file__).resolve().parent / "hooks.json").read_text()
+    )["hooks"]
+    assert "PreCompact" not in manifest, (
+        "the harness TaskList survives compaction; the roll is SessionEnd-only"
+    )
+    assert "SessionEnd" in manifest, "the cross-session roll must stay registered"
+
+
 def _run() -> int:
     os.environ.pop("DOSSIER_SCRATCHPAD_ROOT", None)
     wanted = ""

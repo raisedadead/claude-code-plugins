@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""PreCompact / SessionEnd hook — auto-dump TaskList before context loss.
+"""SessionEnd hook — auto-dump TaskList before the session is gone.
 
 Reads stdin JSON, locates transcript_path, reconstructs current TaskList
 state, writes `<root>/.scratchpad/.tasklist-roll/<ts>.tlr` — `<root>` is the
-payload `cwd` when it names a directory and the process cwd otherwise — emits a top-level
-`systemMessage` breadcrumb. SessionEnd and PreCompact have no
-`hookSpecificOutput` output branch in the CC hook schema, so context cannot
-be injected from here — restore reads the newest .tlr from disk. Always
-exits 0.
+payload `cwd` when it names a directory and the process cwd otherwise — then
+prunes to the newest `roll_lib.ROLL_RETAIN` files and emits a top-level
+`systemMessage` breadcrumb. SessionEnd has no `hookSpecificOutput` output
+branch in the CC hook schema, so context cannot be injected from here —
+restore reads the newest .tlr from disk. Always exits 0.
+
+Not registered on PreCompact: the harness TaskList survives compaction, so a
+compact-time roll duplicated state the harness still held, and the operator
+harness snapshots the same moment from its own task store. This hook keeps the
+cross-session case, where the TaskList does not carry over.
 """
 
 from __future__ import annotations
@@ -23,6 +28,7 @@ try:
         live_slug_from_index,
         new_roll_path,
         parse_transcript,
+        prune_rolls,
         render_tlr,
     )
 except Exception as exc:  # noqa: BLE001
@@ -52,8 +58,8 @@ def main() -> int:
     if not tasks:
         return 0
 
-    event_name = payload.get("hook_event_name") or "PreCompact"
-    trig = "sessionend" if event_name == "SessionEnd" else "precompact"
+    event_name = payload.get("hook_event_name") or "SessionEnd"
+    trig = "precompact" if event_name == "PreCompact" else "sessionend"
     sid = sid or parsed_sid or "unknown"
     try:
         hook_cwd = payload.get("cwd")
@@ -75,6 +81,7 @@ def main() -> int:
     except OSError as exc:
         print(f"roll-precompact write error: {exc}", file=sys.stderr)
         return 0
+    prune_rolls(root)
 
     rel = out_path
     try:

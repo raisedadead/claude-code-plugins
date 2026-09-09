@@ -4,6 +4,16 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-09-09
+
+### Changed
+
+- **The TaskList roll is `SessionEnd`-only; the `PreCompact` registration is gone.** It was registered on both, and the compact-time roll preserved nothing: the harness TaskList survives compaction — post-compaction `TaskUpdate` calls still address ids created before the boundary, seen in 22 transcripts. It also duplicated a snapshot the operator harness takes at the same moment from its own task store. What this removes is that duplication, not a worse snapshot: the harness holds the tasks across the boundary, and the roll only copied what it could already read. Neither source dominates the other: the two disagreed in 18 of 49 sessions whose transcript was at least as fresh, in both directions. `parse_transcript` replays one transcript file while subagent and workflow transcripts write into the same task directory, so the store holds ids the replay cannot see; the store in turn can go stale mid-session and lose pending ids the replay still holds. The replay is not richer — it carries no field the store lacks, and `.tlr` v1 drops `blocks`. `SessionEnd` keeps the roll because a TaskList does not carry across sessions. See `RESEARCH.md` D24.
+
+### Added
+
+- **The roll directory now prunes.** `roll_lib.prune_rolls` keeps the newest `ROLL_RETAIN` (20) `.tlr` files per project and unlinks the rest; the `SessionEnd` hook calls it after each write. `.scratchpad/.tasklist-roll/` previously only grew — no unlink, prune or cap existed anywhere in `roll_lib.py`. An explicit `/dossier:roll dump` does not prune. Three tests: pruning fires past the ceiling, does not fire at it, and the hook itself prunes.
+
 ## 2026-08-25
 
 ### Added

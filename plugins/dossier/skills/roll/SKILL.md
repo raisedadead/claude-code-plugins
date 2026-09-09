@@ -1,6 +1,6 @@
 ---
 name: roll
-description: Persist Claude Code TaskList across session boundaries. PreCompact + SessionEnd hooks auto-dump. Invoke when user says "/dossier:roll", "roll the session", "save tasks before compact", "restore tasks", "dump tasklist".
+description: Persist Claude Code TaskList across session boundaries. A SessionEnd hook auto-dumps. Invoke when user says "/dossier:roll", "roll the session", "save tasks before compact", "restore tasks", "dump tasklist".
 argument-hint: dump | restore [<file>] | list
 ---
 
@@ -25,6 +25,8 @@ trig: explicit | precompact | sessionend
 | 2 | ~ | Soft-block Vm.X | warn+confirm on stale §X | Soft-blocking Vm.X | — |
 | 3 | . | Wire integration | apply T10/T11 | — | 1,2 |
 ```
+
+`trig` values: `explicit` and `sessionend` are current; `precompact` is legacy, carried by files written before the PreCompact registration was dropped, and still read.
 
 State legend (matches dossier §T): `.`=pending · `~`=in_progress · `x`=completed. `—` = absent / default (restore: `desc`/`actv` default to `subject`). `dep` = comma-sep `i` values of blocking tasks; `—` = none.
 
@@ -60,27 +62,29 @@ Restore is **idempotent by subject** — re-restoring the same roll, or restorin
 
 ### `list`
 
-Show every `.tlr` under `<project root>/.scratchpad/.tasklist-roll/`, newest first: filename, task count, pending count, trig (explicit / precompact). Reads each header and counts pipe rows — no TaskList calls.
+Show every `.tlr` under `<project root>/.scratchpad/.tasklist-roll/`, newest first: filename, task count, pending count, trig (explicit / sessionend / precompact, the last being a legacy value on files written before the PreCompact registration was dropped). Reads each header and counts pipe rows — no TaskList calls.
 
-## PreCompact / SessionEnd safety net
+## SessionEnd safety net
 
-The plugin registers `PreCompact` and `SessionEnd` hooks (`hooks/precompact-roll.py`) that auto-dump the TaskList just before context is lost. Each reads the session transcript, reconstructs final state, writes a `.tlr` with `trig: precompact` / `sessionend`, and surfaces a top-level `systemMessage` breadcrumb:
+The plugin registers a `SessionEnd` hook (`hooks/precompact-roll.py`) that auto-dumps the TaskList as the session ends. It reads the session transcript, reconstructs final state, writes a `.tlr` with `trig: sessionend`, prunes the directory to the newest `roll_lib.ROLL_RETAIN` files, and surfaces a top-level `systemMessage` breadcrumb:
 
 ```
 TaskList auto-rolled to .scratchpad/.tasklist-roll/<file> (<N> tasks, <P> pending).
 Run /dossier:roll restore to resume.
 ```
 
-SessionEnd and PreCompact carry no `hookSpecificOutput` branch in the CC hook schema, so they cannot inject model context, and **nothing surfaces the roll in the next session either**: `session-start.sh` has no reference to rolls, `.tlr` files or the TaskList — `grep -ciE 'tlr|tasklist|roll' hooks/session-start.sh` prints `0`. The breadcrumb above reaches the operator only inside the dying session's `systemMessage`, and a compaction they did not watch leaves no trace in the new context.
+There is no `PreCompact` registration. The harness TaskList survives compaction — post-compaction `TaskUpdate` calls still address task ids created before the boundary — so a compact-time roll only duplicated state the harness still held. The roll covers the cross-session case, where the TaskList does not carry over. Files written before that change carry `trig: precompact`; `list` and `restore` still read them.
 
-So recovery is manual and the operator has to know to ask. Next session: `/dossier:roll list` to see what was dumped, then `/dossier:roll restore` for the newest. Best-effort: any failure is a silent skip and the compaction proceeds.
+SessionEnd carries no `hookSpecificOutput` branch in the CC hook schema, so it cannot inject model context, and **nothing surfaces the roll in the next session either**: `session-start.sh` has no reference to rolls, `.tlr` files or the TaskList — `grep -ciE 'tlr|tasklist|roll' hooks/session-start.sh` prints `0`. The breadcrumb above reaches the operator only inside the dying session's `systemMessage`.
+
+So recovery is manual and the operator has to know to ask. Next session: `/dossier:roll list` to see what was dumped, then `/dossier:roll restore` for the newest. Best-effort: any failure is a silent skip and the session ends regardless.
 
 ## Conventions
 
 - Pipe and newline are table-breaking. Dump escapes `|` to `¦` and collapses newlines to spaces; restore reverses both.
 - `id` (the `i` column) is informational; restore generates fresh ids and re-maps `dep`.
 - `.tlr` files are gitignored via the standard `.scratchpad/` rule.
-- Old rolls are operator-managed — delete them when stale.
+- The SessionEnd hook keeps the newest `roll_lib.ROLL_RETAIN` (20) rolls and unlinks the rest. An explicit `dump` does not prune.
 
 ## Hard rules
 
@@ -92,10 +96,10 @@ So recovery is manual and the operator has to know to ask. Next session: `/dossi
 
 - No cross-machine sync — `.tlr` lives in cwd, not a central store.
 - No conflict resolution between two restored TaskLists.
-- No automatic pruning — the operator deletes old rolls.
+- No pruning on an explicit `dump` — only the SessionEnd hook prunes.
 - No `metadata` / `owner` preservation in v1 (v2 adds them as extra columns).
 
 ## Cite
 
 - `hooks/roll_lib.py` — parser/writer primitives
-- `hooks/precompact-roll.py` — PreCompact hook
+- `hooks/precompact-roll.py` — SessionEnd hook
