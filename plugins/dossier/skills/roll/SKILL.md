@@ -45,6 +45,8 @@ Snapshot the current Claude Code TaskList to a new `.tlr` file.
 
 Idempotent — the timestamp namespaces the filename, so a re-run adds a file.
 
+`dump` is transcription, not a copy. Every step above runs in the model, so long descriptions get paraphrased and some get dropped. Measured on `2026-09-09_191440.tlr`: 21 of 49 rows kept a description, and task 46 came out 504 characters against the 732 in the harness store, reworded and missing three file paths. The hook-written roll is the faithful one — it is code, and it copies each field verbatim. When both exist for a session, restore from the newest `trig: sessionend` file and treat an `explicit` one as a summary.
+
 ### `restore [<file>]`
 
 Recreate the TaskList from a `.tlr` file.
