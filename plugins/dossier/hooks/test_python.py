@@ -520,9 +520,9 @@ def test_marker_guard_skips_non_dossier_repo() -> None:
         assert rc == 0 and out == "", (rc, out)
 
 
-def test_precompact_output_schema_safe() -> None:
-    """SessionEnd/PreCompact emit no hookSpecificOutput (absent from the CC 2.1.x output union)."""
-    pr = _load_hyphen("precompact_roll", "precompact-roll.py")
+def test_sessionend_output_schema_safe() -> None:
+    """SessionEnd emits no hookSpecificOutput (absent from the CC 2.1.x output union)."""
+    pr = _load_hyphen("sessionend_roll", "sessionend-roll.py")
     events = [
         {
             "sessionId": "s9",
@@ -1033,8 +1033,8 @@ def _roll_payload(root: Path, cwd: Path | None) -> dict:
     return payload
 
 
-def test_precompact_rolls_under_the_payload_cwd() -> None:
-    pr = _load_hyphen("precompact_roll_cwd", "precompact-roll.py")
+def test_sessionend_rolls_under_the_payload_cwd() -> None:
+    pr = _load_hyphen("sessionend_roll_cwd", "sessionend-roll.py")
     with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
         ws, elsewhere = Path(d), Path(other)
         rc, _ = _drive_in(pr, _roll_payload(ws, ws), elsewhere)
@@ -1045,8 +1045,8 @@ def test_precompact_rolls_under_the_payload_cwd() -> None:
         assert not (elsewhere / ".scratchpad").exists(), "process cwd stays clean"
 
 
-def test_precompact_rolls_under_the_process_cwd_without_a_payload_cwd() -> None:
-    pr = _load_hyphen("precompact_roll_nocwd", "precompact-roll.py")
+def test_sessionend_rolls_under_the_process_cwd_without_a_payload_cwd() -> None:
+    pr = _load_hyphen("sessionend_roll_nocwd", "sessionend-roll.py")
     with tempfile.TemporaryDirectory() as d:
         ws = Path(d)
         rc, _ = _drive_in(pr, _roll_payload(ws, None), ws)
@@ -1056,8 +1056,8 @@ def test_precompact_rolls_under_the_process_cwd_without_a_payload_cwd() -> None:
         )
 
 
-def test_precompact_ignores_a_payload_cwd_that_is_not_a_directory() -> None:
-    pr = _load_hyphen("precompact_roll_gone", "precompact-roll.py")
+def test_sessionend_ignores_a_payload_cwd_that_is_not_a_directory() -> None:
+    pr = _load_hyphen("sessionend_roll_gone", "sessionend-roll.py")
     with tempfile.TemporaryDirectory() as d:
         ws = Path(d)
         gone = ws / "removed-worktree"
@@ -1070,8 +1070,8 @@ def test_precompact_ignores_a_payload_cwd_that_is_not_a_directory() -> None:
         )
 
 
-def test_precompact_exits_zero_when_the_root_cannot_be_written() -> None:
-    pr = _load_hyphen("precompact_roll_ro", "precompact-roll.py")
+def test_sessionend_exits_zero_when_the_root_cannot_be_written() -> None:
+    pr = _load_hyphen("sessionend_roll_ro", "sessionend-roll.py")
     with tempfile.TemporaryDirectory() as d:
         ws = Path(d)
         payload = _roll_payload(ws, ws)
@@ -1087,8 +1087,8 @@ def test_precompact_exits_zero_when_the_root_cannot_be_written() -> None:
         assert not (locked / ".scratchpad").exists(), "an unwritable root stays untouched"
 
 
-def test_precompact_exits_zero_when_the_process_cwd_is_gone() -> None:
-    pr = _load_hyphen("precompact_roll_nocwd_gone", "precompact-roll.py")
+def test_sessionend_exits_zero_when_the_process_cwd_is_gone() -> None:
+    pr = _load_hyphen("sessionend_roll_nocwd_gone", "sessionend-roll.py")
     with tempfile.TemporaryDirectory() as d:
         ws = Path(d)
         payload = _roll_payload(ws, ws / "removed-worktree")
@@ -1151,7 +1151,7 @@ def test_prune_rolls_keeps_everything_under_the_retention() -> None:
 
 
 def test_sessionend_roll_prunes_the_directory() -> None:
-    pr = _load_hyphen("precompact_roll_prune", "precompact-roll.py")
+    pr = _load_hyphen("sessionend_roll_prune", "sessionend-roll.py")
     with tempfile.TemporaryDirectory() as d:
         ws = Path(d) / "ws"
         ws.mkdir()

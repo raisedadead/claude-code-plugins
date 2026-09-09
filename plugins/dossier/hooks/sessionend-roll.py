@@ -32,7 +32,7 @@ try:
         render_tlr,
     )
 except Exception as exc:  # noqa: BLE001
-    print(f"roll-precompact load error: {type(exc).__name__}: {exc}", file=sys.stderr)
+    print(f"roll-sessionend load error: {type(exc).__name__}: {exc}", file=sys.stderr)
     sys.exit(0)
 
 
@@ -51,7 +51,7 @@ def main() -> int:
         tasks, parsed_sid = parse_transcript(Path(transcript))
     except Exception as exc:  # noqa: BLE001
         print(
-            f"roll-precompact parse error: {type(exc).__name__}: {exc}", file=sys.stderr
+            f"roll-sessionend parse error: {type(exc).__name__}: {exc}", file=sys.stderr
         )
         return 0
 
@@ -79,7 +79,7 @@ def main() -> int:
         tmp.write_text(body)
         tmp.replace(out_path)
     except OSError as exc:
-        print(f"roll-precompact write error: {exc}", file=sys.stderr)
+        print(f"roll-sessionend write error: {exc}", file=sys.stderr)
         return 0
     prune_rolls(root)
 

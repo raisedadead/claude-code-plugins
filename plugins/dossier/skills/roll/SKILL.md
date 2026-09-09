@@ -66,7 +66,7 @@ Show every `.tlr` under `<project root>/.scratchpad/.tasklist-roll/`, newest fir
 
 ## SessionEnd safety net
 
-The plugin registers a `SessionEnd` hook (`hooks/precompact-roll.py`) that auto-dumps the TaskList as the session ends. It reads the session transcript, reconstructs final state, writes a `.tlr` with `trig: sessionend`, prunes the directory to the newest `roll_lib.ROLL_RETAIN` files, and surfaces a top-level `systemMessage` breadcrumb:
+The plugin registers a `SessionEnd` hook (`hooks/sessionend-roll.py`) that auto-dumps the TaskList as the session ends. It reads the session transcript, reconstructs final state, writes a `.tlr` with `trig: sessionend`, prunes the directory to the newest `roll_lib.ROLL_RETAIN` files, and surfaces a top-level `systemMessage` breadcrumb:
 
 ```
 TaskList auto-rolled to .scratchpad/.tasklist-roll/<file> (<N> tasks, <P> pending).
@@ -102,4 +102,4 @@ So recovery is manual and the operator has to know to ask. Next session: `/dossi
 ## Cite
 
 - `hooks/roll_lib.py` — parser/writer primitives
-- `hooks/precompact-roll.py` — SessionEnd hook
+- `hooks/sessionend-roll.py` — SessionEnd hook

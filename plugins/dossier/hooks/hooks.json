@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/precompact-roll.py",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/sessionend-roll.py",
             "timeout": 15
           }
         ]
