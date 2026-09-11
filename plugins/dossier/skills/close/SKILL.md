@@ -79,7 +79,7 @@ Append §S as its own paragraph (blank line before AND after — per FORMAT.md �
 
 ### 5.5. CONVERGE (contract gate; `--abandon` skips it)
 
-Run `bash "$CLAUDE_PLUGIN_ROOT"/hooks/lib-converge.sh` with no argument — it resolves the live wave's contract itself, tracked `.dossier/` home first, wave-dir `CONTRACT.md` fallback, and prints the resolved path plus every command before running any of them. Read the `CONVERGE:` line before the exit code (a missing runner exits 1 or 2 on its own, aliasing UNMET and PARSE). Running this at all is model-judgment — no hook fires on close; the verdict is computed.
+Run `bash "$CLAUDE_PLUGIN_ROOT"/hooks/lib-converge.sh <contract>` with the closing wave's own contract: `.dossier/<slug>.md` when that file exists, else `<dir>/CONTRACT.md`. Do not run it bare here — the wave is still `live` at this step, and with a live sibling the bare form exits `PARSE` naming both instead of picking one, which the table below would read as a closable contract gap. The runner prints the resolved path plus every command before running any of them. Read the `CONVERGE:` line before the exit code (a missing runner exits 1 or 2 on its own, aliasing UNMET and PARSE). Running this at all is model-judgment — no hook fires on close; the verdict is computed.
 
 | verdict        | action                                                                                                                                                                      |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -260,10 +260,16 @@ def main(argv: list[str]) -> int:
                 "no live wave under .scratchpad/dossier/ — a closed wave's"
                 " contract runs only by explicit path"
             )
-        found = next((c for s in slugs if (c := _contract_for(root, s))), None)
-        if found is None:
+        owners = [(s, c) for s in slugs if (c := _contract_for(root, s))]
+        if not owners:
             return _fail(f"live wave {slugs[0]} has no contract — ds:new writes one")
-        contract = found
+        if len(owners) > 1:
+            names = ", ".join(s for s, _ in owners)
+            return _fail(
+                f"{len(owners)} live waves resolve a contract ({names}) — pass the"
+                " contract path, or pause/close the stale ones"
+            )
+        contract = owners[0][1]
     else:
         contract = Path(argv[1])
     if not contract.is_file():

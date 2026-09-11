@@ -14,7 +14,7 @@ A `§T` list says what to do and never what done means, so the objective drifts 
 bash "${CLAUDE_PLUGIN_ROOT}"/hooks/lib-converge.sh [contract-path]
 ```
 
-No argument → the runner resolves the live wave's contract: the tracked `.dossier/` home first, then the wave directory's own `CONTRACT.md`. No live wave is `PARSE` — a closed wave's contract runs by explicit path only.
+No argument → the runner resolves the live wave's contract: the tracked `.dossier/` home first, then the wave directory's own `CONTRACT.md`. No live wave is `PARSE` — a closed wave's contract runs by explicit path only. Two or more live waves that each resolve a contract is also `PARSE`, naming them: the runner will not pick one by date, so pass the path or pause/close the stale ones.
 
 | exit | line                         | meaning                                   |
 | ---- | ---------------------------- | ----------------------------------------- |

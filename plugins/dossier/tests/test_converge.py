@@ -402,6 +402,37 @@ def test_a_same_slug_successor_selects_the_live_wave() -> None:
         assert "CONVERGE: MET 1/1" in result.stdout, result.stdout
 
 
+def test_two_live_waves_with_contracts_is_a_parse_naming_both() -> None:
+    """Sorting picked the oldest of three live waves in fCC/infra and answered
+    for a wave nobody asked about. session-start already calls two live waves
+    a conflict; bare converge must not resolve it by date."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-01-older")
+        _wave(root, "2026-08-05-newer")
+        for slug in ("2026-08-01-older", "2026-08-05-newer"):
+            wave = root / ".scratchpad" / "dossier" / slug
+            (wave / "CONTRACT.md").write_text(_contract_text(), encoding="utf-8")
+        result = _run_noarg(root)
+        verdict = _verdict(result)
+        assert verdict.startswith("CONVERGE: PARSE"), result.stdout
+        assert "2026-08-01-older" in verdict and "2026-08-05-newer" in verdict, verdict
+        assert result.returncode == PARSE, result.stdout
+
+
+def test_one_live_wave_beside_a_contractless_live_wave_still_converges() -> None:
+    """Only waves that own a contract compete; a bare live dir is not a rival."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        _wave(root, "2026-08-01-bare")
+        _wave(root, "2026-08-05-solo")
+        wave = root / ".scratchpad" / "dossier" / "2026-08-05-solo"
+        (wave / "CONTRACT.md").write_text(_contract_text(), encoding="utf-8")
+        result = _run_noarg(root)
+        assert "CONVERGE: MET 1/1" in result.stdout, result.stdout + result.stderr
+        assert result.returncode == MET, result.stdout
+
+
 def test_a_single_char_stem_does_not_match_an_unrelated_wave() -> None:
     """`s.md` once matched wave 2026-08-05-rails by suffix and reported MET
     against a contract belonging to nothing."""
