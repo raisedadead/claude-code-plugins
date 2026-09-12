@@ -32,7 +32,7 @@ from pathlib import Path
 
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit"}
 DOSSIER_ALLOW_PREFIXES = (".scratchpad/dossier/", ".scratchpad/")
-DOSSIER_ALLOW_NAMES = {"DOSSIER.md", "PLAN.md", "SPEC.md", "AUDIT.md", "LENS.md"}
+DOSSIER_ALLOW_NAMES = {"DOSSIER.md"}
 REGISTRY_REL = Path(".scratchpad/dossier/.invariant-guards.json")
 
 

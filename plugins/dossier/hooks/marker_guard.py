@@ -46,13 +46,7 @@ DOSSIER_ALLOW_PREFIXES = (
 )
 
 # Filenames that are dossier ledgers regardless of location.
-DOSSIER_ALLOW_NAMES = {
-    "DOSSIER.md",
-    "PLAN.md",
-    "SPEC.md",
-    "AUDIT.md",
-    "LENS.md",
-}
+DOSSIER_ALLOW_NAMES = {"DOSSIER.md"}
 
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit"}
 

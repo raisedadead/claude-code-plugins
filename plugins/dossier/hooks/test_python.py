@@ -700,6 +700,27 @@ def test_invariant_guard_dossier_pass_through() -> None:
         assert rc == 0, rc
 
 
+def test_invariant_guard_blocks_a_repo_root_spec_md() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        _invariant_registry(
+            root, [{"id": "V1", "pattern": r"eval\(", "message": "no eval"}]
+        )
+        rc, _ = _drive_in(invariant_guard, _write_payload("SPEC.md", "eval("), root)
+        assert rc == 2, rc
+
+
+def test_invariant_guard_exempts_an_absolute_dossier_spec_md() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        _invariant_registry(
+            root, [{"id": "V1", "pattern": r"eval\(", "message": "no eval"}]
+        )
+        abs_path = str(root / ".scratchpad" / "dossier" / "x" / "SPEC.md")
+        rc, _ = _drive_in(invariant_guard, _write_payload(abs_path, "eval("), root)
+        assert rc == 0, rc
+
+
 def test_invariant_guard_no_registry_failopen() -> None:
     with tempfile.TemporaryDirectory() as d:
         rc, _ = _drive_in(

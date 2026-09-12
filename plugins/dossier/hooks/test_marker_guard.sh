@@ -61,6 +61,12 @@ guard Edit "src/foo.ts" "// workaround for upstream bug #1234"
 guard Write ".scratchpad/dossier/2026-01-01-foo/DOSSIER.md" "| B1 | bug | PH3-B7 | open |"
 ! advises || fail "DOSSIER.md ledger may carry audit ids without advisory"
 
+guard Write "$TMP/.scratchpad/dossier/2026-01-01-foo/SPEC.md" "# §V26: legacy invariant"
+! advises || fail "an absolute legacy SPEC.md is exempt by prefix, not by name"
+
+guard Edit "SPEC.md" "# §V26: account guard scope check"
+advises || fail "a repo-root SPEC.md is ordinary source and must advise"
+
 guard Edit "src/account.ts" "// §V26: account guard scope check"
 [ "$rc" -eq 0 ] || fail "§V26 cite must exit 0 (advisory, never block)"
 advises || fail "§V26 dossier cite should emit an advisory"

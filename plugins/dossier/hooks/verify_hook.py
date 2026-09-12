@@ -53,11 +53,7 @@ def _scope_ok(scope: str, path: str) -> bool:
 
 def _is_dossier_path(path: str) -> bool:
     posix = Path(path).as_posix()
-    return ".scratchpad/" in posix or Path(path).name in {
-        "DOSSIER.md",
-        "PLAN.md",
-        "SPEC.md",
-    }
+    return ".scratchpad/" in posix or Path(path).name == "DOSSIER.md"
 
 
 _SKIP_LINE = re.compile(r"#\s*verify-skip:\s*([\w,-]+)")
