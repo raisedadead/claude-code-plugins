@@ -15,10 +15,6 @@ Both plugin CHANGELOGs here hand-author dated wave entries; `ds:ship` mechanises
 
 ## Steps
 
-### 0. Detect host env
-
-Per ADAPTERS.md.
-
 ### 1. Locate + gate
 
 Live dossier per `ds:status`. A non-preview run requires §T all-`x` (the same scan `ds:close` uses). `--preview` skips the gate and only prints.
@@ -34,7 +30,7 @@ ds:ship: <n> CHANGELOG.md files found — pass --changelog <path> (never guessin
 For every `x` row, classify the `cite` cell first:
 
 - SHA-shaped (`[0-9a-f]{7,40}`): verify with `git -C <repo> cat-file -t <sha>` per §X repo. A commit object resolves through `git log -1 --format=... <sha>`. Always pass the verified SHA — a bare `git log -1 <cite>` falls back to pathspec resolution and quietly resolves a wrong commit for non-SHA text.
-- Anything else (artifact filename, §-ref — FORMAT.md enumerates SHA/PR-ref/`—`, and live dossiers legitimately carry artifact cites for research rows): bucket as `[no commit cite]`, entry text from the ledger's task cell. A sanctioned no-commit row is signal, not noise.
+- Anything else (artifact filename, §-ref — ${CLAUDE_PLUGIN_ROOT}/FORMAT.md enumerates SHA/PR-ref/`—`, and live dossiers legitimately carry artifact cites for research rows): bucket as `[no commit cite]`, entry text from the ledger's task cell. A sanctioned no-commit row is signal, not noise.
 - SHA-shaped and present in no §X repo: flag `[cite unresolved]`. Every row lands somewhere.
 
 ### 3. Parse + map
@@ -50,7 +46,7 @@ Read the target file's preamble: "Semantic Versioning" → semver mode (`## [<bu
 Group bullets under keep-a-changelog categories, omitting empty ones. Write through the atomic helper — idempotency key = the wave's range cite, unique per wave, so two waves closing the same day stay distinct under a bare date heading:
 
 ```bash
-"$CLAUDE_PLUGIN_ROOT"/hooks/lib-changelog-write.sh <changelog> <section-file> "[<first>..<last>]"
+"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-changelog-write.sh <changelog> <section-file> "[<first>..<last>]"
 ```
 
 Exit 3 = section already present (a safe re-run). The helper is the only writer: a raw `Edit` bypasses the key and duplicates the section.

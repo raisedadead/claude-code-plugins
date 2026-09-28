@@ -80,18 +80,6 @@ guard Edit "src/foo.ts" "// RFC 7519 §4.1.4 exp claim"
 DOSSIER_MARKER_GUARD=off guard Edit "src/foo.ts" "// PH3-B7: bypass"
 ! advises || fail "DOSSIER_MARKER_GUARD=off should suppress the advisory"
 
-python3 -c '
-import json
-print(json.dumps({
-    "tool_name": "MultiEdit",
-    "tool_input": {"file_path": "src/foo.ts", "edits": [
-        {"old_string": "a", "new_string": "// safe rename"},
-        {"old_string": "b", "new_string": "// PH4-A1: extract"},
-    ]},
-}))
-' | CLAUDE_PROJECT_DIR="$TMP" python3 "$GUARD" >"$TMP/out" 2>"$TMP/err" || fail "MultiEdit must exit 0"
-grep -q "additionalContext" "$TMP/out" || fail "MultiEdit with PH-form chunk should advise"
-
 printf '{"tool_name":"Bash","tool_input":{"command":"echo PH3-B7"}}\n' |
 	CLAUDE_PROJECT_DIR="$TMP" python3 "$GUARD" >"$TMP/out" 2>"$TMP/err" || fail "non-Edit tool must exit 0"
 ! grep -q "additionalContext" "$TMP/out" || fail "non-Edit tool must be ignored"

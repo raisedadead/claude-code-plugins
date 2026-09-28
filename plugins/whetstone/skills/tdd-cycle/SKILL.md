@@ -10,7 +10,7 @@ Test-first for ad-hoc work that no ledger is driving. Agree the seam, watch the 
 ## When to use
 
 - Adding a feature or fixing a bug where the test should define "done".
-- Any behaviour-bearing edit outside a `dossier:build` / `ck:build` covenant. Under a covenant, `dossier:build` drives WHEN and WHAT and composes this skill's `run_slice.sh` as its RED/GREEN proof (dossier ADAPTERS §whetstone); the §T row already fixes the seam, so the interview is skipped. One ledger drives one edit.
+- Any behaviour-bearing edit outside a `dossier:build` covenant. Under a covenant, `dossier:build` drives WHEN and WHAT and composes this skill's `run_slice.sh` as its RED/GREEN proof (dossier ADAPTERS §whetstone); the §T row already fixes the seam, so the interview is skipped. One ledger drives one edit.
 
 ## The seam (agree it first)
 

@@ -16,11 +16,9 @@ Six steps. Append-only on §B + §V. Resumable.
 
 ## Steps
 
-### 0. Detect host env
+### 0. Helpers
 
-Per ADAPTERS.md. Note `HAS_CAVEMEM` (recurrence research benefits).
-
-DOSSIER.md writes go through the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` flips a **§T** state cell, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` appends §S. The §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends.
+DOSSIER.md writes go through the bundled helpers (${CLAUDE_PLUGIN_ROOT}/FORMAT.md §15): `${CLAUDE_PLUGIN_ROOT}/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` flips a **§T** state cell, `${CLAUDE_PLUGIN_ROOT}/hooks/lib-s-append.sh <dir> "<event>"` appends §S. The §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends.
 
 **There is no row-flip for §B.** `lib-row-flip.sh <dir> B<N> <state>` exits 1 printing `lib-row-flip: refuses Bugs rows (no state column — would destroy cells); use ds:backprop` — §B carries `id | bug | root cause | invariant added | fix cite` and no state column at all (FORMAT.md §9, §15). Every §B mutation in this skill is therefore an atomic whole-file write: the row append in step 6, the `invariant added` update in step 7, the `fix cite` update in step 8.
 
@@ -61,16 +59,16 @@ Define:
 - root cause hypothesis (≤2 lines)
 - recurrence likelihood (low / mid / high)
 
-A fuzzy root cause or a class-of-bug question: **spawn a `dossier-scout` subagent** with the mission "research <bug-label>: where does this class manifest? Prior occurrences? Test gaps?". With `HAS_CAVEMEM=1`, also query `mcp__cavemem__search` for prior observations of the same class.
+A fuzzy root cause or a class-of-bug question: **spawn a `dossier-scout` subagent** with the mission "research <bug-label>: where does this class manifest? Prior occurrences? Test gaps?".
 
 ### 4.5. FLAKE TRIAGE (failing-test bugs, whetstone compose, optional)
 
-For a bug that IS a failing test. Resolve whetstone's runner deterministically — source checkout (`plugins/whetstone/skills/flaky-test-audit/scripts/flake_runner.sh`) or operator-set `DOSSIER_FLAKE_RUNNER` (the `DOSSIER_RUN_SLICE` rule, ADAPTERS §whetstone). Unresolvable → skip silently, §S `flake-triage=skipped`, proceed to step 5.
+For a bug that IS a failing test, when `flake-runner` is on `PATH` (whetstone `bin/`, ADAPTERS §whetstone). Not on `PATH` → skip silently, §S `flake-triage=skipped`, proceed to step 5.
 
 Run the failing test N times (default 5) before characterising:
 
 ```bash
-"$FLAKE_RUNNER" 5 "$(mktemp -d)/results.json" <test-command...>
+flake-runner 5 "$(mktemp -d)/results.json" <test-command...>
 ```
 
 Rate = `fails/runs` from the results.json it writes (`{"<name>": {"runs": N, "fails": F}}`). Route:
@@ -218,6 +216,5 @@ A `ds:build` test failure invokes `ds:backprop` with bug-description = the test 
 ## Cite
 
 - FORMAT.md §7 (§V format), §9 (§B format), §11 (§S format), §14 (locks), §16 (resume)
-- ADAPTERS.md §cavemem
 - agents/dossier-scout.md
 - hooks/invariant_guard.py (write-time §V guard registry)

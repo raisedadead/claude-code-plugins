@@ -70,7 +70,8 @@ for plugin in ("dossier", "whetstone"):
     proot = os.path.join(root, "plugins", plugin)
     for dirpath, _, files in os.walk(proot):
         for name in files:
-            if not name.endswith(".md"):
+            # A changelog names what shipped at the time, deleted skills included.
+            if not name.endswith(".md") or name == "CHANGELOG.md":
                 continue
             path = os.path.join(dirpath, name)
             with open(path, encoding="utf-8") as handle:
@@ -98,9 +99,9 @@ words = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
     "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
 }
-lead = re.search(r"^(\w+) scripts under `\$CLAUDE_PLUGIN_ROOT/hooks/`", body, re.M)
+lead = re.search(r"^(\w+) scripts under `\$\{CLAUDE_PLUGIN_ROOT\}/hooks/`", body, re.M)
 if not lead:
-    print("  FORMAT.md carries no 'N scripts under $CLAUDE_PLUGIN_ROOT/hooks/' sentence", file=sys.stderr)
+    print("  FORMAT.md carries no 'N scripts under ${CLAUDE_PLUGIN_ROOT}/hooks/' sentence", file=sys.stderr)
     sys.exit(2)
 stated = words.get(lead.group(1).lower())
 if stated is None:
@@ -155,6 +156,54 @@ for span in re.findall(r"`([^`\n]+)`", body):
         bad.append(f"{cmd} -> exit {done.returncode} {note[0] if note else '(no match)'}")
 for entry in bad:
     print(f"  a maintainer running this from FORMAT.md gets nothing: {entry}", file=sys.stderr)
+sys.exit(1 if bad else 0)
+PY
+
+python3 - "$ROOT" <<'PY' || fail "a skill or agent body reaches a bundled file by a path that is empty or absent at install"
+import os, re, sys, tempfile
+
+root = os.path.realpath(sys.argv[1])
+# Claude Code substitutes ${CLAUDE_PLUGIN_ROOT} in skill and agent text and
+# exports no plugin variable to the Bash tool, so the bare form reads as empty.
+bare = re.compile(r"\$CLAUDE_PLUGIN_(ROOT|DATA)\b")
+repo_path = re.compile(r"(?<![\w/.-])(?:\./)?plugins/(dossier|whetstone)/")
+
+
+def offences(plugins_dir):
+    out = []
+    for plugin in sorted(os.listdir(plugins_dir)):
+        for sub in ("skills", "agents"):
+            base = os.path.join(plugins_dir, plugin, sub)
+            for dirpath, _, files in os.walk(base):
+                for name in files:
+                    if name != "SKILL.md" and sub == "skills":
+                        continue
+                    if not name.endswith(".md"):
+                        continue
+                    path = os.path.join(dirpath, name)
+                    with open(path, encoding="utf-8") as handle:
+                        for n, line in enumerate(handle, 1):
+                            if bare.search(line) or repo_path.search(line):
+                                out.append(f"{os.path.relpath(path, plugins_dir)}:{n}")
+    return out
+
+
+def fixture(line):
+    tmp = tempfile.mkdtemp()
+    os.makedirs(os.path.join(tmp, "p", "skills", "s"))
+    with open(os.path.join(tmp, "p", "skills", "s", "SKILL.md"), "w", encoding="utf-8") as handle:
+        handle.write(line + "\n")
+    return tmp
+
+
+assert offences(fixture('run "$CLAUDE_PLUGIN_ROOT"/hooks/x.sh')), "the bare form must be caught"
+assert offences(fixture("read plugins/dossier/FORMAT.md")), "a repo-relative path must be caught"
+assert offences(fixture("read ./plugins/dossier/FORMAT.md")), "a dot-relative path must be caught"
+assert not offences(fixture('run "${CLAUDE_PLUGIN_ROOT}"/hooks/x.sh')), "the braced form must pass"
+
+bad = offences(os.path.join(root, "plugins"))
+for entry in bad:
+    print(f"  {entry}", file=sys.stderr)
 sys.exit(1 if bad else 0)
 PY
 

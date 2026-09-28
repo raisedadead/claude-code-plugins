@@ -17,11 +17,9 @@ Closing takes exactly one of `--complete`, `--successor <slug>` or `--abandon "<
 
 ## Steps
 
-### 0. Detect host env
+### 0. Helpers
 
-Per ADAPTERS.md.
-
-DOSSIER.md writes go through the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` appends §S (the §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends). §Z is written via `$CLAUDE_PLUGIN_ROOT/hooks/lib-z-write.sh <dir> <complete|successor|abandoned> <value> "<summary>" "<cites>"` — atomic, and it guarantees the §12 blank-line separation.
+DOSSIER.md writes go through the bundled helpers (${CLAUDE_PLUGIN_ROOT}/FORMAT.md §15): `${CLAUDE_PLUGIN_ROOT}/hooks/lib-s-append.sh <dir> "<event>"` appends §S (the §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends). §Z is written via `${CLAUDE_PLUGIN_ROOT}/hooks/lib-z-write.sh <dir> <complete|successor|abandoned> <value> "<summary>" "<cites>"` — atomic, and it guarantees the §12 blank-line separation.
 
 ### 1. Locate live dossier
 
@@ -79,7 +77,7 @@ Append §S as its own paragraph (blank line before AND after — per FORMAT.md �
 
 ### 5.5. CONVERGE (contract gate; `--abandon` skips it)
 
-Run `bash "$CLAUDE_PLUGIN_ROOT"/hooks/lib-converge.sh <contract>` with the closing wave's own contract: `.dossier/<slug>.md` when that file exists, else `<dir>/CONTRACT.md`. Do not run it bare here — the wave is still `live` at this step, and with a live sibling the bare form exits `PARSE` naming both instead of picking one, which the table below would read as a closable contract gap. The runner prints the resolved path plus every command before running any of them. Read the `CONVERGE:` line before the exit code (a missing runner exits 1 or 2 on its own, aliasing UNMET and PARSE). Running this at all is model-judgment — no hook fires on close; the verdict is computed.
+Run `bash "${CLAUDE_PLUGIN_ROOT}"/hooks/lib-converge.sh <contract>` with the closing wave's own contract: `.dossier/<slug>.md` when that file exists, else `<dir>/CONTRACT.md`. Do not run it bare here — the wave is still `live` at this step, and with a live sibling the bare form exits `PARSE` naming both instead of picking one, which the table below would read as a closable contract gap. The runner prints the resolved path plus every command before running any of them. Read the `CONVERGE:` line before the exit code (a missing runner exits 1 or 2 on its own, aliasing UNMET and PARSE). Running this at all is model-judgment — no hook fires on close; the verdict is computed.
 
 | verdict        | action                                                                                                                                                                      |
 | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -92,9 +90,9 @@ Run `bash "$CLAUDE_PLUGIN_ROOT"/hooks/lib-converge.sh <contract>` with the closi
 Write §Z through the bundled helper (atomic tmp+rename, guaranteeing the §12 blank-line separation so a formatter cannot merge the fields — the markdown blocks below show the resulting shape, not a manual edit):
 
 ```
-"$CLAUDE_PLUGIN_ROOT"/hooks/lib-z-write.sh <dir> complete   —        "<summary>" "<key cites>"
-"$CLAUDE_PLUGIN_ROOT"/hooks/lib-z-write.sh <dir> successor  <slug>   "<summary>" "<key cites>"
-"$CLAUDE_PLUGIN_ROOT"/hooks/lib-z-write.sh <dir> abandoned  "<reason>" "<summary>" "<key cites>"
+"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-z-write.sh <dir> complete   —        "<summary>" "<key cites>"
+"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-z-write.sh <dir> successor  <slug>   "<summary>" "<key cites>"
+"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-z-write.sh <dir> abandoned  "<reason>" "<summary>" "<key cites>"
 ```
 
 Exit 1 on a `<summary>`, `<reason>` or `<key cites>` that reads as a closure key to the INDEX parser (`successor: <slug>`, `complete: true`, `abandoned: true` — FORMAT.md §12). Nothing is written; reword the prose and re-run.
@@ -143,7 +141,7 @@ summary: <state at abandonment — what shipped, what was dropped>
 key cites: <any T-row cites, or —>
 ```
 
-Flip the header state atomically via `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-header-state.sh <dir> done` (FORMAT.md §15). This flip lands **before** the `§Z=written` checkpoint below: a checkpoint may only trail a mutation already performed, or a crash resumes past an unflipped header and archives a dir still reading `live` — inverse drift.
+Flip the header state atomically via `"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-header-state.sh <dir> done` (FORMAT.md §15). This flip lands **before** the `§Z=written` checkpoint below: a checkpoint may only trail a mutation already performed, or a crash resumes past an unflipped header and archives a dir still reading `live` — inverse drift.
 
 Append §S (checkpoint — §Z written AND header now `done`):
 
@@ -156,7 +154,7 @@ Append §S (checkpoint — §Z written AND header now `done`):
 Guarded, resumable commit-point via the bundled helper — it refuses a pre-existing dest (no nested move), asserts the move landed, and preserves the source on failure (FORMAT.md §15):
 
 ```
-"$CLAUDE_PLUGIN_ROOT"/hooks/lib-archive-move.sh .scratchpad/dossier/<date>-<slug> .scratchpad/dossier/_archive
+"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-archive-move.sh .scratchpad/dossier/<date>-<slug> .scratchpad/dossier/_archive
 ```
 
 Idempotent: re-running after a completed move is a no-op. A non-zero exit leaves the source intact — surface the error and stop, leaving `DONE` unwritten.

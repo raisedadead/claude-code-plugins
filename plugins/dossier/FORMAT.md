@@ -2,7 +2,7 @@
 
 Canonical reference for `DOSSIER.md` shape. Every `ds:*` skill reads this. Every writer obeys it.
 
-Design goals: caveman-compressed, pipe-tables for state, append-only logs, atomic writes, resumable.
+Design goals: terse, pipe-tables for state, append-only logs, atomic writes, resumable.
 
 ## Contents
 
@@ -136,7 +136,6 @@ Format: bullets, one decision per line. Cite RFC / discussion where relevant.
 - Valkey AUTH via sops envelope `infra-secrets/artemis/valkey-creds.enc`.
 - TTL = 60s default, override via `AUTH_CACHE_TTL_S` env.
 - Backward-compat: if Valkey unreachable, fall through to redis. No hard dep.
-- Host-env adapters (auto-detect, see §11): rtk, cavemem.
 ```
 
 **Pinned toolchain (proactive verify):** `ds:new` / `ds:build` resolve current EOL/LTS via `hooks/resolve_pins.py eol:<slug>` and record the result here as a bullet, e.g. `Go 1.26 (latest stable — endoflife.date/go)`. Write the resolved version, not a remembered one — these bullets are the model's ground truth.
@@ -430,7 +429,7 @@ Vm.8: no skill writes a real file directly. Always tmp + rename.
 
 ### Bundled mutation helpers
 
-Six scripts under `$CLAUDE_PLUGIN_ROOT/hooks/` own the common DOSSIER.md mutations — the six rows below are the whole roster. The five that rewrite a file are atomic by tmp + rename; `lib-archive-move.sh` mutates no file, so it is a bare directory `mv` with no temp. All ship with the plugin — always available, no adapter detection, no fastedit dependency (fastedit cannot edit `.md`; see ADAPTERS.md §fastedit).
+Six scripts under `${CLAUDE_PLUGIN_ROOT}/hooks/` own the common DOSSIER.md mutations — the six rows below are the whole roster. The five that rewrite a file are atomic by tmp + rename; `lib-archive-move.sh` mutates no file, so it is a bare directory `mv` with no temp. All ship with the plugin — always available, no adapter detection.
 
 | helper                | mutates                                                    | usage                                                       |
 | --------------------- | ---------------------------------------------------------- | ----------------------------------------------------------- |
@@ -451,7 +450,7 @@ Skills prefer these over the Edit tool for §S / §T / §B mutations. Edit-tool 
 
 ## 16. Resume protocol
 
-For multi-step ops (`ds:build`, `ds:backprop`, `ds:close`, `ds:migrate`):
+For multi-step ops (`ds:build`, `ds:backprop`, `ds:close`):
 
 1. Skill reads §S tail, greps for own target (e.g. `T3`).
 1. Identifies last completed step from `<event>` field.
@@ -474,7 +473,6 @@ Pause/resume are NOT multi-step ops: they write a single atomic §S line (`pause
 | Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                                                                                        | code — `lib-regen-index.sh`                               |
 | Vm.8  | all file mutations atomic (tmp + rename)                                                                                                                                          | code — bundled `lib-*.sh` helpers                         |
 | Vm.9  | active lock blocks mutation; stale lock auto-clears                                                                                                                               | code — `lib-clear-stale-locks.sh`                         |
-| Vm.10 | migrator per-repo marker `.scratchpad/.migrate-v2-done`                                                                                                                           | model — `ds:migrate`                                      |
 | Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                                                                                       | model — skill resume tables                               |
 | Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                                                                                       | code — `session-start.sh` live-count                      |
 | Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt                                                                     | model — `ds:status`                                       |

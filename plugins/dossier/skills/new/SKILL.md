@@ -6,39 +6,32 @@ argument-hint: <slug>
 
 # ds:new — scaffold a new dossier
 
-Creates `.scratchpad/dossier/<YYYY-MM-DD>-<slug>/DOSSIER.md` per `FORMAT.md`, then asks the operator for goal, scope and repos.
+Creates `.scratchpad/dossier/<YYYY-MM-DD>-<slug>/DOSSIER.md` per `${CLAUDE_PLUGIN_ROOT}/FORMAT.md`, then asks the operator for goal, scope and repos.
 
 ## Inputs
 
 - `<slug>` from `$ARGUMENTS` (kebab-case, ≤30 chars). Empty → ask the operator.
-- Date defaults to today (`date +%Y-%m-%d`). Override by prompt when migrating historical work.
+- Date defaults to today (`date +%Y-%m-%d`). Override by prompt when backfilling historical work.
 
 ## Steps
 
-### 0. Detect host env
+### 0. Helpers
 
-Run once. Cache for the invocation.
-
-- `command -v rtk &>/dev/null && echo HAS_RTK`
-- check the tool namespace for `mcp__cavemem__*`, `mcp__fastedit__*`
-- check available skills for `caveman:*`, `ck:*`
-
-See `plugins/dossier/ADAPTERS.md` for routing rules. An absent adapter is a skip.
-
-The §S DONE line (step 6) appends via `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` (FORMAT.md §15) — pass the text **after** the timestamp, which the script prepends. The initial scaffold is a full Write (new file).
+The §S DONE line (step 6) appends via `${CLAUDE_PLUGIN_ROOT}/hooks/lib-s-append.sh <dir> "<event>"` (FORMAT.md §15) — pass the text **after** the timestamp, which the script prepends. The initial scaffold is a full Write (new file).
 
 ### 1. Validate slug + path
 
 - Slug matches `^[a-z0-9][a-z0-9-]{0,29}$`. Anything else is refused with an explanation.
 - Compute `dir=.scratchpad/dossier/<date>-<slug>/`.
 - Collision check: `dir` exists **or `.scratchpad/dossier/_archive/<date>-<slug>/` exists** (a same-day close+reopen) → ask the operator to bump to `<slug>-2`, `<slug>-3`, etc. Checking `_archive/` too avoids two INDEX rows keyed to one slug (Vm.1).
+- Ignore check: in a git work tree, `git check-ignore -q .scratchpad/` exiting 1 means the ledger will show as untracked and a `git add -A` would commit it. Carry that into the step-7 report with the per-clone fix, `echo .scratchpad/ >> .git/info/exclude`, and leave the choice to the operator — some repos track `.scratchpad/` on purpose.
 
 ### 1.5. Grill gate (conditional)
 
 Fires only when a grill artifact exists for this slug, so trivial `ds:new` runs are untouched. `<slug>` is the RESOLVED slug from step 1 (post-collision-bump; a bumped `<slug>-2` starts without `<slug>`'s grill):
 
 ```bash
-"$CLAUDE_PLUGIN_ROOT"/hooks/lib-assert-grill.sh .scratchpad "<slug>"
+"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-assert-grill.sh .scratchpad "<slug>"
 ```
 
 The helper discovers the newest `.grill/<date>-<slug>.md` by slug — grill's own date may be days older than today (multi-day `--resume`, pending-external waits) and the gate still finds it. Route on the exact exit code:
@@ -52,7 +45,7 @@ The helper discovers the newest `.grill/<date>-<slug>.md` by slug — grill's ow
 
 ### 2. Gather inputs (operator-interactive)
 
-Ask one block at a time, caveman, no preamble:
+Ask one block at a time, tersely, no preamble:
 
 1. **§G goal** — one-line outcome, then up to 5 scope bullets (IN / NOT IN).
 1. **§C constraints** — locked decisions, stack notes. Bullets, ≤10.
@@ -164,7 +157,7 @@ Atomic write: `<dir>/DOSSIER.md.tmp` then `mv`. Per Vm.8.
 Before touching INDEX or §S, confirm the write landed intact:
 
 ```bash
-"$CLAUDE_PLUGIN_ROOT"/hooks/lib-assert-scaffold.sh "<dir>"
+"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-assert-scaffold.sh "<dir>"
 ```
 
 It exits non-zero naming any missing `§`-section (or the title line) — deterministic, so nobody eyeballs the Write output. On failure the INDEX regen and the §S DONE line (step 6) both wait: report the missing sections, re-run the step-3 Write to repair, then re-assert. Mirrors the post-move assertion `ds:close` runs via `lib-archive-move.sh`.
@@ -177,7 +170,7 @@ A path that is missing or is not a git tree keeps placeholders plus the note `_(
 
 ### 5. Regen INDEX
 
-Run `$CLAUDE_PLUGIN_ROOT/hooks/lib-regen-index.sh` to append the new dossier to `.scratchpad/INDEX.md`.
+Run `${CLAUDE_PLUGIN_ROOT}/hooks/lib-regen-index.sh` to append the new dossier to `.scratchpad/INDEX.md`.
 
 ### 6. Append §S DONE
 
@@ -189,13 +182,15 @@ Append as its own paragraph (blank line before AND after — per FORMAT.md §11)
 
 ### 7. Report
 
-One-line caveman summary:
+One-line summary:
 
 ```
 ds:new <slug> → .scratchpad/dossier/<date>-<slug>/DOSSIER.md
 §X: <N> repos seeded
 next: ds:build T1 (when ready)
 ```
+
+Add `.scratchpad/ is not gitignored here` plus the fix when step 1's ignore check fired.
 
 ## Idempotency
 
@@ -206,4 +201,3 @@ next: ds:build T1 (when ready)
 ## Cite
 
 - FORMAT.md §2 (section order), §2.5 (wave contract), §10 (§X format), §11 (§S format), §17 (Vm rules)
-- ADAPTERS.md (host-env detection)

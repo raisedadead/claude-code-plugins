@@ -29,13 +29,9 @@ CONSUMED: <dossier-dir-key>          (stamped by ds:new, never by grill)
 
 Footer lines are the machine-checked half: `hooks/lib-assert-grill.sh` exits non-zero on a half-grilled slug. No hook runs it — `ds:new` invoking the script and refusing on its exit is model-judgment, the same split as the tiger route: the verdict is computed, arriving at it is not.
 
-**One entry per paragraph — blank line between every FACT/DECISION/footer line.** Markdown formatters join adjacent bare lines into one paragraph, which un-anchors the `^FRONTIER:`/`^CONFIRMED:` greps and turns a complete artifact into a false "incomplete" (the failure class FORMAT.md §11 solves for §S).
+**One entry per paragraph — blank line between every FACT/DECISION/footer line.** Markdown formatters join adjacent bare lines into one paragraph, which un-anchors the `^FRONTIER:`/`^CONFIRMED:` greps and turns a complete artifact into a false "incomplete" (the failure class ${CLAUDE_PLUGIN_ROOT}/FORMAT.md §11 solves for §S).
 
 ## Steps
-
-### 0. Detect host env
-
-Per ADAPTERS.md. An absent adapter is a skip.
 
 ### 1. Build the tree
 

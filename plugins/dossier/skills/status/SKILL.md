@@ -10,15 +10,11 @@ Read-only on files; mutations route through Bash helpers. The only writes are th
 
 ## Steps
 
-### 0. Detect host env
-
-Per ADAPTERS.md. Cache for the invocation.
-
 ### 1. Locate
 
 - `.scratchpad/INDEX.md` — missing → run `lib-regen-index.sh` to build it.
 - Enumerate ALL rows with `state=live`. Current dossier = the first (most-recent). `state=paused` rows are listed separately, outside the live set.
-- The paused set reaches the report as its own `PAUSED` line in step 6, printed on every full sit-rep — `(none)` when the set is empty. The LIGHT path exits at step 1 and never reaches it, which is correct: LIGHT runs where there is no `.scratchpad/dossier/` to hold a paused wave. A paused wave that no line names is a wave nobody decides about.
+- The paused set reaches the report as its own `PAUSED` line in step 5, printed on every full sit-rep — `(none)` when the set is empty. The LIGHT path exits at step 1 and never reaches it, which is correct: LIGHT runs where there is no `.scratchpad/dossier/` to hold a paused wave. A paused wave that no line names is a wave nobody decides about.
 
 No `.scratchpad/dossier/` in cwd → LIGHT sit-rep, the small-work path with no ceremony:
 
@@ -46,7 +42,7 @@ ds:status suggests; the operator — or the model on explicit request — perfor
 | resume `<slug>`  | `lib-header-state.sh <dir> live` + `lib-s-append.sh <dir> "ds:resume — resumed"` + regen INDEX, then re-run step 3 so any mid-build START resurfaces |
 | abandon `<slug>` | `ds:close --abandon "<reason>"`                                                                                                                      |
 
-Pause and resume each write ONE atomic §S line (no START/DONE pairing — FORMAT.md §16). Pausing works mid-build and leaves §T alone.
+Pause and resume each write ONE atomic §S line (no START/DONE pairing — ${CLAUDE_PLUGIN_ROOT}/FORMAT.md §16). Pausing works mid-build and leaves §T alone.
 
 ### 2. Read
 
@@ -60,6 +56,8 @@ Parse from DOSSIER.md:
 ### 2a. Hydrate TaskList (§T → TaskList projection)
 
 §T is source of truth; the Claude Code TaskList is a derived steering surface the operator watches. Idempotent — safe every invocation.
+
+Skip this step when the session has no `TaskList` tool. Claude Code provides the Task tools by default only on older models; `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` turns them on for the rest ([task tool availability](https://code.claude.com/docs/en/tools-reference#task-tool-availability)).
 
 1. `TaskList` first. Parse the leading `T<id>` token of each existing task's subject (the join key).
 1. Each §T row in `{., ~}` whose `T<id>` is absent: `TaskCreate` subject=`"<T-id> <task>"`, description = task + `verify` cell, activeForm derived from the task.
@@ -81,11 +79,7 @@ Scan §S for `START` lines with no matching `DONE` for the same `<target>`. Each
 
 For each §X row run `git status -sb` + `git rev-list --count` and compare against the recorded values. A difference flags `§X stale (refresh via ds:build or ds:check)`. Refreshing is a write op and belongs to those verbs.
 
-### 5. Cavemem augmentation (optional)
-
-`mcp__cavemem__timeline` available → query observations tagged with the current dossier slug over the last 14 days, surface the top 3 as a `## Recent (cavemem)` block. Absent → skip silently.
-
-### 6. Report (decision-first)
+### 5. Report (decision-first)
 
 Lead with the ONE decision. Full §T/§X tables on `--full`.
 
@@ -109,9 +103,9 @@ Locks: <none | <slug>: <skill> pid <pid> since <time>>
 
 `--full` adds the complete §T + §X tables and the §S tail — the deep-inspection dump.
 
-### 7. What writes, and when
+### 6. What writes, and when
 
-The **sit-rep path — steps 1 through 6, which is every plain `ds:status`** — writes exactly two things, both derived and idempotent:
+The **sit-rep path — steps 1 through 5, which is every plain `ds:status`** — writes exactly two things, both derived and idempotent:
 
 - INDEX regen (atomic, derived)
 - Stale-lock cleanup (the session-start hook already does this; re-running is safe)
@@ -120,15 +114,14 @@ It appends no §S. Reading the ledger should not leave a mark on it.
 
 The **pause / resume actions in step 1a are outside that path** and are not read-only. Each runs only on an explicit operator request, and each mutates the ledger: `lib-s-append.sh` appends one §S line, `lib-header-state.sh` rewrites the header state token in place (`` `live` `` → `` `paused` ``). Invoking one turns that invocation into a write; the sit-rep by itself never becomes one.
 
-### 8. `--recover` mode
+### 7. `--recover` mode
 
 `ds:status --recover` reconstructs context after a crash, compaction, or handoff. Try sources IN ORDER and name which fired:
 
-1. **cavemem** — when `mcp__cavemem__search` / `mcp__cavemem__timeline` is available, query recent observations for the cwd project / current slug (last `${DS_RECOVER_DAYS:-3}` days). Header `## Recovered (cavemem)`.
-1. **transcripts (fallback)** — cavemem absent or empty: grep `~/.claude/projects/<project>/*.jsonl` for the most recent non-sidechain user turns plus the last assistant summary. Header `## Recovered (transcripts — cavemem unavailable)`.
-1. Fold the normal sit-rep (steps 1–6) underneath.
+1. **transcripts** — grep `~/.claude/projects/<project>/*.jsonl` from the last `${DS_RECOVER_DAYS:-3}` days for the most recent non-sidechain user turns plus the last assistant summary. Header `## Recovered (transcripts)`.
+1. Fold the normal sit-rep (steps 1–5) underneath.
 
-Always end with `recovery source: cavemem | transcripts | none`. Worst case is `none`.
+Always end with `recovery source: transcripts | none`. Worst case is `none`.
 
 ## Exit codes
 
@@ -138,4 +131,3 @@ Always end with `recovery source: cavemem | transcripts | none`. Worst case is `
 ## Cite
 
 - FORMAT.md §13 (INDEX format), §16 (resume protocol)
-- ADAPTERS.md §cavemem
