@@ -57,7 +57,7 @@ Parse from DOSSIER.md:
 
 §T is source of truth; the Claude Code TaskList is a derived steering surface the operator watches. Idempotent — safe every invocation.
 
-A deferred `TaskList` is present: load it with `ToolSearch` `select:TaskCreate,TaskList,TaskUpdate`, then hydrate. Skip this step only when the session has no Task tool, loaded or deferred. Claude Code provides the Task tools by default only on older models; `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` turns them on for the rest ([task tool availability](https://code.claude.com/docs/en/tools-reference#task-tool-availability)).
+Skip this step when the session has no `TaskList` tool. Claude Code provides the Task tools by default only on older models; `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` turns them on for the rest ([task tool availability](https://code.claude.com/docs/en/tools-reference#task-tool-availability)).
 
 1. `TaskList` first. Parse the leading `T<id>` token of each existing task's subject (the join key).
 1. Each §T row in `{., ~}` whose `T<id>` is absent: `TaskCreate` subject=`"<T-id> <task>"`, description = task + `verify` cell, activeForm derived from the task.
