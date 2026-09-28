@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verify-layer PreToolUse hook.
 
-Matcher: Edit | Write | MultiEdit.
+Matcher: Edit | Write.
 
 Reads stdin tool_use JSON, scans tool_input content against VERIFY_PATTERNS,
 emits stderr reminders for findings. Non-blocking by default (exit 0).
@@ -26,16 +26,12 @@ from pathlib import Path
 
 
 def _extract(tool_input: dict, tool_name: str) -> tuple[str, str]:
-    """Pull (file_path, content) from the tool_input payload across Edit/Write/MultiEdit shapes."""
+    """Pull (file_path, content) from the tool_input payload across Edit/Write shapes."""
     path = tool_input.get("file_path") or tool_input.get("path") or ""
     if tool_name == "Write":
         return path, str(tool_input.get("content", ""))
     if tool_name == "Edit":
         return path, str(tool_input.get("new_string", ""))
-    if tool_name == "MultiEdit":
-        edits = tool_input.get("edits", []) or []
-        parts = [str(e.get("new_string", "")) for e in edits if isinstance(e, dict)]
-        return path, "\n".join(parts)
     return path, ""
 
 
@@ -96,7 +92,7 @@ def main() -> int:
     os.environ["DOSSIER_VERIFY_CACHE_ONLY"] = "1"
 
     tool_name = payload.get("tool_name", "")
-    if tool_name not in {"Edit", "Write", "MultiEdit"}:
+    if tool_name not in {"Edit", "Write"}:
         return 0
 
     tool_input = payload.get("tool_input", {}) or {}

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -196,6 +197,33 @@ def test_flakiness_quarantine_and_new() -> None:
     assert set(q) == {"a"}, q
     assert compute_flakiness.new_flags(q, {}) == ["a"]
     assert compute_flakiness.new_flags(q, {"a": 0.25}) == []
+
+
+_WRAPPER_TARGET = re.compile(r'\$\(cd "\$\(dirname "\$0"\)/\.\." && pwd\)/([^"]+)"')
+
+
+def _dangling_wrappers(bin_dir: Path) -> list[str]:
+    """Wrappers in bin_dir whose exec target is missing under the plugin root."""
+    out = []
+    for wrapper in sorted(bin_dir.iterdir()):
+        match = _WRAPPER_TARGET.search(wrapper.read_text(encoding="utf-8"))
+        if not match or not (bin_dir.parent / match.group(1)).is_file():
+            out.append(wrapper.name)
+    return out
+
+
+def test_every_bin_wrapper_reaches_a_script() -> None:
+    assert _dangling_wrappers(PLUGIN / "bin") == [], _dangling_wrappers(PLUGIN / "bin")
+
+
+def test_a_wrapper_pointing_at_a_moved_script_is_reported() -> None:
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        (root / "bin").mkdir()
+        (root / "bin" / "gone").write_text(
+            '#!/usr/bin/env bash\nexec bash "$(cd "$(dirname "$0")/.." && pwd)/skills/x/run.sh" "$@"\n'
+        )
+        assert _dangling_wrappers(root / "bin") == ["gone"]
 
 
 def _run() -> int:

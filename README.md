@@ -1,6 +1,6 @@
 # claude-code-plugins
 
-> Personal Claude Code plugins by @raisedadead — a two-plugin engineering toolbox.
+> Two Claude Code plugins for building software you can prove is done. Built and used daily by [@raisedadead](https://github.com/raisedadead); opinionated, and usable in any repo.
 
 An agent will happily report success it cannot demonstrate. These two plugins make "done" a checkable fact: a wave of work lives in one resumable ledger, and every gate ends in an exit code, a computed number, or a verdict line honestly labelled as a judgment.
 
@@ -21,9 +21,11 @@ dossier drives the wave; whetstone is the craft at each gate. Designed to be use
 /plugin install whetstone@raisedadead-plugins
 ```
 
-Needs `python3` 3.10+ on `PATH`; without it the python hooks no-op gracefully.
+Needs Claude Code, `git`, `bash` and `python3` 3.10+ on `PATH`; without `python3` the python hooks no-op. whetstone ships commands in `bin/`, which limits it to Claude Code — claude.ai and Cowork do not install a plugin with a `bin/` directory.
 
-**Updating.** No `version` field — the commit SHA is the version ([D1](./RESEARCH.md)). Nothing signals a release to the plugin cache, so if an update seems not to take, clear the cache and reinstall.
+dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globally, or per clone with `echo .scratchpad/ >> .git/info/exclude`. `/dossier:new` says so when it finds the directory unignored, and leaves the choice to you.
+
+**Updating.** No `version` field, so Claude Code versions each plugin by this repo's commit SHA and `claude plugin update dossier@raisedadead-plugins` picks up every commit ([how versions are computed](https://code.claude.com/docs/en/plugins/loading#versions-and-updates); [D1](./RESEARCH.md)).
 
 ## Commands
 
@@ -36,9 +38,9 @@ Needs `python3` 3.10+ on `PATH`; without it the python hooks no-op gracefully.
 | `/dossier:check`                           | Read-only drift audit across every repo the wave touches.                                    |
 | `/dossier:close`                           | `--complete` · `--successor <slug>` · `--abandon "<why>"`. Validate, close, archive.         |
 
-Everything else fires automatically or is power-user: `build` (the TDD engine, `--auto` to loop hands-off), `backprop` (bug → invariant), `grill`, `ship`, `verify`, `roll`, `migrate`.
+Everything else fires automatically or is power-user: `build` (the TDD engine, `--auto` to loop hands-off), `backprop` (bug → invariant), `grill`, `ship`, `verify`.
 
-Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes tasks, `/dossier:converge` runs the wave contract's done-when criteria ("are we done"), `/dossier:ship` writes the changelog, and `backprop` / `grill` / `verify` / `roll` / `migrate` fire at their moments. In a live wave the `UserPromptSubmit` hook prints the contract's state beside every prompt, naming `ds:converge` for the verdict.
+Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes tasks, `/dossier:converge` runs the wave contract's done-when criteria ("are we done"), `/dossier:ship` writes the changelog, and `backprop` / `grill` / `verify` fire at their moments. In a live wave the `UserPromptSubmit` hook prints the contract's state beside every prompt, naming `ds:converge` for the verdict.
 
 ### Wave contracts
 
@@ -59,7 +61,7 @@ The home is the repo's choice. `mkdir .dossier` opts into tracked contracts at `
 | `/whetstone:skill-smith`      | frontmatter, line budget, reference depth     |
 | `/whetstone:tiger-style`      | column budget computed from the staged diff   |
 
-Two of them also ship as commands on `PATH` while whetstone is enabled, which is how dossier's composed routes reach them in any project: `tiger-check <repo>` (column budget of the lines a commit adds) and `claim-check <path>...` (prose asserting enforcement that names nothing checkable).
+whetstone also ships its scripts as commands on the Bash tool's `PATH` while it is enabled, which is how dossier's composed routes reach them in any project: `run-slice`, `lint-skill`, `flake-runner`, `tiger-check <repo>` (column budget of the lines a commit adds) and `claim-check <path>...` (prose asserting enforcement that names nothing checkable).
 
 ## Quickstart
 
@@ -103,7 +105,7 @@ Other knobs: `DOSSIER_FAKEIMPL_TIMEOUT` (120), `DOSSIER_LIVE_NUDGE` (1) and `DOS
 | [FORMAT.md](./plugins/dossier/FORMAT.md)     | Ledger encoding spec                                                             |
 | [ADAPTERS.md](./plugins/dossier/ADAPTERS.md) | Host-environment detection and composition routes                                |
 
-Migrating from the legacy `{PLAN,SPEC,AUDIT}.md` layout: `/dossier:migrate`, `--gc` to sweep orphans. Idempotent.
+Skill routing has a live-model eval suite: `claude plugin eval plugins/dossier --ablation none` ([evals/README.md](./plugins/dossier/evals/README.md)).
 
 ## License
 

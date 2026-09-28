@@ -2,15 +2,14 @@
 """Stdlib-only tests for the dossier python hooks.
 
 Run directly (`python3 test_python.py`) or under pytest. No third-party deps.
-Covers the catastrophic-failure invariants of the roll + verify subsystem:
-round-trip fidelity, transcript reconstruction, offline-safety, regex compile.
+Covers the catastrophic-failure invariants of the verify subsystem and the
+PreToolUse guards: offline-safety, regex compile, path scoping.
 """
 
 from __future__ import annotations
 
 import contextlib
 import hashlib
-import importlib.util
 import io
 import json
 import os
@@ -23,165 +22,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import eval_skill_routing
 import invariant_guard
 import marker_guard
-import roll_lib
 import verify_hook
 import verify_lib
 import verify_sweep
-
-
-def test_tlr_round_trip() -> None:
-    tasks = [
-        {
-            "id": "1",
-            "subject": "Fix |sort| bug",
-            "description": "INDEX regen\nsort flag wrong",
-            "activeForm": "Fixing sort",
-            "status": "completed",
-            "blockedBy": [],
-        },
-        {
-            "id": "2",
-            "subject": "Wire client",
-            "description": "Wire client",
-            "activeForm": "Wire client",
-            "status": "in_progress",
-            "blockedBy": ["1"],
-        },
-        {
-            "id": "3",
-            "subject": "Rollout",
-            "description": "Rollout",
-            "activeForm": "Rollout",
-            "status": "pending",
-            "blockedBy": [],
-        },
-    ]
-    body = roll_lib.render_tlr(tasks, "sess-1", "explicit", "2026-07-01-foo")
-    assert "doss: 2026-07-01-foo" in body, body
-    hdr = roll_lib.parse_tlr_header(body)
-    assert hdr.get("doss") == "2026-07-01-foo", hdr
-    assert hdr.get("sid") == "sess-1", hdr
-    assert "doss: —" in roll_lib.render_tlr(tasks, "s", "explicit"), (
-        "omitted doss renders —"
-    )
-    parsed = roll_lib.parse_tlr(body)
-    assert len(parsed) == 3, f"expected 3 rows, got {len(parsed)}"
-    assert parsed[0]["subject"] == "Fix |sort| bug", parsed[0]["subject"]
-    assert parsed[0]["status"] == "completed", parsed[0]["status"]
-    assert parsed[1]["status"] == "in_progress" and parsed[1]["blockedBy"] == ["1"], (
-        parsed[1]
-    )
-    assert parsed[2]["status"] == "pending", parsed[2]
-    assert parsed[1]["description"] == "Wire client", parsed[1]["description"]
-
-
-def test_live_slug_from_index() -> None:
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as d:
-        sp = Path(d) / ".scratchpad"
-        sp.mkdir()
-        (sp / "INDEX.md").write_text(
-            "# .scratchpad index\n\n"
-            "| date | slug | state | P | T | B | mtime | §Z |\n"
-            "|------|------|-------|---|---|---|-------|-----|\n"
-            "| 2026-07-01 | alpha | drift! | P1/1 | 0/0 | 0 | — | — |\n"
-            "| 2026-06-30 | beta | live | P1/1 | 0/0 | 0 | — | — |\n"
-        )
-        assert roll_lib.live_slug_from_index(Path(d)) == "2026-06-30-beta"
-    with tempfile.TemporaryDirectory() as d2:
-        assert roll_lib.live_slug_from_index(Path(d2)) == ""
-
-
-def test_parse_transcript() -> None:
-    events = [
-        {
-            "sessionId": "s1",
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "name": "TaskCreate",
-                        "id": "tu1",
-                        "input": {
-                            "subject": "A",
-                            "description": "A",
-                            "activeForm": "Doing A",
-                        },
-                    }
-                ]
-            },
-        },
-        {
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": "tu1",
-                        "content": "Task #1 created successfully: A",
-                    }
-                ]
-            }
-        },
-        {
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "name": "TaskCreate",
-                        "id": "tu2",
-                        "input": {
-                            "subject": "B",
-                            "description": "B",
-                            "activeForm": "Doing B",
-                        },
-                    }
-                ]
-            }
-        },
-        {
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": "tu2",
-                        "content": "Task #2 created successfully: B",
-                    }
-                ]
-            }
-        },
-        {
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "name": "TaskUpdate",
-                        "id": "tu3",
-                        "input": {"taskId": "1", "status": "completed"},
-                    }
-                ]
-            }
-        },
-        {
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "name": "TaskUpdate",
-                        "id": "tu4",
-                        "input": {"taskId": "2", "status": "deleted"},
-                    }
-                ]
-            }
-        },
-    ]
-    with tempfile.TemporaryDirectory() as d:
-        p = Path(d) / "transcript.jsonl"
-        p.write_text("\n".join(json.dumps(e) for e in events) + "\n")
-        tasks, sid = roll_lib.parse_transcript(p)
-    assert sid == "s1", sid
-    assert len(tasks) == 1, f"deleted task must drop; got {[t['id'] for t in tasks]}"
-    assert tasks[0]["id"] == "1" and tasks[0]["status"] == "completed", tasks[0]
 
 
 def test_verify_offline_safe() -> None:
@@ -462,15 +305,6 @@ def _drive(mod: object, payload: dict) -> tuple[int, str]:
     return rc, buf.getvalue()
 
 
-def _load_hyphen(modname: str, filename: str) -> object:
-    path = Path(__file__).resolve().parent / filename
-    spec = importlib.util.spec_from_file_location(modname, path)
-    assert spec and spec.loader, filename
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
 def test_marker_guard_narrowed_to_audit_ids() -> None:
     assert marker_guard.find_marker(["# Step 1: dump the database"]) is None
     assert marker_guard.find_marker(["// Phase 1: validate"]) is None
@@ -518,71 +352,6 @@ def test_marker_guard_skips_non_dossier_repo() -> None:
             },
         )
         assert rc == 0 and out == "", (rc, out)
-
-
-def test_sessionend_output_schema_safe() -> None:
-    """SessionEnd emits no hookSpecificOutput (absent from the CC 2.1.x output union)."""
-    pr = _load_hyphen("sessionend_roll", "sessionend-roll.py")
-    events = [
-        {
-            "sessionId": "s9",
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "name": "TaskCreate",
-                        "id": "x1",
-                        "input": {
-                            "subject": "A",
-                            "description": "A",
-                            "activeForm": "Doing A",
-                        },
-                    }
-                ]
-            },
-        },
-        {
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": "x1",
-                        "content": "Task #1 created successfully: A",
-                    }
-                ]
-            }
-        },
-    ]
-    with tempfile.TemporaryDirectory() as d:
-        dp = Path(d)
-        tpath = dp / "t.jsonl"
-        tpath.write_text("\n".join(json.dumps(e) for e in events) + "\n")
-        payload = {
-            "transcript_path": str(tpath),
-            "session_id": "s9",
-            "hook_event_name": "SessionEnd",
-        }
-        cwd = Path.cwd()
-        os.chdir(dp)
-        try:
-            rc, out = _drive(pr, payload)
-        finally:
-            os.chdir(cwd)
-        rolls = list((dp / ".scratchpad" / ".tasklist-roll").glob("*.tlr"))
-    assert rc == 0, rc
-    assert rolls, "tlr side-effect must be written"
-    obj = json.loads(out)
-    assert "hookSpecificOutput" not in obj, obj
-    assert set(obj) <= {
-        "systemMessage",
-        "continue",
-        "suppressOutput",
-        "stopReason",
-        "decision",
-        "reason",
-        "terminalSequence",
-    }, obj
-    assert "systemMessage" in obj, obj
 
 
 def _write_skill(root: Path, name: str, description: str) -> None:
@@ -964,12 +733,6 @@ def test_verify_sweep_and_hook_agree_on_a_repeated_claim() -> None:
         assert _probe_hits(out) == len(findings), (out, findings)
 
 
-def test_tlr_header_carries_every_documented_trigger() -> None:
-    for trig in ("explicit", "precompact", "sessionend"):
-        body = roll_lib.render_tlr([], "sess-9", trig)
-        assert roll_lib.parse_tlr_header(body).get("trig") == trig, body
-
-
 def test_verify_lib_ships_no_unreferenced_check_helper() -> None:
     import re
 
@@ -1011,122 +774,6 @@ def test_verify_hook_caches_under_the_process_cwd_without_a_payload_cwd() -> Non
         assert (ws / ".scratchpad" / ".verify-cache").is_dir(), "cwd fallback"
 
 
-def _roll_payload(root: Path, cwd: Path | None) -> dict:
-    events = [
-        {
-            "sessionId": "s7",
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_use",
-                        "name": "TaskCreate",
-                        "id": "r1",
-                        "input": {
-                            "subject": "A",
-                            "description": "A",
-                            "activeForm": "Doing A",
-                        },
-                    }
-                ]
-            },
-        },
-        {
-            "message": {
-                "content": [
-                    {
-                        "type": "tool_result",
-                        "tool_use_id": "r1",
-                        "content": "Task #1 created successfully: A",
-                    }
-                ]
-            }
-        },
-    ]
-    tpath = root / "t.jsonl"
-    tpath.write_text("\n".join(json.dumps(e) for e in events) + "\n")
-    payload = {
-        "transcript_path": str(tpath),
-        "session_id": "s7",
-        "hook_event_name": "SessionEnd",
-    }
-    if cwd is not None:
-        payload["cwd"] = str(cwd)
-    return payload
-
-
-def test_sessionend_rolls_under_the_payload_cwd() -> None:
-    pr = _load_hyphen("sessionend_roll_cwd", "sessionend-roll.py")
-    with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
-        ws, elsewhere = Path(d), Path(other)
-        rc, _ = _drive_in(pr, _roll_payload(ws, ws), elsewhere)
-        assert rc == 0, rc
-        assert list((ws / ".scratchpad" / ".tasklist-roll").glob("*.tlr")), (
-            "roll follows payload cwd"
-        )
-        assert not (elsewhere / ".scratchpad").exists(), "process cwd stays clean"
-
-
-def test_sessionend_rolls_under_the_process_cwd_without_a_payload_cwd() -> None:
-    pr = _load_hyphen("sessionend_roll_nocwd", "sessionend-roll.py")
-    with tempfile.TemporaryDirectory() as d:
-        ws = Path(d)
-        rc, _ = _drive_in(pr, _roll_payload(ws, None), ws)
-        assert rc == 0, rc
-        assert list((ws / ".scratchpad" / ".tasklist-roll").glob("*.tlr")), (
-            "cwd is the fallback root"
-        )
-
-
-def test_sessionend_ignores_a_payload_cwd_that_is_not_a_directory() -> None:
-    pr = _load_hyphen("sessionend_roll_gone", "sessionend-roll.py")
-    with tempfile.TemporaryDirectory() as d:
-        ws = Path(d)
-        gone = ws / "removed-worktree"
-        payload = _roll_payload(ws, gone)
-        rc, _ = _drive_in(pr, payload, ws)
-        assert rc == 0, rc
-        assert not gone.exists(), "a removed worktree must not be resurrected"
-        assert list((ws / ".scratchpad" / ".tasklist-roll").glob("*.tlr")), (
-            "the roll falls back to the process cwd"
-        )
-
-
-def test_sessionend_exits_zero_when_the_root_cannot_be_written() -> None:
-    pr = _load_hyphen("sessionend_roll_ro", "sessionend-roll.py")
-    with tempfile.TemporaryDirectory() as d:
-        ws = Path(d)
-        payload = _roll_payload(ws, ws)
-        locked = ws / "locked"
-        locked.mkdir()
-        payload["cwd"] = str(locked)
-        locked.chmod(0o500)
-        try:
-            rc, _ = _drive_in(pr, payload, ws)
-        finally:
-            locked.chmod(0o700)
-        assert rc == 0, "the hook always exits 0, whatever the root does"
-        assert not (locked / ".scratchpad").exists(), "an unwritable root stays untouched"
-
-
-def test_sessionend_exits_zero_when_the_process_cwd_is_gone() -> None:
-    pr = _load_hyphen("sessionend_roll_nocwd_gone", "sessionend-roll.py")
-    with tempfile.TemporaryDirectory() as d:
-        ws = Path(d)
-        payload = _roll_payload(ws, ws / "removed-worktree")
-        vanished = ws / "vanished"
-        vanished.mkdir()
-        old = Path.cwd()
-        os.chdir(vanished)
-        try:
-            vanished.rmdir()
-            with contextlib.redirect_stderr(io.StringIO()):
-                rc, _ = _drive(pr, payload)
-        finally:
-            os.chdir(old)
-            os.environ.pop("DOSSIER_SCRATCHPAD_ROOT", None)
-        assert rc == 0, "a removed process cwd must not raise out of the hook"
-
-
 def test_invariant_guard_reads_the_registry_from_the_payload_cwd() -> None:
     with tempfile.TemporaryDirectory() as d, tempfile.TemporaryDirectory() as other:
         ws = Path(d)
@@ -1145,55 +792,6 @@ def test_invariant_guard_stays_open_when_the_payload_cwd_holds_no_registry() -> 
         payload["cwd"] = str(ws)
         rc, _ = _drive_in(invariant_guard, payload, Path(other))
         assert rc == 0, "no registry stays fail-open"
-
-
-def test_prune_rolls_removes_the_oldest_beyond_the_retention() -> None:
-    with tempfile.TemporaryDirectory() as d:
-        root = Path(d)
-        made = []
-        for n in range(roll_lib.ROLL_RETAIN + 5):
-            f = roll_lib.roll_dir(root) / f"2026-01-{n + 1:02d}_000000.tlr"
-            f.write_text("# tlr v1\n")
-            made.append(f)
-        removed = roll_lib.prune_rolls(root)
-        left = sorted(roll_lib.roll_dir(root).glob("*.tlr"))
-        assert len(left) == roll_lib.ROLL_RETAIN, f"kept {len(left)}"
-        assert len(removed) == 5, f"removed {len(removed)}"
-        assert left == made[5:], "retention must keep the newest, drop the oldest"
-
-
-def test_prune_rolls_keeps_everything_under_the_retention() -> None:
-    with tempfile.TemporaryDirectory() as d:
-        root = Path(d)
-        for n in range(roll_lib.ROLL_RETAIN):
-            (roll_lib.roll_dir(root) / f"2026-02-{n + 1:02d}_000000.tlr").write_text("x")
-        assert roll_lib.prune_rolls(root) == [], "at the ceiling nothing is removed"
-        assert len(list(roll_lib.roll_dir(root).glob("*.tlr"))) == roll_lib.ROLL_RETAIN
-
-
-def test_sessionend_roll_prunes_the_directory() -> None:
-    pr = _load_hyphen("sessionend_roll_prune", "sessionend-roll.py")
-    with tempfile.TemporaryDirectory() as d:
-        ws = Path(d) / "ws"
-        ws.mkdir()
-        for n in range(roll_lib.ROLL_RETAIN + 3):
-            (roll_lib.roll_dir(ws) / f"2026-03-{n + 1:02d}_000000.tlr").write_text("x")
-        seeded = {f.name for f in roll_lib.roll_dir(ws).glob("*.tlr")}
-        rc, _ = _drive_in(pr, _roll_payload(ws, ws), ws)
-        assert rc == 0
-        left = {f.name for f in roll_lib.roll_dir(ws).glob("*.tlr")}
-        assert len(left) == roll_lib.ROLL_RETAIN, f"hook must prune; left {len(left)}"
-        assert left - seeded, "the roll just written must survive its own prune"
-
-
-def test_hooks_json_does_not_register_precompact() -> None:
-    manifest = json.loads(
-        (Path(__file__).resolve().parent / "hooks.json").read_text()
-    )["hooks"]
-    assert "PreCompact" not in manifest, (
-        "the harness TaskList survives compaction; the roll is SessionEnd-only"
-    )
-    assert "SessionEnd" in manifest, "the cross-session roll must stay registered"
 
 
 def _run() -> int:

@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+exec bash "$(cd "$(dirname "$0")/.." && pwd)/skills/tdd-cycle/scripts/run_slice.sh" "$@"

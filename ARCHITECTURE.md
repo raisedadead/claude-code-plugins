@@ -8,7 +8,7 @@ Companion: [`RESEARCH.md`](./RESEARCH.md) holds decisions with their rejected al
 
 An agent will happily report success it cannot demonstrate. These two plugins exist to make "done" a checkable fact rather than a claim: a wave of work is tracked in one resumable ledger, and every gate along the way ends in an exit code, a computed number, or a verdict line that is honestly labelled as a judgment.
 
-Sole operator, many projects. Nothing here is built for a hypothetical adopter — but everything here is built to work in whatever repo it is installed into. Those are not the same constraint, and conflating them produces bad calls: a capability that helps in a consuming project is in scope, while a file left behind in that project is not. Behave everywhere; leave nothing behind.
+Built by one operator for many projects, and published for anyone. The operator's conventions are the defaults — that is what makes these plugins opinionated rather than generic — but what ships has to make sense on a machine that is not the operator's: integrations with personal tooling live in that operator's harness, not here (D26). A capability that helps in a consuming project is in scope; a file left behind in that project is not. Behave everywhere; leave nothing behind.
 
 ## The pair
 
@@ -74,6 +74,8 @@ A gate that blocks on a signal it cannot back will be disabled by the operator w
 A consumer installs `hooks/`, `skills/` and `agents/`. They never receive `.github/`. Any rule enforced only in this repo's CI is a benefit no consuming project ever gets, and measuring its value from inside this repo will overstate it — the safety net here is not present there. When a check could live in either place, prefer the hook.
 
 **The rule is about reach, not content.** A gate encoding a fact about correctness belongs in the plugin, where it travels. A gate encoding one operator's preference belongs in that operator's harness, however well it would travel — shipping a taste to everyone who installs the plugin is the failure this rule invites when read too far. The split test is whether the threshold is a fact or a preference: an unbacked-claim lint is the first, a reply-length ceiling the second. D18 holds the worked example, where one wave built both and sent them to different homes.
+
+Skill and agent bodies reach bundled files through `${CLAUDE_PLUGIN_ROOT}`, braced: Claude Code substitutes that form when it loads the text, and the Bash tool's environment carries no plugin variable, so the bare `$CLAUDE_PLUGIN_ROOT` reads as empty (F38). `test_manifest.sh` exits 1 on the bare form and on a repo-relative `plugins/<name>/` path, since neither exists at the install path.
 
 A plugin's `bin/` is documented as reaching the Bash tool's `PATH`. Whether it also reaches a hook, an MCP server or an LSP server is not stated either way, so a hook that calls a plugin executable resolves the full path itself rather than relying on a bare name. The cost is asymmetric: a full path works whether or not the `PATH` would have carried it. F31 carries the scope, the inference and the wave that read it too far.
 

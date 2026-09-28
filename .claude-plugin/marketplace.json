@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "raisedadead-plugins",
-  "description": "Claude Code plugins by @raisedadead. Personal toolbox: dossier workflow, scratchpad management, and friends.",
+  "description": "Two Claude Code plugins that make \"done\" a checkable fact: dossier drives a wave of work from one resumable ledger, whetstone applies the craft at each gate.",
   "owner": {
     "name": "Mrugesh Mohapatra",
     "email": "noreply@mrugesh.dev"

@@ -4,6 +4,29 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-09-26
+
+Refactor for anyone who installs the plugin, against the Claude Code plugin docs as of 2.1.283. `RESEARCH.md` D24, D26, D27, F38 and F39 carry the reasons and the rejected alternatives.
+
+### Fixed
+
+- **Skill bodies call their helpers through `${CLAUDE_PLUGIN_ROOT}`, braced.** Claude Code substitutes that form when it loads a skill and exports no plugin variable to the Bash tool, so the bare `$CLAUDE_PLUGIN_ROOT` — twenty uses across seventeen lines — read as empty and each helper call resolved to `/hooks/lib-*.sh`. Probed on 2.1.283: bare printed `[]`, braced printed the plugin path. The first `FORMAT.md` and `ADAPTERS.md` cite in each skill now carries the same prefix, so the model can open them from a consuming project. `test_manifest.sh` exits 1 on the bare form and on a repo-relative `plugins/<name>/` path in any skill or agent body.
+- **`skill_gate.py` reads `command_name` on `UserPromptExpansion`**, the documented field; it read `command`, so on the documented payload a typed `/simplify` mid-build raised nothing. It also matches `code-review`, the current name behind the `/review` alias.
+- **`ds:status` projects §T into the TaskList only when the session has the Task tools**, which Claude Code provides by default only on older models.
+
+### Removed
+
+- **The TaskList roll** — the `roll` skill, `sessionend-roll.py`, `roll_lib.py` and the `SessionEnd` registration. Claude Code keeps tasks across compaction and `--resume`, and `CLAUDE_CODE_TASK_LIST_ID` shares a list across sessions. The roll wrote `.scratchpad/.tasklist-roll/` into every project whose session ended with a task, dossier or not.
+- **`migrate`** — a one-time converter for the pre-v2 `{PLAN,SPEC,AUDIT}.md` layout. Run it from a checkout at `b3ad496` if a legacy tree turns up.
+- **The `rtk`, `cavemem`, `caveman` and `fastedit` adapters** and the step-0 host-env probe their skills ran. `ADAPTERS.md` keeps `context7`, `Workflow` and whetstone, each detected where it is used.
+- **`MultiEdit`** from the PreToolUse matcher and the three guards: Claude Code no longer has that tool.
+- **`DOSSIER_RUN_SLICE`, `DOSSIER_LINT_SKILL`, `DOSSIER_FLAKE_RUNNER`, `DOSSIER_TIGER_CHECK`** and the source-checkout paths beside them. Every whetstone route resolves a bare command on `PATH`.
+
+### Added
+
+- **`ds:new` reports an unignored `.scratchpad/`** and names the per-clone fix, `echo .scratchpad/ >> .git/info/exclude`.
+- **Six `claude plugin eval` cases under `evals/`** — five skills and one near-miss negative, graded on the `Skill` call. Run with `--ablation none`.
+
 ## 2026-09-09
 
 ### Changed

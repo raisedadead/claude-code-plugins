@@ -19,11 +19,9 @@ TDD covenant: RED → GREEN → refactor. One commit per `x`-flip. Resumable.
 
 ## Steps
 
-### 0. Detect host env
+### 0. Helpers
 
-Per ADAPTERS.md. Note `HAS_RTK`, `HAS_FASTEDIT`.
-
-DOSSIER.md writes use the bundled helpers (FORMAT.md §15): `$CLAUDE_PLUGIN_ROOT/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` for §T flips, `$CLAUDE_PLUGIN_ROOT/hooks/lib-s-append.sh <dir> "<event>"` for §S appends. Always present, no detection. The §S code-fence examples below show the full line — pass only the text **after** the timestamp (`lib-s-append.sh` prepends it). `HAS_FASTEDIT` governs SOURCE code edits in step 6; DOSSIER.md always goes through the helpers above.
+DOSSIER.md writes use the bundled helpers (${CLAUDE_PLUGIN_ROOT}/FORMAT.md §15): `${CLAUDE_PLUGIN_ROOT}/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` for §T flips, `${CLAUDE_PLUGIN_ROOT}/hooks/lib-s-append.sh <dir> "<event>"` for §S appends. Always present, no detection. The §S code-fence examples below show the full line — pass only the text **after** the timestamp (`lib-s-append.sh` prepends it).
 
 ### 1. Locate live dossier
 
@@ -75,8 +73,8 @@ If state still `.`: flip to `~`. Atomic write. Append §S as its own paragraph (
 Before writing any test or code, ensure the libraries this task introduces are pinned:
 
 - For each package/version the task will add: confirm §I "Pinned deps" already has a resolved entry.
-- If a needed lib is missing: `python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/resolve_pins.py <ecosystem>:<pkg>`, append the row to §I via the Edit tool (DOSSIER.md is `.md` → not fastedit), and append §S `ds:build <T-id> pin=<pkg>@<ver>` (or `pin=offline` if unreachable).
-- Optionally ground the API SHAPE via the `§context7` adapter (ADAPTERS.md): `resolve-library-id` then `query-docs`; WebFetch the official docs as fallback.
+- If a needed lib is missing: `python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/resolve_pins.py <ecosystem>:<pkg>`, append the row to §I via the Edit tool, and append §S `ds:build <T-id> pin=<pkg>@<ver>` (or `pin=offline` if unreachable).
+- Optionally ground the API SHAPE via the `§context7` adapter (${CLAUDE_PLUGIN_ROOT}/ADAPTERS.md): `resolve-library-id` then `query-docs`; WebFetch the official docs as fallback.
 
 Runs OUTSIDE the RED→GREEN→refactor cycle: it lands as a dossier-bookkeeping write, the same class as the §X refresh. The model then writes source using the §I version, so the reactive verify hook fires on a warm-cache HIT and stays silent.
 
@@ -110,11 +108,9 @@ Then implement. Run test → GREEN. Refactor if needed.
 
 If `verify` is shell predicate: run after work, must exit 0. If `verify` is `—`: implement, no test gate. (Discouraged; only for docs / config.)
 
-**run_slice route (whetstone compose, optional):** when whetstone's `run_slice.sh` resolves — this repo's source checkout (`plugins/whetstone/skills/tdd-cycle/scripts/run_slice.sh`) or an operator-set `DOSSIER_RUN_SLICE` path — prove the cycle through it: `run_slice.sh red <test-cmd>` (exits non-zero if the test PASSED), `green <test-cmd>`, `full <suite-cmd>`. Three exit codes replace prose judgment of test output. Unresolvable → raw test commands exactly as above (absent-skip; see ADAPTERS §whetstone for why there is no auto-discovery).
+**run_slice route (whetstone compose, optional):** when `run-slice` is on `PATH` — whetstone ships it in `bin/` (ADAPTERS §whetstone) — prove the cycle through it: `run-slice red <test-cmd>` (exits non-zero if the test PASSED), `green <test-cmd>`, `full <suite-cmd>`. Three exit codes replace prose judgment of test output. Not on `PATH` → raw test commands exactly as above.
 
-Use `fastedit` if `HAS_FASTEDIT=1` for surgical code edits. Else Edit tool.
-
-**Skill-lint route (whetstone compose, touched SKILL.md only):** lint before COMMIT when whetstone's linter resolves — source checkout (`plugins/whetstone/skills/skill-smith/scripts/lint_skill.py <path>`) or operator-set `DOSSIER_LINT_SKILL` (ADAPTERS §whetstone). Exit 0 gates the commit — same yardstick CI enforces repo-wide. Unresolvable → skip silently, §S `skill-lint=skipped-absent` (CI still lints on push; either plugin alone stays functional).
+**Skill-lint route (whetstone compose, touched SKILL.md only):** lint before COMMIT when `lint-skill` is on `PATH` (whetstone `bin/`, ADAPTERS §whetstone): `lint-skill <path>`. Exit 0 gates the commit. Not on `PATH` → skip silently, §S `skill-lint=skipped-absent`.
 
 **Source comments stay phase-agnostic.** A comment in source or test answers _why_: a workaround ref, a non-obvious invariant, an upstream-bug link. Phase and audit tracking live in DOSSIER.md §B and §S, which hold the whole record — so `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)` and `// PH<n>-B<k>` stay out of every source and test file, and a comment that would carry one is rewritten as a _why_ or dropped. The `marker_guard.py` PreToolUse hook watches for the audit-id forms and is advisory: it nudges and exits 0, so the write proceeds and this paragraph is what keeps them out.
 
@@ -122,7 +118,7 @@ Use `fastedit` if `HAS_FASTEDIT=1` for surgical code edits. Else Edit tool.
 
 **Stall rule:** an identical failure twice running is a stuck signal rather than bad luck. The second occurrence forces a strategy change before the third attempt — a different diagnosis, a different seam, or a scout spawn. Retry caps count ATTEMPTS; this rule catches the tighter loop inside them.
 
-Tests failing with an unclear root cause: **spawn a `dossier-scout` subagent** with the mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>", and let its caveman-compressed report guide the fix.
+Tests failing with an unclear root cause: **spawn a `dossier-scout` subagent** with the mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>", and let its report guide the fix.
 
 A failure that implies a missing invariant: run `ds:backprop`, which registers the invariant first and greens the symptom under it.
 
@@ -148,15 +144,15 @@ Append §S either way, as the doubt gate at §5.6 does — `ds:build <T-id> revi
 
 Skip entirely if neither `--review` nor destructive-class — keeps the fast path fast.
 
-Built-in `/review`, `/security-review`, `/simplify` sit alongside this artifact-only gate and cover whole-branch looks it cannot — invoke them rather than reimplementing their checks; the `skill_gate.py` hook breadcrumbs their invocation mid-build so the verdict lands in §S instead of evaporating (reminder is non-blocking; honoring it is model-judgment).
+Built-in `/code-review` (alias `/review`), `/security-review` and `/simplify` sit alongside this artifact-only gate and cover whole-branch looks it cannot — invoke them rather than reimplementing their checks; the `skill_gate.py` hook breadcrumbs their invocation mid-build so the verdict lands in §S instead of evaporating (reminder is non-blocking; honoring it is model-judgment).
 
 ### 7. COMMIT
 
 `git add` only files touched by this task.
 
-**Tiger route (whetstone compose, every build commit).** Measure the column budget of the lines this task ADDS, between the `git add` and the `git commit` — never before the `git add`, because the checker reads `git diff --cached` and an empty index always reports clean. Resolve the checker as `tiger-check` on `PATH`: whetstone ships it in `bin/`, which Claude Code adds to the Bash tool's `PATH` while that plugin is enabled. Fall back to the source-checkout path (`plugins/whetstone/skills/tiger-style/scripts/tiger_check.py`) or an operator-set `DOSSIER_TIGER_CHECK` (ADAPTERS §whetstone). It carries no flag, so D7's failure mode — a gate the operator never turns on — misses this one. The other failure mode lands: no hook fires on `git commit`, so running this at all is model-judgment. The verdict is computed; arriving at it is not. Read the reach caveat below before treating it as universal.
+**Tiger route (whetstone compose, every build commit).** Measure the column budget of the lines this task ADDS, between the `git add` and the `git commit` — never before the `git add`, because the checker reads `git diff --cached` and an empty index always reports clean. Resolve the checker as `tiger-check` on `PATH`: whetstone ships it in `bin/`, which Claude Code adds to the Bash tool's `PATH` while that plugin is enabled. It carries no flag, so D7's failure mode — a gate the operator never turns on — misses this one. The other failure mode lands: no hook fires on `git commit`, so running this at all is model-judgment. The verdict is computed; arriving at it is not. Read the reach caveat below before treating it as universal.
 
-**Read the verdict line before the exit code.** A missing script or a bad `DOSSIER_TIGER_CHECK` makes the interpreter itself exit 2 or 1 — the same numbers the checker uses for NAG and BLOCK — so a code-only reading reports a result for a check that never ran. Require a `TIGER:` line in stdout. No such line means unresolvable, whatever the number was.
+**Read the verdict line before the exit code.** A broken install makes the interpreter behind the wrapper exit 2 — the number the checker uses for NAG — so a code-only reading reports a result for a check that never ran. Require a `TIGER:` line in stdout. No such line means unresolvable, whatever the number was.
 
 With that line present, route on the exact exit code rather than on "non-zero": `0` clean, commit — the line carries how many files were examined and how many were staged but skipped, and a bare `CLEAN 0 files` with no skipped count means no path with added lines was staged — an empty index, or a deletion-only commit; `CLEAN 0 files, 3 skipped` is an ordinary docs-only commit · `2` the built-in 100-column fallback was exceeded — print the offences and commit · `1` a limit the repo itself declared was exceeded, which is a `tiger` PAUSE under `--auto` and an operator decision interactively · `64` the path is not a work tree, treat as unresolvable. Unresolvable → skip silently.
 
@@ -184,7 +180,7 @@ If commit hooks fail: a hook failure is a signal about the change, so investigat
 
 ### 8. §X REFRESH
 
-For each repo in §X, refresh the row via `$CLAUDE_PLUGIN_ROOT/hooks/lib-x-refresh.sh <dir> "<repo-label>" <repo-path>` — it runs the git probes (current branch, `origin/<branch>..HEAD` ahead-count, nearest tag, push state), rewrites branch/ahead/tag/pushed, preserves the `notes` cell, and writes atomically. Supply each repo's on-disk path (you already know it from the task work). `ahead=no-upstream` + `pushed=no` when the branch has no `origin/` tracking ref.
+For each repo in §X, refresh the row via `${CLAUDE_PLUGIN_ROOT}/hooks/lib-x-refresh.sh <dir> "<repo-label>" <repo-path>` — it runs the git probes (current branch, `origin/<branch>..HEAD` ahead-count, nearest tag, push state), rewrites branch/ahead/tag/pushed, preserves the `notes` cell, and writes atomically. Supply each repo's on-disk path (you already know it from the task work). `ahead=no-upstream` + `pushed=no` when the branch has no `origin/` tracking ref.
 
 The `notes` cell is operator free-text — `lib-x-refresh.sh` never touches it. Edit notes manually if they've gone stale.
 
@@ -217,7 +213,7 @@ State `~` → `x`. Update `cite` column with commit SHA. Atomic write. Append §
 <YYYY-MM-DD HH:MM> ds:build <T-id> DONE → x cite=<sha>
 ```
 
-**TaskList mirror:** `TaskUpdate` the `<T-id>` task to `completed`.
+**TaskList mirror:** `TaskUpdate` the `<T-id>` task to `completed`, when step 5 found one.
 
 ### 10. Regen INDEX
 
@@ -251,7 +247,7 @@ Every answer here is already stated once in the steps above — collected so the
 | Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. `marker_guard.py` only nudges (exit 0). Source comments answer _why_; §B/§S answer _which phase_.                 |
 | Retry the same fix after an identical failure          | Stall rule (§6) — twice-identical output is a stuck signal; change strategy or spawn a scout before the third attempt.                           |
 | Blow past the budget ceiling mid-task                  | `budget` PAUSE — land clean: WIP commit, `~` row, §S handoff. An unrecorded tree is the expensive part.                                          |
-| Keep correcting the same issue in a stale context      | Failure handling — two failed corrections = contaminated context; reset via `ds:roll` + fresh session, lesson recorded.                          |
+| Keep correcting the same issue in a stale context      | Failure handling — two failed corrections = contaminated context; reset via a §S handoff + fresh session, lesson recorded.                        |
 | Skip the doubt gate on a design-class task             | §5.6 — design flaws are cheapest pre-RED. Auto-fires without a flag; absent whetstone logs `doubt=skipped-absent`, so the skip is on the record. |
 
 ## Autonomous mode (`--auto`)
@@ -283,7 +279,7 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 | `push`              | any `git push` / network-mutating op — stop and hand back; never auto-push                                                                                                                                                                                      |
 | `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                                                                                                                                                                                                    |
 | `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                                                                                                                                              |
-| `tiger`             | `tiger_check.py` exit 1 (§7 tiger route) — an added line exceeds a limit the repo itself declared. Exit 2 is advisory and never pauses                                                                                                                          |
+| `tiger`             | `tiger-check` exit 1 (§7 tiger route) — an added line exceeds a limit the repo itself declared. Exit 2 is advisory and never pauses                                                                                                                          |
 | `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — the operator answers it                                                                                                                                                                                            |
 | `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`. Clean landing: commit WIP work to the task's files (a `~` row never enters the ds:ship pipeline), row stays `~`, §S handoff note — the tree is recorded before the loop stops |
 
@@ -307,12 +303,12 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 
 - Lock active: refuse, suggest `--resume` or wait.
 - Test fail + can't fix: leave row `~`, release lock, write §S w/ `BLOCKED: <reason>`. Operator decides.
-- Two failed corrections on the SAME issue: stop patching in place — the context is contaminated by its own wrong theory. Interactive: offer the operator a reset — `ds:roll` the TaskList, §S the state, re-enter from a fresh context with the lesson written down (resume protocol picks up mid-task). Under `--auto` this never self-triggers: the `retries-exhausted` PAUSE trips at the same threshold.
+- Two failed corrections on the SAME issue: stop patching in place — the context is contaminated by its own wrong theory. Interactive: offer the operator a reset — §S the state, re-enter from a fresh context with the lesson written down (resume protocol picks up mid-task). Under `--auto` this never self-triggers: the `retries-exhausted` PAUSE trips at the same threshold.
 - Commit fail: leave row `~`, release lock. Operator investigates.
 - §X refresh fail (network / repo missing): row updates partial, flag in §S. Triggers Vm.X stale guard (§8a) — operator confirms before flip.
 
 ## Cite
 
 - FORMAT.md §8 (§T format), §10 (§X format), §11 (§S format), §14 (locks), §15 (atomic writes), §16 (resume)
-- ADAPTERS.md §rtk, §fastedit
+- ADAPTERS.md §context7, §whetstone
 - agents/dossier-scout.md (step 6 failure analysis), agents/dossier-reviewer.md (step 6.5 pre-commit gate)

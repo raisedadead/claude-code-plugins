@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Claude Code PreToolUse marker guard.
 
-Matcher: Edit | Write | MultiEdit.
+Matcher: Edit | Write.
 
 Reads hook JSON on stdin. Flags edits that would land a dossier audit-id
 marker (`// PH3-B7`, `# PH12-A1`) or a §-cite (`// §V26`, `# §B3`) inside
@@ -48,7 +48,7 @@ DOSSIER_ALLOW_PREFIXES = (
 # Filenames that are dossier ledgers regardless of location.
 DOSSIER_ALLOW_NAMES = {"DOSSIER.md"}
 
-EDIT_TOOLS = {"Edit", "Write", "MultiEdit"}
+EDIT_TOOLS = {"Edit", "Write"}
 
 CANONICAL_STATES = frozenset({"live", "done", "paused"})
 HEADER_RE = re.compile(r"^`\d[^`]*`\s+·\s+`([^`]*)`\s+·\s+`")
@@ -72,11 +72,6 @@ def hook_payload(event: dict) -> tuple[str | None, list[str]]:
         new = tool_input.get("new_string")
         if isinstance(new, str):
             chunks.append(new)
-    elif tool_name == "MultiEdit":
-        for edit in tool_input.get("edits") or []:
-            new = (edit or {}).get("new_string")
-            if isinstance(new, str):
-                chunks.append(new)
 
     return (str(file_path) if file_path else None), chunks
 

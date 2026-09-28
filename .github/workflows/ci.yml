@@ -92,7 +92,7 @@ jobs:
 
       - name: first-party manifest + skill validation
         run: |
-          npm install -g @anthropic-ai/claude-code@2.1.220
+          npm install -g @anthropic-ai/claude-code@2.1.283
           claude plugin validate plugins/dossier
           claude plugin validate plugins/whetstone
           claude plugin validate .

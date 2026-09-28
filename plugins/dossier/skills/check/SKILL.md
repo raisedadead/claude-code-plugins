@@ -10,10 +10,6 @@ Validates DOSSIER.md against reality and returns a severity-tagged violation lis
 
 ## Steps
 
-### 0. Detect host env
-
-Per ADAPTERS.md. Note `Workflow` tool presence (scout fan-out routing, §workflow).
-
 ### 1. Locate
 
 Live dossier per `ds:status` step 1. `--all` adds archived dossiers as a sanity sweep.
@@ -41,14 +37,14 @@ Tasks:
 3. For each Tasks (§T) row with state=`x` + `cite=<sha>`: verify <sha> exists in <repo-path> git log. Report VALID/MISSING.
 4. Refresh Repos (§X) for <repo>: git status -sb, ahead-count, latest tag, push state. Report current values; do NOT modify DOSSIER.md.
 
-Output: caveman pipe-table. One row per finding.
+Output: terse pipe-table. One row per finding.
 
 <paste DOSSIER.md here>
 ```
 
 Spawn one `dossier-scout` per repo, in parallel, via the Agent tool with `subagent_type: dossier:dossier-scout`.
 
-§X repos > 2 and `Workflow` present → route the same missions through the §workflow fan-out (ADAPTERS.md): schema-validated rows, budget-gated width, crash-resumable. Otherwise the Agent spawns above.
+§X repos > 2 and `Workflow` present → route the same missions through the §workflow fan-out (${CLAUDE_PLUGIN_ROOT}/ADAPTERS.md): schema-validated rows, budget-gated width, crash-resumable. Otherwise the Agent spawns above.
 
 ### 2a. Verify-layer sweep (existing content)
 
@@ -66,9 +62,9 @@ Missing `verify_sweep.py` (older plugin install) → skip; the sweep is opt-in.
 
 Independent of the scouts; run concurrently with dispatch.
 
-**Deterministic drift gate (Vm.1 + Vm.4, code):** run `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-ds-check.sh .scratchpad`. It regenerates INDEX — the single source of the header × location × §Z reconcile predicate — and exits non-zero naming every dossier whose header token, directory location and §Z closure disagree: the sealed-zombie / done-not-archived class the old heuristics missed. Non-zero exit = 🔴 critical.
+**Deterministic drift gate (Vm.1 + Vm.4, code):** run `"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-ds-check.sh .scratchpad`. It regenerates INDEX — the single source of the header × location × §Z reconcile predicate — and exits non-zero naming every dossier whose header token, directory location and §Z closure disagree: the sealed-zombie / done-not-archived class the old heuristics missed. Non-zero exit = 🔴 critical.
 
-**Deterministic Vm sweep (Vm.2/3/6/8/9, code):** run `"$CLAUDE_PLUGIN_ROOT"/hooks/lib-vm-checks.sh .scratchpad`. One pass over every DOSSIER.md in the tree covers §S timestamp format (Vm.2), §T `x`-rows with an empty `cite` (Vm.3), unpaired §S START/DONE (Vm.6), write-temp orphans (Vm.8) and stale locks (Vm.9, via `lib-clear-stale-locks.sh --dry-run`). Each finding line is prefixed `CRITICAL` (→ 🔴) or `WARN` (→ 🟡); non-zero exit = at least one finding. Read-only — the dry-run stale-lock probe mutates nothing.
+**Deterministic Vm sweep (Vm.2/3/6/8/9, code):** run `"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-vm-checks.sh .scratchpad`. One pass over every DOSSIER.md in the tree covers §S timestamp format (Vm.2), §T `x`-rows with an empty `cite` (Vm.3), unpaired §S START/DONE (Vm.6), write-temp orphans (Vm.8) and stale locks (Vm.9, via `lib-clear-stale-locks.sh --dry-run`). Each finding line is prefixed `CRITICAL` (→ 🔴) or `WARN` (→ 🟡); non-zero exit = at least one finding. Read-only — the dry-run stale-lock probe mutates nothing.
 
 | Vm    | Check                                                                    | How                                                  |
 | ----- | ------------------------------------------------------------------------ | ---------------------------------------------------- |
@@ -81,7 +77,6 @@ Independent of the scouts; run concurrently with dispatch.
 | Vm.7  | INDEX regenerable (run lib-regen-index.sh, diff against current)         | optional                                             |
 | Vm.8  | no write-temp orphans                                                    | `lib-vm-checks.sh` (Vm.8, deterministic)             |
 | Vm.9  | locks not stale                                                          | `lib-vm-checks.sh` (Vm.9, deterministic)             |
-| Vm.10 | migrate markers consistent (if migration in progress)                    | n/a unless ds:migrate active                         |
 | Vm.12 | ≤1 live dossier (excl. paused)                                           | count INDEX rows state=live; >1 → 🟡 warn            |
 | Vm.13 | no stale-live (no §S in >N days)                                         | newest §S ts per live vs `DS_STALE_LIVE_DAYS` (14)   |
 | Vm.14 | every `--auto` PAUSE carries a reason class                              | grep §S `PAUSE reason=`; flag any bare PAUSE         |
@@ -122,7 +117,7 @@ Suggested remediations (do NOT auto-apply):
 
 ### 6. No mutations
 
-`ds:check` leaves DOSSIER.md content and every repo untouched. Two derived writes are carved out. The idempotent INDEX.md regen inside `lib-ds-check.sh` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7) rather than source of truth, so re-deriving it is the same carve-out `ds:status` has, and the Vm.7 dry-check regen falls under it. And `.scratchpad/.verify-cache/`, where step 2a's `verify_sweep.py` stores fetched freshness answers for `${DS_VERIFY_TTL:-86400}` seconds — probe with `python3 -c "import sys;sys.path.insert(0,'plugins/dossier/hooks');import verify_lib;print(verify_lib.cache_dir())"`. Deleting either costs a re-derivation, nothing more.
+`ds:check` leaves DOSSIER.md content and every repo untouched. Two derived writes are carved out. The idempotent INDEX.md regen inside `lib-ds-check.sh` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7) rather than source of truth, so re-deriving it is the same carve-out `ds:status` has, and the Vm.7 dry-check regen falls under it. And `.scratchpad/.verify-cache/`, where step 2a's `verify_sweep.py` stores fetched freshness answers for `${DS_VERIFY_TTL:-86400}` seconds — probe with `python3 -c "import sys;sys.path.insert(0,'${CLAUDE_PLUGIN_ROOT}/hooks');import verify_lib;print(verify_lib.cache_dir())"`. Deleting either costs a re-derivation, nothing more.
 
 No §S append — this is a read-only verb, and the log stays free of the noise.
 
@@ -134,6 +129,6 @@ No §S append — this is a read-only verb, and the log stays free of the noise.
 
 ## Cite
 
-- FORMAT.md §17 (Vm rules)
+- ${CLAUDE_PLUGIN_ROOT}/FORMAT.md §17 (Vm rules)
 - ADAPTERS.md §workflow
 - agents/dossier-scout.md (subagent contract)

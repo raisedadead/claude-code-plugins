@@ -92,7 +92,7 @@ Named so nobody assumes they work:
 
 Done = `tiger_check.py` exits 0 or 2 **and** you have read the diff against the manual pass. Exit 1 is not done: a declared limit was exceeded.
 
-Separately, and only when you suspect the tool itself rather than the diff, `plugins/whetstone/tests/test_tiger_check.py` exercises the checker against fixture repositories. That proves the checker works; it says nothing about your change.
+Separately, and only when you suspect the tool itself rather than the diff, `${CLAUDE_PLUGIN_ROOT}/tests/test_tiger_check.py` exercises the checker against fixture repositories. That proves the checker works; it says nothing about your change.
 
 ## Dossier breadcrumb
 

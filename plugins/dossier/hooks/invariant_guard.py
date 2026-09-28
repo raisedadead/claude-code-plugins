@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Claude Code PreToolUse invariant guard.
 
-Matcher: Edit | Write | MultiEdit.
+Matcher: Edit | Write.
 
 Blocks (exit 2) an edit whose content matches a project-registered forbidden
 pattern — a §V invariant that ds:backprop promoted to a write-time guard for a
@@ -30,7 +30,7 @@ import re
 import sys
 from pathlib import Path
 
-EDIT_TOOLS = {"Edit", "Write", "MultiEdit"}
+EDIT_TOOLS = {"Edit", "Write"}
 DOSSIER_ALLOW_PREFIXES = (".scratchpad/dossier/", ".scratchpad/")
 DOSSIER_ALLOW_NAMES = {"DOSSIER.md"}
 REGISTRY_REL = Path(".scratchpad/dossier/.invariant-guards.json")
@@ -54,11 +54,6 @@ def hook_payload(event: dict) -> tuple[str | None, list[str]]:
         new = tool_input.get("new_string")
         if isinstance(new, str):
             chunks.append(new)
-    elif tool_name == "MultiEdit":
-        for edit in tool_input.get("edits") or []:
-            new = (edit or {}).get("new_string")
-            if isinstance(new, str):
-                chunks.append(new)
 
     return (str(file_path) if file_path else None), chunks
 

@@ -2,7 +2,7 @@
 """Non-blocking breadcrumb when review-family or whetstone skills fire.
 
 PreToolUse (Skill) + UserPromptExpansion hook, two branches:
-- Built-ins (/review, /security-review, /simplify): fire only while a live
+- Built-ins (/code-review and its /review alias, /security-review, /simplify): fire only while a live
   dossier has a ds:build in flight (.ds-lock present) — reminder routes the
   verdict into the step 6.5 artifact trail + §S.
 - ds:close: fire when the INDEX carries at least one `paused` row — reminder
@@ -13,12 +13,13 @@ PreToolUse (Skill) + UserPromptExpansion hook, two branches:
   WHETSTONE allowlist below, not the `whetstone:` prefix, so an unlisted
   whetstone: name is a no-op; test_skill_gate.sh pins that allowlist to one
   entry per directory under plugins/whetstone/skills/.
-Always exit 0; fail-open on any parse or filesystem error. Payload field names are INFERRED by composition — the
-assistant-side tool_use transcript shape ({"skill", "args"}) plus the
-tool_name/tool_input wrapper convention the sibling Edit/Write hooks receive —
-NOT captured from a live Skill/UserPromptExpansion hook stdin (none observed
-as of Claude Code 2.1.205). A shape mismatch silently disables this breadcrumb
-(unknown shapes are a no-op by design); re-verify on harness bumps.
+Always exit 0; fail-open on any parse or filesystem error. The PreToolUse
+shape (tool_name "Skill", tool_input.skill "<plugin>:<name>") was captured from
+a live hook on Claude Code 2.1.283. The UserPromptExpansion field is
+`command_name`, per the hooks reference (code.claude.com/docs/en/hooks) — not
+captured live: a `claude -p` probe on 2.1.283 did not fire that event. A shape
+mismatch silently disables this breadcrumb (unknown shapes are a no-op by
+design); re-verify on harness bumps.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-BUILTINS = {"review", "security-review", "simplify"}
+BUILTINS = {"code-review", "review", "security-review", "simplify"}
 CLOSE = {"dossier:close"}
 WHETSTONE = {
     "whetstone:doubt-pass",
@@ -98,7 +99,7 @@ def main() -> int:
     if isinstance(tool_input, dict):
         name = str(tool_input.get("skill") or tool_input.get("name") or "")
     if not name:
-        name = str(payload.get("command") or "")
+        name = str(payload.get("command_name") or "")
     if name not in BUILTINS and name not in WHETSTONE and name not in CLOSE:
         return 0
 

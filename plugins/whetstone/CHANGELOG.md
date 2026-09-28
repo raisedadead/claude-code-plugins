@@ -4,6 +4,16 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-09-26
+
+### Added
+
+- **`run-slice`, `lint-skill` and `flake-runner` in `bin/`**, beside `tiger-check` and `claim-check`. Claude Code puts an enabled plugin's `bin/` on the Bash tool's `PATH`, which is the one documented way for dossier to reach these scripts from any project; its old checkout-path routes resolved only inside a clone of this repo. `test_whetstone_py.py` exits non-zero when a wrapper points at a script that is not there.
+
+### Changed
+
+- `tiger-style` names its checker test by `${CLAUDE_PLUGIN_ROOT}` rather than a repo-relative path, and `tdd-cycle` drops the cavekit `ck:build` covenant it named beside `dossier:build`.
+
 ## 2026-08-16 (claim-check reads stdin)
 
 The wave built two gates and only one of them belongs in a plugin. Contract: `.dossier/2026-08-16-turn-gates.md`. The other — a response-length ceiling — stayed in the operator's own harness, because a line budget is one operator's taste rather than a fact about correctness; `RESEARCH.md` D18 carries that split and its rejected alternative. **A plugin cache predating this entry exits 64 on `--stdin`**, which is the unknown-option path, verified against the build at `a079de3`. Until a refresh lands, a caller wiring the flag gets an inert call, so read exit 64 as "not available yet" rather than as a failure. `[a6d6f8a..e26f081]`

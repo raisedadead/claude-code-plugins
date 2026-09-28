@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Empirical fact-check for freshness-sensitive claims — versions, EOLs, package latest, GitHub Action SHAs, k8s apiVersions, AI model deprecations, image tags, or anything the model's training cutoff may have staled. Primary sources only. Auto-fires as a PreToolUse hook on Edit/Write/MultiEdit, but only in a repo with a `.scratchpad/dossier/` directory; `/dossier:verify` on demand works anywhere. Invoke when user says "verify", "fact-check", "is this current", "/dossier:verify", "double check", or when reviewing freshness claims.
+description: Empirical fact-check for freshness-sensitive claims — versions, EOLs, package latest, GitHub Action SHAs, k8s apiVersions, AI model deprecations, image tags, or anything the model's training cutoff may have staled. Primary sources only. Auto-fires as a PreToolUse hook on Edit/Write, but only in a repo with a `.scratchpad/dossier/` directory; `/dossier:verify` on demand works anywhere. Invoke when user says "verify", "fact-check", "is this current", "/dossier:verify", "double check", or when reviewing freshness claims.
 argument-hint: '[claim or topic; empty = fact-check previous response]'
 ---
 
@@ -10,7 +10,7 @@ Two surfaces, one rule: **read the primary source's raw bytes.**
 
 ## Surface 1 — PreToolUse hook (auto)
 
-Wired in `hooks/hooks.json`. Fires on `Edit | Write | MultiEdit`, and only in a repo that has a `.scratchpad/dossier/` directory — elsewhere it exits 0 without scanning. Scans content against the pattern registry in `hooks/verify_patterns.py` and the authority catalog in `hooks/verify_authorities.py` (140+ aliases, 34 Docker images, 31 AI models). Covers language/runtime/OS/distro/database EOL, container-image EOL, GitHub Action SHA pinning, k8s deprecated apiVersions, npm/PyPI/Cargo/RubyGems/Go-mod outdated packages, and AI-model deprecation. Full coverage matrix + per-source cheatsheet → [`references/authorities.md`](references/authorities.md).
+Wired in `hooks/hooks.json`. Fires on `Edit | Write`, and only in a repo that has a `.scratchpad/dossier/` directory — elsewhere it exits 0 without scanning. Scans content against the pattern registry in `hooks/verify_patterns.py` and the authority catalog in `hooks/verify_authorities.py` (140+ aliases, 34 Docker images, 31 AI models). Covers language/runtime/OS/distro/database EOL, container-image EOL, GitHub Action SHA pinning, k8s deprecated apiVersions, npm/PyPI/Cargo/RubyGems/Go-mod outdated packages, and AI-model deprecation. Full coverage matrix + per-source cheatsheet → [`references/authorities.md`](references/authorities.md).
 
 Non-blocking by design — emits a stderr reminder plus `additionalContext`. Per-session dedup. Operator escape: `# verify-skip: <ruleName>` on or near the line.
 

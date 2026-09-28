@@ -37,13 +37,16 @@ out="$(run_gate "$(payload review ${SP}-a)")" || fail "gate must exit 0 on dedup
 out="$(run_gate "$(payload security-review ${SP}-a)")" || fail "gate must exit 0 on second builtin"
 printf '%s' "$out" | grep -q 'additionalContext' || fail "different builtin same session must still fire"
 
-out="$(run_gate "$(payload caveman:caveman-review ${SP}-b)")" || fail "gate must exit 0 on namespaced"
+out="$(run_gate "$(payload code-review ${SP}-a)")" || fail "gate must exit 0 on code-review"
+printf '%s' "$out" | grep -q 'additionalContext' || fail "code-review, the current name behind /review, must fire"
+
+out="$(run_gate "$(payload other:code-review ${SP}-b)")" || fail "gate must exit 0 on namespaced"
 [[ -z "$out" ]] || fail "namespaced plugin skill must stay silent"
 
 out="$(run_gate "$(payload foo ${SP}-c)")" || fail "gate must exit 0 on non-builtin"
 [[ -z "$out" ]] || fail "non-builtin skill must stay silent"
 
-out="$(run_gate "$(printf '{"hook_event_name":"UserPromptExpansion","command":"simplify","cwd":"%s","session_id":"%s"}' "$TMP" "${SP}-d")")" || fail "gate must exit 0 on typed path"
+out="$(run_gate "$(printf '{"hook_event_name":"UserPromptExpansion","command_name":"simplify","cwd":"%s","session_id":"%s"}' "$TMP" "${SP}-d")")" || fail "gate must exit 0 on typed path"
 printf '%s' "$out" | grep -q 'UserPromptExpansion' || fail "typed path must fire with its own event name"
 
 mkdir -p "$TMP/.scratchpad/dossier/2026-07-19-zzz"
