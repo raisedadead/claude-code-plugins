@@ -4,6 +4,12 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-09-28
+
+### Changed
+
+- **`whetstone-doubter` runs on `opus` at `effort: high`**, not `sonnet`. It judges a design before any code exists, and it runs only on design-class work. D29 carries the rejected alternatives.
+
 ## 2026-09-26
 
 ### Added

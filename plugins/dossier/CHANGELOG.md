@@ -4,6 +4,12 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-09-28
+
+### Changed
+
+- **`dossier-reviewer` runs on `opus` at `effort: medium`; `dossier-scout` stays on `sonnet` and gains `effort: medium`.** A verdict gate runs on the tier that makes decisions, and a finder on the tier that gathers. D29 carries the rejected alternatives.
+
 ## 2026-09-26
 
 Refactor for anyone who installs the plugin, against the Claude Code plugin docs as of 2.1.283. `RESEARCH.md` D24, D26, D27, F38 and F39 carry the reasons and the rejected alternatives.
