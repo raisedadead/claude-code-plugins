@@ -16,7 +16,7 @@ Refactor for anyone who installs the plugin, against the Claude Code plugin docs
 
 ### Removed
 
-- **The TaskList roll** — the `roll` skill, `sessionend-roll.py`, `roll_lib.py` and the `SessionEnd` registration. Claude Code keeps tasks across compaction and `--resume`, and `CLAUDE_CODE_TASK_LIST_ID` shares a list across sessions. The roll wrote `.scratchpad/.tasklist-roll/` into every project whose session ended with a task, dossier or not.
+- **The TaskList roll** — the `roll` skill, `sessionend-roll.py`, `roll_lib.py` and the `SessionEnd` registration. Claude Code keeps tasks across compaction and `--resume`, and `CLAUDE_CODE_TASK_LIST_ID` shares a list across sessions. The roll wrote `.scratchpad/.tasklist-roll/` into every project whose session ended with a task, dossier or not. Nothing reads those files now. Remove them with `rm -rf .scratchpad/.tasklist-roll` in each project.
 - **`migrate`** — a one-time converter for the pre-v2 `{PLAN,SPEC,AUDIT}.md` layout. Run it from a checkout at `b3ad496` if a legacy tree turns up.
 - **The `rtk`, `cavemem`, `caveman` and `fastedit` adapters** and the step-0 host-env probe their skills ran. `ADAPTERS.md` keeps `context7`, `Workflow` and whetstone, each detected where it is used.
 - **`MultiEdit`** from the PreToolUse matcher and the three guards: Claude Code no longer has that tool.
