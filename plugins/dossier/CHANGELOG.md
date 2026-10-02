@@ -22,6 +22,7 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 - **INDEX rows sort by code point**, not by the locale of the shell, and dossier directories are read in sorted order.
 - **The freshness check runs in `cli/ds`.** The Edit/Write advisory runs `cli/ds verify-edit` from the mod, cache-only, with a 10 s timeout. `ds:check` runs `cli/ds verify-sweep`, and `ds:new` and `ds:build` run `cli/ds resolve-pins`. Output lines and the cache layout are unchanged, and a cache that the Python helpers wrote stays valid. The verbs exit 69 without Node.js 22.18+ and 70 on an internal error; the Python scripts exited 0 when they could not load. The advisory no longer writes a stderr line, and it keeps its once-per-session memory in the mod, not in a `state-*.json` file under `.scratchpad/.verify-cache/`.
 - **The skill-routing lint is `tests/test_skill_routing.ts`.** Run it with `node --test`.
+- **The plugin's own tests need no Python.** The manifest and PAUSE-class parity checks run under `node --test` as `tests/test_manifest.ts` and `tests/test_pause_class_parity.ts`.
 - **The skill gate keeps its once-per-session memory in the mod**, not in a temp file. A hot reload of the plugin resets it, so one reminder can repeat.
 
 ## 2026-09-28

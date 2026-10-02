@@ -22,7 +22,7 @@ export function cells(line: string): string[] {
   return (match[1] ?? '').split(SPLIT).map((cell) => strip(cell.replaceAll('\\|', '|')))
 }
 
-function shlexWords(text: string): string[] | undefined {
+export function shlexWords(text: string): string[] | undefined {
   const words: string[] = []
   let word = ''
   let started = false

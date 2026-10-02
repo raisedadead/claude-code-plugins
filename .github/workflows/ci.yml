@@ -14,16 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: "3.10"
-
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22.18.0"
 
       - name: command tests
-        run: node --test plugins/dossier/tests/test_ds_cli.ts plugins/dossier/tests/test_whetstone_allowlist.ts plugins/dossier/tests/test_converge.ts plugins/dossier/tests/test_convergence_state.ts plugins/dossier/tests/test_verify.ts plugins/dossier/tests/test_skill_routing.ts
+        run: node --test plugins/dossier/tests/test_*.ts
 
       - name: shell helper tests
         run: |
@@ -39,8 +35,6 @@ jobs:
           bash plugins/dossier/hooks/test_lib_vm_checks.sh
           bash plugins/dossier/hooks/test_closure_parity.sh
           bash plugins/dossier/hooks/test_vm6_parity.sh
-          bash plugins/dossier/hooks/test_pause_class_parity.sh
-          bash plugins/dossier/hooks/test_manifest.sh
           bash plugins/dossier/hooks/test_lib_assert_grill.sh
           bash plugins/dossier/hooks/test_lib_changelog_write.sh
           bash plugins/dossier/hooks/test_fakeimpl_stop.sh
@@ -77,17 +71,13 @@ jobs:
           # Three suites once existed, passed locally, and ran nowhere.
           missing=0
           while IFS= read -r t; do
+            dir="${t%/*}"
+            case "$dir" in
+            plugins/*/tests) [[ "$dir" != plugins/*/*/tests && "${t##*/}" == test_*.ts ]] && t="$dir/test_*.ts" ;;
+            esac
             grep -qF "$t" .github/workflows/ci.yml || { echo "not named in CI: $t" >&2; missing=1; }
           done < <(git ls-files 'plugins/*/tests/test_*' 'plugins/*/hooks/test_*' 'tools/test_*' 'tools/*/test_*')
           test "$missing" -eq 0
-
-      - name: research ledger row shape
-        run: |
-          python3 tools/test_check_rows.py
-          python3 tools/check_rows.py
-
-      - name: census notification join
-        run: python3 tools/census/test_census.py
 
       - name: first-party manifest + skill validation
         run: |
@@ -99,11 +89,6 @@ jobs:
       - name: mod tests
         run: claude plugin test plugins/dossier
 
-      - name: ruff
-        run: |
-          pip install -r requirements-dev.txt
-          ruff check plugins/dossier tools
-
       - name: shellcheck
         env:
           # renovate: datasource=github-releases depName=koalaman/shellcheck
@@ -113,6 +98,28 @@ jobs:
           sudo mv "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
           shellcheck --version | grep "version: ${SHELLCHECK_VERSION#v}"
           shellcheck plugins/dossier/hooks/*.sh
+
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: "3.10"
+
+      - name: research ledger row shape
+        run: |
+          python3 tools/test_check_rows.py
+          python3 tools/check_rows.py
+
+      - name: census notification join
+        run: python3 tools/census/test_census.py
+
+      - name: ruff
+        run: |
+          pip install -r requirements-dev.txt
+          ruff check tools
 
   whetstone:
     runs-on: ubuntu-latest
@@ -124,7 +131,7 @@ jobs:
           node-version: "22.18.0"
 
       - name: command tests
-        run: node --test plugins/whetstone/tests/test_tiger_check.ts plugins/whetstone/tests/test_lint_skill_cli.ts
+        run: node --test plugins/whetstone/tests/test_*.ts
 
       - name: shell script tests
         run: |
