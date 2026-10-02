@@ -92,10 +92,13 @@ jobs:
 
       - name: first-party manifest + skill validation
         run: |
-          npm install -g @anthropic-ai/claude-code@2.1.283
+          npm install -g @anthropic-ai/claude-code@2.1.287
           claude plugin validate plugins/dossier
           claude plugin validate plugins/whetstone
           claude plugin validate .
+
+      - name: mod tests
+        run: claude plugin test plugins/dossier
 
       - name: ruff
         run: |
@@ -135,6 +138,11 @@ jobs:
 
       - name: skill lint (self-hosted)
         run: python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/whetstone/skills
+
+      - name: mod tests
+        run: |
+          npm install -g @anthropic-ai/claude-code@2.1.287
+          claude plugin test plugins/whetstone
 
       - name: ruff
         run: |
