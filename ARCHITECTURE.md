@@ -66,6 +66,7 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 | `marker_guard.py` header block  | non-canonical state token in a file named `DOSSIER.md` | exit 2       |
 | `marker_guard.py` advisory path | regex over comment prefixes in arbitrary source        | exit 0, nag  |
 | `verify_hook.py`                | network-dependent freshness claim                      | never blocks |
+| whetstone claim gate            | unbacked enforcement verb in the final reply           | Stop `block`, once per turn |
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.
 

@@ -4,6 +4,16 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-10-03
+
+### Added
+
+- **Claim gate on Stop.** whetstone is now a mod (`hooks/register.ts`, Claude Code 2.1.287+). When the final reply says something blocks, enforces, gates, denies, prevents or refuses, and names no exit code, citation or honesty label, the gate returns a Stop `block` with the flagged lines. It never blocks a continued Stop, so it fires once per turn. D31 carries the rejected alternatives.
+
+### Changed
+
+- **`claim-check` is TypeScript.** `hooks/claim-check.ts` holds the one algorithm for the gate and the command; `bin/claim-check` runs it with Node.js 22.18+. Flags, stdout lines and exit codes (0, 1, 64) are unchanged; the stderr prefix is now `claim-check:`. Read the `CLAIMS:` line before the exit code: a `node` older than 22.18 exits 1 with no `CLAIMS:` line. `skills/skill-smith/scripts/claim_check.py` is deleted.
+
 ## 2026-09-28
 
 ### Changed

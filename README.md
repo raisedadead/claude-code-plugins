@@ -21,7 +21,7 @@ dossier drives the wave; whetstone is the craft at each gate. Designed to be use
 /plugin install whetstone@raisedadead-plugins
 ```
 
-Needs Claude Code 2.1.287 or later (the first build with [mods](https://code.claude.com/docs/en/plugins/mods/overview)), `git`, `bash` and `python3` 3.10+ on `PATH`; without `python3` the python hooks no-op. whetstone ships commands in `bin/`, which limits it to Claude Code — claude.ai and Cowork do not install a plugin with a `bin/` directory.
+Needs Claude Code 2.1.287 or later (the first build with [mods](https://code.claude.com/docs/en/plugins/mods/overview)), `git`, `bash`, `python3` 3.10+ and Node.js 22.18+ on `PATH`; without `python3` the python hooks no-op. whetstone ships commands in `bin/`, which limits it to Claude Code — claude.ai and Cowork do not install a plugin with a `bin/` directory.
 
 dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globally, or per clone with `echo .scratchpad/ >> .git/info/exclude`. `/dossier:new` says so when it finds the directory unignored, and leaves the choice to you.
 
@@ -84,6 +84,7 @@ In-session hooks. The three write-time gates scope themselves to projects that o
 | **invariant guard**    | on      | `DOSSIER_INVARIANT_GUARD=off`        | Edits matching a project-registered pattern. Fail-open until you register one.                  |
 | **freshness verify**   | on      | `# verify-skip: <rule>` on the line  | Stale version, EOL, SHA and deprecated-model claims. Advisory; never blocks.                    |
 | **fake-impl backstop** | off     | `DOSSIER_FAKEIMPL_CMD='<fast test>'` | On stop with a dirty tree — untracked files included — runs your test command; non-zero blocks. |
+| **claim gate**         | on      | disable whetstone                    | whetstone. A final reply that says something blocks, enforces, gates, denies, prevents or refuses, with no exit code, citation or honesty label. Sends the turn back once per turn. |
 
 The invariant guard is where the ratchet lands: `ds:backprop` promotes a recurring bug class into a write-time block. Registry is a JSON list at `.scratchpad/dossier/.invariant-guards.json` — gitignored by design, so the suite leaves no artifact in a project that did not ask for one:
 

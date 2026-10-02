@@ -9,3 +9,4 @@ __pycache__/
 .venv/
 .scratchpad/
 plugins/*/evals/results/
+plugins/*/tsconfig.json

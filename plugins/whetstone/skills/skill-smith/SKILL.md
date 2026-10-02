@@ -51,7 +51,7 @@ In a repo with a live dossier ledger, record the verdict as one §S line through
 
 ## Claim check
 
-`claim-check --stdin | <path>...` (also `skills/skill-smith/scripts/claim_check.py`) reads shipped prose for a narrower defect than structure: a sentence asserting that something of ours **blocks**, **enforces**, **gates**, **denies**, **prevents** or **refuses**, while naming nothing a reader could check.
+`claim-check --stdin | <path>...` (also `node ${CLAUDE_PLUGIN_ROOT}/hooks/claim-check-cli.ts`) reads shipped prose for a narrower defect than structure: a sentence asserting that something of ours **blocks**, **enforces**, **gates**, **denies**, **prevents** or **refuses**, while naming nothing a reader could check.
 
 `--stdin` lints text that is not a file yet — a turn's own output, a commit message, a draft. It takes no paths: one input surface per invocation, so a clean file can never vouch for dirty stdin. Empty input is clean.
 
@@ -61,6 +61,8 @@ In a repo with a live dossier ledger, record the verdict as one §S line through
 | 0    | `CLAIMS: CLEAN stdin`       | same verdict, reading stdin                                          |
 | 1    | `CLAIMS: FLAGGED <n>`       | `<n>` claims name none of those                                      |
 | 64   | —                           | no paths given, a path that does not exist, or `--stdin` with a path |
+
+Read the `CLAIMS:` line before the exit code. A missing `node`, or a `node` older than 22.18, exits 1 with no `CLAIMS:` line, and 1 is also the flagged code.
 
 A claim passes by naming an exit code, carrying a citation, or labelling itself advisory / model-judgment / opt-in / a nag. It decides **shape, never fact**: whether the exit code named is the real one stays a reader's question. That is the mechanical half of a defect class this repo keeps shipping: `RESEARCH.md` F19 counts six false documented claims, F25 six instances across one wave.
 
