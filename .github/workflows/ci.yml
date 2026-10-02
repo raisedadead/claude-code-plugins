@@ -28,9 +28,11 @@ jobs:
           python3 plugins/dossier/tests/test_converge.py
           python3 plugins/dossier/tests/test_convergence_state.py
 
-      - name: shell helper + marker-guard tests
+      - name: command tests
+        run: node --test plugins/dossier/tests/test_ds_cli.ts plugins/dossier/tests/test_whetstone_allowlist.ts
+
+      - name: shell helper tests
         run: |
-          bash plugins/dossier/hooks/test_marker_guard.sh
           bash plugins/dossier/hooks/test_lib_dossier_edit.sh
           bash plugins/dossier/hooks/test_lib_regen.sh
           bash plugins/dossier/hooks/test_session_start.sh
@@ -47,7 +49,6 @@ jobs:
           bash plugins/dossier/hooks/test_manifest.sh
           bash plugins/dossier/hooks/test_lib_assert_grill.sh
           bash plugins/dossier/hooks/test_lib_changelog_write.sh
-          bash plugins/dossier/hooks/test_skill_gate.sh
           bash plugins/dossier/hooks/test_fakeimpl_stop.sh
 
       - name: skill lint (all dossier skills)

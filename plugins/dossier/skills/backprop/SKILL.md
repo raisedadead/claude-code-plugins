@@ -83,16 +83,16 @@ Append §S: `ds:backprop <B> flake=<rate> runs=<n>` (the resume table keys on it
 
 Write the test that reproduces the bug and run it — it must FAIL (RED). A passing test means the bug is characterised wrongly; revisit step 4.
 
-**Test comments stay phase-agnostic.** The link lives in the test name and the commit's `Refs §B B<N>`; the forms `// Phase N`, `// PH<n>-B<k>` and `// V<n> (Phase <m> / A<k>)` belong in neither the test body nor anywhere else in source. That is a convention you keep, and `marker_guard.py` covers only part of it:
+**Test comments stay phase-agnostic.** The link lives in the test name and the commit's `Refs §B B<N>`; the forms `// Phase N`, `// PH<n>-B<k>` and `// V<n> (Phase <m> / A<k>)` belong in neither the test body nor anywhere else in source. That is a convention you keep, and the dossier mod's marker guard covers only part of it:
 
-| comment line           | `marker_guard.py`                                           |
+| comment line           | marker guard                                                |
 | ---------------------- | ----------------------------------------------------------- |
-| `// PH3-B7`            | nudges — `additionalContext`, exit 0, the write still lands |
-| `// §V26`, `# §B3`     | nudges — same                                               |
-| `// Phase 2`           | silent, exit 0, no output                                   |
-| `// V3 (Phase 2 / A1)` | silent, exit 0, no output                                   |
+| `// PH3-B7`            | denies the Edit/Write with the reason                       |
+| `// §V26`, `# §B3`     | denies — same                                               |
+| `// Phase 2`           | silent, the write lands                                     |
+| `// V3 (Phase 2 / A1)` | silent, the write lands                                     |
 
-Its `MARKER_PATTERNS` are exactly two: a comment line containing `PH\d+-[A-Z]\d+`, or one carrying a `§[VBTSXGZ]\d+` sigil. A bare `Phase|Stage|Step N` is deliberately unmatched — it collides with legitimate `# Step 1: dump` comments — and the V-form carries no `§`, so neither of those two is reported by anything. It is also scoped: a `cwd` whose `.scratchpad/dossier` is not a directory returns 0 before any scan, so the guard is silent on all four forms outside a dossier repo. Treat it as a partial reminder, never a gate.
+Its `MARKER_PATTERNS` are exactly two: a comment line containing `PH\d+-[A-Z]\d+`, or one carrying a `§[VBTSXGZ]\d+` sigil. A bare `Phase|Stage|Step N` is deliberately unmatched — it collides with legitimate `# Step 1: dump` comments — and the V-form carries no `§`, so neither of those two is reported by anything. It is also scoped: in a session whose cwd has no `.scratchpad/dossier` directory it scans nothing, so the guard is silent on all four forms outside a dossier repo. It denies the first two forms; the convention covers the other two.
 
 Commit:
 
@@ -150,13 +150,13 @@ Append §S:
 
 NO → §B `invariant added` stays `—`, and §S notes `§V=skipped:one-off`.
 
-**Optional — graduate to a write-time guard (recurrence=high only):** when the invariant is a _forbidden code pattern_ (a regex the offending edit would contain), offer to register it so `invariant_guard.py` denies the bug class at Edit/Write time with exit 2 on every future edit, rather than surfacing it at the next `ds:check`. Append an entry to `.scratchpad/dossier/.invariant-guards.json` (a JSON list):
+**Optional — graduate to a write-time guard (recurrence=high only):** when the invariant is a _forbidden code pattern_ (a regex the offending edit would contain), offer to register it so the dossier mod's invariant guard denies the bug class at Edit/Write time on every future edit, rather than surfacing it at the next `ds:check`. Append an entry to `.scratchpad/dossier/.invariant-guards.json` (a JSON list):
 
 ```json
 { "id": "V<N>", "pattern": "<forbidden-regex>", "message": "<why this is blocked>", "paths": ["<glob>"] }
 ```
 
-`paths` scopes the guard (omit = every non-dossier source file). Keep the regex **tight**: a loose pattern denies legitimate edits, which is the one failure mode of a write-time guard. The guard is fail-open (missing registry / bad regex / out-of-scope path = no block) and bypassable with `DOSSIER_INVARIANT_GUARD=off` (log the rationale in §S). Reserve it for a genuinely mechanical, regex-expressible class; a semantic invariant stays a §V `check` predicate audited by `ds:check`.
+`pattern` is an ECMAScript regex; the Python forms `(?P<name>`, `(?P=name)`, a leading `(?i)` / `(?s)` / `(?m)`, `\A` and `\Z` are translated, and a pattern with any other Python-only syntax is skipped with an advisory. `paths` holds `fnmatch` globs, where `*` also matches `/`, and scopes the guard (omit = every non-dossier source file). Keep the regex **tight**: a loose pattern denies legitimate edits, which is the one failure mode of a write-time guard. The guard is fail-open (missing registry / bad regex / out-of-scope path = no block) and bypassable with `DOSSIER_INVARIANT_GUARD=off` (log the rationale in §S). Reserve it for a genuinely mechanical, regex-expressible class; a semantic invariant stays a §V `check` predicate audited by `ds:check`.
 
 ### 8. FIX (GREEN)
 
@@ -207,7 +207,7 @@ Each rebuttal appears once in the steps above; they are collected here so the te
 | Write the fix before a failing test            | §5 — a test that passes pre-fix doesn't characterize the bug. RED first; if it's green, revisit step 4.           |
 | Skip the §V invariant ("it's a one-off")       | §7 — only `low`/one-off skips. `high`/systemic MUST add a §V row, or the whole class recurs.                      |
 | Green the regression test, skip the full suite | §8 — a scoped GREEN can mask a fresh regression. Run the full (or scoped) suite before committing the fix.        |
-| Tag the test with `// PH<n>-B<k>`              | §5 — test name + `Refs §B B<N>` carry the link. `marker_guard.py` nudges advisorily (exit 0) — nothing blocks it. |
+| Tag the test with `// PH<n>-B<k>`              | §5 — test name + `Refs §B B<N>` carry the link. The marker guard denies it (opt-out: `DOSSIER_MARKER_GUARD=off`). |
 
 ## Auto-trigger from ds:build
 
@@ -217,4 +217,4 @@ A `ds:build` test failure invokes `ds:backprop` with bug-description = the test 
 
 - FORMAT.md §7 (§V format), §9 (§B format), §11 (§S format), §14 (locks), §16 (resume)
 - agents/dossier-scout.md
-- hooks/invariant_guard.py (write-time §V guard registry)
+- engine/guards.ts and `cli/ds invariant-check` (write-time §V guard registry)

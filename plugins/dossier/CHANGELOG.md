@@ -4,6 +4,16 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-10-03
+
+### Changed
+
+- **dossier is now a mod (Claude Code 2.1.287+).** `hooks/register.ts` runs the Edit/Write guards and the skill gate in process; `marker_guard.py`, `invariant_guard.py` and `skill_gate.py` are deleted. The other hooks still run from `hooks.json`. D32 carries the rejected alternatives.
+- **The marker guard denies.** In a project with `.scratchpad/dossier/`, an Edit or Write that puts a `PH3-B7`-style audit id or a `§V26`-style cite in a source comment is denied; before, it was advisory. A bare `Phase N`, `Stage N` or `Step N` still passes. `DOSSIER_MARKER_GUARD=off` turns the marker rule off and no longer turns the header check off. D33 carries the reason and the known false positive (a `SPEC §`-style spec citation).
+- **The invariant guard reads ECMAScript regex.** `cli/ds invariant-check` runs the registered patterns with a 5 s timeout. The Python forms `(?P<name>`, `(?P=name)`, a leading `(?i)` / `(?s)` / `(?m)`, `\A`, `\Z` and `$` are translated; a pattern with other Python-only syntax is skipped, and the write gets an advisory that names it.
+- **`cli/ds` needs Node.js 22.18+.** Without it, `cli/ds` exits 69 and the invariant guard lets the write through.
+- **The skill gate keeps its once-per-session memory in the mod**, not in a temp file. A hot reload of the plugin resets it, so one reminder can repeat.
+
 ## 2026-09-28
 
 ### Changed
@@ -54,6 +64,7 @@ Refactor for anyone who installs the plugin, against the Claude Code plugin docs
 - **A live dossier now reaches the operator, not only the model.** `session-start.sh` set `systemMessage` only when the tree was in a conflicting state — more than one live row, or drift. The ordinary case, exactly one live wave, went to `additionalContext`, which the model reads and the operator never sees, so a wave stayed invisible to the person deciding about it for its whole length. One live row now raises `dossier live: <slug> · <P> · T <done>/<tot> · B <n> — /dossier:status for the sit-rep.`, computed from the INDEX row and advisory: the hook exits 0 either way. It fires on `startup`, `resume`, `fork` and `clear` — every source that means a session began for the operator — and stays silent on `compact`, which is the harness reclaiming context mid-turn and not a moment the operator asked for a status line. `additionalContext` still carries the live dossier on all five sources, so the model never loses the fact. Set `DOSSIER_LIVE_NUDGE=0` in `settings.json` `env` to turn it off; `README.md` lists it beside the other hook-read knobs. `test_session_start.sh` covers one-live, the exact `P/T/B` payload, each of the four firing sources, `compact`, the opt-out, two-live (the consolidate warning still wins) and no-live.
 
 - **Paused dossiers are named when a wave closes**, from two surfaces that fail independently:
+
   - `ds:status` step 6 prints a `PAUSED` line on every full sit-rep, `(none)` when the set is empty. Step 1 already enumerated paused rows separately; nothing printed them. The LIGHT path exits before step 6, which is where no `.scratchpad/dossier/` exists to hold a paused wave.
   - `skill_gate.py` fires on the `Skill` PreToolUse event for `dossier:close` and returns the paused slugs as `additionalContext`. Computed from `.scratchpad/INDEX.md`, deduped per session, exit 0 always.
 

@@ -36,7 +36,7 @@ Judge on two orthogonal axes. Report each finding under exactly one.
 
 - Repo conventions (a documented repo standard always wins over any generic taste).
 
-- Phase-marker leakage into source/test (`// Phase N`, `// PH<n>-B<k>`). `marker_guard.py` does NOT block these — it emits a nudge and exits 0, so the write proceeds, and its patterns match only `PH<n>-B<k>` and `§`-cites, never a bare `// Phase N`. This axis is the only thing that catches them; flag every one you see.
+- Phase-marker leakage into source/test (`// Phase N`, `// PH<n>-B<k>`). The dossier mod's marker guard denies only `PH<n>-B<k>` and `§`-cites in a comment, never a bare `// Phase N`, and `DOSSIER_MARKER_GUARD=off` turns it off. This axis is the only thing that catches the rest; flag every one you see.
 
 - Narration / restating-code comments, dead code, obvious smells (feature envy, shotgun surgery, speculative generality). Smells are always a judgement call, never a hard block.
 

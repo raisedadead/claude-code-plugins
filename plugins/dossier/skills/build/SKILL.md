@@ -112,7 +112,7 @@ If `verify` is shell predicate: run after work, must exit 0. If `verify` is `—
 
 **Skill-lint route (whetstone compose, touched SKILL.md only):** lint before COMMIT when `lint-skill` is on `PATH` (whetstone `bin/`, ADAPTERS §whetstone): `lint-skill <path>`. Exit 0 gates the commit. Not on `PATH` → skip silently, §S `skill-lint=skipped-absent`.
 
-**Source comments stay phase-agnostic.** A comment in source or test answers _why_: a workaround ref, a non-obvious invariant, an upstream-bug link. Phase and audit tracking live in DOSSIER.md §B and §S, which hold the whole record — so `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)` and `// PH<n>-B<k>` stay out of every source and test file, and a comment that would carry one is rewritten as a _why_ or dropped. The `marker_guard.py` PreToolUse hook watches for the audit-id forms and is advisory: it nudges and exits 0, so the write proceeds and this paragraph is what keeps them out.
+**Source comments stay phase-agnostic.** A comment in source or test answers _why_: a workaround ref, a non-obvious invariant, an upstream-bug link. Phase and audit tracking live in DOSSIER.md §B and §S, which hold the whole record — so `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)` and `// PH<n>-B<k>` stay out of every source and test file, and a comment that would carry one is rewritten as a _why_ or dropped. The dossier mod's marker guard denies the audit-id and `§`-cite forms on Edit/Write; the bare `Phase N` / `Step N` forms pass it, and this paragraph is what keeps them out.
 
 **Conflict route (whetstone compose, merge-class only):** a plain `git merge` conflict during WORK, with `whetstone:merge-resolve` in the available-skills list, resolves per that skill's process — hunk-by-hunk with intent, then the `verify_clean.sh` proof (baseline `-` marker-mode when no pre-conflict count exists; the step-6 full-suite GREEN gate already floors regressions). §S: `ds:build <T-id> conflict=resolved verify_clean=0`. Skill absent → resolve inline as before, §S `conflict=resolved-inline`. Routing is model-judgment (trigger-phrase match); the verify_clean exit code is the code-enforced part. Conflicts from `rebase` / `cherry-pick` are OUT of this route — their `--continue` creates commits outside step 7's task-scoped discipline: under `--auto` PAUSE (`destructive`); interactive, hand to the operator (standalone `whetstone:merge-resolve` already owns that trigger).
 
@@ -144,7 +144,7 @@ Append §S either way, as the doubt gate at §5.6 does — `ds:build <T-id> revi
 
 Skip entirely if neither `--review` nor destructive-class — keeps the fast path fast.
 
-Built-in `/code-review` (alias `/review`), `/security-review` and `/simplify` sit alongside this artifact-only gate and cover whole-branch looks it cannot — invoke them rather than reimplementing their checks; the `skill_gate.py` hook breadcrumbs their invocation mid-build so the verdict lands in §S instead of evaporating (reminder is non-blocking; honoring it is model-judgment).
+Built-in `/code-review` (alias `/review`), `/security-review` and `/simplify` sit alongside this artifact-only gate and cover whole-branch looks it cannot — invoke them rather than reimplementing their checks; the dossier mod's skill gate breadcrumbs their invocation mid-build so the verdict lands in §S instead of evaporating (reminder is non-blocking; honoring it is model-judgment).
 
 ### 7. COMMIT
 
@@ -244,7 +244,7 @@ Every answer here is already stated once in the steps above — collected so the
 | Auto-confirm the §X stale guard                        | §8a / Vm.X — stale §X hides push/ahead drift. Under `--auto` it is a PAUSE (`x-stale`) and the operator answers the prompt.                      |
 | Keep retrying a red test past 2 attempts               | `retries-exhausted` PAUSE (2 fixes + one auto-`ds:backprop`). Looping burns turns — escalate the decision.                                       |
 | Patch the symptom, skip the invariant                  | §6 — if the failure implies a missing invariant, run `ds:backprop` to register it, then green the test under it.                                 |
-| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. `marker_guard.py` only nudges (exit 0). Source comments answer _why_; §B/§S answer _which phase_.                 |
+| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. The marker guard passes a bare `Phase N`. Source comments answer _why_; §B/§S answer _which phase_.                 |
 | Retry the same fix after an identical failure          | Stall rule (§6) — twice-identical output is a stuck signal; change strategy or spawn a scout before the third attempt.                           |
 | Blow past the budget ceiling mid-task                  | `budget` PAUSE — land clean: WIP commit, `~` row, §S handoff. An unrecorded tree is the expensive part.                                          |
 | Keep correcting the same issue in a stale context      | Failure handling — two failed corrections = contaminated context; reset via a §S handoff + fresh session, lesson recorded.                        |
@@ -297,7 +297,7 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 | `x-stale`           | "refresh later, flip now"                 | stale §X hides push/ahead drift; a flip on stale state forges the ledger                                                       |
 | `budget`            | "one more task won't hurt"                | ceilings exist because 'one more' compounds; land clean (commit + §S) and hand back                                            |
 
-**Rails:** push stays the operator's, never automatic · `ds:close` stays an explicit operator step, so the loop stops at the last `x`-flip · per-task lock · atomic writes · `marker_guard` + `verify` hooks stay active during WORK. Every PAUSE writes its reason to §S so `ds:status` shows WHY on return (Vm.14).
+**Rails:** push stays the operator's, never automatic · `ds:close` stays an explicit operator step, so the loop stops at the last `x`-flip · per-task lock · atomic writes · marker guard + `verify` hooks stay active during WORK. Every PAUSE writes its reason to §S so `ds:status` shows WHY on return (Vm.14).
 
 ## Failure handling
 

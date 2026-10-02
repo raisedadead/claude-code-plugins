@@ -167,7 +167,7 @@ def _header_state(ledger: Path) -> str:
     first 400 characters was a substring test instead: a `paused` ledger whose
     Goal prose said `live` came back live, and since `ds:converge` with no
     argument resolves its contract from this list, that wave's criteria reached
-    a shell. The pattern is `marker_guard.py`'s `HEADER_RE`, so the line whose
+    a shell. The pattern is `engine/guards.ts`'s `HEADER`, so the line whose
     state token the write guard polices is the line this reads. First matching
     line wins and ends the read, as `lib-regen-index.sh`'s awk does; a ledger
     with no header line is unreadable state, which is not live.

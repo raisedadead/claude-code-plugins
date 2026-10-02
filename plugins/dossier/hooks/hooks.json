@@ -1,4 +1,7 @@
 {
+  "modules": [
+    "./register.ts"
+  ],
   "hooks": {
     "SessionStart": [
       {
@@ -17,40 +20,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/marker_guard.py",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/invariant_guard.py",
-            "timeout": 5
-          },
-          {
-            "type": "command",
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/verify_hook.py",
             "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Skill",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/skill_gate.py",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
-    "UserPromptExpansion": [
-      {
-        "matcher": "code-review|review|security-review|simplify",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}\"/hooks/skill_gate.py",
-            "timeout": 5
           }
         ]
       }

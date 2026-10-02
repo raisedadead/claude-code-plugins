@@ -63,8 +63,8 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 
 | gate                            | signal                                                 | action       |
 | ------------------------------- | ------------------------------------------------------ | ------------ |
-| `marker_guard.py` header block  | non-canonical state token in a file named `DOSSIER.md` | exit 2       |
-| `marker_guard.py` advisory path | regex over comment prefixes in arbitrary source        | exit 0, nag  |
+| dossier header guard            | non-canonical state token in a file named `DOSSIER.md` | PreToolUse `deny` |
+| dossier marker guard            | regex over comment prefixes, in a project with `.scratchpad/dossier/` | PreToolUse `deny`, opt-out `DOSSIER_MARKER_GUARD=off` (D33: an operator decision against F20's measured false positives) |
 | `verify_hook.py`                | network-dependent freshness claim                      | never blocks |
 | whetstone claim gate            | unbacked enforcement verb in the final reply           | Stop `block`, once per turn |
 
@@ -114,7 +114,7 @@ Tests here guard hard-won invariants. They do not assert that prose says what pr
 - **Every gate needs both a positive and a negative test.** One proving it fires, one proving it does not false-positive. TIGER_STYLE's golden rule of assertions — assert the positive space you expect, and the negative space you do not — applied to hooks.
 - **Prefer one algorithm to two that agree on fixtures.** Where a predicate must exist twice, make the second a transcription of the first, not an independent implementation that happens to match. A shared fixture set only proves agreement on the cases someone thought of: the `§S` pairing predicate passed four such fixtures while still diverging on a fifth, because one side decided by set membership at the end and the other by deleting as it walked. Aligning the algorithms closed the whole class; adding fixtures would only have closed the case that was found.
 - **Cross-check load-bearing predicates in two places.** Where two subsystems must agree on what a value means, test the agreement from both sides on a shared fixture. A parity claim that runs against one implementation is not a cross-check, and a failure message naming a property the test never verifies hands the next reader a false belief about coverage.
-- **A false positive becomes a permanent regression test.** `test_marker_guard.sh` carries one named inline as the artemis regression: a comment reading `# Step 1: dump the database` must not trigger the guard. It once did.
+- **A false positive becomes a permanent regression test.** `plugins/dossier/tests/gates.test.ts` carries one as the artemis regression: a comment reading `# Step 1: dump the database` must not trigger the guard. It once did.
 - **Never test documentation.** A grep asserting a README contains a phrase catches nothing and breaks on every edit.
 - **A recorded number is a claim, and decays like one.** Counts written into a finding are rarely re-probed, so a stale one quietly becomes evidence for a conclusion it never supported — `F20` carries the worked example, where both the count and the inference it drove were wrong. Record the command beside the count, and re-run it before the count justifies a change.
 
@@ -133,7 +133,7 @@ A decision is finished when a later session, holding none of the context, stops 
 
 **The counterweight matters as much: durable is not accumulated.** That rule keeps refusals, not history. A ledger that grows a row every time someone changes their mind stops being read, and an unread ledger prevents no re-proposal at all — the same failure, reached the opposite way. A position that reverses is rewritten in place, carrying every alternative still worth refusing and dropping the ones we merely passed through. **Optimise these files to be read by someone with no memory of writing them.** Git holds the route; these files hold the destination and the roads deliberately not taken.
 
-The ledger format has the same gap: a wave's constraints and rejected options go quiet when it is archived — readable if you go looking, invisible if you do not. **The plugins do not yet close this.** It is an open stride in `RESEARCH.md`, labelled unimplemented rather than described as though it works. The shape it wants: decisions survive their wave, surface at session start beside the sit-rep, and — where a rejected alternative is mechanically detectable — a re-adoption attempt is caught at write time, the way `invariant_guard.py` catches registered invariants.
+The ledger format has the same gap: a wave's constraints and rejected options go quiet when it is archived — readable if you go looking, invisible if you do not. **The plugins do not yet close this.** It is an open stride in `RESEARCH.md`, labelled unimplemented rather than described as though it works. The shape it wants: decisions survive their wave, surface at session start beside the sit-rep, and — where a rejected alternative is mechanically detectable — a re-adoption attempt is caught at write time, the way the dossier invariant guard catches registered invariants.
 
 ## Lineage
 

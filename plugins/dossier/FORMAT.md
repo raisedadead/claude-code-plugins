@@ -67,17 +67,17 @@ Headings are fixed. Order is fixed.
 
 Readers match headings through `hooks/lib-sections.sh`, which holds one pattern per section and accepts both this spelling and the `## §G — Goal` … `## §Z — Closeout` sigils every dossier written before 2026-08-05 carries. A descriptive tail is allowed after either form. `ds:new` writes the worded spelling; nothing rewrites an existing ledger, so the sigil form stays readable indefinitely.
 
-The third field is **required, and its value is never read**. Five parsers demand it. `lib-header-state.sh`, `lib-regen-index.sh` and `lib-reconcile-state.sh` each carry the awk pattern `` /^`.*` · `.*` · / ``; `marker_guard.py` (`HEADER_RE`) and `converge.py` (`_HEADER`) carry the same regex, transcribed twice, which wants those two `·` separators plus a first field that is backticked *and* starts with a digit. A two-field header matches none of the five. Two of them say so out loud, a third leaves a visible mark, and two go quiet:
+The third field is **required, and its value is never read**. Five parsers demand it. `lib-header-state.sh`, `lib-regen-index.sh` and `lib-reconcile-state.sh` each carry the awk pattern `` /^`.*` · `.*` · / ``; `engine/guards.ts` (`HEADER`) and `converge.py` (`_HEADER`) carry the same regex, transcribed twice, which wants those two `·` separators plus a first field that is backticked *and* starts with a digit. A two-field header matches none of the five. Two of them say so out loud, a third leaves a visible mark, and two go quiet:
 
 | parser                   | two-field header                                                            |
 | ------------------------ | --------------------------------------------------------------------------- |
 | `lib-header-state.sh`    | exit 1, `header metadata line not found` — `ds:close` + pause/resume fail   |
 | `lib-regen-index.sh`     | exit 0, writes `drift!` as that dossier's INDEX state                       |
 | `lib-reconcile-state.sh` | exit 0, leaves an archived §Z-closed dossier still reading `live`           |
-| `marker_guard.py`        | exit 0, its exit-2 refusal of a non-canonical state token never fires       |
+| `engine/guards.ts`       | allows the write; its refusal of a non-canonical state token never fires    |
 | `converge.py`            | exit 2, `CONVERGE: PARSE — no live wave`: the wave never joins the live set |
 
-All five then read field two. Field three's contents are never examined: it is always `P1/1` because Tasks carries no phase column. Dropping it means relaxing all five patterns in the same commit, not deleting a spare field — miss `marker_guard.py` and the exit-2 header gate goes permanently quiet with no other signal. The digit anchor those last two share already means `` `v1` · `sealed` · `P1/1` `` passes `marker_guard.py` at exit 0 while `` `2026-08-05` · `sealed` · `P1/1` `` is blocked at exit 2.
+All five then read field two. Field three's contents are never examined: it is always `P1/1` because Tasks carries no phase column. Dropping it means relaxing all five patterns in the same commit, not deleting a spare field — miss `engine/guards.ts` and the header deny goes permanently quiet with no other signal. The digit anchor those last two share already means `` `v1` · `sealed` · `P1/1` `` passes the header guard while `` `2026-08-05` · `sealed` · `P1/1` `` is denied.
 
 State values: `live` | `done` | `paused`. Default at `ds:new` = `live`. The header state token is flipped atomically by `lib-header-state.sh` (§15): `ds:close` sets `done`; the `ds:status` pause/resume actions toggle `live` ↔ `paused`. A `paused` dossier stays a direct child of `dossier/` (not archived — pause is reversible) and is excluded from the live-count + the SessionStart "current live" pick.
 
