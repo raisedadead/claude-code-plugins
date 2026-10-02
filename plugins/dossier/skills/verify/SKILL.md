@@ -10,9 +10,9 @@ Two surfaces, one rule: **read the primary source's raw bytes.**
 
 ## Surface 1 — PreToolUse hook (auto)
 
-Wired in `hooks/hooks.json`. Fires on `Edit | Write`, and only in a repo that has a `.scratchpad/dossier/` directory — elsewhere it exits 0 without scanning. Scans content against the pattern registry in `hooks/verify_patterns.py` and the authority catalog in `hooks/verify_authorities.py` (140+ aliases, 34 Docker images, 31 AI models). Covers language/runtime/OS/distro/database EOL, container-image EOL, GitHub Action SHA pinning, k8s deprecated apiVersions, npm/PyPI/Cargo/RubyGems/Go-mod outdated packages, and AI-model deprecation. Full coverage matrix + per-source cheatsheet → [`references/authorities.md`](references/authorities.md).
+Wired in the mod, `hooks/register.ts`. Fires on `Edit | Write`, and only in a repo that has a `.scratchpad/dossier/` directory — elsewhere it does not scan. Scans content against the pattern registry in `engine/verify.ts` and the authority catalog in `engine/verify-authorities.ts` (140+ aliases, 34 Docker images, 31 AI models). Covers language/runtime/OS/distro/database EOL, container-image EOL, GitHub Action SHA pinning, k8s deprecated apiVersions, npm/PyPI/Cargo/RubyGems/Go-mod outdated packages, and AI-model deprecation. Full coverage matrix + per-source cheatsheet → [`references/authorities.md`](references/authorities.md).
 
-Non-blocking by design — emits a stderr reminder plus `additionalContext`. Per-session dedup. Operator escape: `# verify-skip: <ruleName>` on or near the line.
+Non-blocking by design — a finding is `additionalContext` only. Per-session dedup, held in the mod; a hot reload of the plugin resets it. The hook reads the cache only and never fetches. Operator escape: `# verify-skip: <ruleName>` anywhere in the written content.
 
 Cache at `<project root>/.scratchpad/.verify-cache/` (24h TTL on registries, 30d on resolved SHAs). Offline = silent skip.
 
@@ -85,14 +85,13 @@ Per-source raw-JSON `curl` / `gh api` paths, and how to add a new authority (pur
 
 ## Composition
 
-- **With `ds:check`**: the drift detector runs `verify_sweep.py` on touched files automatically; findings fold into 🟡 warnings.
+- **With `ds:check`**: the drift detector runs `ds verify-sweep` on touched files automatically; findings fold into 🟡 warnings.
 - **With `ds:build`**: the PreToolUse hook is active inside the build (a live wave means the `.scratchpad/dossier/` gate passes), so no explicit invocation is needed. It skips dossier paths themselves — `.scratchpad/` and `DOSSIER.md` — so ledger writes stay unscanned.
-- **With `ds:backprop`**: when a bug's root cause is "stale claim baked into code", the backprop fix adds the missing alias to `verify_authorities.py` so recurrence is caught at write time.
+- **With `ds:backprop`**: when a bug's root cause is "stale claim baked into code", the backprop fix adds the missing alias to `engine/verify-authorities.ts` so recurrence is caught at write time.
 
 ## Cite
 
-- `hooks/verify_authorities.py` — alias maps + registry definitions
-- `hooks/verify_lib.py` — generic check functions
-- `hooks/verify_patterns.py` — pattern registry
-- `hooks/verify_hook.py` — PreToolUse dispatcher
-- `hooks/verify_sweep.py` — read-only sweep (used by ds:check)
+- `engine/verify-authorities.ts` — alias maps + registry definitions
+- `engine/verify.ts` — check functions and the pattern registry
+- `hooks/gates.ts` `verifyGate` — PreToolUse advisory
+- `cli/verify.ts` — HTTP cache, `ds verify-sweep` (used by ds:check), `ds verify-edit`, `ds resolve-pins`

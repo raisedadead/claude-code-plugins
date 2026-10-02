@@ -8,7 +8,7 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 
 ### Changed
 
-- **dossier is now a mod (Claude Code 2.1.287+).** `hooks/register.ts` runs the Edit/Write guards, the skill gate, the session start, the prompt convergence state and the fake-impl Stop backstop. `marker_guard.py`, `invariant_guard.py`, `skill_gate.py`, `session-start.sh`, `convergence_state.py`, `fakeimpl_stop.py`, `converge.py` and every `lib-*.sh` are deleted. Only `verify_hook.py` still runs from `hooks.json`. D32 carries the rejected alternatives.
+- **dossier is now a mod (Claude Code 2.1.287+).** `hooks/register.ts` runs the Edit/Write guards, the skill gate, the session start, the prompt convergence state and the fake-impl Stop backstop. `marker_guard.py`, `invariant_guard.py`, `skill_gate.py`, `session-start.sh`, `convergence_state.py`, `fakeimpl_stop.py`, `converge.py`, the `verify_*.py` files, `resolve_pins.py`, `eval_skill_routing.py` and every `lib-*.sh` are deleted, and `hooks.json` holds no settings hook. D32 carries the rejected alternatives.
 - **`ds:converge` runs `"${CLAUDE_PLUGIN_ROOT}"/cli/ds converge`.** Output and exit codes are unchanged; exit 69 or 70 now means the runner did not start.
 - **The session-start notices are toasts.** A mod result has no `systemMessage`, so the one-line live-wave notice and the more-than-one-live and drift warnings are a `$.ui.toast`. `DOSSIER_LIVE_NUDGE=0` still turns off the live-wave notice.
 - **Resume hints list the open ops of one dossier in log order.** The awk scan listed them in hash order.
@@ -20,6 +20,8 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 - **Every ledger writer is a `cli/ds` verb.** The skills call `"${CLAUDE_PLUGIN_ROOT}"/cli/ds <verb>`: `row-flip`, `s-append`, `x-refresh`, `header-state`, `archive-move`, `z-write`, `regen-index`, `reconcile`, `clear-locks`, `ds-check`, `vm-checks`, `assert-scaffold`, `assert-grill` and `changelog-write`. The `hooks/lib-*.sh` writers are deleted. Each verb keeps the exit codes of the script it replaces, except that a failed file write now exits 70; an error line now starts with `ds <verb>:`.
 - **A rewritten ledger file gets the default file mode.** The bash writers left a rewritten `DOSSIER.md` or `INDEX.md` at mode 0600; `cli/ds` writes it at the default mode for the umask.
 - **INDEX rows sort by code point**, not by the locale of the shell, and dossier directories are read in sorted order.
+- **The freshness check runs in `cli/ds`.** The Edit/Write advisory runs `cli/ds verify-edit` from the mod, cache-only, with a 10 s timeout. `ds:check` runs `cli/ds verify-sweep`, and `ds:new` and `ds:build` run `cli/ds resolve-pins`. Output lines and the cache layout are unchanged, and a cache that the Python helpers wrote stays valid. The verbs exit 69 without Node.js 22.18+ and 70 on an internal error; the Python scripts exited 0 when they could not load. The advisory no longer writes a stderr line, and it keeps its once-per-session memory in the mod, not in a `state-*.json` file under `.scratchpad/.verify-cache/`.
+- **The skill-routing lint is `tests/test_skill_routing.ts`.** Run it with `node --test`.
 - **The skill gate keeps its once-per-session memory in the mod**, not in a temp file. A hot reload of the plugin resets it, so one reminder can repeat.
 
 ## 2026-09-28

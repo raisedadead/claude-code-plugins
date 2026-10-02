@@ -18,6 +18,7 @@ import {
 import { constants, tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { convergenceStateVerb, convergeVerb } from './converge.ts'
+import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
 import { sessionReport } from '../engine/session.ts'
 import { splitLines, strip } from '../engine/text.ts'
@@ -593,7 +594,7 @@ function fakeimplVerb(): number {
   }
 }
 
-const VERBS: Record<string, (args: string[]) => number> = {
+const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'archive-move': archiveMoveVerb,
   'assert-grill': assertGrillVerb,
   'assert-scaffold': assertScaffoldVerb,
@@ -606,10 +607,13 @@ const VERBS: Record<string, (args: string[]) => number> = {
   'header-state': headerStateVerb,
   'invariant-check': invariantCheckVerb,
   reconcile: reconcileVerb,
+  'resolve-pins': resolvePinsVerb,
   'regen-index': regenIndexVerb,
   'row-flip': rowFlipVerb,
   'session-start': sessionStartVerb,
   's-append': sAppendVerb,
+  'verify-edit': verifyEditVerb,
+  'verify-sweep': verifySweepVerb,
   'vm-checks': vmChecksVerb,
   'x-refresh': xRefreshVerb,
   'z-write': zWriteVerb,
@@ -623,7 +627,7 @@ export async function main(args: string[]): Promise<number> {
     return EXIT_USAGE
   }
   try {
-    return run(rest)
+    return await run(rest)
   } catch (error) {
     if (!(error instanceof Refusal)) throw error
     console.error(error.message)

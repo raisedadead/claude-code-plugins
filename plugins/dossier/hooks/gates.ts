@@ -17,6 +17,8 @@ export type Io = {
 export type Verdict = { deny?: string; context?: string }
 
 const INVARIANT_TIMEOUT_MS = 5000
+const VERIFY_TIMEOUT_MS = 10_000
+const VERIFY_FOOTER = '\nsilence a rule for this write: `# verify-skip: <ruleName>` anywhere in the content.'
 const SESSION_TIMEOUT_MS = 60_000
 const PROMPT_TIMEOUT_MS = 10_000
 const STOP_TIMEOUT_MS = 180_000
@@ -58,6 +60,35 @@ export async function editGate(io: Io, root: string, input: Record<string, unkno
   const marker = guarded ? markerDenial(edit) : undefined
   if (marker) return { deny: marker }
   return invariantGate(io, root, edit.filePath, edit.chunks)
+}
+
+export async function verifyGate(io: Io, root: string, input: Record<string, unknown>, fired: Set<string>): Promise<string | undefined> {
+  const edit = editOf(input)
+  const content = edit?.chunks[0]
+  if (!edit || !content || isDossierPath(edit.filePath)) return undefined
+  if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return undefined
+  let done: { exitCode: number; stdout: string }
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'verify-edit', root]
+    done = await io.run(argv, { stdin: JSON.stringify({ file_path: edit.filePath, content }), timeoutMs: VERIFY_TIMEOUT_MS })
+  } catch {
+    return undefined
+  }
+  if (done.exitCode !== 0 || !done.stdout.trim()) return undefined
+  let hits: unknown
+  try {
+    hits = JSON.parse(done.stdout)
+  } catch {
+    return undefined
+  }
+  if (!Array.isArray(hits)) return undefined
+  const lines: string[] = []
+  for (const hit of hits as { key?: unknown; line?: unknown }[]) {
+    if (typeof hit?.key !== 'string' || typeof hit.line !== 'string' || fired.has(hit.key)) continue
+    fired.add(hit.key)
+    lines.push(hit.line)
+  }
+  return lines.length ? `${lines.join('\n')}${VERIFY_FOOTER}` : undefined
 }
 
 function rows(index: string, state: string): string[] {

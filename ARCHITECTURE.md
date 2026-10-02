@@ -65,7 +65,7 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 | ------------------------------- | ------------------------------------------------------ | ------------ |
 | dossier header guard            | non-canonical state token in a file named `DOSSIER.md` | PreToolUse `deny` |
 | dossier marker guard            | regex over comment prefixes, in a project with `.scratchpad/dossier/` | PreToolUse `deny`, opt-out `DOSSIER_MARKER_GUARD=off` (D33: an operator decision against F20's measured false positives) |
-| `verify_hook.py`                | network-dependent freshness claim                      | never blocks |
+| dossier verify advisory         | network-dependent freshness claim, read from the cache | never blocks |
 | whetstone claim gate            | unbacked enforcement verb in the final reply           | Stop `block`, once per turn |
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.

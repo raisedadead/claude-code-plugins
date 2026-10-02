@@ -1,5 +1,5 @@
 import type { EngineInterface, Register } from 'claude-code'
-import { BUILTINS, editGate, type Io, promptGate, sessionGate, skillGate, skillOf, stopGate } from './gates.ts'
+import { BUILTINS, editGate, type Io, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from './gates.ts'
 
 function ioOf($: EngineInterface): Io {
   return {
@@ -24,21 +24,24 @@ function ioOf($: EngineInterface): Io {
 }
 
 const seen = new Set<string>()
+const verified = new Set<string>()
 
 export const register: Register = (on) => {
   on('classic.PreToolUse', async ($, e, next) => {
     const input = e as unknown as Record<string, unknown>
-    let context: string | undefined
+    const context: string[] = []
     if (input.tool === 'Skill') {
-      context = await skillGate(ioOf($), await $.session.cwd(), skillOf(input), seen)
+      context.push((await skillGate(ioOf($), await $.session.cwd(), skillOf(input), seen)) ?? '')
     } else if (input.tool === 'Edit' || input.tool === 'Write') {
-      const verdict = await editGate(ioOf($), await $.session.cwd(), input)
+      const root = await $.session.cwd()
+      const verdict = await editGate(ioOf($), root, input)
       if (verdict.deny) return { deny: verdict.deny }
-      context = verdict.context
+      context.push(verdict.context ?? '', (await verifyGate(ioOf($), root, input, verified)) ?? '')
     }
     const result = await next(e)
-    if (!context) return result
-    return { ...result, additionalContext: [...(result.additionalContext ?? []), context] }
+    const added = context.filter(Boolean)
+    if (!added.length) return result
+    return { ...result, additionalContext: [...(result.additionalContext ?? []), ...added] }
   })
 
   on('classic.UserPromptExpansion', async ($, e, next) => {

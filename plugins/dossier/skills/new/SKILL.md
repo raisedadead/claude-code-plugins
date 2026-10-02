@@ -62,13 +62,13 @@ Ask one block at a time, tersely, no preamble:
 From the stack named in §C plus the repos in §X, derive a pin-spec list and resolve current versions once (shared 24h cache, offline-safe):
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/resolve_pins.py eol:<slug>... <ecosystem>:<pkg>...
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds resolve-pins eol:<slug>... <ecosystem>:<pkg>...
 ```
 
 - `eol:` results → §C bullets (current stable / EOL note).
 - package results → the §I "Pinned deps" table (FORMAT.md §6).
 - Map the libs actually named to specs (e.g. "Go backend + React UI" → `eol:go npm:react npm:react-dom go:<module>`). The model does the stack→spec mapping; do not blind-parse §C prose into specs.
-- `{"offline": true}` / `latest: null` → record the pin as `offline` and proceed; the scaffold continues either way.
+- `{"offline": true}` / `latest: null`, or exit 69 (no Node.js 22.18+) / 70 (internal error) → record the pin as `offline` and proceed; the scaffold continues either way.
 - `go:<module>` without a `/vN` suffix names the v0/v1 path, so the resolver walks `/v2` through `/v12` and answers from the highest that resolves — pin the module path in `src`, not the one you asked for. A `warning` on the object means a probe went unanswered: the version is a floor, not the ceiling.
 
 These fold into the single atomic step-3 Write — no extra commit, no TDD cycle.

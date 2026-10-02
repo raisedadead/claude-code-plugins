@@ -23,6 +23,23 @@ describe('dossier mod wiring', () => {
     expect((result as { result?: string }).result).toBe('ran')
   })
 
+  test('a Write in a dossier project asks the cli to verify it', async ($, on) => {
+    const runs: string[][] = []
+    on('session.cwd', async () => ({ value: '/w' }))
+    on('fs.stat', async () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }))
+    on('fs.exists', async () => ({ value: false }))
+    on('env.get', async () => ({ value: undefined }))
+    on('process.run', async (_, e) => {
+      runs.push([...e.argv])
+      return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+    })
+    on('classic.PreToolUse', async () => ({}))
+    on('tool.call', async () => ({ result: 'ran' }))
+    const result = await $.tool.call({ tool: 'Write', file_path: 'ci.yml', content: 'uses: a@v1' } as never)
+    expect((result as { result?: string }).result).toBe('ran')
+    expect(runs.map((argv) => argv.slice(-2))).toEqual([['verify-edit', '/w']])
+  })
+
   test('a typed /simplify mid-build gets the reminder as context', async ($, on) => {
     on('fs.read', async (_, e) => ({
       value: e.path.endsWith('INDEX.md') ? '| 2026-01-01 | foo | live | P1/1 |\n' : '{"skill":"ds:build","target":"T3"}',

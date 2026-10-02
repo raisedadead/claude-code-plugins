@@ -4,16 +4,16 @@ Two layers of confidence that a `SKILL.md` **description** steers the router to 
 
 ## Layer 1 — deterministic lint (in CI)
 
-`hooks/eval_skill_routing.py` — a static pass, no model, no network:
+`tests/test_skill_routing.ts` — a static pass, no model, no network:
 
 - **Trigger-phrase collision** — two skills claiming the same quoted phrase in their `description`. `FAIL`.
 - **Missing trigger clause** — a `description` with no `Invoke when` / `Use when` clause. `FAIL`.
 
 ```bash
-python3 plugins/dossier/hooks/eval_skill_routing.py        # or pass a skills dir
+node --test plugins/dossier/tests/test_skill_routing.ts
 ```
 
-Exit 1 on any finding. CI runs it through `test_python.py` (`test_eval_routing_real_skills_clean`).
+Exit 1 on any finding. CI runs it with the other node tests (`the shipped skill descriptions lint clean`).
 
 ## Layer 2 — live-model routing (manual, not in CI)
 

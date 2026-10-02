@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'claude-code/testing'
-import { type Io, editGate, promptGate, sessionGate, skillGate, skillOf, stopGate } from '../hooks/gates.ts'
+import { type Io, editGate, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from '../hooks/gates.ts'
 
 const ROOT = '/w'
 
@@ -252,5 +252,40 @@ describe('fake-impl stop backstop', () => {
       throw new Error('timed out')
     }
     expect(await stopGate(io({}, { env: armed, run: timedOut }), ROOT)).toBeUndefined()
+  })
+})
+
+describe('verify advisory', () => {
+  const hits = [
+    { key: 'r:a', line: '⚠ verify[r] a → b · src: u' },
+    { key: 'r:c', line: '⚠ verify[r] c → d · src: u' },
+  ]
+  const found: Io['run'] = async () => ({ exitCode: 0, stdout: JSON.stringify(hits), stderr: '' })
+  const footer = '\nsilence a rule for this write: `# verify-skip: <ruleName>` anywhere in the content.'
+
+  test('passes the edit to the cli and returns its findings once per session', async () => {
+    let sent: string[] = []
+    const run: Io['run'] = async (argv, init) => {
+      sent = [...argv, init.stdin]
+      return found(argv, init)
+    }
+    const fired = new Set<string>()
+    const text = await verifyGate(io(OPTED_IN, { run }), ROOT, edit('ci.yml', 'uses: a@v1'), fired)
+    expect(text).toBe(`${hits[0]?.line}\n${hits[1]?.line}${footer}`)
+    expect(sent.slice(-3)).toEqual(['verify-edit', ROOT, JSON.stringify({ file_path: 'ci.yml', content: 'uses: a@v1' })])
+    expect(await verifyGate(io(OPTED_IN, { run: found }), ROOT, edit('ci.yml', 'uses: a@v1'), fired)).toBeUndefined()
+  })
+
+  test('stays silent outside a dossier tree, on a dossier path, on no findings or a cli failure', async () => {
+    expect(await verifyGate(io({}, { run: found }), ROOT, edit('ci.yml', 'x'), new Set())).toBeUndefined()
+    expect(await verifyGate(io(OPTED_IN, { run: found }), ROOT, edit('.scratchpad/dossier/x/a.yml', 'x'), new Set())).toBeUndefined()
+    const none: Io['run'] = async () => ({ exitCode: 0, stdout: '', stderr: '' })
+    expect(await verifyGate(io(OPTED_IN, { run: none }), ROOT, edit('ci.yml', 'x'), new Set())).toBeUndefined()
+    const broken: Io['run'] = async () => ({ exitCode: 69, stdout: JSON.stringify(hits), stderr: '' })
+    expect(await verifyGate(io(OPTED_IN, { run: broken }), ROOT, edit('ci.yml', 'x'), new Set())).toBeUndefined()
+    const rejects: Io['run'] = async () => {
+      throw new Error('no sh')
+    }
+    expect(await verifyGate(io(OPTED_IN, { run: rejects }), ROOT, edit('ci.yml', 'x'), new Set())).toBeUndefined()
   })
 })

@@ -6,7 +6,7 @@ disallowed-tools: Edit, Write, NotebookEdit
 
 # ds:check — drift detector
 
-Validates DOSSIER.md against reality and returns a severity-tagged violation list. It changes no DOSSIER.md content and no repo. Two derived paths are written: `INDEX.md`, which `ds ds-check` regenerates on every run (step 3), and `.scratchpad/.verify-cache/`, which `verify_sweep.py` populates at step 2a through `verify_lib.cache_dir()`. Both are caches rebuilt from source, never source themselves — the carve-out step 6 states.
+Validates DOSSIER.md against reality and returns a severity-tagged violation list. It changes no DOSSIER.md content and no repo. Two derived paths are written: `INDEX.md`, which `ds ds-check` regenerates on every run (step 3), and `.scratchpad/.verify-cache/`, which `ds verify-sweep` populates at step 2a. Both are caches rebuilt from source, never source themselves — the carve-out step 6 states.
 
 ## Steps
 
@@ -48,15 +48,15 @@ Spawn one `dossier-scout` per repo, in parallel, via the Agent tool with `subage
 
 ### 2a. Verify-layer sweep (existing content)
 
-PreToolUse `verify_hook.py` sees new writes only, so existing files may still carry pre-hook claims. Scan them:
+The PreToolUse verify advisory sees new writes only, so existing files may still carry pre-hook claims. Scan them:
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}"/hooks/verify_sweep.py <touched-files...>
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds verify-sweep <touched-files...>
 ```
 
 Touched-files = files cited by any §T `x`-row commit, unioned with files in `git status -sb` (changed but uncommitted). Findings fold into 🟡 warnings — verify is advisory.
 
-Missing `verify_sweep.py` (older plugin install) → skip; the sweep is opt-in.
+Exit 69 (no Node.js 22.18+) or 70 (internal error) → skip and name the stderr line; the sweep is opt-in.
 
 ### 3. Local checks (main thread)
 
@@ -117,7 +117,7 @@ Suggested remediations (do NOT auto-apply):
 
 ### 6. No mutations
 
-`ds:check` leaves DOSSIER.md content and every repo untouched. Two derived writes are carved out. The idempotent INDEX.md regen inside `ds ds-check` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7) rather than source of truth, so re-deriving it is the same carve-out `ds:status` has, and the Vm.7 dry-check regen falls under it. And `.scratchpad/.verify-cache/`, where step 2a's `verify_sweep.py` stores fetched freshness answers for `${DS_VERIFY_TTL:-86400}` seconds — probe with `python3 -c "import sys;sys.path.insert(0,'${CLAUDE_PLUGIN_ROOT}/hooks');import verify_lib;print(verify_lib.cache_dir())"`. Deleting either costs a re-derivation, nothing more.
+`ds:check` leaves DOSSIER.md content and every repo untouched. Two derived writes are carved out. The idempotent INDEX.md regen inside `ds ds-check` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7) rather than source of truth, so re-deriving it is the same carve-out `ds:status` has, and the Vm.7 dry-check regen falls under it. And `.scratchpad/.verify-cache/`, where step 2a's `ds verify-sweep` stores fetched freshness answers for 24 hours (30 days for a resolved action SHA); when `.scratchpad/` cannot be created the cache falls back to `${TMPDIR:-/tmp}/dossier-verify-cache`. Deleting either costs a re-derivation, nothing more.
 
 No §S append — this is a read-only verb, and the log stays free of the noise.
 
