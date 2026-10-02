@@ -62,7 +62,7 @@ whetstone ships the craft dossier composes at its gates. Neither plugin declares
 | `tiger-check`  | `ds:build` step 7 — column budget of the staged lines         | §S `tiger=skipped-absent`      |
 | `flake-runner` | `ds:backprop` step 4.5 — rerun a failing test, compute a rate | §S `flake-triage=skipped`      |
 
-`tiger-check` exits `0` clean · `1` a limit the repo declared was exceeded (blocking) · `2` the built-in 100-column fallback was exceeded (advisory) · `64` not a git work tree. Require a `TIGER:` line in stdout before trusting the number: a broken install makes `python3` itself exit 2, which aliases NAG.
+`tiger-check` exits `0` clean · `1` a limit the repo declared was exceeded (blocking) · `2` the built-in 100-column fallback was exceeded (advisory) · `64` not a git work tree. Require a `TIGER:` line in stdout before trusting the number: a missing script makes `node` exit 1, which aliases BLOCK, and a missing `node` makes the wrapper exit 127.
 
 The checker's limit knob is `WHETSTONE_TIGER_COLS`, deliberately not a `DOSSIER_` name: it configures whetstone and has to work for someone who never installed dossier.
 

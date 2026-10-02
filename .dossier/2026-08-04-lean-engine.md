@@ -50,15 +50,15 @@ Criteria 1-5 are **red today**. A criterion already MET before the work starts p
 | id  | command                                                                                                                                     | expect |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
 | 1   | `python3 plugins/dossier/hooks/converge.py plugins/dossier/tests/fixtures/stderr-only.md`                                                   | exit 1 |
-| 2   | `grep -q 'def test_a_subdirectory_root' plugins/whetstone/tests/test_tiger_check.py && python3 plugins/whetstone/tests/test_tiger_check.py` | exit 0 |
+| 2   | `grep -q 'a subdirectory root agrees' plugins/whetstone/tests/test_tiger_check.ts && node --test plugins/whetstone/tests/test_tiger_check.ts` | exit 0 |
 | 3   | `grep -q 'def test_a_hyphen_boundary' plugins/dossier/tests/test_converge.py && python3 plugins/dossier/tests/test_converge.py`             | exit 0 |
 | 4   | `bash plugins/dossier/hooks/test_invocation_parity.sh`                                                                                      | exit 0 |
 | 5   | `test "$(cat plugins/*/skills/*/SKILL.md \| wc -l)" -le 1600`                                                                               | exit 0 |
 | 6   | `python3 plugins/dossier/tests/test_converge.py`                                                                                            | exit 0 |
-| 7   | `python3 plugins/whetstone/tests/test_tiger_check.py`                                                                                       | exit 0 |
+| 7   | `node --test plugins/whetstone/tests/test_tiger_check.ts`                                                                                       | exit 0 |
 | 8   | `bash plugins/dossier/hooks/test_lib_vm_checks.sh`                                                                                          | exit 0 |
 | 9   | `bash plugins/dossier/hooks/test_closure_parity.sh`                                                                                         | exit 0 |
-| 10  | `python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/dossier/skills`                                                 | exit 0 |
+| 10  | `plugins/whetstone/bin/lint-skill plugins/dossier/skills`                                                 | exit 0 |
 | 11  | `bash plugins/whetstone/bin/claim-check $(git ls-files '*.md' \| grep -v tests/fixtures/)`                                                  | exit 0 |
 | 12  | `for t in plugins/dossier/hooks/test_*.sh; do bash "$t" >/dev/null 2>&1 \|\| exit 1; done`                                                  | exit 0 |
 

@@ -1,4 +1,2 @@
 #!/usr/bin/env bash
-set -euo pipefail
-
-exec python3 "$(cd "$(dirname "$0")/.." && pwd)/skills/skill-smith/scripts/lint_skill.py" "$@"
+exec node "$(cd "$(dirname "$0")/.." && pwd)/skills/skill-smith/scripts/lint-skill-cli.ts" "$@"

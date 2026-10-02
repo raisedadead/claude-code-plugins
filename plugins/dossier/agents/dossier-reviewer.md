@@ -42,7 +42,7 @@ Judge on two orthogonal axes. Report each finding under exactly one.
 
 - Code shape, per whetstone's `tiger-style` rules that no script can compute: function length, assert adequacy (including the negative space — the states that must never occur, not only the expected ones), loop bounds, and limits written as named constants rather than inline literals. **Cap every code-shape finding at `Warn:`.** These never block on their own: the reader who wrote the diff is not the one who sets the repo's taste, and a shape opinion is not a contract violation. If a shape problem is genuinely a correctness bug, it belongs on the Spec axis and gets judged there on its own merits.
 
-- Leave line length to `tiger_check.py`. The column budget is computed there at build step 7 and already reported with exact counts; restating it as a judgment call turns a number back into an opinion.
+- Leave line length to `tiger-check`. The column budget is computed there at build step 7 and already reported with exact counts; restating it as a judgment call turns a number back into an opinion.
 
 Skip pure formatting nits — a formatter owns those.
 

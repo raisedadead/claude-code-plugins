@@ -12,6 +12,7 @@ Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — ev
 
 ### Changed
 
+- **whetstone ships no Python.** `tiger-check`, `lint-skill` and `compute-flakiness` are TypeScript run by Node.js 22.18+: `bin/tiger-check` and `bin/lint-skill` are shims over `tiger-check-cli.ts` and `lint-skill-cli.ts`, and the flaky-test-audit skill runs `compute-flakiness-cli.ts` with `node`. Stdout lines and exit codes match the Python scripts on the probed inputs; stderr messages now begin with the command name. Known differences: `lint-skill` now lists the files under a skill in code-point order (Python used directory order) and, as before, does not follow a symlinked directory; `compute-flakiness` refuses `NaN` and `Infinity` in its JSON input (exit 252) and writes non-ASCII names raw in `quarantine.json`; `tiger-check` reads a file that is not valid UTF-8 with replacement characters instead of crashing. The column widths come from a Unicode 16.0 table in `unicode-width.ts`, so they no longer change with the Python version. `tiger_check.py`, `lint_skill.py`, `compute_flakiness.py` and their Python tests are deleted.
 - **`claim-check` is TypeScript.** `hooks/claim-check.ts` holds the one algorithm for the gate and the command; `bin/claim-check` runs it with Node.js 22.18+. Flags, stdout lines and exit codes (0, 1, 64) are unchanged; the stderr prefix is now `claim-check:`. Read the `CLAIMS:` line before the exit code: a `node` older than 22.18 exits 1 with no `CLAIMS:` line. `skills/skill-smith/scripts/claim_check.py` is deleted.
 
 ## 2026-09-28

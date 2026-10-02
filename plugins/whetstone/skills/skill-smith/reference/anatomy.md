@@ -1,6 +1,6 @@
 # SKILL.md anatomy
 
-The shape a well-formed skill converges on. `lint_skill.py` fails the frontmatter contract and the 500-line body budget at exit 1; reference depth is a `WARN` that exits 0, and the section order below is read by no check at all. Everything on this page is the structure to diff a new skill against by hand.
+The shape a well-formed skill converges on. `lint-skill` fails the frontmatter contract and the 500-line body budget at exit 1; reference depth is a `WARN` that exits 0, and the section order below is read by no check at all. Everything on this page is the structure to diff a new skill against by hand.
 
 ## Frontmatter
 

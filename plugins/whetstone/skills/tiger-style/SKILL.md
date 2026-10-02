@@ -16,7 +16,7 @@ One TIGER_STYLE rule is cheap to compute from a diff; the rest need a reader. Th
 ## Run the check
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}"/skills/tiger-style/scripts/tiger_check.py [repo-path]
+"${CLAUDE_PLUGIN_ROOT}"/bin/tiger-check [repo-path]
 ```
 
 Reads the **staged** diff (`git diff --cached`), never `HEAD`. `--cached` compares HEAD against the index, which is exactly what the commit will contain. `HEAD` would compare against the working tree instead: it would flag unstaged edits the commit does not carry, and it fails outright in a repository with no commits yet — a failure the checker would read as "nothing was added".
@@ -90,9 +90,9 @@ Named so nobody assumes they work:
 
 ## Verification
 
-Done = `tiger_check.py` exits 0 or 2 **and** you have read the diff against the manual pass. Exit 1 is not done: a declared limit was exceeded.
+Done = `tiger-check` exits 0 or 2 **and** you have read the diff against the manual pass. Exit 1 is not done: a declared limit was exceeded.
 
-Separately, and only when you suspect the tool itself rather than the diff, `${CLAUDE_PLUGIN_ROOT}/tests/test_tiger_check.py` exercises the checker against fixture repositories. That proves the checker works; it says nothing about your change.
+Separately, and only when you suspect the tool itself rather than the diff, `node --test "${CLAUDE_PLUGIN_ROOT}"/tests/test_tiger_check.ts` exercises the checker against fixture repositories. That proves the checker works; it says nothing about your change.
 
 ## Dossier breadcrumb
 

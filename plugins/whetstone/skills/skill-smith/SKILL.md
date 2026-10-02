@@ -16,7 +16,7 @@ A skill lives or dies on its routing and its shape. The script judges the determ
 ## Run the lint
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}"/skills/skill-smith/scripts/lint_skill.py <path-to-SKILL.md>
+"${CLAUDE_PLUGIN_ROOT}"/bin/lint-skill <path-to-SKILL.md>
 ```
 
 Pass a single `SKILL.md`, or a `skills/` directory to lint every skill under it. Exit 1 when any `FAIL` is present; `WARN` alone exits 0.
@@ -30,7 +30,7 @@ What it checks, deterministically:
 
 ## The loop
 
-Fix the reported `FAIL`s, re-run, repeat — cap at **3 rounds**. Findings still standing after the third round go to the operator as a residual list. The exit criterion is `lint_skill.py` exiting 0, judged by the script.
+Fix the reported `FAIL`s, re-run, repeat — cap at **3 rounds**. Findings still standing after the third round go to the operator as a residual list. The exit criterion is `lint-skill` exiting 0, judged by the script.
 
 `WARN`s exit 0 and are still worth reading — a first-person description or a body creeping toward the budget is cheapest to fix while you are here.
 
@@ -43,7 +43,7 @@ Two things stay judgement calls. After the lint is clean, read the change agains
 
 ## Verification
 
-Done = `lint_skill.py <path>` exits 0 **and** you have read the change against both reference checklists. The exit code is the gate; the checklists are the judgement.
+Done = `lint-skill <path>` exits 0 **and** you have read the change against both reference checklists. The exit code is the gate; the checklists are the judgement.
 
 ## Dossier breadcrumb
 

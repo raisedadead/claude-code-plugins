@@ -18,6 +18,10 @@ jobs:
         with:
           python-version: "3.10"
 
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.18.0"
+
       - name: python hook tests
         run: |
           python3 plugins/dossier/hooks/test_python.py
@@ -47,7 +51,7 @@ jobs:
           bash plugins/dossier/hooks/test_fakeimpl_stop.sh
 
       - name: skill lint (all dossier skills)
-        run: python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/dossier/skills
+        run: plugins/whetstone/bin/lint-skill plugins/dossier/skills
 
       - name: positive-rails ceiling
         run: |
@@ -124,14 +128,8 @@ jobs:
         with:
           node-version: "22.18.0"
 
-      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
-        with:
-          python-version: "3.10"
-
-      - name: python helper tests
-        run: |
-          python3 plugins/whetstone/tests/test_whetstone_py.py
-          python3 plugins/whetstone/tests/test_tiger_check.py
+      - name: command tests
+        run: node --test plugins/whetstone/tests/test_tiger_check.ts plugins/whetstone/tests/test_lint_skill_cli.ts
 
       - name: shell script tests
         run: |
@@ -139,19 +137,15 @@ jobs:
           bash plugins/whetstone/tests/test_verify_clean.sh
           bash plugins/whetstone/tests/test_run_slice.sh
           bash plugins/whetstone/tests/test_claim_check_cli.sh
+          bash plugins/whetstone/tests/test_bin_wrappers.sh
 
       - name: skill lint (self-hosted)
-        run: python3 plugins/whetstone/skills/skill-smith/scripts/lint_skill.py plugins/whetstone/skills
+        run: plugins/whetstone/bin/lint-skill plugins/whetstone/skills
 
       - name: mod tests
         run: |
           npm install -g @anthropic-ai/claude-code@2.1.287
           claude plugin test plugins/whetstone
-
-      - name: ruff
-        run: |
-          pip install -r requirements-dev.txt
-          ruff check plugins/whetstone
 
       - name: claim-check
         run: |

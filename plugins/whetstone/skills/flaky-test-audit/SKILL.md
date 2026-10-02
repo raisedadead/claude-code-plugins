@@ -28,7 +28,7 @@ A test is flaky when it passes and fails on the same code. That is a number: run
 1. **Compute the rate:**
 
    ```bash
-   python3 "${CLAUDE_PLUGIN_ROOT}"/skills/flaky-test-audit/scripts/compute_flakiness.py \
+   node "${CLAUDE_PLUGIN_ROOT}"/skills/flaky-test-audit/scripts/compute-flakiness-cli.ts \
      results.json prev-quarantine.json quarantine.json
    ```
 
@@ -44,7 +44,7 @@ The detection is a script — route the N reruns and the rate computation to a c
 
 ## Verification
 
-Done = the exit code of `compute_flakiness.py`, not the presence of a file: 0 no new flake, 1-250 that many newly-flaky tests with `quarantine.json` rewritten, 251-253 a failed run that computed no delta and left no usable `quarantine.json` — re-run it, and never report a sweep clean on one of those codes. The rate is the gate; the quarantine file is the artifact. Quarantine holds exactly the `0 < rate < 1` tests — a deterministic pass or a deterministic fail is a different problem.
+Done = the exit code of `compute-flakiness-cli.ts`, not the presence of a file: 0 no new flake, 1-250 that many newly-flaky tests with `quarantine.json` rewritten, 251-253 a failed run that computed no delta and left no usable `quarantine.json` — re-run it, and never report a sweep clean on one of those codes. The rate is the gate; the quarantine file is the artifact. Quarantine holds exactly the `0 < rate < 1` tests — a deterministic pass or a deterministic fail is a different problem.
 
 ## Dossier breadcrumb
 

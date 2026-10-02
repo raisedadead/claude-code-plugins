@@ -1,6 +1,6 @@
 # Framework adapters
 
-Two ways to produce the `results.json` that `compute_flakiness.py` consumes: `{ "<test>": {"runs": N, "fails": F}, … }`.
+Two ways to produce the `results.json` that `compute-flakiness-cli.ts` consumes: `{ "<test>": {"runs": N, "fails": F}, … }`.
 
 ## A. Loop `flake_runner.sh` over a single test (framework-agnostic)
 
@@ -37,4 +37,4 @@ Sum failures per test name across the N run reports into `{runs, fails}`. The ru
 
 ## Note
 
-Keep N high enough to surface intermittent failures; 10 is a reasonable floor. A test failing 1 in 50 needs more runs than one failing 1 in 3, and `compute_flakiness.py` reports the observed rate rather than the true one — a `rate` near 0 over few runs reads as "not yet characterised".
+Keep N high enough to surface intermittent failures; 10 is a reasonable floor. A test failing 1 in 50 needs more runs than one failing 1 in 3, and `compute-flakiness-cli.ts` reports the observed rate rather than the true one — a `rate` near 0 over few runs reads as "not yet characterised".

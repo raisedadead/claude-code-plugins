@@ -1,6 +1,6 @@
 # Skill failure modes
 
-Six ways a skill rots, from Matt Pocock's writing-great-skills. `lint_skill.py` exits 0 on every one of them; this list is read by hand.
+Six ways a skill rots, from Matt Pocock's writing-great-skills. `lint-skill` exits 0 on every one of them; this list is read by hand.
 
 | Mode                     | What it looks like                                                                 | Catch it by                                                                   |
 | ------------------------ | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
