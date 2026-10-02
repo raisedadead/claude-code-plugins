@@ -25,11 +25,9 @@ jobs:
       - name: python hook tests
         run: |
           python3 plugins/dossier/hooks/test_python.py
-          python3 plugins/dossier/tests/test_converge.py
-          python3 plugins/dossier/tests/test_convergence_state.py
 
       - name: command tests
-        run: node --test plugins/dossier/tests/test_ds_cli.ts plugins/dossier/tests/test_whetstone_allowlist.ts
+        run: node --test plugins/dossier/tests/test_ds_cli.ts plugins/dossier/tests/test_whetstone_allowlist.ts plugins/dossier/tests/test_converge.ts plugins/dossier/tests/test_convergence_state.ts
 
       - name: shell helper tests
         run: |

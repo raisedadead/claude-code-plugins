@@ -11,7 +11,7 @@ A `§T` list says what to do and never what done means, so the objective drifts 
 ## Run it
 
 ```bash
-bash "${CLAUDE_PLUGIN_ROOT}"/hooks/lib-converge.sh [contract-path]
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds converge [contract-path]
 ```
 
 No argument → the runner resolves the live wave's contract: the tracked `.dossier/` home first, then the wave directory's own `CONTRACT.md`. No live wave is `PARSE` — a closed wave's contract runs by explicit path only. Two or more live waves that each resolve a contract is also `PARSE`, naming them: the runner will not pick one by date, so pass the path or pause/close the stale ones.
@@ -21,8 +21,10 @@ No argument → the runner resolves the live wave's contract: the tracked `.doss
 | 0    | `CONVERGE: MET <n>/<n>`      | every criterion met — the wave is over    |
 | 1    | `CONVERGE: UNMET <n> of <m>` | the named criteria are the remaining work |
 | 2    | `CONVERGE: PARSE — <why>`    | the contract could not be read            |
+| 69   | none                         | `cli/ds` needs Node.js 22.18+             |
+| 70   | none                         | `cli/ds` internal error                   |
 
-**Read the `CONVERGE:` line before the exit code.** A missing runner makes the interpreter exit 1 or 2 by itself, which are this tool's own UNMET and PARSE codes, so a number alone cannot separate a verdict from a crash. No `CONVERGE:` line means nothing ran.
+**Read the `CONVERGE:` line before the exit code.** No `CONVERGE:` line means nothing ran.
 
 Criteria are shell, and `ds:close` resolves a contract with no argument, so the runner names the work first: a `contract: <path>` header — carrying `(wave-dir, untracked)` when that home won — then one `will run <id>. <command>` line per criterion, flushed before the first command starts. The flush is load-bearing: every caller here reads a pipe, and a buffered block arrives at exit, after the commands it was meant to preview. In a repo somebody else wrote, read that block — the untracked home is a file no diff ever showed a reviewer.
 
@@ -76,7 +78,7 @@ wave <slug> · <n> criteria · run ds:converge for the verdict
   commits: <spent> of <budget>
 ```
 
-**Which criteria are met is the one thing that line does not carry.** Running them on every prompt would put their whole cost there, so `convergence_state.py` reports only what is cheap and leaves the verdict to this verb — the count is a pointer, not a result. When the answer turns on met/unmet, run the runner above and quote its `CONVERGE:` line. An instruction to keep going is cheap to satisfy and expensive to satisfy blindly — make the trade visible, then follow the operator's call.
+**Which criteria are met is the one thing that line does not carry.** Running them on every prompt would put their whole cost there, so the prompt hook (`cli/ds convergence-state`) reports only what is cheap and leaves the verdict to this verb — the count is a pointer, not a result. When the answer turns on met/unmet, run the runner above and quote its `CONVERGE:` line. An instruction to keep going is cheap to satisfy and expensive to satisfy blindly — make the trade visible, then follow the operator's call.
 
 ## Dossier breadcrumb
 

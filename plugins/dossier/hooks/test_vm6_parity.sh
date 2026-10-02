@@ -3,7 +3,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 DS="$SCRIPT_DIR/../cli/ds"
-HOOK="$SCRIPT_DIR/session-start.sh"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/dossier-vm6.XXXXXX")"
 
 cleanup() { rm -rf "$TMP"; }
@@ -36,7 +35,7 @@ vm_checks_reports_unpaired() {
 session_start_reports_unpaired() {
 	local out
 	out="$(printf '%s' '{"hook_event_name":"SessionStart","source":"startup","session_title":""}' |
-		(cd "$1" && CLAUDE_PLUGIN_ROOT="$SCRIPT_DIR/.." "$HOOK") 2>/dev/null || true)"
+		(cd "$1" && "$DS" session-start) 2>/dev/null || true)"
 	[[ "$out" == *"resume needed"* ]]
 }
 

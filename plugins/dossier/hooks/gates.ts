@@ -6,14 +6,21 @@ export type Io = {
   read: (path: string) => Promise<string>
   exists: (path: string) => Promise<boolean>
   list: (path: string) => Promise<string[]>
-  env: (name: 'DOSSIER_MARKER_GUARD' | 'DOSSIER_INVARIANT_GUARD') => Promise<string | undefined>
-  run: (argv: string[], init: { stdin: string; timeoutMs: number }) => Promise<{ exitCode: number; stdout: string; stderr: string }>
+  env: (name: 'DOSSIER_MARKER_GUARD' | 'DOSSIER_INVARIANT_GUARD' | 'DOSSIER_FAKEIMPL_CMD') => Promise<string | undefined>
+  run: (
+    argv: string[],
+    init: { stdin: string; timeoutMs: number; cwd?: string },
+  ) => Promise<{ exitCode: number; stdout: string; stderr: string }>
   cli?: string
 }
 
 export type Verdict = { deny?: string; context?: string }
 
 const INVARIANT_TIMEOUT_MS = 5000
+const SESSION_TIMEOUT_MS = 60_000
+const PROMPT_TIMEOUT_MS = 10_000
+const STOP_TIMEOUT_MS = 180_000
+const EXIT_NO_NODE = 69
 export const BUILTINS = new Set(['code-review', 'review', 'security-review', 'simplify'])
 const CLOSE = 'dossier:close'
 export const WHETSTONE = new Set([
@@ -134,4 +141,61 @@ export async function skillGate(io: Io, root: string, name: string, seen: Set<st
 
 export function skillOf(input: Record<string, unknown>): string {
   return String(input.skill || input.name || '')
+}
+
+export type SessionVerdict = { context?: string; title?: string; toast?: string }
+
+function parsed(text: string): Record<string, unknown> {
+  try {
+    const value: unknown = JSON.parse(text)
+    return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
+}
+
+function cliFailure(exitCode: number | undefined): string {
+  const why = exitCode === EXIT_NO_NODE ? 'needs Node.js 22.18+' : `failed${exitCode === undefined ? '' : ` (exit ${exitCode})`}`
+  return `dossier: cli/ds ${why}; stale locks, reconcile and INDEX.md were not refreshed.`
+}
+
+export async function sessionGate(io: Io, root: string, input: { source: string; session_title: string }): Promise<SessionVerdict> {
+  if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return {}
+  let done: { exitCode: number; stdout: string }
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'session-start']
+    done = await io.run(argv, { stdin: JSON.stringify(input), timeoutMs: SESSION_TIMEOUT_MS, cwd: root })
+  } catch {
+    return { context: cliFailure(undefined) }
+  }
+  if (done.exitCode !== 0) return { context: cliFailure(done.exitCode) }
+  const output = parsed(done.stdout)
+  const nested = output.hookSpecificOutput
+  const specific = typeof nested === 'object' && nested !== null ? (nested as Record<string, unknown>) : {}
+  const text = (value: unknown): string | undefined => (typeof value === 'string' && value ? value : undefined)
+  return { context: text(specific.additionalContext), title: text(specific.sessionTitle), toast: text(output.systemMessage) }
+}
+
+export async function promptGate(io: Io, root: string): Promise<string | undefined> {
+  if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return undefined
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'convergence-state']
+    const done = await io.run(argv, { stdin: JSON.stringify({ cwd: root }), timeoutMs: PROMPT_TIMEOUT_MS, cwd: root })
+    const text = done.stdout.trim()
+    return done.exitCode === 0 && text ? text : undefined
+  } catch {
+    return undefined
+  }
+}
+
+export async function stopGate(io: Io, root: string): Promise<string | undefined> {
+  if (!(await io.env('DOSSIER_FAKEIMPL_CMD'))?.trim()) return undefined
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'fakeimpl']
+    const done = await io.run(argv, { stdin: '{}', timeoutMs: STOP_TIMEOUT_MS, cwd: root })
+    const output = parsed(done.stdout)
+    return done.exitCode === 0 && output.decision === 'block' && typeof output.reason === 'string' ? output.reason : undefined
+  } catch {
+    return undefined
+  }
 }

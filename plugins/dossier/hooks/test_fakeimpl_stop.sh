@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOOK="$SCRIPT_DIR/fakeimpl_stop.py"
+DS="$SCRIPT_DIR/../cli/ds"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/dossier-fakeimpl.XXXXXX")"
 
 cleanup() {
@@ -24,11 +24,11 @@ git -C "$TMP" add -A
 git -C "$TMP" commit -qm seed
 
 run() {
-	(cd "$TMP" && printf '{}' | env DOSSIER_FAKEIMPL_CMD="$1" python3 "$HOOK")
+	(cd "$TMP" && printf '{}' | env DOSSIER_FAKEIMPL_CMD="$1" "$DS" fakeimpl)
 }
 
 is_block() {
-	[[ "$1" == *'"decision": "block"'* ]]
+	[[ "$1" == *'"decision":"block"'* ]]
 }
 
 printf 'dirty\n' >>"$TMP/a.txt"
@@ -57,7 +57,7 @@ printf 'ledger\n' >"$TMP/apps/web/.scratchpad/dossier/DOSSIER.md"
 out="$(run "false")"
 if is_block "$out"; then fail "a nested .scratchpad must not arm the gate either"; fi
 
-out="$(cd "$TMP/apps/web" && printf '{}' | env DOSSIER_FAKEIMPL_CMD="false" python3 "$HOOK")"
+out="$(cd "$TMP/apps/web" && printf '{}' | env DOSSIER_FAKEIMPL_CMD="false" "$DS" fakeimpl)"
 if is_block "$out"; then fail "a .scratchpad above the session cwd must not arm the gate"; fi
 rm -rf "$TMP/apps"
 

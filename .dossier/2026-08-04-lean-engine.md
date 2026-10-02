@@ -17,7 +17,7 @@ What each section is for. This section exists because the previous encoding used
 | Map          | this legend                                                                                 |
 | Goal         | what this wave is for, in one paragraph                                                     |
 | Constraints  | what the wave may not do, and what it must work around                                      |
-| Done-when    | the contract: every row a command with an expected result. `lib-converge.sh` runs it        |
+| Done-when    | the contract: every row a command with an expected result. `cli/ds converge` runs it        |
 | Tasks        | the work. `state` is where it is, `who` is who can move it, `needs` is what must land first |
 | Fog          | suspected work not yet sharp enough to be a task                                            |
 | Out of scope | ruled out of this wave on purpose, so it stops being re-proposed                            |
@@ -47,20 +47,20 @@ The wave also carries the three defects a multi-lens review confirmed in the unr
 
 Criteria 1-5 are **red today**. A criterion already MET before the work starts proves nothing about it — the rule `run_slice.sh` already applies when it fails a slice whose test passed on its first run. Criteria 6-12 are green today and guard against regression.
 
-| id  | command                                                                                                                                     | expect |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
-| 1   | `python3 plugins/dossier/hooks/converge.py plugins/dossier/tests/fixtures/stderr-only.md`                                                   | exit 1 |
+| id  | command                                                                                                                                       | expect |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| 1   | `sh plugins/dossier/cli/ds converge plugins/dossier/tests/fixtures/stderr-only.md`                                                            | exit 1 |
 | 2   | `grep -q 'a subdirectory root agrees' plugins/whetstone/tests/test_tiger_check.ts && node --test plugins/whetstone/tests/test_tiger_check.ts` | exit 0 |
-| 3   | `grep -q 'def test_a_hyphen_boundary' plugins/dossier/tests/test_converge.py && python3 plugins/dossier/tests/test_converge.py`             | exit 0 |
-| 4   | `bash plugins/dossier/hooks/test_invocation_parity.sh`                                                                                      | exit 0 |
-| 5   | `test "$(cat plugins/*/skills/*/SKILL.md \| wc -l)" -le 1600`                                                                               | exit 0 |
-| 6   | `python3 plugins/dossier/tests/test_converge.py`                                                                                            | exit 0 |
-| 7   | `node --test plugins/whetstone/tests/test_tiger_check.ts`                                                                                       | exit 0 |
-| 8   | `bash plugins/dossier/hooks/test_lib_vm_checks.sh`                                                                                          | exit 0 |
-| 9   | `bash plugins/dossier/hooks/test_closure_parity.sh`                                                                                         | exit 0 |
-| 10  | `plugins/whetstone/bin/lint-skill plugins/dossier/skills`                                                 | exit 0 |
-| 11  | `bash plugins/whetstone/bin/claim-check $(git ls-files '*.md' \| grep -v tests/fixtures/)`                                                  | exit 0 |
-| 12  | `for t in plugins/dossier/hooks/test_*.sh; do bash "$t" >/dev/null 2>&1 \|\| exit 1; done`                                                  | exit 0 |
+| 3   | `grep -q 'a hyphen boundary' plugins/dossier/tests/test_converge.ts && node --test plugins/dossier/tests/test_converge.ts`                    | exit 0 |
+| 4   | `bash plugins/dossier/hooks/test_invocation_parity.sh`                                                                                        | exit 0 |
+| 5   | `test "$(cat plugins/*/skills/*/SKILL.md \| wc -l)" -le 1600`                                                                                 | exit 0 |
+| 6   | `node --test plugins/dossier/tests/test_converge.ts`                                                                                          | exit 0 |
+| 7   | `node --test plugins/whetstone/tests/test_tiger_check.ts`                                                                                     | exit 0 |
+| 8   | `bash plugins/dossier/hooks/test_lib_vm_checks.sh`                                                                                            | exit 0 |
+| 9   | `bash plugins/dossier/hooks/test_closure_parity.sh`                                                                                           | exit 0 |
+| 10  | `plugins/whetstone/bin/lint-skill plugins/dossier/skills`                                                                                     | exit 0 |
+| 11  | `bash plugins/whetstone/bin/claim-check $(git ls-files '*.md' \| grep -v tests/fixtures/)`                                                    | exit 0 |
+| 12  | `for t in plugins/dossier/hooks/test_*.sh; do bash "$t" >/dev/null 2>&1 \|\| exit 1; done`                                                    | exit 0 |
 
 Criterion 1 asserts the negative space: a fixture whose only output goes to stderr must **not** satisfy a `stdout:` expect, so the runner reports UNMET and exits 1. Today it exits 0 — that is the defect. Criterion 5 is the lightness goal as a number: 2,205 lines today, 1,600 the ceiling. Criterion 4 names a test that does not exist yet — the guard for the D6 class, where a verb was made unreachable while a hook still named it as the remedy.
 
@@ -80,7 +80,7 @@ Criterion 1 asserts the negative space: a fixture whose only output goes to stde
 | T10 | .     | A   | `ds:status` emits the frontier and the flow map                              | T6, T8 | —    | manual: state + next step in one block        |
 | T11 | .     | A   | `migrate`/`ship`/`roll` become user-invoked; add `test_invocation_parity`    | T8     | —    | criterion 4                                   |
 | T12 | .     | A   | ponytail's ladder into `dossier-reviewer`'s Standards axis                   | —      | —    | criterion 10                                  |
-| T13 | .     | A   | section anchors resolve case-insensitively; PARSE names the anchor it wanted | T5     | —    | new case in `test_converge.py`                |
+| T13 | .     | A   | section anchors resolve case-insensitively; PARSE names the anchor it wanted | T5     | —    | new case in `test_converge.ts`                |
 | T14 | x     | A   | the stdlib test runners honour `-k`, or contracts stop using it              | —      | efe6a2e | new case in `test_converge.py`                |
 | T15 | .     | A   | the header's `P<cur>/<tot>` counter goes with the phases it counted          | T4     | —    | `test_lib_regen.sh`, `test_session_start.sh`  |
 
@@ -96,7 +96,7 @@ Two findings came out of using the format by hand rather than from reading the c
 
 **T13.** `converge.py:68` splits on the literal `"## done-when"`, so a heading cased `## Done-when` produced `CONVERGE: PARSE — no done-when table, or it holds no numbered rows` — an error naming neither the anchor nor the case as the cause. Hit in the first five minutes.
 
-**T14.** One of the six stdlib runners honours `-k`; the other five accept it and run everything. `test_convergence_state.py` filters and exits 1 on `-k zzz_nope`, so the shipped `harness-alignment` criterion 12 is sound. `test_converge.py`, `test_python.py`, `test_whetstone_py.py`, `test_tiger_check.py` and `test_claim_check.py` all exit 0 on the same input, so a contract that reaches for `-k` against any of them gets a false green. The fix is to transcribe the working implementation into the five, not to write a sixth.
+**T14.** One of the six stdlib runners honours `-k`; the other five accept it and run everything. `test_convergence_state.py` filters and exits 1 on `-k zzz_nope`, so the shipped `harness-alignment` criterion 12 is sound. Since T8 the suites run under `node --test`, whose `--test-name-pattern` exits 0 on a pattern that matches nothing, so criterion 12 now greps for the test name before it runs the suite. `test_converge.py`, `test_python.py`, `test_whetstone_py.py`, `test_tiger_check.py` and `test_claim_check.py` all exit 0 on the same input, so a contract that reaches for `-k` against any of them gets a false green. The fix is to transcribe the working implementation into the five, not to write a sixth.
 
 The first version of this row claimed the runners ignore `-k` *generally* and that criterion 12 could not fail for the reason it named. Both were wrong: `test_converge.py` was probed and the conclusion generalised to a runner that behaves differently. It is recorded rather than quietly rewritten because it is the wave's own subject matter — a claim that outran its probe.
 

@@ -2,9 +2,12 @@ import { spawnSync } from 'node:child_process'
 import { randomBytes } from 'node:crypto'
 import {
   appendFileSync,
+  closeSync,
   copyFileSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
+  openSync,
   readdirSync,
   readFileSync,
   renameSync,
@@ -12,8 +15,12 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs'
+import { constants, tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
+import { convergenceStateVerb, convergeVerb } from './converge.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
+import { sessionReport } from '../engine/session.ts'
+import { splitLines, strip } from '../engine/text.ts'
 import {
   changelogInsert,
   hasRepo,
@@ -504,18 +511,104 @@ function invariantCheckVerb(args: string[]): number {
   return 0
 }
 
+function stdinPayload(): Record<string, unknown> {
+  try {
+    const payload: unknown = JSON.parse(readFileSync(0, 'utf8'))
+    return typeof payload === 'object' && payload !== null && !Array.isArray(payload) ? (payload as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
+}
+
+function text(value: unknown): string {
+  return value ? String(value) : ''
+}
+
+function sessionStartVerb(): number {
+  const scratchpad = '.scratchpad'
+  const dossiers = `${scratchpad}/dossier`
+  if (!isDir(dossiers)) {
+    console.log(JSON.stringify({ continue: true }))
+    return 0
+  }
+  const payload = stdinPayload()
+  quietly(() => clearLocks(dossiers, false))
+  quietly(() => reconcileVerb([scratchpad]))
+  quietly(() => regenIndex(scratchpad))
+  const index = `${scratchpad}/INDEX.md`
+  const ledgers = subdirs(dossiers)
+    .filter((name) => name !== '_archive' && isFile(`${dossiers}/${name}/DOSSIER.md`))
+    .map((name) => ({ name, text: readFileSync(`${dossiers}/${name}/DOSSIER.md`, 'utf8') }))
+  const report = sessionReport({
+    index: isFile(index) ? readFileSync(index, 'utf8') : undefined,
+    ledgers,
+    source: text(payload.source),
+    title: text(payload.session_title),
+    titleFlag: process.env.DOSSIER_SESSION_TITLE ?? '0',
+    nudgeFlag: process.env.DOSSIER_LIVE_NUDGE ?? '1',
+  })
+  const specific = { hookEventName: 'SessionStart', additionalContext: report.context, ...(report.title ? { sessionTitle: report.title } : {}) }
+  console.log(JSON.stringify({ continue: true, hookSpecificOutput: specific, ...(report.system ? { systemMessage: report.system } : {}) }))
+  return 0
+}
+
+function scratchpadEntry(entry: string): boolean {
+  let path = entry.length > 3 ? entry.slice(3).trim() : ''
+  if (path.includes(' -> ')) path = path.slice(path.lastIndexOf(' -> ') + 4)
+  return path.trim().replace(/^"+|"+$/g, '').split('/').includes('.scratchpad')
+}
+
+function fakeimplVerb(): number {
+  const command = (process.env.DOSSIER_FAKEIMPL_CMD ?? '').trim()
+  if (!command) return 0
+  const status = spawnSync('git', ['status', '--porcelain', '-uall'], { encoding: 'utf8', timeout: 10_000, maxBuffer: 64 * 1024 * 1024 })
+  if (status.error) return 0
+  const dirty = (status.stdout ?? '').split('\n').filter((line) => line.trim() && !scratchpadEntry(line))
+  if (!dirty.length) return 0
+  const raw = (process.env.DOSSIER_FAKEIMPL_TIMEOUT ?? '120').trim()
+  const timeout = /^[+-]?[0-9]+$/.test(raw) ? Number(raw) : 120
+  const block = (reason: string): number => {
+    console.log(JSON.stringify({ decision: 'block', reason }))
+    return 0
+  }
+  const timedOut = (): number =>
+    block(`fake-impl backstop: \`${command}\` timed out after ${timeout}s — verify the change actually runs before finishing, or unset DOSSIER_FAKEIMPL_CMD.`)
+  if (timeout <= 0) return timedOut()
+  const capture = mkdtempSync(join(tmpdir(), 'ds-fakeimpl-'))
+  try {
+    const out = openSync(join(capture, 'out'), 'w')
+    const err = openSync(join(capture, 'err'), 'w')
+    const run = spawnSync('/bin/sh', ['-c', command], { stdio: ['ignore', out, err], timeout: timeout * 1000, killSignal: 'SIGKILL' })
+    closeSync(out)
+    closeSync(err)
+    if ((run.error as NodeJS.ErrnoException | undefined)?.code === 'ETIMEDOUT') return timedOut()
+    if (run.error) return 0
+    const code = run.signal ? -(constants.signals[run.signal] ?? 1) : (run.status ?? 1)
+    if (code === 0) return 0
+    const output = `${readFileSync(join(capture, 'out'), 'utf8')}${readFileSync(join(capture, 'err'), 'utf8')}`.replace(/\r\n?/g, '\n')
+    const tail = splitLines(strip(output)).slice(-8).join('\n')
+    return block(`fake-impl backstop: \`${command}\` failed (exit ${code}) on a dirty tree — the change is not verified:\n${tail}`)
+  } finally {
+    rmSync(capture, { recursive: true, force: true })
+  }
+}
+
 const VERBS: Record<string, (args: string[]) => number> = {
   'archive-move': archiveMoveVerb,
   'assert-grill': assertGrillVerb,
   'assert-scaffold': assertScaffoldVerb,
   'changelog-write': changelogWriteVerb,
   'clear-locks': clearLocksVerb,
+  converge: convergeVerb,
+  'convergence-state': convergenceStateVerb,
   'ds-check': dsCheckVerb,
+  fakeimpl: fakeimplVerb,
   'header-state': headerStateVerb,
   'invariant-check': invariantCheckVerb,
   reconcile: reconcileVerb,
   'regen-index': regenIndexVerb,
   'row-flip': rowFlipVerb,
+  'session-start': sessionStartVerb,
   's-append': sAppendVerb,
   'vm-checks': vmChecksVerb,
   'x-refresh': xRefreshVerb,

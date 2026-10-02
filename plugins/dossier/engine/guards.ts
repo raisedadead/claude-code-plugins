@@ -6,7 +6,7 @@ const MARKER_PATTERNS = [
   unicodeRegex(COMMENT_PREFIX + String.raw`.*\bPH\d+-[A-Z]\d+\b`),
   unicodeRegex(COMMENT_PREFIX + '.*§[VBTSXGZ]\\d+'),
 ]
-const HEADER = unicodeRegex('^`\\d[^`]*`\\s+·\\s+`([^`]*)`\\s+·\\s+`')
+export const HEADER = unicodeRegex('^`\\d[^`]*`\\s+·\\s+`([^`]*)`\\s+·\\s+`')
 const CANONICAL_STATES = new Set(['live', 'done', 'paused'])
 
 export type Edit = { filePath: string; chunks: string[] }

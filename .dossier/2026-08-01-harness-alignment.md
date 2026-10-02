@@ -8,20 +8,20 @@
 
 ## done-when
 
-| id  | command                                                                              | expect            |
-| --- | ------------------------------------------------------------------------------------ | ----------------- |
-| 1   | `bash plugins/dossier/hooks/lib-converge.sh plugins/dossier/tests/fixtures/met.md`   | exit 0            |
-| 2   | `bash plugins/dossier/hooks/lib-converge.sh plugins/dossier/tests/fixtures/unmet.md` | exit 1            |
-| 3   | `python3 plugins/dossier/tests/test_converge.py`                                     | exit 0            |
-| 4   | `python3 plugins/dossier/tests/test_convergence_state.py`                            | exit 0            |
-| 5   | `printf '{"cwd":"/tmp"}' \| python3 plugins/dossier/hooks/convergence_state.py`      | stdout: (nothing) |
-| 6   | `git ls-files plugins/whetstone/bin/tiger-check`                                     | stdout: bin       |
-| 7   | `test -x plugins/whetstone/bin/tiger-check`                                          | exit 0            |
-| 8   | `ruff check plugins`                                                                 | exit 0            |
-| 9   | `shellcheck plugins/dossier/hooks/lib-converge.sh plugins/whetstone/bin/tiger-check` | exit 0            |
-| 10  | `claude plugin validate plugins/dossier`                                             | exit 0            |
-| 11  | `claude plugin validate plugins/whetstone`                                           | exit 0            |
-| 12  | `python3 plugins/dossier/tests/test_convergence_state.py -k contractless`            | exit 0            |
+| id  | command                                                                                                                                                      | expect            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- |
+| 1   | `sh plugins/dossier/cli/ds converge plugins/dossier/tests/fixtures/met.md`                                                                                   | exit 0            |
+| 2   | `sh plugins/dossier/cli/ds converge plugins/dossier/tests/fixtures/unmet.md`                                                                                 | exit 1            |
+| 3   | `node --test plugins/dossier/tests/test_converge.ts`                                                                                                         | exit 0            |
+| 4   | `node --test plugins/dossier/tests/test_convergence_state.ts`                                                                                                | exit 0            |
+| 5   | `printf '{"cwd":"/tmp"}' \| sh plugins/dossier/cli/ds convergence-state`                                                                                     | stdout: (nothing) |
+| 6   | `git ls-files plugins/whetstone/bin/tiger-check`                                                                                                             | stdout: bin       |
+| 7   | `test -x plugins/whetstone/bin/tiger-check`                                                                                                                  | exit 0            |
+| 8   | `ruff check plugins`                                                                                                                                         | exit 0            |
+| 9   | `shellcheck plugins/dossier/cli/ds plugins/whetstone/bin/tiger-check`                                                                                        | exit 0            |
+| 10  | `claude plugin validate plugins/dossier`                                                                                                                     | exit 0            |
+| 11  | `claude plugin validate plugins/whetstone`                                                                                                                   | exit 0            |
+| 12  | `grep -q 'a contractless live wave is named' plugins/dossier/tests/test_convergence_state.ts && node --test plugins/dossier/tests/test_convergence_state.ts` | exit 0            |
 
 ## out-of-scope
 

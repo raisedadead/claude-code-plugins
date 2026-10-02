@@ -1,5 +1,5 @@
 import type { EngineInterface, Register } from 'claude-code'
-import { BUILTINS, editGate, type Io, skillGate, skillOf } from './gates.ts'
+import { BUILTINS, editGate, type Io, promptGate, sessionGate, skillGate, skillOf, stopGate } from './gates.ts'
 
 function ioOf($: EngineInterface): Io {
   return {
@@ -13,7 +13,11 @@ function ioOf($: EngineInterface): Io {
     read: async (path) => String(await $.fs.read(path)),
     exists: (path) => $.fs.exists(path),
     list: async (path) => (await $.fs.list(path)).map((entry) => entry.name),
-    env: (name) => (name === 'DOSSIER_MARKER_GUARD' ? $.env.get('DOSSIER_MARKER_GUARD') : $.env.get('DOSSIER_INVARIANT_GUARD')),
+    env: (name) => {
+      if (name === 'DOSSIER_MARKER_GUARD') return $.env.get('DOSSIER_MARKER_GUARD')
+      if (name === 'DOSSIER_INVARIANT_GUARD') return $.env.get('DOSSIER_INVARIANT_GUARD')
+      return $.env.get('DOSSIER_FAKEIMPL_CMD')
+    },
     run: (argv, init) => $.process.run(argv, init),
     cli: `${$.plugin.root}/cli/ds`,
   }
@@ -43,5 +47,30 @@ export const register: Register = (on) => {
     const context = await skillGate(ioOf($), e.cwd, e.command_name, seen)
     if (!context) return result
     return { ...result, additionalContext: [...(result.additionalContext ?? []), context] }
+  })
+
+  on('classic.SessionStart', async ($, e, next) => {
+    const result = await next(e)
+    const verdict = await sessionGate(ioOf($), e.cwd, { source: e.source, session_title: e.session_title ?? '' })
+    if (verdict.toast) $.ui.toast(verdict.toast)
+    return {
+      ...result,
+      ...(verdict.context ? { additionalContext: [...(result.additionalContext ?? []), verdict.context] } : {}),
+      ...(verdict.title && !result.sessionTitle ? { sessionTitle: verdict.title } : {}),
+    }
+  })
+
+  on('classic.UserPromptSubmit', async ($, e, next) => {
+    const result = await next(e)
+    const context = await promptGate(ioOf($), e.cwd)
+    if (!context) return result
+    return { ...result, additionalContext: [...(result.additionalContext ?? []), context] }
+  })
+
+  on('classic.Stop', async ($, e, next) => {
+    const result = await next(e)
+    if (result.block) return result
+    const block = await stopGate(ioOf($), e.cwd)
+    return block ? { ...result, block } : result
   })
 }

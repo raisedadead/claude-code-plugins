@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'claude-code/testing'
-import { type Io, editGate, skillGate, skillOf } from '../hooks/gates.ts'
+import { type Io, editGate, promptGate, sessionGate, skillGate, skillOf, stopGate } from '../hooks/gates.ts'
 
 const ROOT = '/w'
 
@@ -172,5 +172,85 @@ describe('skill gate', () => {
   test('lists paused rows at dossier:close and is silent without them', async () => {
     expect(await skillGate(io({ [INDEX]: LIVE + PAUSED }), ROOT, 'dossier:close', new Set())).toContain('1 paused dossier(s) alongside this close: 2026-01-02-bar.')
     expect(await skillGate(io({ [INDEX]: LIVE }), ROOT, 'dossier:close', new Set())).toBeUndefined()
+  })
+})
+
+describe('session start', () => {
+  const START = { source: 'startup', session_title: '' }
+
+  test('maps the cli report to context, title and toast', async () => {
+    const stdout = JSON.stringify({
+      continue: true,
+      hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: '## INDEX', sessionTitle: '2026-01-01-foo' },
+      systemMessage: 'dossier live: 2026-01-01-foo',
+    })
+    const calls: { argv: string[]; cwd?: string }[] = []
+    const run: Io['run'] = async (argv, init) => {
+      calls.push({ argv, cwd: init.cwd })
+      return { exitCode: 0, stdout, stderr: '' }
+    }
+    const verdict = await sessionGate(io(OPTED_IN, { run, cli: '/p/cli/ds' }), ROOT, START)
+    expect(verdict).toEqual({ context: '## INDEX', title: '2026-01-01-foo', toast: 'dossier live: 2026-01-01-foo' })
+    expect(calls).toEqual([{ argv: ['sh', '/p/cli/ds', 'session-start'], cwd: ROOT }])
+  })
+
+  test('names a missing Node.js instead of going quiet', async () => {
+    const run: Io['run'] = async () => ({ exitCode: 69, stdout: '', stderr: 'ds: node 22.18+ required' })
+    expect((await sessionGate(io(OPTED_IN, { run }), ROOT, START)).context).toContain('needs Node.js 22.18+')
+    const rejected: Io['run'] = async () => {
+      throw new Error('spawn sh ENOENT')
+    }
+    expect((await sessionGate(io(OPTED_IN, { run: rejected }), ROOT, START)).context).toContain('cli/ds failed')
+  })
+
+  test('spawns nothing in a project without a dossier', async () => {
+    let ran = false
+    const run: Io['run'] = async () => {
+      ran = true
+      return { exitCode: 0, stdout: '', stderr: '' }
+    }
+    expect(await sessionGate(io({}, { run }), ROOT, START)).toEqual({})
+    expect(ran).toBe(false)
+  })
+})
+
+describe('prompt convergence state', () => {
+  test('passes the cli lines through as context', async () => {
+    const run: Io['run'] = async () => ({ exitCode: 0, stdout: 'wave demo · 2 criteria · run ds:converge for the verdict\n', stderr: '' })
+    expect(await promptGate(io(OPTED_IN, { run }), ROOT)).toBe('wave demo · 2 criteria · run ds:converge for the verdict')
+  })
+
+  test('stays silent on empty output, a failure or no dossier', async () => {
+    const empty: Io['run'] = async () => ({ exitCode: 0, stdout: '\n', stderr: '' })
+    expect(await promptGate(io(OPTED_IN, { run: empty }), ROOT)).toBeUndefined()
+    const missing: Io['run'] = async () => ({ exitCode: 69, stdout: 'x', stderr: '' })
+    expect(await promptGate(io(OPTED_IN, { run: missing }), ROOT)).toBeUndefined()
+    const lines: Io['run'] = async () => ({ exitCode: 0, stdout: 'wave x', stderr: '' })
+    expect(await promptGate(io({}, { run: lines }), ROOT)).toBeUndefined()
+  })
+})
+
+describe('fake-impl stop backstop', () => {
+  const armed: Io['env'] = async (name) => (name === 'DOSSIER_FAKEIMPL_CMD' ? 'npm test' : undefined)
+
+  test('blocks with the reason the cli prints', async () => {
+    const run: Io['run'] = async () => ({ exitCode: 0, stdout: JSON.stringify({ decision: 'block', reason: 'fake-impl backstop: failed' }), stderr: '' })
+    expect(await stopGate(io({}, { env: armed, run }), ROOT)).toBe('fake-impl backstop: failed')
+  })
+
+  test('allows when unset, on a pass, or when the cli cannot run', async () => {
+    let ran = false
+    const counting: Io['run'] = async () => {
+      ran = true
+      return { exitCode: 0, stdout: JSON.stringify({ decision: 'block', reason: 'x' }), stderr: '' }
+    }
+    expect(await stopGate(io({}, { run: counting }), ROOT)).toBeUndefined()
+    expect(ran).toBe(false)
+    const pass: Io['run'] = async () => ({ exitCode: 0, stdout: '', stderr: '' })
+    expect(await stopGate(io({}, { env: armed, run: pass }), ROOT)).toBeUndefined()
+    const timedOut: Io['run'] = async () => {
+      throw new Error('timed out')
+    }
+    expect(await stopGate(io({}, { env: armed, run: timedOut }), ROOT)).toBeUndefined()
   })
 })

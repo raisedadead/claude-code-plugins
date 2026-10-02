@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-HOOK="$SCRIPT_DIR/session-start.sh"
+DS="$SCRIPT_DIR/../cli/ds"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/dossier-session-start.XXXXXX")"
 WS="$TMP/ws"
 
@@ -33,21 +33,19 @@ EOF
 }
 
 run_hook() {
-	local payload="$1" benv="${2:-}"
+	local payload="$1"
 	printf '%s' "$payload" |
-		(cd "$WS" && BASH_ENV="$benv" CLAUDE_PLUGIN_ROOT="$SCRIPT_DIR/.." "$HOOK") >"$TMP/out" 2>"$TMP/err" && rc=0 || rc=$?
+		(cd "$WS" && "$DS" session-start) >"$TMP/out" 2>"$TMP/err" && rc=0 || rc=$?
 }
 
-title_of() {
-	python3 -c '
-import json, sys
-d = json.load(open(sys.argv[1]))
-print(d.get("hookSpecificOutput", {}).get("sessionTitle", ""))
-' "$TMP/out"
+json_of() {
+	node -e 'const d = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8")); console.log(eval(process.argv[2]) ?? "")' "$TMP/out" "$1"
 }
+
+title_of() { json_of 'd.hookSpecificOutput?.sessionTitle'; }
 
 assert_valid_json() {
-	python3 -c 'import json, sys; json.load(open(sys.argv[1]))' "$TMP/out" ||
+	node -e 'JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"))' "$TMP/out" ||
 		fail "$1: output must be valid JSON"
 }
 
@@ -94,35 +92,8 @@ run_hook 'not json at all'
 assert_valid_json "malformed-stdin"
 [ -z "$(title_of)" ] || fail "malformed stdin must not emit sessionTitle"
 
-cat >"$TMP/nojq-env" <<'EOF'
-command() {
-	if [[ "${1:-}" == "-v" && "${2:-}" == "jq" ]]; then
-		return 1
-	fi
-	builtin command "$@"
-}
-EOF
-
-if command -v python3 >/dev/null 2>&1; then
-	run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}' "$TMP/nojq-env"
-	[ "$rc" -eq 0 ] || fail "no-jq startup must exit 0"
-	assert_valid_json "no-jq-startup"
-	[ "$(title_of)" = "2026-06-05-foo" ] || fail "no-jq startup must emit slug via python3 fallback"
-
-	run_hook '{"hook_event_name":"SessionStart","source":"resume","session_title":"user-set"}' "$TMP/nojq-env"
-	assert_valid_json "no-jq-preset-title"
-	[ -z "$(title_of)" ] || fail "no-jq non-empty session_title must never be clobbered"
-
-	DOSSIER_SESSION_TITLE=0 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}' "$TMP/nojq-env"
-	assert_valid_json "no-jq-flag-zero"
-	[ -z "$(title_of)" ] || fail "no-jq flag-zero must not emit sessionTitle"
-	grep -q "additionalContext" "$TMP/out" || fail "no-jq flag-zero must not displace additionalContext"
-else
-	printf 'skip: python3 unavailable — no-jq pass skipped\n' >&2
-fi
-
-sys_of() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("systemMessage",""))' "$TMP/out"; }
-ctx_of() { python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("hookSpecificOutput",{}).get("additionalContext",""))' "$TMP/out"; }
+sys_of() { json_of 'd.systemMessage'; }
+ctx_of() { json_of 'd.hookSpecificOutput?.additionalContext'; }
 
 rm -rf "$WS/.scratchpad"
 scaffold "2026-06-05-foo"
@@ -205,22 +176,6 @@ EOF
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
 assert_valid_json "z-prose"
 ctx_of | grep -q 'phase START' && fail "§Z prose with a field-5 START must not trigger a resume hint (scan is §S-scoped)"
-
-cat >"$TMP/nojq-nopy-env" <<'EOF'
-command() {
-	if [[ "${1:-}" == "-v" && ( "${2:-}" == "jq" || "${2:-}" == "python3" ) ]]; then
-		return 1
-	fi
-	builtin command "$@"
-}
-python3() { return 1; }
-EOF
-
-rm -rf "$WS/.scratchpad"
-scaffold "2026-06-05-foo"
-run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}' "$TMP/nojq-nopy-env"
-[ "$rc" -eq 0 ] || fail "no-jq no-python3 must exit 0"
-assert_valid_json "no-jq-no-python3 fallback must be valid JSON"
 
 rm -rf "$WS/.scratchpad"
 scaffold "2026-06-07-current"
@@ -320,19 +275,5 @@ mkdir -p "$WS/.scratchpad/dossier/_archive"
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
 assert_valid_json "no-live-nudge"
 [ -z "$(sys_of)" ] || fail "no live dossier must raise no systemMessage, got: $(sys_of)"
-
-rm -rf "$WS/.scratchpad"
-scaffold "2026-06-05-foo"
-run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
-grep -q 'Node.js 22.18' "$TMP/out" && fail "a working cli/ds must not raise the Node.js notice"
-
-mkdir -p "$TMP/nonode/hooks" "$TMP/nonode/cli"
-cp "$SCRIPT_DIR"/lib-clear-stale-locks.sh "$SCRIPT_DIR"/lib-reconcile-state.sh "$SCRIPT_DIR"/lib-regen-index.sh "$TMP/nonode/hooks/"
-printf '#!/bin/sh\nexit 69\n' >"$TMP/nonode/cli/ds"
-chmod +x "$TMP/nonode/cli/ds"
-printf '%s' '{"hook_event_name":"SessionStart","source":"startup","session_title":""}' |
-	(cd "$WS" && CLAUDE_PLUGIN_ROOT="$TMP/nonode" "$HOOK") >"$TMP/out" 2>"$TMP/err" || fail "a missing Node.js must not fail the hook"
-assert_valid_json "no-node"
-grep -q 'Node.js 22.18' "$TMP/out" || fail "cli/ds exit 69 must surface in the session context, got: $(cat "$TMP/out")"
 
 printf 'ok\n'

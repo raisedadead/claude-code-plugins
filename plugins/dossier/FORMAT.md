@@ -65,9 +65,9 @@ Headings are fixed. Order is fixed.
 ## Closeout
 ```
 
-Readers match headings through `engine/ledger.ts` (`SEC`), which holds one pattern per section and accepts both this spelling and the `## §G — Goal` … `## §Z — Closeout` sigils every dossier written before 2026-08-05 carries. `hooks/lib-sections.sh` carries the Tasks, Repos and Status patterns for `session-start.sh`. A descriptive tail is allowed after either form. `ds:new` writes the worded spelling; nothing rewrites an existing ledger, so the sigil form stays readable indefinitely.
+Readers match headings through `engine/ledger.ts` (`SEC`), which holds one pattern per section and accepts both this spelling and the `## §G — Goal` … `## §Z — Closeout` sigils every dossier written before 2026-08-05 carries. A descriptive tail is allowed after either form. `ds:new` writes the worded spelling; nothing rewrites an existing ledger, so the sigil form stays readable indefinitely.
 
-The third field is **required, and its value is never read**. Five parsers demand it. `ds header-state`, `ds regen-index` and `ds reconcile` share the pattern `` /^`.*` · `.*` · / `` (`engine/ledger.ts`, `HEADER_LINE`); `engine/guards.ts` (`HEADER`) and `converge.py` (`_HEADER`) carry the same regex, transcribed twice, which wants those two `·` separators plus a first field that is backticked *and* starts with a digit. A two-field header matches none of the five. Two of them say so out loud, a third leaves a visible mark, and two go quiet:
+The third field is **required, and its value is never read**. Five parsers demand it. `ds header-state`, `ds regen-index` and `ds reconcile` share the pattern `` /^`.*` · `.*` · / `` (`engine/ledger.ts`, `HEADER_LINE`); `engine/guards.ts` (`HEADER`), which `engine/converge.ts` imports, carries a stricter regex that wants those two `·` separators plus a first field that is backticked *and* starts with a digit. A two-field header matches none of the five. Two of them say so out loud, a third leaves a visible mark, and two go quiet:
 
 | parser             | two-field header                                                            |
 | ------------------ | --------------------------------------------------------------------------- |
@@ -75,7 +75,7 @@ The third field is **required, and its value is never read**. Five parsers deman
 | `ds regen-index`   | exit 0, writes `drift!` as that dossier's INDEX state                       |
 | `ds reconcile`     | exit 0, leaves an archived §Z-closed dossier still reading `live`           |
 | `engine/guards.ts` | allows the write; its refusal of a non-canonical state token never fires    |
-| `converge.py`      | exit 2, `CONVERGE: PARSE — no live wave`: the wave never joins the live set |
+| `ds converge`      | exit 2, `CONVERGE: PARSE — no live wave`: the wave never joins the live set |
 
 All five then read field two. Field three's contents are never examined: it is always `P1/1` because Tasks carries no phase column. Dropping it means relaxing all five patterns in the same commit, not deleting a spare field — miss `engine/guards.ts` and the header deny goes permanently quiet with no other signal. The digit anchor those last two share already means `` `v1` · `sealed` · `P1/1` `` passes the header guard while `` `2026-08-05` · `sealed` · `P1/1` `` is denied.
 
@@ -221,7 +221,7 @@ The **frontier** is every `.` row whose `needs` are all `x`. It is derived on re
 
 Phases are gone. A `P<N>` column made the operator name the shape of the work before the work was understood, which is the pressure the Fog section exists to remove; a wave that genuinely runs in stages expresses that as `needs` edges between its first rows.
 
-**Columns resolve by header name.** Four readers take the positions they need from the header row rather than counting cells, so both this layout and the legacy `id|P|state|task|cite|verify` one are read correctly: `ds vm-checks`, `ds row-flip`, `ds regen-index` and `session-start.sh`. A header naming no `state` column is reported by the first three — `WARN Vm.3`, a refusal at exit 1, and a stderr line respectively. `session-start.sh` emits JSON and so degrades quietly, showing no task summary. The three verbs share one resolver, `columns` in `engine/ledger.ts`; `session-start.sh` matches `trim($i)=="state"` in its own awk.
+**Columns resolve by header name.** Four readers take the positions they need from the header row rather than counting cells, so both this layout and the legacy `id|P|state|task|cite|verify` one are read correctly: `ds vm-checks`, `ds row-flip`, `ds regen-index` and `ds session-start`. A header naming no `state` column is reported by the first three — `WARN Vm.3`, a refusal at exit 1, and a stderr line respectively. `ds session-start` feeds the session context and so degrades quietly, showing no task summary. The first three share one resolver, `columns` in `engine/ledger.ts`; `ds session-start` resolves its own in `engine/session.ts` (`taskSummary`).
 
 Vm.3: every row with `state=x` MUST have non-empty `cite`.
 
@@ -284,7 +284,7 @@ Append-only timeline. Every skill op emits one or more lines. Format:
 <YYYY-MM-DD HH:MM> <skill> <target> <event> [<detail>]
 ```
 
-**Formatter-resistant rule (critical):** every §S entry MUST be its own paragraph (blank line before AND after). Without this, markdown formatters like prettier will merge consecutive lines into a single paragraph, breaking the per-line append/parse semantics and rendering §S unparseable by `ds regen-index` and `session-start.sh`. The parser tolerates joined entries (substring matching) but skill writers MUST emit blank-line-separated entries.
+**Formatter-resistant rule (critical):** every §S entry MUST be its own paragraph (blank line before AND after). Without this, markdown formatters like prettier will merge consecutive lines into a single paragraph, breaking the per-line append/parse semantics and rendering §S unparseable by `ds regen-index` and `ds session-start`. The parser tolerates joined entries (substring matching) but skill writers MUST emit blank-line-separated entries.
 
 Examples (note the blank lines between entries):
 
@@ -469,12 +469,12 @@ Pause/resume are NOT multi-step ops: they write a single atomic §S line (`pause
 | Vm.3  | every §T `x` row has non-empty `cite` (commit SHA / PR)                                                                                                                           | code — `ds row-flip` refuses cite-less `x`            |
 | Vm.4  | every closed dossier has a `done` header and lives under `_archive/`; a machine-readable §Z key is NOT required there, so migrated legacy dossiers stay concordant                | code — `ds ds-check`                                  |
 | Vm.5  | INDEX counts match DOSSIER §T/§B actual rows                                                                                                                                      | code — `ds regen-index` derives both                  |
-| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                                                                                                   | code — `session-start.sh` resume scan; `ds vm-checks` |
+| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                                                                                                   | code — `ds session-start` resume scan; `ds vm-checks` |
 | Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                                                                                        | code — `ds regen-index`                               |
 | Vm.8  | all file mutations atomic (tmp + rename)                                                                                                                                          | code — `cli/ds` writers                               |
 | Vm.9  | active lock blocks mutation; stale lock auto-clears                                                                                                                               | code — `ds clear-locks`                               |
 | Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                                                                                       | model — skill resume tables                           |
-| Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                                                                                       | code — `session-start.sh` live-count                  |
+| Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                                                                                       | code — `ds session-start` live-count                  |
 | Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt                                                                     | model — `ds:status`                                   |
 | Vm.14 | every `ds:build --auto` PAUSE carries a reason class; the autonomous loop never auto-pushes and never auto-closes                                                                 | model — `ds:build --auto`                             |
 | Vm.15 | header token × location × §Z closure concordant (`done`⇔`_archive/`⇔§Z-closed; `live`\|`paused`⇔direct child⇔§Z-open) AND token ∈ {live,done,paused}; any disagreement ⇒ `drift!` | code — `ds regen-index` reconcile + `ds ds-check`     |

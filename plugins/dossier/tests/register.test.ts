@@ -52,4 +52,34 @@ describe('dossier mod wiring', () => {
     })
     expect(result.additionalContext).toBeUndefined()
   })
+
+  test('a session start in a dossier project gets the report as context', async ($, on) => {
+    on('fs.stat', async () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }))
+    on('process.run', async () => ({
+      value: { exitCode: 0, stdout: JSON.stringify({ hookSpecificOutput: { additionalContext: '## INDEX' } }),
+        stderr: '',
+        isStdoutTruncated: false,
+        isStderrTruncated: false,
+      },
+    }))
+    on('classic.SessionStart', async () => ({}))
+    const result = await $.classic.SessionStart({ cwd: '/w', source: 'startup' })
+    expect(result.additionalContext).toEqual(['## INDEX'])
+  })
+
+  test('a failing fake-impl command blocks the stop', async ($, on) => {
+    on('env.get', async (_, e) => ({ value: e.name === 'DOSSIER_FAKEIMPL_CMD' ? 'false' : undefined }))
+    on('process.run', async () => ({
+      value: {
+        exitCode: 0,
+        stdout: JSON.stringify({ decision: 'block', reason: 'not verified' }),
+        stderr: '',
+        isStdoutTruncated: false,
+        isStderrTruncated: false,
+      },
+    }))
+    on('classic.Stop', async () => ({}))
+    const result = await $.classic.Stop({ cwd: '/w', stop_hook_active: false })
+    expect(result.block).toBe('not verified')
+  })
 })
