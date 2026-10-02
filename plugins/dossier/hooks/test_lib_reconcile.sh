@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-RECON="$SCRIPT_DIR/lib-reconcile-state.sh"
+DS="$SCRIPT_DIR/../cli/ds"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/dossier-reconcile.XXXXXX")"
 
 cleanup() { rm -rf "$TMP"; }
@@ -50,7 +50,7 @@ make_doss "2026-06-02-prose" "live" "draft: if we stop early the work is carried
 make_doss "2026-06-01-locked" "done" "complete: true"
 printf '{"pid": %d, "started": "2026-06-01T10:00:00Z", "skill": "ds:close"}' "$$" >"$DD/2026-06-01-locked/.ds-lock"
 
-"$RECON" "$SP"
+"$DS" reconcile "$SP"
 
 [[ -f "$ARC/2026-06-05-zombie/DOSSIER.md" ]] || fail "§Z-closed done zombie must be auto-archived"
 [[ ! -e "$DD/2026-06-05-zombie" ]] || fail "auto-archived zombie must leave live location"
@@ -65,7 +65,7 @@ grep -q 'ds:reconcile' "$ARC/2026-06-05-zombie/DOSSIER.md" || fail "auto-archive
 [[ -d "$DD/2026-06-02-prose" ]] || fail "§Z prose that merely contains 'successor: <word>' mid-sentence must NOT archive a live wave"
 [[ "$(hdr_of "$DD/2026-06-02-prose/DOSSIER.md")" == "live" ]] || fail "a prose-only §Z must leave the header live"
 
-"$RECON" "$SP"
+"$DS" reconcile "$SP"
 [[ -f "$ARC/2026-06-05-zombie/DOSSIER.md" ]] || fail "second reconcile must be idempotent"
 
 mkdir -p "$ARC/2026-05-01-inverse"
@@ -76,7 +76,7 @@ cat >"$ARC/2026-05-01-inverse/DOSSIER.md" <<'EOF'
 
 complete: true
 EOF
-"$RECON" "$SP"
+"$DS" reconcile "$SP"
 [[ "$(hdr_of "$ARC/2026-05-01-inverse/DOSSIER.md")" == "done" ]] || fail "archived dir with a non-done header must be healed to done (inverse drift)"
 
 printf 'ok\n'

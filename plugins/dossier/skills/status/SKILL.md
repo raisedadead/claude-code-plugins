@@ -12,7 +12,7 @@ Read-only on files; mutations route through Bash helpers. The only writes are th
 
 ### 1. Locate
 
-- `.scratchpad/INDEX.md` — missing → run `lib-regen-index.sh` to build it.
+- `.scratchpad/INDEX.md` — missing → run `ds regen-index` to build it.
 - Enumerate ALL rows with `state=live`. Current dossier = the first (most-recent). `state=paused` rows are listed separately, outside the live set.
 - The paused set reaches the report as its own `PAUSED` line in step 5, printed on every full sit-rep — `(none)` when the set is empty. The LIGHT path exits at step 1 and never reaches it, which is correct: LIGHT runs where there is no `.scratchpad/dossier/` to hold a paused wave. A paused wave that no line names is a wave nobody decides about.
 
@@ -30,17 +30,17 @@ Warn (advisory, never blocking) when the tree needs tidying:
 
 - **>1 live dossier** (Vm.12): print a CONSOLIDATE block listing each live slug and its §S-tail age, then suggest picking the current one and **pausing** or **closing** the rest.
 - **stale-live** (Vm.13): any live dossier whose last §S entry is older than `${DS_STALE_LIVE_DAYS:-14}` days → suggest pause or `ds:close --abandon`.
-- **drift** (Vm.15): an INDEX carrying a `<!-- drift:N slugs:... -->` trailer (any dossier rendered `drift!` — header/location/§Z disagreement, the sealed-zombie class) gets a DRIFT block naming each drift slug and its likely cause, then a route: a `§Z`-closed drift auto-heals on the next SessionStart (session-start runs `lib-reconcile-state.sh`); anything else is operator-resolved — finish the close (`ds:close --resume`) or correct the header through `lib-header-state.sh`, which is the supported writer (the dossier mod's header guard denies a non-canonical token written any other way). Run `hooks/lib-ds-check.sh .scratchpad` for the deterministic list.
+- **drift** (Vm.15): an INDEX carrying a `<!-- drift:N slugs:... -->` trailer (any dossier rendered `drift!` — header/location/§Z disagreement, the sealed-zombie class) gets a DRIFT block naming each drift slug and its likely cause, then a route: a `§Z`-closed drift auto-heals on the next SessionStart (session-start runs `ds reconcile`); anything else is operator-resolved — finish the close (`ds:close --resume`) or correct the header through `ds header-state`, which is the supported writer (the dossier mod's header guard denies a non-canonical token written any other way). Run `cli/ds ds-check .scratchpad` for the deterministic list.
 
 ds:status suggests; the operator — or the model on explicit request — performs one of the actions below.
 
 **Pause / resume / abandon (operator actions, atomic):**
 
-| Action           | Mechanism                                                                                                                                            |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| pause `<slug>`   | `lib-header-state.sh <dir> paused` + `lib-s-append.sh <dir> "ds:pause — paused reason=<r>"` + regen INDEX                                            |
-| resume `<slug>`  | `lib-header-state.sh <dir> live` + `lib-s-append.sh <dir> "ds:resume — resumed"` + regen INDEX, then re-run step 3 so any mid-build START resurfaces |
-| abandon `<slug>` | `ds:close --abandon "<reason>"`                                                                                                                      |
+| Action           | Mechanism                                                                                                                                    |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| pause `<slug>`   | `ds header-state <dir> paused` + `ds s-append <dir> "ds:pause — paused reason=<r>"` + regen INDEX                                            |
+| resume `<slug>`  | `ds header-state <dir> live` + `ds s-append <dir> "ds:resume — resumed"` + regen INDEX, then re-run step 3 so any mid-build START resurfaces |
+| abandon `<slug>` | `ds:close --abandon "<reason>"`                                                                                                              |
 
 Pause and resume each write ONE atomic §S line (no START/DONE pairing — ${CLAUDE_PLUGIN_ROOT}/FORMAT.md §16). Pausing works mid-build and leaves §T alone.
 
@@ -112,7 +112,7 @@ The **sit-rep path — steps 1 through 5, which is every plain `ds:status`** —
 
 It appends no §S. Reading the ledger should not leave a mark on it.
 
-The **pause / resume actions in step 1a are outside that path** and are not read-only. Each runs only on an explicit operator request, and each mutates the ledger: `lib-s-append.sh` appends one §S line, `lib-header-state.sh` rewrites the header state token in place (`` `live` `` → `` `paused` ``). Invoking one turns that invocation into a write; the sit-rep by itself never becomes one.
+The **pause / resume actions in step 1a are outside that path** and are not read-only. Each runs only on an explicit operator request, and each mutates the ledger: `ds s-append` appends one §S line, `ds header-state` rewrites the header state token in place (`` `live` `` → `` `paused` ``). Invoking one turns that invocation into a write; the sit-rep by itself never becomes one.
 
 ### 7. `--recover` mode
 
@@ -126,7 +126,7 @@ Always end with `recovery source: transcripts | none`. Worst case is `none`.
 ## Exit codes
 
 - 0 for the sit-rep path — a missing INDEX, repo or §X row is reported, not raised.
-- A step-1a pause/resume helper can exit non-zero on its own: `lib-header-state.sh` and `lib-s-append.sh` each print `not found: <path>/DOSSIER.md` and exit 1 against a directory holding no ledger. Surface that instead of reporting the sit-rep clean.
+- A step-1a pause/resume helper can exit non-zero on its own: `ds header-state` and `ds s-append` each print `ds <verb>: not found: <path>/DOSSIER.md` and exit 1 against a directory holding no ledger. Surface that instead of reporting the sit-rep clean.
 
 ## Cite
 

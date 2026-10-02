@@ -87,8 +87,8 @@ for entry in sorted(bad):
 sys.exit(1 if bad else 0)
 PY
 
-python3 - "$ROOT" <<'PY' || fail "FORMAT.md's bundled-helper count word disagrees with the roster table under it"
-import os, re, sys
+python3 - "$ROOT" <<'PY' || fail "FORMAT.md's cli/ds verb count disagrees with the roster table or the dispatcher"
+import os, re, subprocess, sys
 
 root = os.path.realpath(sys.argv[1])
 fmt_path = os.path.join(root, "plugins", "dossier", "FORMAT.md")
@@ -99,9 +99,9 @@ words = {
     "one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
     "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
 }
-lead = re.search(r"^(\w+) scripts under `\$\{CLAUDE_PLUGIN_ROOT\}/hooks/`", body, re.M)
+lead = re.search(r"^(\w+) verbs of `\$\{CLAUDE_PLUGIN_ROOT\}/cli/ds`", body, re.M)
 if not lead:
-    print("  FORMAT.md carries no 'N scripts under ${CLAUDE_PLUGIN_ROOT}/hooks/' sentence", file=sys.stderr)
+    print("  FORMAT.md carries no 'N verbs of ${CLAUDE_PLUGIN_ROOT}/cli/ds' sentence", file=sys.stderr)
     sys.exit(2)
 stated = words.get(lead.group(1).lower())
 if stated is None:
@@ -117,16 +117,23 @@ for line in body[lead.end():].splitlines():
         break
 roster = []
 for row in rows:
-    hit = re.match(r"^\| `(lib-[a-z0-9-]+\.sh)`", row)
+    hit = re.match(r"^\| `ds ([a-z0-9-]+)`", row)
     if hit and hit.group(1) not in roster:
         roster.append(hit.group(1))
+
+usage = subprocess.run([os.path.join(root, "plugins", "dossier", "cli", "ds")], capture_output=True, text=True).stderr
+verbs = re.search(r"usage: ds <([a-z0-9|-]+)>", usage)
+if not verbs:
+    print(f"  cli/ds printed no verb list: {usage.strip()}", file=sys.stderr)
+    sys.exit(2)
+known = set(verbs.group(1).split("|"))
 
 bad = []
 if len(roster) != stated:
     bad.append(f"sentence says {stated}, table lists {len(roster)}: {roster}")
 for helper in roster:
-    if not os.path.isfile(os.path.join(root, "plugins", "dossier", "hooks", helper)):
-        bad.append(f"table names a helper absent from hooks/: {helper}")
+    if helper not in known:
+        bad.append(f"table names a verb cli/ds does not dispatch: {helper}")
 for entry in bad:
     print(f"  {entry}", file=sys.stderr)
 sys.exit(1 if bad else 0)

@@ -9,9 +9,12 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 ### Changed
 
 - **dossier is now a mod (Claude Code 2.1.287+).** `hooks/register.ts` runs the Edit/Write guards and the skill gate in process; `marker_guard.py`, `invariant_guard.py` and `skill_gate.py` are deleted. The other hooks still run from `hooks.json`. D32 carries the rejected alternatives.
-- **The marker guard denies.** In a project with `.scratchpad/dossier/`, an Edit or Write that puts a `PH3-B7`-style audit id or a `§V26`-style cite in a source comment is denied; before, it was advisory. A bare `Phase N`, `Stage N` or `Step N` still passes. `DOSSIER_MARKER_GUARD=off` turns the marker rule off and no longer turns the header check off. D33 carries the reason and the known false positive (a `SPEC §`-style spec citation).
+- **The marker guard denies.** In a project with `.scratchpad/dossier/`, an Edit or Write that puts a `PH3-B7`-style audit id or a `§V26`-style cite in a source comment is denied; before, it was advisory. A bare `Phase N`, `Stage N` or `Step N` still passes. `DOSSIER_MARKER_GUARD=off` turns the marker rule and the ledger header check off. D33 carries the reason and the known false positive (a `SPEC §`-style spec citation).
 - **The invariant guard reads ECMAScript regex.** `cli/ds invariant-check` runs the registered patterns with a 5 s timeout. The Python forms `(?P<name>`, `(?P=name)`, a leading `(?i)` / `(?s)` / `(?m)`, `\A`, `\Z` and `$` are translated; a pattern with other Python-only syntax is skipped, and the write gets an advisory that names it.
-- **`cli/ds` needs Node.js 22.18+.** Without it, `cli/ds` exits 69 and the invariant guard lets the write through.
+- **`cli/ds` needs Node.js 22.18+.** Without it, `cli/ds` exits 69: the invariant guard lets the write through, the ledger verbs refuse, and the session start skips the stale-lock clear, the reconcile and the INDEX rebuild and says so in its context.
+- **Every ledger writer is a `cli/ds` verb.** The skills call `"${CLAUDE_PLUGIN_ROOT}"/cli/ds <verb>`: `row-flip`, `s-append`, `x-refresh`, `header-state`, `archive-move`, `z-write`, `regen-index`, `reconcile`, `clear-locks`, `ds-check`, `vm-checks`, `assert-scaffold`, `assert-grill` and `changelog-write`. The `hooks/lib-*.sh` writers are deleted. Each verb keeps the exit codes of the script it replaces, except that a failed file write now exits 70; an error line now starts with `ds <verb>:`.
+- **A rewritten ledger file gets the default file mode.** The bash writers left a rewritten `DOSSIER.md` or `INDEX.md` at mode 0600; `cli/ds` writes it at the default mode for the umask.
+- **INDEX rows sort by code point**, not by the locale of the shell, and dossier directories are read in sorted order.
 - **The skill gate keeps its once-per-session memory in the mod**, not in a temp file. A hot reload of the plugin resets it, so one reminder can repeat.
 
 ## 2026-09-28

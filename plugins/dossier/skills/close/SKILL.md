@@ -19,7 +19,7 @@ Closing takes exactly one of `--complete`, `--successor <slug>` or `--abandon "<
 
 ### 0. Helpers
 
-DOSSIER.md writes go through the bundled helpers (${CLAUDE_PLUGIN_ROOT}/FORMAT.md §15): `${CLAUDE_PLUGIN_ROOT}/hooks/lib-s-append.sh <dir> "<event>"` appends §S (the §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends). §Z is written via `${CLAUDE_PLUGIN_ROOT}/hooks/lib-z-write.sh <dir> <complete|successor|abandoned> <value> "<summary>" "<cites>"` — atomic, and it guarantees the §12 blank-line separation.
+DOSSIER.md writes go through the bundled helpers (${CLAUDE_PLUGIN_ROOT}/FORMAT.md §15): `"${CLAUDE_PLUGIN_ROOT}"/cli/ds s-append <dir> "<event>"` appends §S (the §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends). §Z is written via `"${CLAUDE_PLUGIN_ROOT}"/cli/ds z-write <dir> <complete|successor|abandoned> <value> "<summary>" "<cites>"` — atomic, and it guarantees the §12 blank-line separation.
 
 ### 1. Locate live dossier
 
@@ -90,9 +90,9 @@ Run `bash "${CLAUDE_PLUGIN_ROOT}"/hooks/lib-converge.sh <contract>` with the clo
 Write §Z through the bundled helper (atomic tmp+rename, guaranteeing the §12 blank-line separation so a formatter cannot merge the fields — the markdown blocks below show the resulting shape, not a manual edit):
 
 ```
-"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-z-write.sh <dir> complete   —        "<summary>" "<key cites>"
-"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-z-write.sh <dir> successor  <slug>   "<summary>" "<key cites>"
-"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-z-write.sh <dir> abandoned  "<reason>" "<summary>" "<key cites>"
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds z-write <dir> complete   —        "<summary>" "<key cites>"
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds z-write <dir> successor  <slug>   "<summary>" "<key cites>"
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds z-write <dir> abandoned  "<reason>" "<summary>" "<key cites>"
 ```
 
 Exit 1 on a `<summary>`, `<reason>` or `<key cites>` that reads as a closure key to the INDEX parser (`successor: <slug>`, `complete: true`, `abandoned: true` — FORMAT.md §12). Nothing is written; reword the prose and re-run.
@@ -141,7 +141,7 @@ summary: <state at abandonment — what shipped, what was dropped>
 key cites: <any T-row cites, or —>
 ```
 
-Flip the header state atomically via `"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-header-state.sh <dir> done` (FORMAT.md §15). This flip lands **before** the `§Z=written` checkpoint below: a checkpoint may only trail a mutation already performed, or a crash resumes past an unflipped header and archives a dir still reading `live` — inverse drift.
+Flip the header state atomically via `"${CLAUDE_PLUGIN_ROOT}"/cli/ds header-state <dir> done` (FORMAT.md §15). This flip lands **before** the `§Z=written` checkpoint below: a checkpoint may only trail a mutation already performed, or a crash resumes past an unflipped header and archives a dir still reading `live` — inverse drift.
 
 Append §S (checkpoint — §Z written AND header now `done`):
 
@@ -154,7 +154,7 @@ Append §S (checkpoint — §Z written AND header now `done`):
 Guarded, resumable commit-point via the bundled helper — it refuses a pre-existing dest (no nested move), asserts the move landed, and preserves the source on failure (FORMAT.md §15):
 
 ```
-"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-archive-move.sh .scratchpad/dossier/<date>-<slug> .scratchpad/dossier/_archive
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds archive-move .scratchpad/dossier/<date>-<slug> .scratchpad/dossier/_archive
 ```
 
 Idempotent: re-running after a completed move is a no-op. A non-zero exit leaves the source intact — surface the error and stop, leaving `DONE` unwritten.
@@ -171,7 +171,7 @@ When the wave's contract lives in `.dossier/` and is tracked (`git ls-files --er
 
 ### 8. Regen INDEX
 
-Run `lib-regen-index.sh`. INDEX flips the dossier row to `state=done` and the `§Z` column to `complete` or `→<slug>`.
+Run `ds regen-index`. INDEX flips the dossier row to `state=done` and the `§Z` column to `complete` or `→<slug>`.
 
 ### 9. Release lock
 
@@ -190,7 +190,7 @@ next: <ds:new <successor> | nothing — project complete>
 
 - §T non-`x` rows present: refuse, list them, suggest `ds:build --next`.
 - §B unfixed rows: refuse, list them, suggest `ds:backprop B<N>` per row.
-- §Z written but the move failed (rare crash): `--resume` re-runs `lib-archive-move.sh`, which finishes or no-ops.
+- §Z written but the move failed (rare crash): `--resume` re-runs `ds archive-move`, which finishes or no-ops.
 - Successor slug missing: offer the `ds:new <successor>` inline scaffold.
 
 ## Cite

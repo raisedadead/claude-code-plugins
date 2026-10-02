@@ -65,21 +65,21 @@ Headings are fixed. Order is fixed.
 ## Closeout
 ```
 
-Readers match headings through `hooks/lib-sections.sh`, which holds one pattern per section and accepts both this spelling and the `## §G — Goal` … `## §Z — Closeout` sigils every dossier written before 2026-08-05 carries. A descriptive tail is allowed after either form. `ds:new` writes the worded spelling; nothing rewrites an existing ledger, so the sigil form stays readable indefinitely.
+Readers match headings through `engine/ledger.ts` (`SEC`), which holds one pattern per section and accepts both this spelling and the `## §G — Goal` … `## §Z — Closeout` sigils every dossier written before 2026-08-05 carries. `hooks/lib-sections.sh` carries the Tasks, Repos and Status patterns for `session-start.sh`. A descriptive tail is allowed after either form. `ds:new` writes the worded spelling; nothing rewrites an existing ledger, so the sigil form stays readable indefinitely.
 
-The third field is **required, and its value is never read**. Five parsers demand it. `lib-header-state.sh`, `lib-regen-index.sh` and `lib-reconcile-state.sh` each carry the awk pattern `` /^`.*` · `.*` · / ``; `engine/guards.ts` (`HEADER`) and `converge.py` (`_HEADER`) carry the same regex, transcribed twice, which wants those two `·` separators plus a first field that is backticked *and* starts with a digit. A two-field header matches none of the five. Two of them say so out loud, a third leaves a visible mark, and two go quiet:
+The third field is **required, and its value is never read**. Five parsers demand it. `ds header-state`, `ds regen-index` and `ds reconcile` share the pattern `` /^`.*` · `.*` · / `` (`engine/ledger.ts`, `HEADER_LINE`); `engine/guards.ts` (`HEADER`) and `converge.py` (`_HEADER`) carry the same regex, transcribed twice, which wants those two `·` separators plus a first field that is backticked *and* starts with a digit. A two-field header matches none of the five. Two of them say so out loud, a third leaves a visible mark, and two go quiet:
 
-| parser                   | two-field header                                                            |
-| ------------------------ | --------------------------------------------------------------------------- |
-| `lib-header-state.sh`    | exit 1, `header metadata line not found` — `ds:close` + pause/resume fail   |
-| `lib-regen-index.sh`     | exit 0, writes `drift!` as that dossier's INDEX state                       |
-| `lib-reconcile-state.sh` | exit 0, leaves an archived §Z-closed dossier still reading `live`           |
-| `engine/guards.ts`       | allows the write; its refusal of a non-canonical state token never fires    |
-| `converge.py`            | exit 2, `CONVERGE: PARSE — no live wave`: the wave never joins the live set |
+| parser             | two-field header                                                            |
+| ------------------ | --------------------------------------------------------------------------- |
+| `ds header-state`  | exit 1, `header metadata line not found` — `ds:close` + pause/resume fail   |
+| `ds regen-index`   | exit 0, writes `drift!` as that dossier's INDEX state                       |
+| `ds reconcile`     | exit 0, leaves an archived §Z-closed dossier still reading `live`           |
+| `engine/guards.ts` | allows the write; its refusal of a non-canonical state token never fires    |
+| `converge.py`      | exit 2, `CONVERGE: PARSE — no live wave`: the wave never joins the live set |
 
 All five then read field two. Field three's contents are never examined: it is always `P1/1` because Tasks carries no phase column. Dropping it means relaxing all five patterns in the same commit, not deleting a spare field — miss `engine/guards.ts` and the header deny goes permanently quiet with no other signal. The digit anchor those last two share already means `` `v1` · `sealed` · `P1/1` `` passes the header guard while `` `2026-08-05` · `sealed` · `P1/1` `` is denied.
 
-State values: `live` | `done` | `paused`. Default at `ds:new` = `live`. The header state token is flipped atomically by `lib-header-state.sh` (§15): `ds:close` sets `done`; the `ds:status` pause/resume actions toggle `live` ↔ `paused`. A `paused` dossier stays a direct child of `dossier/` (not archived — pause is reversible) and is excluded from the live-count + the SessionStart "current live" pick.
+State values: `live` | `done` | `paused`. Default at `ds:new` = `live`. The header state token is flipped atomically by `ds header-state` (§15): `ds:close` sets `done`; the `ds:status` pause/resume actions toggle `live` ↔ `paused`. A `paused` dossier stays a direct child of `dossier/` (not archived — pause is reversible) and is excluded from the live-count + the SessionStart "current live" pick.
 
 ## 2.5 Wave contract (its own file, outside the ledger)
 
@@ -221,7 +221,7 @@ The **frontier** is every `.` row whose `needs` are all `x`. It is derived on re
 
 Phases are gone. A `P<N>` column made the operator name the shape of the work before the work was understood, which is the pressure the Fog section exists to remove; a wave that genuinely runs in stages expresses that as `needs` edges between its first rows.
 
-**Columns resolve by header name.** Four readers take the positions they need from the header row rather than counting cells, so both this layout and the legacy `id|P|state|task|cite|verify` one are read correctly: `lib-vm-checks.sh`, `lib-row-flip.sh`, `lib-regen-index.sh` and `session-start.sh`. A header naming no `state` column is reported by the first three — `WARN Vm.3`, a refusal at exit 1, and a stderr line respectively. `session-start.sh` emits JSON and so degrades quietly, showing no task summary. Find the converted set with `grep -rlE 'trim\([^)]*\) *== *"state"' plugins/dossier/hooks/` — it returns exactly those four files. Match the comparison, not the array name: the awk spelling differs per reader (`f[i]` in `lib-row-flip.sh` and `lib-regen-index.sh`, `a[i]` in `lib-vm-checks.sh`, `$i` in `session-start.sh`), so a name-shaped pattern like `trim(f[i])` returns two of the four and mislabels the other two as positional. Anything under `hooks/` that reads a §T cell without matching this is still positional.
+**Columns resolve by header name.** Four readers take the positions they need from the header row rather than counting cells, so both this layout and the legacy `id|P|state|task|cite|verify` one are read correctly: `ds vm-checks`, `ds row-flip`, `ds regen-index` and `session-start.sh`. A header naming no `state` column is reported by the first three — `WARN Vm.3`, a refusal at exit 1, and a stderr line respectively. `session-start.sh` emits JSON and so degrades quietly, showing no task summary. The three verbs share one resolver, `columns` in `engine/ledger.ts`; `session-start.sh` matches `trim($i)=="state"` in its own awk.
 
 Vm.3: every row with `state=x` MUST have non-empty `cite`.
 
@@ -284,7 +284,7 @@ Append-only timeline. Every skill op emits one or more lines. Format:
 <YYYY-MM-DD HH:MM> <skill> <target> <event> [<detail>]
 ```
 
-**Formatter-resistant rule (critical):** every §S entry MUST be its own paragraph (blank line before AND after). Without this, markdown formatters like prettier will merge consecutive lines into a single paragraph, breaking the per-line append/parse semantics and rendering §S unparseable by `lib-regen-index.sh` and `session-start.sh`. The parser tolerates joined entries (substring matching) but skill writers MUST emit blank-line-separated entries.
+**Formatter-resistant rule (critical):** every §S entry MUST be its own paragraph (blank line before AND after). Without this, markdown formatters like prettier will merge consecutive lines into a single paragraph, breaking the per-line append/parse semantics and rendering §S unparseable by `ds regen-index` and `session-start.sh`. The parser tolerates joined entries (substring matching) but skill writers MUST emit blank-line-separated entries.
 
 Examples (note the blank lines between entries):
 
@@ -376,14 +376,14 @@ key cites: [a96987b]
 
 Vm.4: closed dossier MUST live under `.scratchpad/dossier/_archive/`.
 
-Parser grammar: a closure key opens its own line. The three patterns live once, in `hooks/lib-sections.sh` as `DS_Z_COMPLETE` / `DS_Z_ABANDONED` / `DS_Z_SUCCESSOR`; `lib-regen-index.sh`, `lib-reconcile-state.sh` and `lib-z-write.sh` all read them from there. §Z carries operator prose in the same region the parser scans, which sets the rest of the grammar:
+Parser grammar: a closure key opens its own line. The three patterns live once, in `engine/ledger.ts` as `Z.complete` / `Z.abandoned` / `Z.successor`; `ds regen-index`, `ds reconcile` and `ds z-write` all read them from there. §Z carries operator prose in the same region the parser scans, which sets the rest of the grammar:
 
-- A key mid-sentence is prose, not a closure. An abandoned dossier whose summary read "carried into the successor: the age-identity exemption" rendered `→the` in the INDEX §Z column while `abandoned: true` sat two lines above it, and the same sentence in a **live** dossier moved the whole wave to `_archive/` on the next session start — `lib-reconcile-state.sh` reads one OR of the three keys and archives on a match.
+- A key mid-sentence is prose, not a closure. An abandoned dossier whose summary read "carried into the successor: the age-identity exemption" rendered `→the` in the INDEX §Z column while `abandoned: true` sat two lines above it, and the same sentence in a **live** dossier moved the whole wave to `_archive/` on the next session start — `ds reconcile` reads one OR of the three keys and archives on a match.
 - The booleans are tested before `successor:`, whose value is free text where theirs is the literal `true`.
 - `successor:` takes only the `ds:new` slug charset (`[a-z0-9][a-z0-9-]*`).
-- `lib-z-write.sh` exits 1 rather than write a `summary`, `reason` or `key cites` whose own line opens with any of the three.
+- `ds z-write` exits 1 rather than write a `summary`, `reason` or `key cites` whose own line opens with any of the three.
 
-A key that a formatter joins onto the end of another line is therefore no longer read as a closure. That direction is safe: `lib-reconcile-state.sh` leaves the dossier where it is, so a `done` header sitting outside `_archive/` renders `drift!` in INDEX with a drift trailer, and the operator is told. The reverse — a prose sentence read as a closure — archived a live wave and reported nothing.
+A key that a formatter joins onto the end of another line is therefore no longer read as a closure. That direction is safe: `ds reconcile` leaves the dossier where it is, so a `done` header sitting outside `_archive/` renders `drift!` in INDEX with a drift trailer, and the operator is told. The reverse — a prose sentence read as a closure — archived a live wave and reported nothing.
 
 Writers MUST emit blank-line separation to keep §Z human-readable.
 
@@ -429,22 +429,22 @@ Vm.8: no skill writes a real file directly. Always tmp + rename.
 
 ### Bundled mutation helpers
 
-Six scripts under `${CLAUDE_PLUGIN_ROOT}/hooks/` own the common DOSSIER.md mutations — the six rows below are the whole roster. The five that rewrite a file are atomic by tmp + rename; `lib-archive-move.sh` mutates no file, so it is a bare directory `mv` with no temp. All ship with the plugin — always available, no adapter detection.
+Six verbs of `${CLAUDE_PLUGIN_ROOT}/cli/ds` own the common DOSSIER.md mutations — the six rows below are the whole roster. The five that rewrite a file are atomic by tmp + rename; `ds archive-move` mutates no file, so it is a bare directory rename with no temp. All ship with the plugin — always available, no adapter detection. Skills call them as `"${CLAUDE_PLUGIN_ROOT}"/cli/ds <verb>`. `cli/ds` needs Node.js 22.18+: it exits 69 without it and 70 on an internal error.
 
-| helper                | mutates                                                    | usage                                                       |
-| --------------------- | ---------------------------------------------------------- | ----------------------------------------------------------- |
-| `lib-row-flip.sh`     | §T row `state` cell (+ optional `cite`)                    | `lib-row-flip.sh <dossier-dir> <row-id> <new-state> [cite]` |
-| `lib-s-append.sh`     | §S — appends one blank-wrapped paragraph before `## §Z`    | `lib-s-append.sh <dossier-dir> "<event text>"`              |
-| `lib-x-refresh.sh`    | §X row `branch`/`ahead`/`tag`/`pushed` (keeps `notes`)     | `lib-x-refresh.sh <dossier-dir> "<repo-label>" <repo-path>` |
-| `lib-header-state.sh` | header `<state>` token (`live`/`done`/`paused`)            | `lib-header-state.sh <dossier-dir> <live\|done\|paused>`    |
-| `lib-archive-move.sh` | dir location (→ `_archive/`) — the `ds:close` commit-point | `lib-archive-move.sh <src-dossier-dir> <archive-parent>`    |
-| `lib-z-write.sh`      | §Z closeout block (`complete`/`successor`/`abandoned`)     | `lib-z-write.sh <dir> <kind> <value> "<summary>" "<cites>"` |
+| verb              | mutates                                                    | usage                                                   |
+| ----------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
+| `ds row-flip`     | §T row `state` cell (+ optional `cite`)                    | `ds row-flip <dossier-dir> <row-id> <new-state> [cite]` |
+| `ds s-append`     | §S — appends one blank-wrapped paragraph before `## §Z`    | `ds s-append <dossier-dir> "<event text>"`              |
+| `ds x-refresh`    | §X row `branch`/`ahead`/`tag`/`pushed` (keeps `notes`)     | `ds x-refresh <dossier-dir> "<repo-label>" <repo-path>` |
+| `ds header-state` | header `<state>` token (`live`/`done`/`paused`)            | `ds header-state <dossier-dir> <live\|done\|paused>`    |
+| `ds archive-move` | dir location (→ `_archive/`) — the `ds:close` commit-point | `ds archive-move <src-dossier-dir> <archive-parent>`    |
+| `ds z-write`      | §Z closeout block (`complete`/`successor`/`abandoned`)     | `ds z-write <dir> <kind> <value> "<summary>" "<cites>"` |
 
-- `lib-s-append.sh` **prepends the timestamp itself** (honors `DS_TS_SECONDS`) and guarantees the §11 blank-line rule. Pass only the text *after* the timestamp — `ds:build T3 START`, never `2026-… ds:build T3 START`.
-- `lib-row-flip.sh` matches the row by trimmed `id` cell **within §T only**, rewrites only the `state` (and optional `cite`) cells, exits non-zero if the id is absent from §T, if it matches more than one §T row, if the state is not one of `. ~ x ! ?`, if the id is a `B<N>` (§B has no state column — use `ds:backprop`), or if a `-> x` flip would leave the row without a `cite` (Vm.3).
-- `lib-x-refresh.sh` matches the §X row by trimmed `repo` cell, runs the git probes against `<repo-path>`, rewrites `branch`/`ahead`/`tag`/`pushed`, leaves the operator-owned `notes` cell untouched, exits non-zero if the repo label is absent or the path is not a git repo. `ahead=no-upstream` + `pushed=no` when the branch has no `origin/` tracking ref.
-- `lib-header-state.sh` rewrites only the `<state>` token on the header metadata line (the 2nd backtick-wrapped field), validates `<state>` ∈ `live|done|paused`, exits non-zero if the metadata line is absent. The sole writer of the header state — `ds:close` and the `ds:status` pause/resume actions both route through it.
-- `lib-archive-move.sh` is the `ds:close` commit-point: refuses a pre-existing dest (no nested move), `mv`s `<src>` → `<archive-parent>/<basename>`, asserts the move landed (`DOSSIER.md` present at dest, source gone). Idempotent — a no-op if already archived (resume-safe). On any failure the source is left intact (exit non-zero) and callers leave `DONE` unwritten. Assumes `_archive/` is same-FS as `dossier/` (rename atomicity).
+- `ds s-append` **prepends the timestamp itself** (honors `DS_TS_SECONDS`) and guarantees the §11 blank-line rule. Pass only the text *after* the timestamp — `ds:build T3 START`, never `2026-… ds:build T3 START`.
+- `ds row-flip` matches the row by trimmed `id` cell **within §T only**, rewrites only the `state` (and optional `cite`) cells, exits non-zero if the id is absent from §T, if it matches more than one §T row, if the state is not one of `. ~ x ! ?`, if the id is a `B<N>` (§B has no state column — use `ds:backprop`), or if a `-> x` flip would leave the row without a `cite` (Vm.3).
+- `ds x-refresh` matches the §X row by trimmed `repo` cell, runs the git probes against `<repo-path>`, rewrites `branch`/`ahead`/`tag`/`pushed`, leaves the operator-owned `notes` cell untouched, exits non-zero if the repo label is absent or the path is not a git repo. `ahead=no-upstream` + `pushed=no` when the branch has no `origin/` tracking ref.
+- `ds header-state` rewrites only the `<state>` token on the header metadata line (the 2nd backtick-wrapped field), validates `<state>` ∈ `live|done|paused`, exits non-zero if the metadata line is absent. The sole writer of the header state — `ds:close` and the `ds:status` pause/resume actions both route through it.
+- `ds archive-move` is the `ds:close` commit-point: refuses a pre-existing dest (no nested move), `mv`s `<src>` → `<archive-parent>/<basename>`, asserts the move landed (`DOSSIER.md` present at dest, source gone). Idempotent — a no-op if already archived (resume-safe). On any failure the source is left intact (exit non-zero) and callers leave `DONE` unwritten. Assumes `_archive/` is same-FS as `dossier/` (rename atomicity).
 
 Skills prefer these over the Edit tool for §S / §T / §B mutations. Edit-tool fallback only if a helper is somehow missing.
 
@@ -462,23 +462,23 @@ Pause/resume are NOT multi-step ops: they write a single atomic §S line (`pause
 
 ## 17. Meta-invariants (enforced by skills)
 
-| id    | rule                                                                                                                                                                              | enforced by                                               |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Vm.1  | every live dossier has state=live in INDEX                                                                                                                                        | code — `lib-ds-check.sh` (via regen reconcile)            |
-| Vm.2  | every §S entry starts with valid ISO timestamp                                                                                                                                    | code — `lib-vm-checks.sh` awk                             |
-| Vm.3  | every §T `x` row has non-empty `cite` (commit SHA / PR)                                                                                                                           | code — `lib-row-flip.sh` refuses cite-less `x`            |
-| Vm.4  | every closed dossier has a `done` header and lives under `_archive/`; a machine-readable §Z key is NOT required there, so migrated legacy dossiers stay concordant                | code — `lib-ds-check.sh`                                  |
-| Vm.5  | INDEX counts match DOSSIER §T/§B actual rows                                                                                                                                      | code — `lib-regen-index.sh` derives both                  |
-| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                                                                                                   | code — `session-start.sh` resume scan; `ds:check` awk     |
-| Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                                                                                        | code — `lib-regen-index.sh`                               |
-| Vm.8  | all file mutations atomic (tmp + rename)                                                                                                                                          | code — bundled `lib-*.sh` helpers                         |
-| Vm.9  | active lock blocks mutation; stale lock auto-clears                                                                                                                               | code — `lib-clear-stale-locks.sh`                         |
-| Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                                                                                       | model — skill resume tables                               |
-| Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                                                                                       | code — `session-start.sh` live-count                      |
-| Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt                                                                     | model — `ds:status`                                       |
-| Vm.14 | every `ds:build --auto` PAUSE carries a reason class; the autonomous loop never auto-pushes and never auto-closes                                                                 | model — `ds:build --auto`                                 |
-| Vm.15 | header token × location × §Z closure concordant (`done`⇔`_archive/`⇔§Z-closed; `live`\|`paused`⇔direct child⇔§Z-open) AND token ∈ {live,done,paused}; any disagreement ⇒ `drift!` | code — `lib-regen-index.sh` reconcile + `lib-ds-check.sh` |
-| Vm.16 | at most one dossier per `<date>-<slug>` path, live or `_archive/`; the same slug under a different date is not detected                                                           | model — `ds:new` collision check                          |
-| Vm.X  | stale §X (>30min) warns + requires operator confirm on flip                                                                                                                       | model — `ds:build` step 8a guard                          |
+| id    | rule                                                                                                                                                                              | enforced by                                           |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Vm.1  | every live dossier has state=live in INDEX                                                                                                                                        | code — `ds ds-check` (via regen reconcile)            |
+| Vm.2  | every §S entry starts with valid ISO timestamp                                                                                                                                    | code — `ds vm-checks`                                 |
+| Vm.3  | every §T `x` row has non-empty `cite` (commit SHA / PR)                                                                                                                           | code — `ds row-flip` refuses cite-less `x`            |
+| Vm.4  | every closed dossier has a `done` header and lives under `_archive/`; a machine-readable §Z key is NOT required there, so migrated legacy dossiers stay concordant                | code — `ds ds-check`                                  |
+| Vm.5  | INDEX counts match DOSSIER §T/§B actual rows                                                                                                                                      | code — `ds regen-index` derives both                  |
+| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                                                                                                   | code — `session-start.sh` resume scan; `ds vm-checks` |
+| Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                                                                                        | code — `ds regen-index`                               |
+| Vm.8  | all file mutations atomic (tmp + rename)                                                                                                                                          | code — `cli/ds` writers                               |
+| Vm.9  | active lock blocks mutation; stale lock auto-clears                                                                                                                               | code — `ds clear-locks`                               |
+| Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                                                                                       | model — skill resume tables                           |
+| Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                                                                                       | code — `session-start.sh` live-count                  |
+| Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt                                                                     | model — `ds:status`                                   |
+| Vm.14 | every `ds:build --auto` PAUSE carries a reason class; the autonomous loop never auto-pushes and never auto-closes                                                                 | model — `ds:build --auto`                             |
+| Vm.15 | header token × location × §Z closure concordant (`done`⇔`_archive/`⇔§Z-closed; `live`\|`paused`⇔direct child⇔§Z-open) AND token ∈ {live,done,paused}; any disagreement ⇒ `drift!` | code — `ds regen-index` reconcile + `ds ds-check`     |
+| Vm.16 | at most one dossier per `<date>-<slug>` path, live or `_archive/`; the same slug under a different date is not detected                                                           | model — `ds:new` collision check                      |
+| Vm.X  | stale §X (>30min) warns + requires operator confirm on flip                                                                                                                       | model — `ds:build` step 8a guard                      |
 
-`ds:check` runs the **code**-enforced rules deterministically (`lib-ds-check.sh` exits non-zero on any Vm.1/Vm.4/Vm.15 drift) and applies the **model**-enforced rules best-effort on read. The `enforced by` column is the honest map: a `model` row is guidance a skill follows, not a guarantee — do not read "ds:check ran" as "every Vm holds".
+`ds:check` runs the **code**-enforced rules deterministically (`ds ds-check` exits non-zero on any Vm.1/Vm.4/Vm.15 drift) and applies the **model**-enforced rules best-effort on read. The `enforced by` column is the honest map: a `model` row is guidance a skill follows, not a guarantee — do not read "ds:check ran" as "every Vm holds".

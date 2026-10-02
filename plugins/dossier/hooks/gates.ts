@@ -44,13 +44,12 @@ export async function editGate(io: Io, root: string, input: Record<string, unkno
   const edit = editOf(input)
   if (!edit) return {}
   if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return {}
-  const header = headerDenial(edit)
+  const guarded = (await io.env('DOSSIER_MARKER_GUARD')) !== 'off'
+  const header = guarded ? headerDenial(edit) : undefined
   if (header) return { deny: header }
   if (isDossierPath(edit.filePath)) return {}
-  if ((await io.env('DOSSIER_MARKER_GUARD')) !== 'off') {
-    const marker = markerDenial(edit)
-    if (marker) return { deny: marker }
-  }
+  const marker = guarded ? markerDenial(edit) : undefined
+  if (marker) return { deny: marker }
   return invariantGate(io, root, edit.filePath, edit.chunks)
 }
 
@@ -109,7 +108,7 @@ function reminder(name: string, paused: string[], live: string | undefined, flig
   if (WHETSTONE.has(name) && live) {
     return (
       `live dossier (${live}) — after this skill's verdict, record the §S line this skill's own rule ` +
-      "calls for via dossier's lib-s-append.sh (first live row = current; main thread writes, never " +
+      "calls for via dossier's cli/ds s-append (first live row = current; main thread writes, never " +
       'subagents). Reminder only, never blocking.'
     )
   }

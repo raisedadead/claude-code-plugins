@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ASSERT="$SCRIPT_DIR/lib-assert-scaffold.sh"
+DS="$SCRIPT_DIR/../cli/ds"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/dossier-scaffold.XXXXXX")"
 
 cleanup() { rm -rf "$TMP"; }
@@ -127,7 +127,7 @@ assert_section_required() {
 	"$writer" "$dir"
 	grep -vxF "$heading" "$dir/DOSSIER.md" >"$dir/DOSSIER.md.tmp"
 	mv "$dir/DOSSIER.md.tmp" "$dir/DOSSIER.md"
-	if err="$("$ASSERT" "$dir" 2>&1)"; then
+	if err="$("$DS" assert-scaffold "$dir" 2>&1)"; then
 		fail "dropping '$heading' must exit non-zero"
 	fi
 	printf '%s' "$err" | grep -qF "$tag" || fail "error for dropped '$heading' must name $tag"
@@ -159,13 +159,13 @@ WORDED_SECTIONS=(
 
 D="$TMP/2026-07-07-happy"
 write_full "$D"
-"$ASSERT" "$D" || fail "full scaffold (dir arg) must exit 0"
-"$ASSERT" "$D/DOSSIER.md" || fail "full scaffold (file arg) must exit 0"
-"$ASSERT" "$D/" || fail "full scaffold (dir arg, trailing slash) must exit 0"
+"$DS" assert-scaffold "$D" || fail "full scaffold (dir arg) must exit 0"
+"$DS" assert-scaffold "$D/DOSSIER.md" || fail "full scaffold (file arg) must exit 0"
+"$DS" assert-scaffold "$D/" || fail "full scaffold (dir arg, trailing slash) must exit 0"
 
 DW="$TMP/2026-08-05-worded"
 write_worded "$DW"
-"$ASSERT" "$DW" || fail "worded scaffold as ds:new writes it must exit 0"
+"$DS" assert-scaffold "$DW" || fail "worded scaffold as ds:new writes it must exit 0"
 
 for pair in "${SIGIL_SECTIONS[@]}"; do
 	assert_section_required write_full "${pair%%|*}" "${pair##*|}"
@@ -179,8 +179,8 @@ D3="$TMP/2026-07-07-notitle"
 write_full "$D3"
 grep -v '^# demo-slug$' "$D3/DOSSIER.md" >"$D3/DOSSIER.md.tmp"
 mv "$D3/DOSSIER.md.tmp" "$D3/DOSSIER.md"
-if "$ASSERT" "$D3" 2>/dev/null; then fail "missing title must exit non-zero"; fi
+if "$DS" assert-scaffold "$D3" 2>/dev/null; then fail "missing title must exit non-zero"; fi
 
-if "$ASSERT" "$TMP/nope" 2>/dev/null; then fail "missing DOSSIER.md must exit non-zero"; fi
+if "$DS" assert-scaffold "$TMP/nope" 2>/dev/null; then fail "missing DOSSIER.md must exit non-zero"; fi
 
 printf 'ok\n'

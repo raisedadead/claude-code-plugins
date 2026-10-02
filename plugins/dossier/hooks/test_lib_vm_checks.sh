@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VM="$SCRIPT_DIR/lib-vm-checks.sh"
+DS="$SCRIPT_DIR/../cli/ds"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/dossier-vm.XXXXXX")"
 
 cleanup() { rm -rf "$TMP"; }
@@ -73,12 +73,12 @@ EOF
 
 CLEAN_ROOT="$TMP/clean/.scratchpad"
 write_clean "$CLEAN_ROOT/dossier/2026-07-07-clean"
-clean_out="$("$VM" "$CLEAN_ROOT" 2>&1)" || fail "clean tree must exit 0"
+clean_out="$("$DS" vm-checks "$CLEAN_ROOT" 2>&1)" || fail "clean tree must exit 0"
 [[ -z "$clean_out" ]] || fail "clean tree must emit no findings, got: $clean_out"
 
 DIRTY_ROOT="$TMP/dirty/.scratchpad"
 write_dirty "$DIRTY_ROOT/dossier/2026-07-07-dirty"
-if dirty_out="$("$VM" "$DIRTY_ROOT" 2>&1)"; then fail "dirty tree must exit non-zero"; fi
+if dirty_out="$("$DS" vm-checks "$DIRTY_ROOT" 2>&1)"; then fail "dirty tree must exit non-zero"; fi
 printf '%s' "$dirty_out" | grep -q 'Vm.2' || fail "must flag Vm.2 (missing §S timestamp)"
 printf '%s' "$dirty_out" | grep -q 'CRITICAL Vm.3' || fail "must flag Vm.3 critical (x-row empty cite)"
 printf '%s' "$dirty_out" | grep -q 'Vm.6' || fail "must flag Vm.6 (START without DONE)"
@@ -98,7 +98,7 @@ write_shaped() {
 
 assert_vm3_by_header_name() {
 	local label="$1" root="$2" want="$3" out
-	out="$("$VM" "$root" 2>&1)" || true
+	out="$("$DS" vm-checks "$root" 2>&1)" || true
 	if [[ "$want" == yes ]]; then
 		printf '%s' "$out" | grep -q 'CRITICAL Vm.3' ||
 			fail "$label: state and cite are read by header name, so an x-row with an empty cite must flag Vm.3; got: $out"
@@ -164,7 +164,7 @@ write_worded_pair() {
 
 assert_three_findings() {
 	local label="$1" root="$2" out
-	out="$("$VM" "$root" 2>&1 || true)"
+	out="$("$DS" vm-checks "$root" 2>&1 || true)"
 	printf '%s' "$out" | grep -q 'CRITICAL Vm.3' || fail "$label: Vm.3 must fire; got: $out"
 	printf '%s' "$out" | grep -q 'Vm.2' || fail "$label: Vm.2 must fire, so the Status pattern is exercised; got: $out"
 	printf '%s' "$out" | grep -q 'Vm.6' || fail "$label: Vm.6 must fire, so START/DONE pairing reads the Status section; got: $out"
@@ -181,13 +181,13 @@ done
 
 LOOKALIKE="$TMP/lookalike/.scratchpad"
 write_worded_pair "$LOOKALIKE/dossier/2026-08-04-lookalike" '## Taskslist' '## Statusline'
-lookalike_out="$("$VM" "$LOOKALIKE" 2>&1 || true)"
+lookalike_out="$("$DS" vm-checks "$LOOKALIKE" 2>&1 || true)"
 printf '%s' "$lookalike_out" | grep -q 'Vm\.' &&
 	fail "a heading that merely starts with the section word is not that section; got: $lookalike_out"
 
 SIGIL_LOOKALIKE="$TMP/sigil-lookalike/.scratchpad"
 write_worded_pair "$SIGIL_LOOKALIKE/dossier/2026-08-04-sigil" '## §Task ledger' '## §Status log'
-sigil_out="$("$VM" "$SIGIL_LOOKALIKE" 2>&1 || true)"
+sigil_out="$("$DS" vm-checks "$SIGIL_LOOKALIKE" 2>&1 || true)"
 printf '%s' "$sigil_out" | grep -q 'Vm\.' &&
 	fail "## §Task must not be read as the Tasks section; got: $sigil_out"
 
@@ -196,7 +196,7 @@ write_shaped "$UNNAMED/dossier/2026-08-04-unnamed" \
 	'| id | status | owner | task |' \
 	'|----|--------|-------|------|' \
 	'| T1 | x      | A     | do   |'
-unnamed_out="$("$VM" "$UNNAMED" 2>&1 || true)"
+unnamed_out="$("$DS" vm-checks "$UNNAMED" 2>&1 || true)"
 printf '%s' "$unnamed_out" | grep -q 'names no state or cite column' ||
 	fail "a §T header naming neither column must say so, and name both; got: $unnamed_out"
 printf '%s' "$unnamed_out" | grep -q 'CRITICAL Vm.3' &&

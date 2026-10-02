@@ -17,7 +17,7 @@ Creates `.scratchpad/dossier/<YYYY-MM-DD>-<slug>/DOSSIER.md` per `${CLAUDE_PLUGI
 
 ### 0. Helpers
 
-The §S DONE line (step 6) appends via `${CLAUDE_PLUGIN_ROOT}/hooks/lib-s-append.sh <dir> "<event>"` (FORMAT.md §15) — pass the text **after** the timestamp, which the script prepends. The initial scaffold is a full Write (new file).
+The §S DONE line (step 6) appends via `"${CLAUDE_PLUGIN_ROOT}"/cli/ds s-append <dir> "<event>"` (FORMAT.md §15) — pass the text **after** the timestamp, which the script prepends. The initial scaffold is a full Write (new file).
 
 ### 1. Validate slug + path
 
@@ -31,17 +31,18 @@ The §S DONE line (step 6) appends via `${CLAUDE_PLUGIN_ROOT}/hooks/lib-s-append
 Fires only when a grill artifact exists for this slug, so trivial `ds:new` runs are untouched. `<slug>` is the RESOLVED slug from step 1 (post-collision-bump; a bumped `<slug>-2` starts without `<slug>`'s grill):
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-assert-grill.sh .scratchpad "<slug>"
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds assert-grill .scratchpad "<slug>"
 ```
 
 The helper discovers the newest `.grill/<date>-<slug>.md` by slug — grill's own date may be days older than today (multi-day `--resume`, pending-external waits) and the gate still finds it. Route on the exact exit code:
 
-| exit | meaning                           | action                                                                                                                                                                                                                  |
-| ---- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0    | complete (path printed)           | consume its `## Draft` §G/§C in step 2 — do NOT re-ask; after the step-3 Write lands, stamp via `lib-assert-grill.sh --consume .scratchpad "<slug>" "<date>-<slug>"` (atomic tmp+mv per Vm.8; refuses a double-consume) |
-| 1    | no artifact                       | proceed normally — grill is never required; step 2's clarify lever recommends it                                                                                                                                        |
-| 2, 3 | artifact incomplete / unconfirmed | REFUSE scaffold; point at `ds:grill <slug> --resume` (or delete the artifact to abandon)                                                                                                                                |
-| 4    | artifact already consumed         | proceed normally; recommend a fresh `ds:grill <slug>` — a consumed grill never feeds twice                                                                                                                              |
+| exit   | meaning                                                          | action                                                                                                                                                                                                              |
+| ------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0      | complete (path printed)                                          | consume its `## Draft` §G/§C in step 2 — do NOT re-ask; after the step-3 Write lands, stamp via `ds assert-grill --consume .scratchpad "<slug>" "<date>-<slug>"` (atomic tmp+mv per Vm.8; refuses a double-consume) |
+| 1      | no artifact                                                      | proceed normally — grill is never required; step 2's clarify lever recommends it                                                                                                                                    |
+| 2, 3   | artifact incomplete / unconfirmed                                | REFUSE scaffold; point at `ds:grill <slug> --resume` (or delete the artifact to abandon)                                                                                                                            |
+| 4      | artifact already consumed                                        | proceed normally; recommend a fresh `ds:grill <slug>` — a consumed grill never feeds twice                                                                                                                          |
+| 69, 70 | `cli/ds` did not run (69: no Node.js 22.18+; 70: internal error) | REFUSE scaffold; report the stderr line                                                                                                                                                                             |
 
 ### 2. Gather inputs (operator-interactive)
 
@@ -157,10 +158,10 @@ Atomic write: `<dir>/DOSSIER.md.tmp` then `mv`. Per Vm.8.
 Before touching INDEX or §S, confirm the write landed intact:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-assert-scaffold.sh "<dir>"
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds assert-scaffold "<dir>"
 ```
 
-It exits non-zero naming any missing `§`-section (or the title line) — deterministic, so nobody eyeballs the Write output. On failure the INDEX regen and the §S DONE line (step 6) both wait: report the missing sections, re-run the step-3 Write to repair, then re-assert. Mirrors the post-move assertion `ds:close` runs via `lib-archive-move.sh`.
+It exits 1 naming any missing `§`-section (or the title line) — deterministic, so nobody eyeballs the Write output. On failure the INDEX regen and the §S DONE line (step 6) both wait: report the missing sections, re-run the step-3 Write to repair, then re-assert. Mirrors the post-move assertion `ds:close` runs via `ds archive-move`. Exit 69 (no Node.js 22.18+) or 70 (internal error) means the assertion did not run: report its stderr line and stop before step 6.
 
 ### 4. Initial §X refresh
 
@@ -170,7 +171,7 @@ A path that is missing or is not a git tree keeps placeholders plus the note `_(
 
 ### 5. Regen INDEX
 
-Run `${CLAUDE_PLUGIN_ROOT}/hooks/lib-regen-index.sh` to append the new dossier to `.scratchpad/INDEX.md`.
+Run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds regen-index` to append the new dossier to `.scratchpad/INDEX.md`.
 
 ### 6. Append §S DONE
 

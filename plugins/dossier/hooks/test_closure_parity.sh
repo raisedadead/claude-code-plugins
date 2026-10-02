@@ -2,8 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REGEN="$SCRIPT_DIR/lib-regen-index.sh"
-RECON="$SCRIPT_DIR/lib-reconcile-state.sh"
+DS="$SCRIPT_DIR/../cli/ds"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/dossier-closure.XXXXXX")"
 
 cleanup() { rm -rf "$TMP"; }
@@ -39,13 +38,13 @@ EOF
 
 regen_sees_closed() {
 	local ws="$1"
-	(cd "$ws" && "$REGEN" .scratchpad >/dev/null 2>&1 || true)
+	(cd "$ws" && "$DS" regen-index .scratchpad >/dev/null 2>&1 || true)
 	grep -q 'drift!' "$ws/.scratchpad/INDEX.md" 2>/dev/null
 }
 
 reconcile_sees_closed() {
 	local ws="$1"
-	(cd "$ws" && "$RECON" .scratchpad >/dev/null 2>&1 || true)
+	(cd "$ws" && "$DS" reconcile .scratchpad >/dev/null 2>&1 || true)
 	[[ -d "$ws/.scratchpad/dossier/_archive/2026-06-01-closure" ]]
 }
 

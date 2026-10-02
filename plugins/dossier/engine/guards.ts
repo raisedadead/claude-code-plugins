@@ -45,7 +45,7 @@ export function headerDenial({ filePath, chunks }: Edit): string | undefined {
       return (
         `dossier: refusing to write non-canonical header state '${token}'.\n` +
         '  canonical header states: live | done | paused.\n' +
-        '  route header changes through lib-header-state.sh ' +
+        '  route header changes through cli/ds header-state ' +
         '(ds:close flips done; ds:status pause/resume) — not a raw Edit/Write.'
       )
     }

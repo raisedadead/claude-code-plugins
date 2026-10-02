@@ -27,7 +27,7 @@ CONFIRMED: <ISO timestamp> operator="<verbatim confirmation>"
 CONSUMED: <dossier-dir-key>          (stamped by ds:new, never by grill)
 ```
 
-Footer lines are the machine-checked half: `hooks/lib-assert-grill.sh` exits non-zero on a half-grilled slug. No hook runs it — `ds:new` invoking the script and refusing on its exit is model-judgment, the same split as the tiger route: the verdict is computed, arriving at it is not.
+Footer lines are the machine-checked half: `cli/ds assert-grill` exits non-zero on a half-grilled slug. No hook runs it — `ds:new` invoking the script and refusing on its exit is model-judgment, the same split as the tiger route: the verdict is computed, arriving at it is not.
 
 **One entry per paragraph — blank line between every FACT/DECISION/footer line.** Markdown formatters join adjacent bare lines into one paragraph, which un-anchors the `^FRONTIER:`/`^CONFIRMED:` greps and turns a complete artifact into a false "incomplete" (the failure class ${CLAUDE_PLUGIN_ROOT}/FORMAT.md §11 solves for §S).
 
@@ -65,13 +65,13 @@ Append the footer lines, then draft §G (one-line outcome + IN/NOT-IN scope bull
 
 ### 7. Hand off
 
-Report the artifact path. `ds:new <slug>` consumes the draft §G/§C and skips its own re-asking; its step 1.5 gate verifies the footers via `lib-assert-grill.sh`.
+Report the artifact path. `ds:new <slug>` consumes the draft §G/§C and skips its own re-asking; its step 1.5 gate verifies the footers via `ds assert-grill`.
 
 ## Honesty labels
 
 | claim                                         | enforced by                                                               |
 | --------------------------------------------- | ------------------------------------------------------------------------- |
-| footer lines present before ds:new proceeds   | code — `lib-assert-grill.sh` grep + exit code                             |
+| footer lines present before ds:new proceeds   | code — `ds assert-grill` footer match + exit code                         |
 | every FACT cites a source                     | code-checkable shape (`cite=`); whether the lookup actually ran = model   |
 | every DECISION carries a real operator answer | model — no script distinguishes a typed answer from an assumed one        |
 | "frontier is empty"                           | model — no fixed decision-tree schema exists to verify against            |
@@ -91,4 +91,4 @@ Artifact SHAPE is code-enforced; SUBSTANCE is model-judgment. "ds:grill ran" nev
 ## Cite
 
 - FORMAT.md §4 (§G), §5 (§C), §15 (helpers)
-- hooks/lib-assert-grill.sh (gate), skills/new/SKILL.md step 1.5 (consumer)
+- cli/ds assert-grill (gate), skills/new/SKILL.md step 1.5 (consumer)

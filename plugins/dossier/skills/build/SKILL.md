@@ -21,7 +21,7 @@ TDD covenant: RED → GREEN → refactor. One commit per `x`-flip. Resumable.
 
 ### 0. Helpers
 
-DOSSIER.md writes use the bundled helpers (${CLAUDE_PLUGIN_ROOT}/FORMAT.md §15): `${CLAUDE_PLUGIN_ROOT}/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` for §T flips, `${CLAUDE_PLUGIN_ROOT}/hooks/lib-s-append.sh <dir> "<event>"` for §S appends. Always present, no detection. The §S code-fence examples below show the full line — pass only the text **after** the timestamp (`lib-s-append.sh` prepends it).
+DOSSIER.md writes use the bundled helpers (${CLAUDE_PLUGIN_ROOT}/FORMAT.md §15): `"${CLAUDE_PLUGIN_ROOT}"/cli/ds row-flip <dir> <id> <state> [cite]` for §T flips, `"${CLAUDE_PLUGIN_ROOT}"/cli/ds s-append <dir> "<event>"` for §S appends. Always present, no detection. The §S code-fence examples below show the full line — pass only the text **after** the timestamp (`ds s-append` prepends it).
 
 ### 1. Locate live dossier
 
@@ -180,11 +180,11 @@ If commit hooks fail: a hook failure is a signal about the change, so investigat
 
 ### 8. §X REFRESH
 
-For each repo in §X, refresh the row via `${CLAUDE_PLUGIN_ROOT}/hooks/lib-x-refresh.sh <dir> "<repo-label>" <repo-path>` — it runs the git probes (current branch, `origin/<branch>..HEAD` ahead-count, nearest tag, push state), rewrites branch/ahead/tag/pushed, preserves the `notes` cell, and writes atomically. Supply each repo's on-disk path (you already know it from the task work). `ahead=no-upstream` + `pushed=no` when the branch has no `origin/` tracking ref.
+For each repo in §X, refresh the row via `"${CLAUDE_PLUGIN_ROOT}"/cli/ds x-refresh <dir> "<repo-label>" <repo-path>` — it runs the git probes (current branch, `origin/<branch>..HEAD` ahead-count, nearest tag, push state), rewrites branch/ahead/tag/pushed, preserves the `notes` cell, and writes atomically. Supply each repo's on-disk path (you already know it from the task work). `ahead=no-upstream` + `pushed=no` when the branch has no `origin/` tracking ref.
 
-The `notes` cell is operator free-text — `lib-x-refresh.sh` never touches it. Edit notes manually if they've gone stale.
+The `notes` cell is operator free-text — `ds x-refresh` never touches it. Edit notes manually if they've gone stale.
 
-Multi-repo path-resolution sweep before the loop: parallel Bash calls. The per-row write itself stays with `lib-x-refresh.sh`.
+Multi-repo path-resolution sweep before the loop: parallel Bash calls. The per-row write itself stays with `ds x-refresh`.
 
 Append §S (one entry summarising the sweep). Emit `§X=refreshed` **only if every repo refreshed cleanly**; if any repo was unreachable or only partially refreshed, emit `§X=partial` instead so the stale guard (8a) fires before the flip:
 
@@ -217,7 +217,7 @@ State `~` → `x`. Update `cite` column with commit SHA. Atomic write. Append §
 
 ### 10. Regen INDEX
 
-Run `lib-regen-index.sh`. INDEX now reflects updated `T <done>/<total>`.
+Run `ds regen-index`. INDEX now reflects updated `T <done>/<total>`.
 
 ### 11. Release lock
 

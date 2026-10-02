@@ -18,9 +18,9 @@ Six steps. Append-only on §B + §V. Resumable.
 
 ### 0. Helpers
 
-DOSSIER.md writes go through the bundled helpers (${CLAUDE_PLUGIN_ROOT}/FORMAT.md §15): `${CLAUDE_PLUGIN_ROOT}/hooks/lib-row-flip.sh <dir> <id> <state> [cite]` flips a **§T** state cell, `${CLAUDE_PLUGIN_ROOT}/hooks/lib-s-append.sh <dir> "<event>"` appends §S. The §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends.
+DOSSIER.md writes go through the bundled helpers (${CLAUDE_PLUGIN_ROOT}/FORMAT.md §15): `"${CLAUDE_PLUGIN_ROOT}"/cli/ds row-flip <dir> <id> <state> [cite]` flips a **§T** state cell, `"${CLAUDE_PLUGIN_ROOT}"/cli/ds s-append <dir> "<event>"` appends §S. The §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends.
 
-**There is no row-flip for §B.** `lib-row-flip.sh <dir> B<N> <state>` exits 1 printing `lib-row-flip: refuses Bugs rows (no state column — would destroy cells); use ds:backprop` — §B carries `id | bug | root cause | invariant added | fix cite` and no state column at all (FORMAT.md §9, §15). Every §B mutation in this skill is therefore an atomic whole-file write: the row append in step 6, the `invariant added` update in step 7, the `fix cite` update in step 8.
+**There is no row-flip for §B.** `ds row-flip <dir> B<N> <state>` exits 1 printing `ds row-flip: refuses Bugs rows (no state column — would destroy cells); use ds:backprop` — §B carries `id | bug | root cause | invariant added | fix cite` and no state column at all (FORMAT.md §9, §15). Every §B mutation in this skill is therefore an atomic whole-file write: the row append in step 6, the `invariant added` update in step 7, the `fix cite` update in step 8.
 
 ### 1. Locate live dossier
 

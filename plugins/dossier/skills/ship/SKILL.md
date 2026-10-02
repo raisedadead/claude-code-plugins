@@ -46,7 +46,7 @@ Read the target file's preamble: "Semantic Versioning" → semver mode (`## [<bu
 Group bullets under keep-a-changelog categories, omitting empty ones. Write through the atomic helper — idempotency key = the wave's range cite, unique per wave, so two waves closing the same day stay distinct under a bare date heading:
 
 ```bash
-"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-changelog-write.sh <changelog> <section-file> "[<first>..<last>]"
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds changelog-write <changelog> <section-file> "[<first>..<last>]"
 ```
 
 Exit 3 = section already present (a safe re-run). The helper is the only writer: a raw `Edit` bypasses the key and duplicates the section.
@@ -67,7 +67,7 @@ Append §S: `ds:ship — DONE changelog=<path> section=<key>`.
 | SHA cite resolves (or is flagged)           | code-checkable (`cat-file -t` exit code); whether it ran per row = model |
 | conventional-commit type parse              | code-checkable (regex); whether it was applied per row = model           |
 | type → bump                                 | code — spec lookup table                                                 |
-| duplicate section refused                   | code — `lib-changelog-write.sh` key grep                                 |
+| duplicate section refused                   | code — `ds changelog-write` key match, exit 3                             |
 | type → category                             | model — convention table, judgment on refactor/removal flavor            |
 | entry wording (task text vs commit subject) | model — "for humans" per keep-a-changelog                                |
 | changelog-mode detection from header phrase | model — heuristic; ambiguity routes to the operator                      |
@@ -84,5 +84,5 @@ Append §S: `ds:ship — DONE changelog=<path> section=<key>`.
 ## Cite
 
 - FORMAT.md §8 (§T), §10 (§X), §15 (atomic writes), Vm.8
-- reference/changelog-mapping.md (tables), hooks/lib-changelog-write.sh (writer)
+- reference/changelog-mapping.md (tables), cli/ds changelog-write (writer)
 - skills/close/SKILL.md step 5 (advisory consumer)

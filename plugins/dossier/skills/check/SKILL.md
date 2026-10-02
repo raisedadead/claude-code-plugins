@@ -6,7 +6,7 @@ disallowed-tools: Edit, Write, NotebookEdit
 
 # ds:check — drift detector
 
-Validates DOSSIER.md against reality and returns a severity-tagged violation list. It changes no DOSSIER.md content and no repo. Two derived paths are written: `INDEX.md`, which `lib-ds-check.sh` regenerates on every run (step 3), and `.scratchpad/.verify-cache/`, which `verify_sweep.py` populates at step 2a through `verify_lib.cache_dir()`. Both are caches rebuilt from source, never source themselves — the carve-out step 6 states.
+Validates DOSSIER.md against reality and returns a severity-tagged violation list. It changes no DOSSIER.md content and no repo. Two derived paths are written: `INDEX.md`, which `ds ds-check` regenerates on every run (step 3), and `.scratchpad/.verify-cache/`, which `verify_sweep.py` populates at step 2a through `verify_lib.cache_dir()`. Both are caches rebuilt from source, never source themselves — the carve-out step 6 states.
 
 ## Steps
 
@@ -62,24 +62,24 @@ Missing `verify_sweep.py` (older plugin install) → skip; the sweep is opt-in.
 
 Independent of the scouts; run concurrently with dispatch.
 
-**Deterministic drift gate (Vm.1 + Vm.4, code):** run `"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-ds-check.sh .scratchpad`. It regenerates INDEX — the single source of the header × location × §Z reconcile predicate — and exits non-zero naming every dossier whose header token, directory location and §Z closure disagree: the sealed-zombie / done-not-archived class the old heuristics missed. Non-zero exit = 🔴 critical.
+**Deterministic drift gate (Vm.1 + Vm.4, code):** run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds ds-check .scratchpad`. It regenerates INDEX — the single source of the header × location × §Z reconcile predicate — and exits non-zero naming every dossier whose header token, directory location and §Z closure disagree: the sealed-zombie / done-not-archived class the old heuristics missed. Exit 1 = 🔴 critical. Exit 69 (no Node.js 22.18+) or 70 (internal error) means the gate did not run: report its stderr line as the finding, not as drift.
 
-**Deterministic Vm sweep (Vm.2/3/6/8/9, code):** run `"${CLAUDE_PLUGIN_ROOT}"/hooks/lib-vm-checks.sh .scratchpad`. One pass over every DOSSIER.md in the tree covers §S timestamp format (Vm.2), §T `x`-rows with an empty `cite` (Vm.3), unpaired §S START/DONE (Vm.6), write-temp orphans (Vm.8) and stale locks (Vm.9, via `lib-clear-stale-locks.sh --dry-run`). Each finding line is prefixed `CRITICAL` (→ 🔴) or `WARN` (→ 🟡); non-zero exit = at least one finding. Read-only — the dry-run stale-lock probe mutates nothing.
+**Deterministic Vm sweep (Vm.2/3/6/8/9, code):** run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds vm-checks .scratchpad`. One pass over every DOSSIER.md in the tree covers §S timestamp format (Vm.2), §T `x`-rows with an empty `cite` (Vm.3), unpaired §S START/DONE (Vm.6), write-temp orphans (Vm.8) and stale locks (Vm.9, via `ds clear-locks --dry-run`). Each finding line is prefixed `CRITICAL` (→ 🔴) or `WARN` (→ 🟡); exit 1 = at least one finding; exit 69 (no Node.js 22.18+) or 70 (internal error) means the sweep did not run, so report its stderr line as the finding. Read-only — the dry-run stale-lock probe mutates nothing.
 
-| Vm    | Check                                                                    | How                                                  |
-| ----- | ------------------------------------------------------------------------ | ---------------------------------------------------- |
-| Vm.1  | every live dossier reads state=live in INDEX; header⇔location concordant | `lib-ds-check.sh` (deterministic header×location×§Z) |
-| Vm.2  | every §S line has ISO timestamp                                          | `lib-vm-checks.sh` (Vm.2, deterministic)             |
-| Vm.3  | every §T `x` row has non-empty `cite`                                    | `lib-vm-checks.sh` (Vm.3, deterministic)             |
-| Vm.4  | closed dossiers under `_archive/`                                        | `lib-ds-check.sh` (deterministic)                    |
-| Vm.5  | INDEX counts match DOSSIER §T/§B                                         | parse both, diff                                     |
-| Vm.6  | no §S START without DONE for same target                                 | `lib-vm-checks.sh` (Vm.6, deterministic)             |
-| Vm.7  | INDEX regenerable (run lib-regen-index.sh, diff against current)         | optional                                             |
-| Vm.8  | no write-temp orphans                                                    | `lib-vm-checks.sh` (Vm.8, deterministic)             |
-| Vm.9  | locks not stale                                                          | `lib-vm-checks.sh` (Vm.9, deterministic)             |
-| Vm.12 | ≤1 live dossier (excl. paused)                                           | count INDEX rows state=live; >1 → 🟡 warn            |
-| Vm.13 | no stale-live (no §S in >N days)                                         | newest §S ts per live vs `DS_STALE_LIVE_DAYS` (14)   |
-| Vm.14 | every `--auto` PAUSE carries a reason class                              | grep §S `PAUSE reason=`; flag any bare PAUSE         |
+| Vm    | Check                                                                    | How                                                |
+| ----- | ------------------------------------------------------------------------ | -------------------------------------------------- |
+| Vm.1  | every live dossier reads state=live in INDEX; header⇔location concordant | `ds ds-check` (deterministic header×location×§Z)   |
+| Vm.2  | every §S line has ISO timestamp                                          | `ds vm-checks` (Vm.2, deterministic)               |
+| Vm.3  | every §T `x` row has non-empty `cite`                                    | `ds vm-checks` (Vm.3, deterministic)               |
+| Vm.4  | closed dossiers under `_archive/`                                        | `ds ds-check` (deterministic)                      |
+| Vm.5  | INDEX counts match DOSSIER §T/§B                                         | parse both, diff                                   |
+| Vm.6  | no §S START without DONE for same target                                 | `ds vm-checks` (Vm.6, deterministic)               |
+| Vm.7  | INDEX regenerable (run ds regen-index, diff against current)             | optional                                           |
+| Vm.8  | no write-temp orphans                                                    | `ds vm-checks` (Vm.8, deterministic)               |
+| Vm.9  | locks not stale                                                          | `ds vm-checks` (Vm.9, deterministic)               |
+| Vm.12 | ≤1 live dossier (excl. paused)                                           | count INDEX rows state=live; >1 → 🟡 warn           |
+| Vm.13 | no stale-live (no §S in >N days)                                         | newest §S ts per live vs `DS_STALE_LIVE_DAYS` (14) |
+| Vm.14 | every `--auto` PAUSE carries a reason class                              | grep §S `PAUSE reason=`; flag any bare PAUSE       |
 
 ### 4. Aggregate
 
@@ -117,7 +117,7 @@ Suggested remediations (do NOT auto-apply):
 
 ### 6. No mutations
 
-`ds:check` leaves DOSSIER.md content and every repo untouched. Two derived writes are carved out. The idempotent INDEX.md regen inside `lib-ds-check.sh` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7) rather than source of truth, so re-deriving it is the same carve-out `ds:status` has, and the Vm.7 dry-check regen falls under it. And `.scratchpad/.verify-cache/`, where step 2a's `verify_sweep.py` stores fetched freshness answers for `${DS_VERIFY_TTL:-86400}` seconds — probe with `python3 -c "import sys;sys.path.insert(0,'${CLAUDE_PLUGIN_ROOT}/hooks');import verify_lib;print(verify_lib.cache_dir())"`. Deleting either costs a re-derivation, nothing more.
+`ds:check` leaves DOSSIER.md content and every repo untouched. Two derived writes are carved out. The idempotent INDEX.md regen inside `ds ds-check` (step 3): INDEX is a cache rebuilt from the DOSSIER walk (Vm.7) rather than source of truth, so re-deriving it is the same carve-out `ds:status` has, and the Vm.7 dry-check regen falls under it. And `.scratchpad/.verify-cache/`, where step 2a's `verify_sweep.py` stores fetched freshness answers for `${DS_VERIFY_TTL:-86400}` seconds — probe with `python3 -c "import sys;sys.path.insert(0,'${CLAUDE_PLUGIN_ROOT}/hooks');import verify_lib;print(verify_lib.cache_dir())"`. Deleting either costs a re-derivation, nothing more.
 
 No §S append — this is a read-only verb, and the log stays free of the noise.
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-VM_CHECKS="$SCRIPT_DIR/lib-vm-checks.sh"
+DS="$SCRIPT_DIR/../cli/ds"
 HOOK="$SCRIPT_DIR/session-start.sh"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/dossier-vm6.XXXXXX")"
 
@@ -29,7 +29,7 @@ fixture_with_status_log() {
 
 vm_checks_reports_unpaired() {
 	local out
-	out="$(cd "$1" && bash "$VM_CHECKS" .scratchpad 2>&1 || true)"
+	out="$(cd "$1" && "$DS" vm-checks .scratchpad 2>&1 || true)"
 	[[ "$out" == *"Vm.6"* ]]
 }
 
@@ -45,7 +45,7 @@ assert_both_enforcers_agree() {
 	vm_checks_reports_unpaired "$ws" && from_vm=yes
 	session_start_reports_unpaired "$ws" && from_hook=yes
 	[[ "$from_vm" == "$from_hook" ]] ||
-		fail "$label: enforcers disagree — lib-vm-checks=$from_vm session-start=$from_hook"
+		fail "$label: enforcers disagree — vm-checks=$from_vm session-start=$from_hook"
 	[[ "$from_vm" == "$want" ]] ||
 		fail "$label: expected unpaired=$want, both reported $from_vm"
 }

@@ -36,11 +36,15 @@ print(str(d.get("source") or ""), str(d.get("session_title") or ""), sep="\t")
 	fi
 fi
 
-"${PLUGIN_ROOT}/hooks/lib-clear-stale-locks.sh" "${DOSSIER_DIR}" 2>/dev/null || true
+ds_rc=0
+"${PLUGIN_ROOT}/hooks/lib-clear-stale-locks.sh" "${DOSSIER_DIR}" 2>/dev/null || ds_rc=$?
 "${PLUGIN_ROOT}/hooks/lib-reconcile-state.sh" "${SCRATCHPAD}" 2>/dev/null || true
 "${PLUGIN_ROOT}/hooks/lib-regen-index.sh" "${SCRATCHPAD}" 2>/dev/null || true
 
 ctx_lines=()
+if [[ ${ds_rc} -eq 69 ]]; then
+	ctx_lines+=("dossier: cli/ds needs Node.js 22.18+; stale locks, reconcile and INDEX.md were not refreshed.")
+fi
 
 if [[ -f "${INDEX_FILE}" ]]; then
 	ctx_lines+=("## .scratchpad/INDEX.md (head)")

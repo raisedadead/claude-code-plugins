@@ -321,4 +321,18 @@ run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":"
 assert_valid_json "no-live-nudge"
 [ -z "$(sys_of)" ] || fail "no live dossier must raise no systemMessage, got: $(sys_of)"
 
+rm -rf "$WS/.scratchpad"
+scaffold "2026-06-05-foo"
+run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
+grep -q 'Node.js 22.18' "$TMP/out" && fail "a working cli/ds must not raise the Node.js notice"
+
+mkdir -p "$TMP/nonode/hooks" "$TMP/nonode/cli"
+cp "$SCRIPT_DIR"/lib-clear-stale-locks.sh "$SCRIPT_DIR"/lib-reconcile-state.sh "$SCRIPT_DIR"/lib-regen-index.sh "$TMP/nonode/hooks/"
+printf '#!/bin/sh\nexit 69\n' >"$TMP/nonode/cli/ds"
+chmod +x "$TMP/nonode/cli/ds"
+printf '%s' '{"hook_event_name":"SessionStart","source":"startup","session_title":""}' |
+	(cd "$WS" && CLAUDE_PLUGIN_ROOT="$TMP/nonode" "$HOOK") >"$TMP/out" 2>"$TMP/err" || fail "a missing Node.js must not fail the hook"
+assert_valid_json "no-node"
+grep -q 'Node.js 22.18' "$TMP/out" || fail "cli/ds exit 69 must surface in the session context, got: $(cat "$TMP/out")"
+
 printf 'ok\n'

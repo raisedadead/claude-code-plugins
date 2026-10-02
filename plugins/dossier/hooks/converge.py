@@ -163,13 +163,13 @@ def _header_state(ledger: Path) -> str:
     """A ledger's header state token, or "" when it carries no header line.
 
     FORMAT.md §2 makes this token the wave's state, flipped by
-    `lib-header-state.sh`. Deciding liveness with `"`live`" in head` over the file's
+    `ds header-state`. Deciding liveness with `"`live`" in head` over the file's
     first 400 characters was a substring test instead: a `paused` ledger whose
     Goal prose said `live` came back live, and since `ds:converge` with no
     argument resolves its contract from this list, that wave's criteria reached
     a shell. The pattern is `engine/guards.ts`'s `HEADER`, so the line whose
     state token the write guard polices is the line this reads. First matching
-    line wins and ends the read, as `lib-regen-index.sh`'s awk does; a ledger
+    line wins and ends the read, as `ds regen-index` does; a ledger
     with no header line is unreadable state, which is not live.
     """
     try:

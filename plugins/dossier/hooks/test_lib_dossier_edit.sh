@@ -2,8 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-FLIP="$SCRIPT_DIR/lib-row-flip.sh"
-APPEND="$SCRIPT_DIR/lib-s-append.sh"
+DS="$SCRIPT_DIR/../cli/ds"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/dossier-edit.XXXXXX")"
 
 cleanup() { rm -rf "$TMP"; }
@@ -77,10 +76,10 @@ D="$TMP/flip"
 make_fixture "$D"
 DF="$D/DOSSIER.md"
 
-"$FLIP" "$D" T3 '~'
+"$DS" row-flip "$D" T3 '~'
 [[ "$(state_of "$DF" T3)" == "~" ]] || fail "flip T3 .->~ did not set state"
 
-"$FLIP" "$D" T3 x '[deadbee]'
+"$DS" row-flip "$D" T3 x '[deadbee]'
 [[ "$(state_of "$DF" T3)" == "x" ]] || fail "flip T3 ->x did not set state"
 [[ "$(cite_of "$DF" T3)" == "[deadbee]" ]] || fail "flip T3 cite not set"
 
@@ -88,23 +87,22 @@ DF="$D/DOSSIER.md"
 [[ "$(state_of "$DF" T2)" == "~" ]] || fail "T2 state mutated"
 grep -q "scaffold pkg" "$DF" || fail "T1 task text lost"
 
-if "$FLIP" "$D" T99 x 2>/dev/null; then fail "missing id should error"; fi
+if "$DS" row-flip "$D" T99 x 2>/dev/null; then fail "missing id should error"; fi
 
-if "$FLIP" "$D" T1 z 2>/dev/null; then fail "bad state should error"; fi
+if "$DS" row-flip "$D" T1 z 2>/dev/null; then fail "bad state should error"; fi
 
 [[ -z "$(find "$D" -name 'DOSSIER.md.*' 2>/dev/null)" ]] || fail "flip left .tmp orphan"
 
-if "$FLIP" "$D" B1 x '[abc]' 2>/dev/null; then fail "flip must refuse §B ids (data-loss guard)"; fi
+if "$DS" row-flip "$D" B1 x '[abc]' 2>/dev/null; then fail "flip must refuse §B ids (data-loss guard)"; fi
 
 D5="$TMP/citex"
 make_fixture "$D5"
 DF5="$D5/DOSSIER.md"
-if "$FLIP" "$D5" T3 x 2>/dev/null; then fail "flip .->x with empty cite must refuse (Vm.3)"; fi
+if "$DS" row-flip "$D5" T3 x 2>/dev/null; then fail "flip .->x with empty cite must refuse (Vm.3)"; fi
 [[ "$(state_of "$DF5" T3)" == "." ]] || fail "refused cite-for-x must not mutate state"
-"$FLIP" "$D5" T3 x '[c0ffee]'
+"$DS" row-flip "$D5" T3 x '[c0ffee]'
 [[ "$(state_of "$DF5" T3)" == "x" ]] || fail "cite-for-x with cite must succeed"
 
-VM="$SCRIPT_DIR/lib-vm-checks.sh"
 VM3_FLIP=norun
 vm3_parity() {
 	local label="$1" cite="$2" slug="2026-06-01-vm3" ws
@@ -112,10 +110,10 @@ vm3_parity() {
 	rm -rf "$ws"
 	make_fixture "$ws/.scratchpad/dossier/$slug"
 	VM3_FLIP=refused
-	if "$FLIP" "$ws/.scratchpad/dossier/$slug" T3 x "$cite" 2>/dev/null; then
+	if "$DS" row-flip "$ws/.scratchpad/dossier/$slug" T3 x "$cite" 2>/dev/null; then
 		VM3_FLIP=accepted
-		"$VM" "$ws/.scratchpad" >/dev/null 2>&1 ||
-			fail "flip wrote cite '$cite' on a ->x row that lib-vm-checks.sh reports as a Vm.3 violation"
+		"$DS" vm-checks "$ws/.scratchpad" >/dev/null 2>&1 ||
+			fail "flip wrote cite '$cite' on a ->x row that ds vm-checks reports as a Vm.3 violation"
 	elif [[ "$(state_of "$ws/.scratchpad/dossier/$slug/DOSSIER.md" T3)" != "." ]]; then
 		fail "flip refused cite '$cite' but still mutated the T3 state cell"
 	fi
@@ -124,7 +122,7 @@ vm3_parity() {
 vm3_parity emdash '—'
 [[ "$VM3_FLIP" == refused ]] || fail "flip must refuse an em-dash cite on ->x (Vm.3)"
 vm3_parity hyphen '-'
-[[ "$VM3_FLIP" == refused ]] || fail "flip must refuse an ASCII-hyphen cite on ->x (lib-vm-checks.sh counts it empty)"
+[[ "$VM3_FLIP" == refused ]] || fail "flip must refuse an ASCII-hyphen cite on ->x (ds vm-checks counts it empty)"
 vm3_parity padded-hyphen '  -  '
 [[ "$VM3_FLIP" == refused ]] || fail "flip must refuse a whitespace-padded ASCII-hyphen cite on ->x"
 vm3_parity sha '[c0ffee]'
@@ -134,14 +132,14 @@ D6="$TMP/scope"
 make_fixture "$D6"
 DF6="$D6/DOSSIER.md"
 printf '\n| T2 | decoy | fabricated-root-cause | — | — |\n' >>"$DF6"
-"$FLIP" "$D6" T2 x '[beef]'
+"$DS" row-flip "$D6" T2 x '[beef]'
 grep -q 'fabricated-root-cause' "$DF6" || fail "flip must not touch a T-row outside §T (section scope)"
 
 D2="$TMP/append"
 make_fixture "$D2"
 DF2="$D2/DOSSIER.md"
 
-"$APPEND" "$D2" "ds:build T3 START"
+"$DS" s-append "$D2" "ds:build T3 START"
 grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} ds:build T3 START$' "$DF2" ||
 	fail "append entry missing or no timestamp"
 
@@ -155,19 +153,18 @@ below=$(sed -n "$((new_ln + 1))p" "$DF2")
 [[ -z "$above" ]] || fail "no blank line before §S entry"
 [[ -z "$below" ]] || fail "no blank line after §S entry"
 
-DS_TS_SECONDS=1 "$APPEND" "$D2" "ds:build T3 DONE"
+DS_TS_SECONDS=1 "$DS" s-append "$D2" "ds:build T3 DONE"
 grep -qE '^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ds:build T3 DONE$' "$DF2" ||
 	fail "DS_TS_SECONDS did not produce second-granular ts"
 
 D3="$TMP/no-z"
 mkdir -p "$D3"
 printf '## §S — Rolling status log\n\n2026-06-01 10:00 ds:new — x\n' >"$D3/DOSSIER.md"
-"$APPEND" "$D3" "ds:check — drift=0"
+"$DS" s-append "$D3" "ds:check — drift=0"
 grep -q 'ds:check — drift=0' "$D3/DOSSIER.md" || fail "append-EOF fallback failed"
 
 [[ -z "$(find "$D2" -name 'DOSSIER.md.*' 2>/dev/null)" ]] || fail "append left .tmp orphan"
 
-HSTATE="$SCRIPT_DIR/lib-header-state.sh"
 hdr_state() {
 	awk '/^`.*` · `.*` · / { n = split($0, p, "`"); gsub(/^[ \t]+|[ \t]+$/, "", p[4]); print p[4]; exit }' "$1"
 }
@@ -175,18 +172,18 @@ D4="$TMP/hstate"
 make_fixture "$D4"
 DF4="$D4/DOSSIER.md"
 
-"$HSTATE" "$D4" paused
+"$DS" header-state "$D4" paused
 [[ "$(hdr_state "$DF4")" == "paused" ]] || fail "header-state ->paused failed"
-"$HSTATE" "$D4" live
+"$DS" header-state "$D4" live
 [[ "$(hdr_state "$DF4")" == "live" ]] || fail "header-state ->live failed"
 grep -q "wire client" "$DF4" || fail "header-state clobbered body"
 
-if "$HSTATE" "$D4" bogus 2>/dev/null; then fail "header-state bad value should error"; fi
+if "$DS" header-state "$D4" bogus 2>/dev/null; then fail "header-state bad value should error"; fi
 
 D4b="$TMP/hstate-nometa"
 mkdir -p "$D4b"
 printf '# x\n\nno meta line here\n' >"$D4b/DOSSIER.md"
-if "$HSTATE" "$D4b" paused 2>/dev/null; then fail "header-state no-meta should error"; fi
+if "$DS" header-state "$D4b" paused 2>/dev/null; then fail "header-state no-meta should error"; fi
 
 [[ -z "$(find "$D4" -name 'DOSSIER.md.*' 2>/dev/null)" ]] || fail "header-state left .tmp orphan"
 
@@ -195,7 +192,6 @@ command -v git >/dev/null || {
 	exit 0
 }
 
-XREFRESH="$SCRIPT_DIR/lib-x-refresh.sh"
 DX="$TMP/xref"
 make_fixture "$DX"
 DFX="$DX/DOSSIER.md"
@@ -210,7 +206,7 @@ git -C "$REPO" remote add origin "$REMOTE"
 git -C "$REPO" push -q -u origin main
 git -C "$REPO" -c user.email=t@t -c user.name=t commit -q --allow-empty -m c2
 
-"$XREFRESH" "$DX" "myorg/demo" "$REPO"
+"$DS" x-refresh "$DX" "myorg/demo" "$REPO"
 demo_row=$(grep -E '^\| +myorg/demo ' "$DFX" | head -1)
 [[ -n "$demo_row" ]] || fail "x-refresh demo row vanished"
 echo "$demo_row" | grep -q 'main' || fail "x-refresh did not set branch=main"
@@ -226,10 +222,10 @@ grep -E '^\| +myorg/two ' "$DFX" | grep -q 'stale' || fail "x-refresh touched no
 REPO2="$TMP/repo2"
 git init -q -b main "$REPO2"
 git -C "$REPO2" -c user.email=t@t -c user.name=t commit -q --allow-empty -m c1
-"$XREFRESH" "$DX" "myorg/two" "$REPO2"
+"$DS" x-refresh "$DX" "myorg/two" "$REPO2"
 grep -E '^\| +myorg/two ' "$DFX" | grep -q 'no-upstream' || fail "x-refresh no-upstream not set"
 
-if "$XREFRESH" "$DX" "myorg/absent" "$REPO" 2>/dev/null; then fail "x-refresh missing label should error"; fi
+if "$DS" x-refresh "$DX" "myorg/absent" "$REPO" 2>/dev/null; then fail "x-refresh missing label should error"; fi
 
 [[ -z "$(find "$DX" -name 'DOSSIER.md.*' 2>/dev/null)" ]] || fail "x-refresh left .tmp orphan"
 
@@ -246,7 +242,7 @@ shaped_dir "$DW" \
 	'| id | state | who | task | needs | cite | verify |' \
 	'|----|-------|-----|------|-------|------|--------|' \
 	'| T1 | .     | A   | one  | —     | —    | —      |'
-"$FLIP" "$DW" T1 x abc123 || fail "flip must succeed on the who/needs layout"
+"$DS" row-flip "$DW" T1 x abc123 || fail "flip must succeed on the who/needs layout"
 row="$(grep -E '^\| *T1 ' "$DW/DOSSIER.md")"
 printf '%s' "$row" | awk -F'|' '{exit ($3 ~ /x/) ? 0 : 1}' ||
 	fail "state is written to the cell the header names, got: $row"
@@ -260,7 +256,7 @@ shaped_dir "$DWORD" \
 	'|----|-------|-----|------|-------|------|--------|' \
 	'| T1 | .     | A   | one  | —     | —    | —      |' \
 	'## Tasks' '## Status'
-"$FLIP" "$DWORD" T1 x abc123 || fail "flip must succeed under the worded Tasks heading"
+"$DS" row-flip "$DWORD" T1 x abc123 || fail "flip must succeed under the worded Tasks heading"
 grep -E '^\| *T1 ' "$DWORD/DOSSIER.md" | head -1 | awk -F'|' '{exit ($3 ~ /x/ && $7 ~ /abc123/) ? 0 : 1}' ||
 	fail "worded heading must reach the same cells as the sigil heading"
 grep -q 'outside | the | tasks | section' "$DWORD/DOSSIER.md" ||
@@ -271,7 +267,7 @@ shaped_dir "$DN" \
 	'| id | status | owner | task |' \
 	'|----|--------|-------|------|' \
 	'| T1 | .      | A     | one  |'
-if "$FLIP" "$DN" T1 x abc123 2>/dev/null; then
+if "$DS" row-flip "$DN" T1 x abc123 2>/dev/null; then
 	fail "a §T header naming neither state nor cite must be refused, not edited by position"
 fi
 grep -qE '^\| T1 \| \. ' "$DN/DOSSIER.md" || fail "refused flip must leave the ledger untouched"
@@ -279,7 +275,7 @@ grep -qE '^\| T1 \| \. ' "$DN/DOSSIER.md" || fail "refused flip must leave the l
 DRAG="$TMP/ragged"
 mkdir -p "$DRAG"
 printf '# r\n\n## Tasks\n\n| id | state | who | task | needs | cite | verify |\n|----|-------|-----|------|-------|------|--------|\n| T1 | .     | A   | one  |\n' >"$DRAG/DOSSIER.md"
-if "$FLIP" "$DRAG" T1 x ab12 2>/dev/null; then
+if "$DS" row-flip "$DRAG" T1 x ab12 2>/dev/null; then
 	fail "a row with fewer cells than the header names must be refused, not written past its end"
 fi
 grep -qE '^\| T1 \| \. ' "$DRAG/DOSSIER.md" || fail "a refused ragged flip must leave the row untouched"
