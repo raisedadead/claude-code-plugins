@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -78,6 +78,30 @@ test('a verb run from a linked worktree writes the primary checkout ledger', () 
     assert.equal(done.status, 0, done.stderr)
     assert.ok(existsSync(join(main, '.scratchpad', 'INDEX.md')))
     assert.ok(!existsSync(join(base, 'repo.feature', '.scratchpad')))
+  } finally {
+    rmSync(base, { recursive: true, force: true })
+  }
+})
+
+test('from a linked worktree, x-refresh reads the worktree repo and converge finds the wave contract', () => {
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'ds-wt2-')))
+  const main = join(base, 'repo')
+  const feature = join(base, 'repo.feature')
+  try {
+    const wave = join(main, '.scratchpad', 'dossier', '2026-10-03-w')
+    mkdirSync(wave, { recursive: true })
+    writeFileSync(join(wave, 'DOSSIER.md'), '# w\n\n`2026-10-03` · `live` · `P1/1`\n\n## Repos\n\n| repo | branch | ahead | tag | pushed | notes |\n|------|--------|-------|-----|--------|-------|\n| app | main | 0 | — | no | |\n')
+    writeFileSync(join(wave, 'CONTRACT.md'), '| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | \`test -f here.txt\` | exit 0 |\n')
+    const git = (...args: string[]) => execFileSync('git', ['-C', main, ...args], { stdio: 'ignore' })
+    git('init', '-q', '-b', 'main')
+    git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init')
+    git('worktree', 'add', '-q', feature, '-b', 'feature')
+    writeFileSync(join(feature, 'here.txt'), '')
+    const refresh = spawnSync('sh', [DS, 'x-refresh', '.scratchpad/dossier/2026-10-03-w', 'app', '.'], { cwd: feature, encoding: 'utf8' })
+    assert.equal(refresh.status, 0, refresh.stderr)
+    assert.match(readFileSync(join(wave, 'DOSSIER.md'), 'utf8'), /\| app \| feature \|/)
+    const converge = spawnSync('sh', [DS, 'converge'], { cwd: feature, encoding: 'utf8' })
+    assert.match(converge.stdout, /CONVERGE: MET/, converge.stdout + converge.stderr)
   } finally {
     rmSync(base, { recursive: true, force: true })
   }

@@ -76,7 +76,7 @@ export const register: Register = (on) => {
   on('classic.Stop', async ($, e, next) => {
     const result = await next(e)
     if (result.block) return result
-    const block = await stopGate(ioOf($), await ledgerRoot(ioOf($), e.cwd))
+    const block = await stopGate(ioOf($), e.cwd)
     return block ? { ...result, block } : result
   })
 }

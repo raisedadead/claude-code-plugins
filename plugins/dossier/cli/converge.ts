@@ -139,7 +139,7 @@ export function convergeVerb(args: string[]): number {
   const level = depth()
   if (level >= MAX_DEPTH) return fail(`converge nested ${level} deep; refusing to recurse further`)
   const root = process.cwd()
-  const resolved = args[0] === undefined ? resolveContract(root) : pyPath(args[0])
+  const resolved = args[0] === undefined ? resolveContract(process.env.DOSSIER_LEDGER_ROOT || root) : pyPath(args[0])
   if (typeof resolved === 'number') return resolved
   const contract = resolved
   if (!isFile(contract)) return fail(`no contract at ${contract}`)

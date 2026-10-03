@@ -298,12 +298,18 @@ describe('ledger root', () => {
     expect(await ledgerRoot(io({ '/main/.scratchpad/dossier/.keep': '' }, git), '/main.feature')).toBe('/main')
   })
 
+  test('a subdirectory finds its own checkout ledger before the primary', async () => {
+    const run = async (argv: string[]) => ({ exitCode: 0, stdout: argv.includes('--show-toplevel') ? '/main.feature\n' : porcelain, stderr: '' })
+    const files = { '/main.feature/.scratchpad/dossier/.keep': '', '/main/.scratchpad/dossier/.keep': '' }
+    expect(await ledgerRoot(io(files, { run }), '/main.feature/pkg')).toBe('/main.feature')
+  })
+
   test('a checkout with its own ledger keeps it', async () => {
     expect(await ledgerRoot(io({ '/main.feature/.scratchpad/dossier/.keep': '', '/main/.scratchpad/dossier/.keep': '' }, git), '/main.feature')).toBe('/main.feature')
   })
 
   test('no ledger anywhere, or no git, stays on the session directory', async () => {
-    expect(await ledgerRoot(io({}, git), '/main.feature')).toBe('/main.feature')
+    expect(await ledgerRoot(io({}, git), '/elsewhere')).toBe('/elsewhere')
     expect(await ledgerRoot(io({ '/main/.scratchpad/dossier/.keep': '' }, { run: async () => { throw new Error('no git') } }), '/x')).toBe('/x')
   })
 })

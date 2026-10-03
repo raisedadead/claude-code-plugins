@@ -51,15 +51,32 @@ async function invariantGate(io: Io, root: string, filePath: string, chunks: str
 
 const PRIMARY = /^worktree (.+)$/m
 
+const roots = new Map<string, string>()
+
+async function gitOut(io: Io, args: string[]): Promise<string | undefined> {
+  try {
+    const done = await io.run(['git', ...args], { stdin: '', timeoutMs: 5000 })
+    return done.exitCode === 0 ? done.stdout : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export async function ledgerRoot(io: Io, cwd: string): Promise<string> {
   if (await io.isDir(`${cwd}/.scratchpad/dossier`)) return cwd
-  try {
-    const listed = await io.run(['git', '-C', cwd, 'worktree', 'list', '--porcelain'], { stdin: '', timeoutMs: 5000 })
-    const primary = listed.exitCode === 0 ? PRIMARY.exec(listed.stdout)?.[1] : undefined
-    return primary && (await io.isDir(`${primary}/.scratchpad/dossier`)) ? primary : cwd
-  } catch {
-    return cwd
+  const known = roots.get(cwd)
+  if (known) return known
+  const top = (await gitOut(io, ['-C', cwd, 'rev-parse', '--show-toplevel']))?.trim()
+  const primary = PRIMARY.exec((await gitOut(io, ['-C', cwd, 'worktree', 'list', '--porcelain'])) ?? '')?.[1]
+  let root = cwd
+  for (const dir of [top, primary]) {
+    if (dir && (await io.isDir(`${dir}/.scratchpad/dossier`))) {
+      root = dir
+      break
+    }
   }
+  roots.set(cwd, root)
+  return root
 }
 
 export async function editGate(io: Io, root: string, input: Record<string, unknown>): Promise<Verdict> {

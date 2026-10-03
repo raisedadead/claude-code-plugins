@@ -16,7 +16,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { constants, tmpdir } from 'node:os'
-import { basename, join } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 import { convergenceStateVerb, convergeVerb } from './converge.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
@@ -620,18 +620,34 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
 }
 
 const PRIMARY = /^worktree (.+)$/m
-const LEDGER_VERBS = new Set(['archive-move', 'assert-grill', 'assert-scaffold', 'clear-locks', 'ds-check', 'header-state', 'regen-index', 'row-flip', 's-append', 'session-start', 'vm-checks', 'x-refresh', 'z-write'])
+const GIT_TIMEOUT_MS = 5000
+const LEDGER_VERBS = new Set(['archive-move', 'assert-grill', 'assert-scaffold', 'clear-locks', 'ds-check', 'header-state', 'reconcile', 'regen-index', 'row-flip', 's-append', 'session-start', 'vm-checks', 'x-refresh', 'z-write'])
 
-function enterLedgerRoot(): void {
-  if (existsSync(join('.scratchpad', 'dossier'))) return
-  const listed = spawnSync('git', ['worktree', 'list', '--porcelain'], { encoding: 'utf8' })
-  const primary = listed.status === 0 ? PRIMARY.exec(listed.stdout)?.[1] : undefined
-  if (primary && existsSync(join(primary, '.scratchpad', 'dossier'))) process.chdir(primary)
+function hasLedger(dir: string): boolean {
+  return existsSync(join(dir, '.scratchpad', 'dossier'))
+}
+
+function gitLine(args: string[]): string | undefined {
+  const done = spawnSync('git', args, { encoding: 'utf8', timeout: GIT_TIMEOUT_MS })
+  return done.status === 0 ? done.stdout : undefined
+}
+
+function ledgerRoot(): string {
+  const here = process.cwd()
+  if (hasLedger(here)) return here
+  const top = gitLine(['rev-parse', '--show-toplevel'])?.trim()
+  if (top && hasLedger(top)) return top
+  const primary = PRIMARY.exec(gitLine(['worktree', 'list', '--porcelain']) ?? '')?.[1]
+  return primary && hasLedger(primary) ? primary : here
 }
 
 export async function main(args: string[]): Promise<number> {
   const [verb, ...rest] = args
-  if (verb !== undefined && LEDGER_VERBS.has(verb)) enterLedgerRoot()
+  const ledger = ledgerRoot()
+  process.env.DOSSIER_LEDGER_ROOT ??= ledger
+  process.env.DOSSIER_SCRATCHPAD_ROOT ??= ledger
+  if (verb === 'x-refresh' && rest[2] !== undefined) rest[2] = resolve(rest[2])
+  if (verb !== undefined && LEDGER_VERBS.has(verb)) process.chdir(ledger)
   const run = verb === undefined ? undefined : VERBS[verb]
   if (!run) {
     console.error(`usage: ds <${Object.keys(VERBS).join('|')}> [args]`)
