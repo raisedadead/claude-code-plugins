@@ -1,5 +1,5 @@
 import type { EngineInterface, Register } from 'claude-code'
-import { BUILTINS, editGate, type Io, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from './gates.ts'
+import { BUILTINS, editGate, type Io, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from './gates.ts'
 
 function ioOf($: EngineInterface): Io {
   return {
@@ -31,9 +31,9 @@ export const register: Register = (on) => {
     const input = e as unknown as Record<string, unknown>
     const context: string[] = []
     if (input.tool === 'Skill') {
-      context.push((await skillGate(ioOf($), await $.session.cwd(), skillOf(input), seen)) ?? '')
+      context.push((await skillGate(ioOf($), await ledgerRoot(ioOf($), await $.session.cwd()), skillOf(input), seen)) ?? '')
     } else if (input.tool === 'Edit' || input.tool === 'Write') {
-      const root = await $.session.cwd()
+      const root = await ledgerRoot(ioOf($), await $.session.cwd())
       const verdict = await editGate(ioOf($), root, input)
       if (verdict.deny) return { deny: verdict.deny }
       context.push(verdict.context ?? '', (await verifyGate(ioOf($), root, input, verified)) ?? '')
@@ -47,25 +47,28 @@ export const register: Register = (on) => {
   on('classic.UserPromptExpansion', async ($, e, next) => {
     const result = await next(e)
     if (!BUILTINS.has(e.command_name) || !e.cwd) return result
-    const context = await skillGate(ioOf($), e.cwd, e.command_name, seen)
+    const context = await skillGate(ioOf($), await ledgerRoot(ioOf($), e.cwd), e.command_name, seen)
     if (!context) return result
     return { ...result, additionalContext: [...(result.additionalContext ?? []), context] }
   })
 
   on('classic.SessionStart', async ($, e, next) => {
     const result = await next(e)
-    const verdict = await sessionGate(ioOf($), e.cwd, { source: e.source, session_title: e.session_title ?? '' })
+    const root = await ledgerRoot(ioOf($), e.cwd)
+    const verdict = await sessionGate(ioOf($), root, { source: e.source, session_title: e.session_title ?? '' })
     if (verdict.toast) $.ui.toast(verdict.toast)
+    const away = root === e.cwd ? [] : [`dossier ledger: ${root}/.scratchpad — this session works in ${e.cwd}; read and write the ledger by that absolute path.`]
+    const context = [...(verdict.context ? [verdict.context] : []), ...(verdict.context ? away : [])]
     return {
       ...result,
-      ...(verdict.context ? { additionalContext: [...(result.additionalContext ?? []), verdict.context] } : {}),
+      ...(context.length ? { additionalContext: [...(result.additionalContext ?? []), ...context] } : {}),
       ...(verdict.title && !result.sessionTitle ? { sessionTitle: verdict.title } : {}),
     }
   })
 
   on('classic.UserPromptSubmit', async ($, e, next) => {
     const result = await next(e)
-    const context = await promptGate(ioOf($), e.cwd)
+    const context = await promptGate(ioOf($), await ledgerRoot(ioOf($), e.cwd))
     if (!context) return result
     return { ...result, additionalContext: [...(result.additionalContext ?? []), context] }
   })
@@ -73,7 +76,7 @@ export const register: Register = (on) => {
   on('classic.Stop', async ($, e, next) => {
     const result = await next(e)
     if (result.block) return result
-    const block = await stopGate(ioOf($), e.cwd)
+    const block = await stopGate(ioOf($), await ledgerRoot(ioOf($), e.cwd))
     return block ? { ...result, block } : result
   })
 }

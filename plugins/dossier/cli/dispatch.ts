@@ -619,8 +619,19 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'z-write': zWriteVerb,
 }
 
+const PRIMARY = /^worktree (.+)$/m
+const LEDGER_VERBS = new Set(['archive-move', 'assert-grill', 'assert-scaffold', 'clear-locks', 'ds-check', 'header-state', 'regen-index', 'row-flip', 's-append', 'session-start', 'vm-checks', 'x-refresh', 'z-write'])
+
+function enterLedgerRoot(): void {
+  if (existsSync(join('.scratchpad', 'dossier'))) return
+  const listed = spawnSync('git', ['worktree', 'list', '--porcelain'], { encoding: 'utf8' })
+  const primary = listed.status === 0 ? PRIMARY.exec(listed.stdout)?.[1] : undefined
+  if (primary && existsSync(join(primary, '.scratchpad', 'dossier'))) process.chdir(primary)
+}
+
 export async function main(args: string[]): Promise<number> {
   const [verb, ...rest] = args
+  if (verb !== undefined && LEDGER_VERBS.has(verb)) enterLedgerRoot()
   const run = verb === undefined ? undefined : VERBS[verb]
   if (!run) {
     console.error(`usage: ds <${Object.keys(VERBS).join('|')}> [args]`)

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
@@ -63,4 +63,22 @@ test('ds exits 69 when node is not on PATH', () => {
   const done = spawnSync('/bin/sh', [DS, 'invariant-check'], { encoding: 'utf8', env: { PATH: '/nonexistent' } })
   assert.equal(done.status, 69)
   assert.match(done.stderr, /node 22\.18\+ required/)
+})
+
+test('a verb run from a linked worktree writes the primary checkout ledger', () => {
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'ds-wt-')))
+  const main = join(base, 'repo')
+  try {
+    mkdirSync(join(main, '.scratchpad', 'dossier'), { recursive: true })
+    const git = (...args: string[]) => execFileSync('git', ['-C', main, ...args], { stdio: 'ignore' })
+    git('init', '-q')
+    git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init')
+    git('worktree', 'add', '-q', join(base, 'repo.feature'), '-b', 'feature')
+    const done = spawnSync('sh', [DS, 'regen-index'], { cwd: join(base, 'repo.feature'), encoding: 'utf8' })
+    assert.equal(done.status, 0, done.stderr)
+    assert.ok(existsSync(join(main, '.scratchpad', 'INDEX.md')))
+    assert.ok(!existsSync(join(base, 'repo.feature', '.scratchpad')))
+  } finally {
+    rmSync(base, { recursive: true, force: true })
+  }
 })

@@ -49,6 +49,19 @@ async function invariantGate(io: Io, root: string, filePath: string, chunks: str
   return {}
 }
 
+const PRIMARY = /^worktree (.+)$/m
+
+export async function ledgerRoot(io: Io, cwd: string): Promise<string> {
+  if (await io.isDir(`${cwd}/.scratchpad/dossier`)) return cwd
+  try {
+    const listed = await io.run(['git', '-C', cwd, 'worktree', 'list', '--porcelain'], { stdin: '', timeoutMs: 5000 })
+    const primary = listed.exitCode === 0 ? PRIMARY.exec(listed.stdout)?.[1] : undefined
+    return primary && (await io.isDir(`${primary}/.scratchpad/dossier`)) ? primary : cwd
+  } catch {
+    return cwd
+  }
+}
+
 export async function editGate(io: Io, root: string, input: Record<string, unknown>): Promise<Verdict> {
   const edit = editOf(input)
   if (!edit) return {}

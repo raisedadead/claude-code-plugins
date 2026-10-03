@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'claude-code/testing'
-import { type Io, editGate, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from '../hooks/gates.ts'
+import { type Io, editGate, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from '../hooks/gates.ts'
 
 const ROOT = '/w'
 
@@ -287,5 +287,23 @@ describe('verify advisory', () => {
       throw new Error('no sh')
     }
     expect(await verifyGate(io(OPTED_IN, { run: rejects }), ROOT, edit('ci.yml', 'x'), new Set())).toBeUndefined()
+  })
+})
+
+describe('ledger root', () => {
+  const porcelain = 'worktree /main\nHEAD abc\nbranch refs/heads/main\n\nworktree /main.feature\nHEAD def\n'
+  const git = { run: async () => ({ exitCode: 0, stdout: porcelain, stderr: '' }) }
+
+  test('a worktree session finds the ledger in the primary checkout', async () => {
+    expect(await ledgerRoot(io({ '/main/.scratchpad/dossier/.keep': '' }, git), '/main.feature')).toBe('/main')
+  })
+
+  test('a checkout with its own ledger keeps it', async () => {
+    expect(await ledgerRoot(io({ '/main.feature/.scratchpad/dossier/.keep': '', '/main/.scratchpad/dossier/.keep': '' }, git), '/main.feature')).toBe('/main.feature')
+  })
+
+  test('no ledger anywhere, or no git, stays on the session directory', async () => {
+    expect(await ledgerRoot(io({}, git), '/main.feature')).toBe('/main.feature')
+    expect(await ledgerRoot(io({ '/main/.scratchpad/dossier/.keep': '' }, { run: async () => { throw new Error('no git') } }), '/x')).toBe('/x')
   })
 })
