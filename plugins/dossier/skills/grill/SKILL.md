@@ -1,6 +1,6 @@
 ---
 name: grill
-description: Define-phase interrogation before ds:new. Separates environment-lookup facts (model looks up, cites, never asks) from operator decisions (asked, never assumed) — serial one-question-at-a-time while decisions chain, frontier-batched rounds once independent. Stops only when the frontier is empty AND the operator confirms; output feeds §G Goal + §C Constraints so ds:new never re-asks. Invoke when the user says "grill me", "ds:grill", "interrogate before we scaffold", "define this dossier", or before ds:new on anything beyond a one-line goal. Do NOT use for mid-build clarifying questions inside ds:build — Define-phase only.
+description: Define-phase interrogation before ds:new. Separates environment-lookup facts (model looks up, cites, never asks) from operator decisions (asked, never assumed) — serial while an answer adds or removes groups of questions, batched in decision blocks once none does. Stops only when the frontier is empty AND the operator confirms; output feeds §G Goal + §C Constraints so ds:new never re-asks. Invoke when the user says "grill me", "ds:grill", "interrogate before we scaffold", "define this dossier", or before ds:new on anything beyond a one-line goal. Do NOT use for mid-build clarifying questions inside ds:build — Define-phase only.
 argument-hint: <slug> | --resume
 disable-model-invocation: true
 ---
@@ -20,7 +20,7 @@ A vague goal yields vague tasks. This formalises `ds:new` step 2's "clarify befo
 
 ```
 FACT: <statement> cite=<file|command|url>
-DECISION: <question> recommended=<x> answer=<operator verbatim>
+DECISION: <question> recommended=<x> answer=<operator verbatim>[ → (<option>)]
 DECISION: <question> recommended=<x> answer=pending-external → <questionnaire path>
 FRONTIER: empty | empty-except-external n=<k>
 CONFIRMED: <ISO timestamp> operator="<verbatim confirmation>"
@@ -42,11 +42,44 @@ Read what the operator has said so far plus the repo state (existing dossiers, g
 
 ### 2. Serial phase
 
-While decisions are dependency-chained (an answer changes which questions exist): ask ONE at a time, always with a recommended answer, and wait for confirm or override. Chained questions asked as a batch bewilder.
+While an answer adds or removes whole groups of questions: ask ONE decision at a time, as a decision block with one group, and wait for confirm or override. Chained questions asked as a batch bewilder.
 
 ### 3. Batch phase
 
-Once the remaining decisions are mutually independent: ask the whole frontier as one numbered block (recommended answer each), recompute the frontier from the answers, repeat until empty.
+Once no answer adds or removes a group: ask the whole frontier as one decision block, recompute the frontier from the answers, repeat until empty. A lighter dependency rides in the batch as a note on the dependent decision ("Skip if 1(b).").
+
+Decision block:
+
+```
+<the fact that is dangerous now, with its cite; omit when none>
+
+Below are the decisions, in plain English. Each has my recommendation first.
+
+A. <group topic>
+
+<facts the group's decisions share, one bullet each, with cite; omit when none>
+
+1. <question, one sentence>
+   - (a) Recommended: <option>. <what it changes or costs>
+   - (b) <option>. <what it changes or costs>
+2. <question> Skip if 1(b).
+   - ...
+
+B. <group topic>
+
+3. Which of these stay? <items>
+   - (a) Recommended: keep <subset>. <what dropping the rest changes>
+   - (b) Keep all. <what it costs>
+
+Answer decisions 1–3. You can reply "all recommended" and list only the ones you want differently.
+```
+
+- Number decisions across groups, so a reply reads "2b, 3c".
+- Write each fact once, in plain English, above the group that uses it.
+- Put the recommended option first, labelled `Recommended:`. Every option states what it changes or costs.
+- Put a decision outside the grill's scope in its own last group. Its answer goes to the draft as a §G NOT-IN bullet.
+- End the block on the answer line. The host's output style owns the closing format.
+- "all recommended" is an operator answer. Record one `DECISION:` line per decision, with the reply verbatim plus the option it selects: `answer="all recommended" → (a)`, `answer="all recommended, 2b" → (b)`. A decision that a "Skip if" note removes gets `answer=skipped by 1(b)`.
 
 ### 4. Stakeholder fork
 
@@ -75,7 +108,7 @@ Report the artifact path. `ds:new <slug>` consumes the draft §G/§C and skips i
 | every FACT cites a source                     | code-checkable shape (`cite=`); whether the lookup actually ran = model   |
 | every DECISION carries a real operator answer | model — no script distinguishes a typed answer from an assumed one        |
 | "frontier is empty"                           | model — no fixed decision-tree schema exists to verify against            |
-| serial-vs-batch phase choice                  | model — governed by the dependency-chain rule, not mechanically checkable |
+| serial-vs-batch phase choice                  | model — governed by the group add/remove rule, not mechanically checkable |
 | pending-external nodes surfaced as §C bullets | model — step 4 asserts it; no script walks the draft to verify            |
 
 Artifact SHAPE is code-enforced; SUBSTANCE is model-judgment. "ds:grill ran" never reads as "every decision is sound."

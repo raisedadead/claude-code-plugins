@@ -4,6 +4,12 @@ Notable changes to the **dossier** plugin.
 
 This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date rather than semver.
 
+## 2026-10-07
+
+### Changed
+
+- **`ds:grill` asks in a decision block.** A fact that is dangerous now comes first. Decisions sit in lettered groups under their shared facts, numbered across groups, each with options `(a)`, `(b)`, the recommended one first; an out-of-scope decision gets its own last group and lands as a §G NOT-IN bullet. The block ends on the answer line, and the host's output style owns the closing format. The operator can reply "all recommended" plus the exceptions; each `DECISION:` line records that reply verbatim with the option it selects, or `skipped by <n>(<x>)`. A lighter dependency rides in the batch as a "Skip if" note; the serial phase is kept for an answer that adds or removes whole groups. D34 and D35 carry the rejected alternatives.
+
 ## 2026-10-03
 
 ### Changed
