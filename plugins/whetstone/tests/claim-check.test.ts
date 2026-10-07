@@ -56,6 +56,25 @@ describe('claim-check', () => {
     expect(flagged(BACKED_CLAIMS)).toEqual([])
   })
 
+  test('passes a claim that cites a source file and line', () => {
+    const text = [
+      'The guard denies the path (src/guard.ts:134).',
+      'The `hook_config.json` rule blocks it; see `dot_pi/RIG.md:74`.',
+      'The `register.ts` hook blocks once per turn, register.ts:24-31.',
+      '',
+    ].join('\n')
+    expect(flagged(text)).toEqual([])
+  })
+
+  test('reads a long dotted token in linear time', () => {
+    expect(flagged(`The hook blocks ${'a.'.repeat(100_000)}:\n`).length).toBe(1)
+  })
+
+  test('does not take a clock time or a ratio for a file and line', () => {
+    const text = 'The hook blocks writes after 10:30.\n\nThe gate refuses 3:1 of the writes.\n'
+    expect(flagged(text).length).toBe(2)
+  })
+
   test('passes a claim labelled advisory, opt-in or model-judgment', () => {
     expect(flagged(LABELLED_CLAIMS)).toEqual([])
   })
