@@ -12,7 +12,8 @@ const CLAIM = unicodeRegex(
 const BACKED = unicodeRegex(
   '\\bexits?\\s+\\d+\\b|\\bexit\\s+cod\\w*\\b|\\breturn(?:s|ing)?\\s+exit\\b' +
     '|\\bnon-zero\\b|\\bexit-code\\b|https?://|#\\d{2,}' +
-    '|(?<![\\w./~-])[\\w./~-]*\\.[A-Za-z]\\w*:\\d+\\b',
+    '|(?<![\\w./~-])(?:[\\w.~-]*/[\\w./~-]*' +
+    '|[\\w.~-]*\\.(?:[cm]?[jt]sx?|py|sh|zsh|fish|md|json|jsonc|toml|ya?ml|tmpl|rs|go|rb|lua|css|html|txt)):\\d+\\b',
   'i',
 )
 

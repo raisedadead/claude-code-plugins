@@ -70,6 +70,15 @@ describe('claim-check', () => {
     expect(flagged(`The hook blocks ${'a.'.repeat(100_000)}:\n`).length).toBe(1)
   })
 
+  test('passes a citation of a path without an extension', () => {
+    expect(flagged('The hook blocks a secret (.githooks/pre-commit:13).\n')).toEqual([])
+  })
+
+  test('does not take a host and port or a dotted time for a file and line', () => {
+    const text = 'The guard blocks calls to api.example.com:443.\n\nThe hook blocks at 5.pm:30.\n\nThe gate refuses 3.x:1 of the writes.\n'
+    expect(flagged(text).length).toBe(3)
+  })
+
   test('does not take a clock time or a ratio for a file and line', () => {
     const text = 'The hook blocks writes after 10:30.\n\nThe gate refuses 3:1 of the writes.\n'
     expect(flagged(text).length).toBe(2)

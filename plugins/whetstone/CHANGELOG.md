@@ -8,7 +8,7 @@ Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — ev
 
 ### Changed
 
-- **`claim-check` takes a `path:line` citation.** A claim that cites a source file and line, such as `src/guard.ts:134`, counts as backed, beside an exit code, a URL or an issue number. A clock time or a ratio does not count. The Stop claim gate and `bin/claim-check` share the change. D36 carries the rejected alternative.
+- **`claim-check` takes a `path:line` citation.** A claim that cites a source file and line, such as `src/guard.ts:134` or `.githooks/pre-commit:13`, counts as backed, beside an exit code, a URL or an issue number. The token must contain a `/` or end in a known source extension. A clock time, a ratio or a host and port does not count. The Stop claim gate and `bin/claim-check` share the change. D36 carries the rejected alternative.
 
 ## 2026-10-03
 
