@@ -112,7 +112,7 @@ Skill routing has a live-model eval suite: `claude plugin eval plugins/dossier -
 
 ## Contributing
 
-Run `pnpm install` and `git config core.hooksPath .githooks` once per clone. The pre-push hook runs the RESEARCH.md row check, the positive-rails ceiling, `claim-check`, `oxfmt --check`, `oxlint`, `tsc` (outside the mod files) and the Vitest suites, and stops the push on a failure. It reads the working tree, so it also stops a push from a dirty tree or of a branch that is not checked out. A tag push skips the checks. CI runs the full set.
+Run `pnpm install` and `git config core.hooksPath .githooks` once per clone or worktree. The pre-push hook runs the RESEARCH.md row check, the positive-rails ceiling, `claim-check`, `oxfmt --check`, `oxlint`, `tsc` (outside the mod files) and the Vitest suites, and stops the push on a failure. It reads the working tree, so it also stops a push from a dirty tree or of a branch that is not checked out. A tag push skips the checks. CI runs the full set.
 
 ## License
 
