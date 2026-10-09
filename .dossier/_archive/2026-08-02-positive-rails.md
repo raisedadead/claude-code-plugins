@@ -38,7 +38,6 @@ Three reasons qualify. **fact** — the sentence describes what the system does,
 | build    | `lib-x-refresh.sh` never touches the notes cell          | fact    |
 | build    | §X was never refreshed                                   | fact    |
 | build    | a gate the operator never turns on (D7's failure mode)   | fact    |
-| build    | a `~` row never enters the ds:ship pipeline              | fact    |
 | build    | `push` PAUSE — never auto-push                           | guarded |
 | build    | exit 2 is advisory and never pauses                      | fact    |
 | build    | rails: push stays the operator's, never automatic        | guarded |
