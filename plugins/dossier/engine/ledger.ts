@@ -1,3 +1,5 @@
+import { CELL } from './text.ts'
+
 const SPACE = '[ \\t\\n\\r\\f\\v]'
 
 function section(tag: string, word: string): RegExp {
@@ -65,7 +67,7 @@ function* inSection(rows: string[], pattern: RegExp): Generator<[number, string,
 }
 
 function columns(header: string, names: string[]): Record<string, number> {
-  const cells = header.split('|')
+  const cells = header.split(CELL)
   const found: Record<string, number> = {}
   for (let i = 1; i < cells.length - 1; i++) {
     const name = trim(cells[i] ?? '')
@@ -90,7 +92,7 @@ export function rowFlip(text: string, file: string, id: string, state: string, c
       continue
     }
     if (!inside || !row.startsWith('|')) continue
-    const cells = row.split('|')
+    const cells = row.split(CELL)
     if (!header) {
       header = true
       const named = columns(row, ['state', 'cite'])
@@ -133,13 +135,13 @@ export function rowFlip(text: string, file: string, id: string, state: string, c
       out.push(row)
       continue
     }
-    const cells = row.split('|')
+    const cells = row.split(CELL)
     if (trim(cells[1] ?? '') !== id) {
       out.push(row)
       continue
     }
     cells[colState] = ` ${state} `
-    if (cite !== '') cells[colCite] = ` ${cite} `
+    if (cite !== '') cells[colCite] = ` ${cite.replaceAll('|', '\\|')} `
     out.push(`|${cells.slice(1, -1).join('|')}|`)
   }
   return { text: unlines(out) }
@@ -185,7 +187,7 @@ function repoRows(text: string): Generator<[number, string, boolean]> {
 
 export function hasRepo(text: string, label: string): boolean {
   for (const [, row, inside] of repoRows(text)) {
-    if (inside && row.startsWith('|') && trim(row.split('|')[1] ?? '') === label) return true
+    if (inside && row.startsWith('|') && trim(row.split(CELL)[1] ?? '') === label) return true
   }
   return false
 }
@@ -197,7 +199,7 @@ export function xRefresh(text: string, label: string, values: [string, string, s
       out.push(row)
       continue
     }
-    const cells = row.split('|')
+    const cells = row.split(CELL)
     if (trim(cells[1] ?? '') !== label) {
       out.push(row)
       continue
@@ -354,7 +356,7 @@ export function vmFindings(file: string, text: string): string[] {
     }
     if (sec === 'T') {
       if (!row.startsWith('|') || RULE_ROW.test(row)) continue
-      const cells = row.split('|')
+      const cells = row.split(CELL)
       if (!header) {
         header = true
         const named = columns(row, ['state', 'cite'])
@@ -403,7 +405,7 @@ function taskCount(rows: string[]): { done: number; total: number; noState: bool
       if (!colState) noState = true
       continue
     }
-    if (TASK_ROW.test(row) && colState && trim(row.split('|')[colState] ?? '') === 'x') done++
+    if (TASK_ROW.test(row) && colState && trim(row.split(CELL)[colState] ?? '') === 'x') done++
   }
   return { done, total, noState }
 }

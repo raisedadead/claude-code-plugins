@@ -1,8 +1,7 @@
 import { HEADER } from './guards.ts'
-import { splitLines, strip, unicodeRegex } from './text.ts'
+import { CELL, splitLines, strip, unicodeRegex } from './text.ts'
 
 const ROW = unicodeRegex('^\\|(.+)\\|\\s*$')
-const SPLIT = /(?<!\\)\|/
 const EXPECT = unicodeRegex('^(?:exit\\s+\\d+|stdout:\\s*\\S[^\\n]*)$')
 const EXIT = unicodeRegex('^exit\\s+(\\d+)$')
 const DETAIL_MAX = 120
@@ -19,7 +18,7 @@ function rstrip(text: string): string {
 export function cells(line: string): string[] {
   const match = ROW.exec(rstrip(line))
   if (!match) return []
-  return (match[1] ?? '').split(SPLIT).map((cell) => strip(cell.replaceAll('\\|', '|')))
+  return (match[1] ?? '').split(CELL).map((cell) => strip(cell.replaceAll('\\|', '|')))
 }
 
 export function shlexWords(text: string): string[] | undefined {

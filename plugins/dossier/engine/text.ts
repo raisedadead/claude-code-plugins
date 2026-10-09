@@ -37,6 +37,8 @@ export function unicodeRegex(source: string, flags = ''): RegExp {
   return new RegExp(out, `${flags}u`)
 }
 
+export const CELL = /(?<!\\)\|/
+
 export function strip(text: string): string {
   return text.replace(EDGE_SPACE, '')
 }
