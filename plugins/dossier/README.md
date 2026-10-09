@@ -1,6 +1,6 @@
 # dossier
 
-Phase-scoped engineering workflow. One resumable `DOSSIER.md` drives a wave of work — tasks, bugs, invariants, cross-repo state, evidence log — with in-session quality gates.
+Wave-scoped engineering workflow. One resumable `DOSSIER.md` drives a wave of work — tasks, bugs, invariants, cross-repo state, evidence log — with in-session quality gates.
 
 Docs live at the repository root, which is not shipped to the install path — these are absolute so they resolve from the plugin cache too:
 
