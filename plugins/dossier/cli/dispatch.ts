@@ -19,6 +19,7 @@ import { constants, tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { convergenceStateVerb, convergeVerb } from './converge.ts'
 import { claimRoots } from './env.ts'
+import { progressVerb } from './progress.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
 import { sessionReport } from '../engine/session.ts'
@@ -607,6 +608,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   fakeimpl: fakeimplVerb,
   'header-state': headerStateVerb,
   'invariant-check': invariantCheckVerb,
+  progress: progressVerb,
   reconcile: reconcileVerb,
   'resolve-pins': resolvePinsVerb,
   'regen-index': regenIndexVerb,

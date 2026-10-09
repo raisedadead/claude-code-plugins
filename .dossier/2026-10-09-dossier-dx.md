@@ -5,7 +5,6 @@
 | consumer    | The operator and anyone who installs the dossier plugin, in each session that opens a wave        |
 | reached-via | `raisedadead-plugins` marketplace → `/plugin update` → `/reload-plugins` in a Claude Code session |
 | budget      | 30 commits                                                                                        |
-| milestone   | T12                                                                                               |
 
 ## done-when
 

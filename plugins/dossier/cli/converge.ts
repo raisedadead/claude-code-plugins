@@ -66,7 +66,7 @@ function pyPath(path: string): string {
   return lead + body || '.'
 }
 
-function liveSlugs(root: string): string[] {
+export function liveSlugs(root: string): string[] {
   const dossiers = join(root, '.scratchpad', 'dossier')
   return visible(dossiers).filter((name) => {
     const ledger = join(dossiers, name, 'DOSSIER.md')
@@ -93,6 +93,16 @@ function trackedContract(repo: string, slug: string): string | undefined {
     if (stem === slug || stem === undated) return join(folder, name)
   }
   return undefined
+}
+
+export function waveContract(dir: string, root: string): string | undefined {
+  const slug = dir.split('/').filter(Boolean).pop() ?? ''
+  for (const repo of new Set([topLevel(process.cwd()), root])) {
+    const tracked = trackedContract(repo, slug)
+    if (tracked) return tracked
+  }
+  const local = join(dir, 'CONTRACT.md')
+  return isFile(local) ? local : undefined
 }
 
 function contractFor(root: string, slug: string, from: string = root): string | undefined {
