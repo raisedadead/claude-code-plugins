@@ -256,6 +256,8 @@ function takeLock(dir: string): void {
   writeFileSync(join(dir, '.ds-lock'), JSON.stringify({ pid: process.pid, started: new Date().toISOString(), skill: 'ds close', target: '—' }))
 }
 
+const SHIPPED = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2} ds:ship — DONE\b/m
+
 function check(options: Options, tools: CloseTools, at: Wave, text: string, rows: Row[]): Check {
   const { mode } = options
   const result: Check = { findings: [], blocked: false, record: 'skipped' }
@@ -292,6 +294,7 @@ function check(options: Options, tools: CloseTools, at: Wave, text: string, rows
     result.record = verdict.record
   }
   for (const repo of repoRowsUnpushed(text)) result.findings.push(`⚠ ${repo} not pushed — the push stays yours`)
+  if (mode.kind !== 'abandoned' && !SHIPPED.test(text)) result.findings.push('⚠ no ds:ship in §S — run ds:ship for the changelog first, or close without one')
   return result
 }
 

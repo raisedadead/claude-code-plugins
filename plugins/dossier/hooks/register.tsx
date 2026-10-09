@@ -3,7 +3,7 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { DossierWave } from '../types'
 import { field, headerToken } from '../engine/converge.ts'
 import { needsTree, ownerLine, progress, progressLine, taskRows } from '../engine/progress.ts'
-import { BUILTINS, editGate, type Io, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from './gates.ts'
+import { BUILTINS, bugGate, editGate, type Io, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from './gates.ts'
 
 function ioOf($: EngineInterface): Io {
   return {
@@ -29,6 +29,7 @@ function ioOf($: EngineInterface): Io {
 
 const seen = new Set<string>()
 const verified = new Set<string>()
+const bugsSeen = new Set<string>()
 const PANE = 'dossier-tasks'
 const wave = atom({ plugin: 'dossier', key: 'wave' } as const, null)
 const GLYPH: Record<string, string> = { x: '✓', '~': '▸', '.': '·', '!': '‼', '?': '?' }
@@ -127,6 +128,16 @@ export const register: Register = (on) => {
     const added = context.filter(Boolean)
     if (!added.length) return result
     return { ...result, additionalContext: [...(result.additionalContext ?? []), ...added] }
+  })
+
+  on('classic.PostToolUse', async ($, e, next) => {
+    const result = await next(e)
+    if (e.tool_name !== 'Edit' && e.tool_name !== 'Write') return result
+    const input = (e.tool_input ?? {}) as Record<string, unknown>
+    const path = typeof input.file_path === 'string' ? input.file_path : ''
+    const context = path ? await bugGate(ioOf($), path, bugsSeen) : undefined
+    if (!context) return result
+    return { ...result, additionalContext: [...(result.additionalContext ?? []), context] }
   })
 
   on('classic.UserPromptExpansion', async ($, e, next) => {

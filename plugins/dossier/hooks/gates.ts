@@ -1,4 +1,6 @@
+import { cells } from '../engine/converge.ts'
 import { editOf, headerDenial, isDossierPath, markerDenial } from '../engine/guards.ts'
+import { SEC } from '../engine/ledger.ts'
 import { byCodePoint, strip } from '../engine/text.ts'
 
 export type Io = {
@@ -25,6 +27,8 @@ const STOP_TIMEOUT_MS = 180_000
 const EXIT_NO_NODE = 69
 export const BUILTINS = new Set(['code-review', 'review', 'security-review', 'simplify'])
 const CLOSE = 'dossier:close'
+const GRILLING = new Set(['mattpocock-skills:grilling', 'grilling'])
+const EMPTY_CELL = new Set(['', '—', '-'])
 export const WHETSTONE = new Set([
   'whetstone:doubt-pass',
   'whetstone:flaky-test-audit',
@@ -159,7 +163,41 @@ async function inFlight(io: Io, root: string, live: string[]): Promise<string | 
   return undefined
 }
 
+export async function bugGate(io: Io, filePath: string, seen: Set<string>): Promise<string | undefined> {
+  if (!filePath.endsWith('/DOSSIER.md') || !isDossierPath(filePath)) return undefined
+  let text: string
+  try {
+    text = await io.read(filePath)
+  } catch {
+    return undefined
+  }
+  let inside = false
+  let names: string[] = []
+  const bare: string[] = []
+  for (const line of text.split('\n')) {
+    if (line.startsWith('## ')) {
+      inside = SEC.bugs.test(line)
+      names = []
+      continue
+    }
+    const values = inside ? cells(line) : []
+    if (!values.length || /^-+$/.test(values[0] ?? '')) continue
+    if (!names.length) names = values.map((name) => name.toLowerCase())
+    else if (/^B\d+$/.test(values[0] ?? '') && EMPTY_CELL.has(values[names.indexOf('invariant added')] ?? '')) bare.push(values[0] ?? '')
+  }
+  const fresh = bare.filter((id) => !seen.has(`${filePath}#${id}`))
+  for (const id of fresh) seen.add(`${filePath}#${id}`)
+  if (!fresh.length) return undefined
+  return `${fresh.join(', ')} ${fresh.length > 1 ? 'have' : 'has'} no invariant yet — ds:backprop ${fresh[0]} registers one before the fix. Reminder only, never blocking.`
+}
+
 function reminder(name: string, paused: string[], live: string | undefined, flight: string | undefined): string | undefined {
+  if (GRILLING.has(name)) {
+    return (
+      'this repo keeps dossier waves — dossier:grill records each decision through ds grill-add, forks a decision on ' +
+      '"discuss more", and ds:new consumes its draft. Prefer it here. Reminder only, never blocking.'
+    )
+  }
   if (name === CLOSE && paused.length) {
     return (
       `${paused.length} paused dossier(s) alongside this close: ${paused.join(', ')}. Decide each one ` +
@@ -184,7 +222,7 @@ function reminder(name: string, paused: string[], live: string | undefined, flig
 }
 
 export async function skillGate(io: Io, root: string, name: string, seen: Set<string>): Promise<string | undefined> {
-  if (!BUILTINS.has(name) && !WHETSTONE.has(name) && name !== CLOSE) return undefined
+  if (!BUILTINS.has(name) && !WHETSTONE.has(name) && !GRILLING.has(name) && name !== CLOSE) return undefined
   if (seen.has(name)) return undefined
   let index: string
   try {

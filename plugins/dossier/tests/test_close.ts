@@ -116,7 +116,21 @@ test('--plan on a finished wave reports ready with exit 0 and writes nothing', (
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(done.stdout, /✓ converge 1\/1/)
       assert.match(done.stdout, /^ready$/m)
+      assert.match(done.stdout, /⚠ no ds:ship in §S/)
       assert.equal(live(root), before)
+    },
+    [['T1', 'x', 'A']],
+  )
+})
+
+test('--plan stays silent on the ship advisory once §S records a ds:ship DONE', () => {
+  within(
+    (root) => {
+      const path = join(root, '.scratchpad', 'dossier', SLUG, 'DOSSIER.md')
+      writeFileSync(path, live(root).replace('slug=wave\n', 'slug=wave\n\n2026-10-09 10:00 ds:ship — DONE changelog=CHANGELOG.md section=abc\n'))
+      const done = close(root, '--complete', '--plan')
+      assert.equal(done.status, 0, done.stdout + done.stderr)
+      assert.doesNotMatch(done.stdout, /ds:ship/)
     },
     [['T1', 'x', 'A']],
   )

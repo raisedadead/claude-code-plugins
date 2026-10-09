@@ -58,6 +58,18 @@ describe('dossier mod wiring', () => {
     expect(result.additionalContext?.[0]).toContain('live dossier build in flight (2026-01-01-foo: ds:build T3)')
   })
 
+  test('an edit that adds a bug row with no invariant gets the backprop nudge, and other edits do not', async ($, on) => {
+    const ledger = '/w/.scratchpad/dossier/2026-01-01-foo/DOSSIER.md'
+    on('fs.read', async (_, e) => ({
+      value: e.path === ledger ? '## Bugs\n\n| id | bug | root cause | invariant added | fix cite |\n|---|---|---|---|---|\n| B4 | x | y | — | — |\n' : '',
+    }))
+    on('classic.PostToolUse', async () => ({}))
+    const raise = (file_path: string) =>
+      $.classic.PostToolUse({ tool_name: 'Edit', tool_input: { file_path }, tool_response: {}, tool_use_id: 'u1' } as never)
+    expect((await raise(ledger)).additionalContext?.[0]).toContain('ds:backprop B4')
+    expect((await raise('/w/src/a.ts')).additionalContext).toBeUndefined()
+  })
+
   test('a typed whetstone command gets no expansion reminder', async ($, on) => {
     on('classic.UserPromptExpansion', async () => ({}))
     const result = await $.classic.UserPromptExpansion({

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'claude-code/testing'
-import { type Io, editGate, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from '../hooks/gates.ts'
+import { type Io, bugGate, editGate, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from '../hooks/gates.ts'
 
 const ROOT = '/w'
 
@@ -130,6 +130,23 @@ describe('invariant guard', () => {
   })
 })
 
+describe('bug gate', () => {
+  const LEDGER = `${ROOT}/.scratchpad/dossier/2026-01-01-foo/DOSSIER.md`
+  const bugs = (row: string) => `## Bugs\n\n| id | bug | root cause | invariant added | fix cite |\n|----|-----|------------|-----------------|----------|\n${row}\n`
+
+  test('names a bug row with no invariant once per session', async () => {
+    const seen = new Set<string>()
+    const gate = io({ [LEDGER]: bugs('| B1 | leak | env | — | — |') })
+    expect(await bugGate(gate, LEDGER, seen)).toContain('ds:backprop B1')
+    expect(await bugGate(gate, LEDGER, seen)).toBeUndefined()
+  })
+
+  test('stays silent on a bug row with an invariant and on a file outside the ledger', async () => {
+    expect(await bugGate(io({ [LEDGER]: bugs('| B1 | leak | env | V3 | — |') }), LEDGER, new Set())).toBeUndefined()
+    expect(await bugGate(io({ '/w/src/a.md': bugs('| B1 | leak | env | — | — |') }), '/w/src/a.md', new Set())).toBeUndefined()
+  })
+})
+
 describe('skill gate', () => {
   const INDEX = `${ROOT}/.scratchpad/INDEX.md`
   const LIVE = '| 2026-01-01 | foo | live | P1/1 | 1/2 | 0 | x | open |\n'
@@ -151,6 +168,16 @@ describe('skill gate', () => {
     const seen = new Set<string>()
     expect(await skillGate(io({ [INDEX]: LIVE }), ROOT, 'whetstone:tdd-cycle', seen)).toContain('live dossier (2026-01-01-foo)')
     expect(await skillGate(io({ [INDEX]: LIVE }), ROOT, 'whetstone:tdd-cycle', seen)).toBeUndefined()
+  })
+
+  test('points another grilling skill at dossier:grill in a dossier repo, once per session', async () => {
+    const seen = new Set<string>()
+    expect(await skillGate(io({ [INDEX]: PAUSED }), ROOT, 'mattpocock-skills:grilling', seen)).toContain('dossier:grill')
+    expect(await skillGate(io({ [INDEX]: PAUSED }), ROOT, 'mattpocock-skills:grilling', seen)).toBeUndefined()
+  })
+
+  test('stays silent for another grilling skill outside a dossier repo', async () => {
+    expect(await skillGate(io({}), ROOT, 'mattpocock-skills:grilling', new Set())).toBeUndefined()
   })
 
   test('stays silent for a whetstone skill when no dossier is live', async () => {

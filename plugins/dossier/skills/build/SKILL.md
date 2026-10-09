@@ -261,11 +261,13 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 1. A PAUSE condition (below) holds → §S `ds:build <id> PAUSE reason=<class>:<detail>`, print `PAUSE: <reason>`, release lock, stop.
 1. Else run steps 5–12 verbatim (full covenant + TaskList mirror), then print `CONTINUE` (more `.` remain) or `DONE`.
 
-**Driver — wrap with native `/goal`** so a fresh evaluator keeps the turn going until done:
+**Driver — native `/goal`.** A fresh evaluator keeps the turn going until done. Start `--auto` by setting it yourself: when no goal is active and the `ProposeGoal` tool is present, call it with this condition:
 
 ```
-/goal Keep running ds:build --auto until it prints DONE or PAUSE. Stop on PAUSE.
+ds:build --auto printed DONE or PAUSE for <slug>, and §S records the matching auto-stop or PAUSE line.
 ```
+
+`ask_user` stays at its default (`true`): the operator approves the goal once, then the loop needs no further turn from them. `ProposeGoal` absent → print the same line as `/goal <condition>` for the operator to paste, and continue the loop in this turn. Proposing the goal is model-judgment; the evaluator that holds it is the harness.
 
 `/goal clear` (or Esc) ends the run cleanly. `/goal` is the driver because it runs in the foreground, takes mid-run steer, and respects dependency order — Workflows and `/loop` give up all three, so the `--auto` loop stays on `/goal`.
 
