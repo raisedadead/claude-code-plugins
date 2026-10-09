@@ -1,4 +1,4 @@
-import { indexNames, namedRows, openOps, SEC, sectionRows, statusSection } from './ledger.ts'
+import { indexNames, namedRows, openOps, SEC, sectionRows, statusSection, unpushedRepos } from './ledger.ts'
 import { ownerLine, progress, progressLine, taskRows } from './progress.ts'
 
 export type SessionInput = {
@@ -30,9 +30,8 @@ function stuckRows(text: string): string[] {
 }
 
 function repoSummary(text: string): string[] {
-  const repos = namedRows(text, SEC.repos)
-  const unpushed = repos.filter((row) => row('pushed') === 'no').length
-  return repos.length ? [`repos ${repos.length} · unpushed ${unpushed}`] : []
+  const count = namedRows(text, SEC.repos).length
+  return count ? [`repos ${count} · unpushed ${unpushedRepos(text).length}`] : []
 }
 
 export function sessionReport(input: SessionInput): SessionOutput {

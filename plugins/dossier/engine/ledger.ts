@@ -30,7 +30,7 @@ export const Z = {
 export const HEADER = unicodeRegex('^`\\d[^`]*`\\s+·\\s+`([^`]*)`(?:\\s+·\\s|\\s*$)')
 const TASK_ROW = /^\|[ \t\n\r\f\v]*T[0-9]+[ \t\n\r\f\v]*\|/
 const BUG_ROW = /^\|[ \t\n\r\f\v]*B[0-9]+[ \t\n\r\f\v]*\|/
-const RULE_ROW = /^[-| :+]*$/
+const RULE_ROW = /^[-|:+\s]*$/
 
 export type Result = { text: string } | { error: string }
 
@@ -320,7 +320,7 @@ export function namedRows(text: string, heading: RegExp): Cell[] {
 
 export function unpushedRepos(text: string): string[] {
   return namedRows(text, SEC.repos)
-    .filter((row) => row('pushed') !== 'yes')
+    .filter((row) => !['', 'yes'].includes(row('pushed').toLowerCase()))
     .map((row) => row('repo'))
 }
 

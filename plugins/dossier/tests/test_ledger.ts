@@ -55,7 +55,24 @@ test('a header whose first field is not a date is not the header', () => {
   assert.equal(headerToken('# w\n\n`draft` · `live`\n\n## Goal\n'), '')
 })
 
+function repos(rule: string, rows: string[], eol = '\n'): string {
+  return ['## Repos', '', '| repo | pushed |', rule, ...rows, ''].join(eol)
+}
+
 test('an aligned rule row is not a repo', () => {
-  const text = ['## Repos', '', '| repo | pushed |', '| :--- | ---: |', '| a | no |', ''].join('\n')
-  assert.deepEqual(unpushedRepos(text), ['a'])
+  assert.deepEqual(unpushedRepos(repos('| :--- | ---: |', ['| a | no |', '| b | yes |'])), ['a'])
+})
+
+test('a CRLF or tabbed rule row is not a repo', () => {
+  assert.deepEqual(unpushedRepos(repos('|------|--------|', ['| a | no |', '| b | yes |'], '\r\n')), ['a'])
+  assert.deepEqual(unpushedRepos(repos('|---\t|---|', ['| a | no |', '| b | yes |'])), ['a'])
+})
+
+test('a hand-typed Yes is pushed', () => {
+  assert.deepEqual(unpushedRepos(repos('|---|---|', ['| a | Yes |', '| b | NO |'])), ['b'])
+})
+
+test('a Repos table with no pushed column names no repo', () => {
+  const text = ['## Repos', '', '| repo | branch |', '|---|---|', '| a | main |', ''].join('\n')
+  assert.deepEqual(unpushedRepos(text), [])
 })

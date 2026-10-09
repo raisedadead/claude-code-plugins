@@ -232,7 +232,8 @@ function changelogAdvisory(contract: string | undefined): string | undefined {
   const top = dirname(dirname(contract))
   const added = git(top, 'log', '--diff-filter=A', '--format=%H', '--', relative(top, contract)).out.split('\n').pop()
   if (!added) return 'the contract is not committed — the CHANGELOG.md check did not run'
-  const changed = git(top, 'diff', '--name-only', added).out.split('\n')
+  const tracked = git(top, 'diff', '--name-only', added).out.split('\n')
+  const changed = [...tracked, ...git(top, 'ls-files', '--others', '--exclude-standard').out.split('\n')]
   if (changed.some((path) => basename(path) === 'CHANGELOG.md')) return undefined
   return 'no CHANGELOG.md changed since the contract commit — write the entry first, or close without one'
 }

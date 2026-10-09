@@ -51,7 +51,7 @@ test('an INDEX that still carries the P column names the same live wave', () => 
   assert.match(report(LEDGER, legacy).context, new RegExp(`^dossier live: ${NAME} 47%`))
 })
 
-test('the repos line skips an aligned rule row and counts only pushed=no', () => {
+test('the repos line skips an aligned rule row and counts every repo not pushed', () => {
   const repos = [
     '',
     '## Repos',
@@ -63,5 +63,5 @@ test('the repos line skips an aligned rule row and counts only pushed=no', () =>
     '| c | main | 2 | — | no | |',
     '',
   ].join('\n')
-  assert.match(report(LEDGER + repos).context, /^repos 3 · unpushed 1$/m)
+  assert.match(report(LEDGER + repos).context, /^repos 3 · unpushed 2$/m)
 })
