@@ -1,7 +1,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 import type { DossierWave } from '../types'
-import { field, headerToken } from '../engine/converge.ts'
+import { field } from '../engine/converge.ts'
+import { headerToken } from '../engine/ledger.ts'
 import { needsTree, ownerLine, progress, progressLine, taskRows } from '../engine/progress.ts'
 import { BUILTINS, bugGate, editGate, type Io, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from './gates.ts'
 

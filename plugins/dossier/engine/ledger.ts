@@ -1,4 +1,4 @@
-import { CELL } from './text.ts'
+import { CELL, strip, unicodeRegex } from './text.ts'
 
 const SPACE = '[ \\t\\n\\r\\f\\v]'
 
@@ -26,7 +26,7 @@ export const Z = {
   slug: /^[a-z0-9][a-z0-9-]*$/,
 }
 
-export const HEADER_LINE = /^`[^`]*` · `[^`]*`(?: · |[ \t]*$)/
+export const HEADER = unicodeRegex('^`\\d[^`]*`\\s+·\\s+`([^`]*)`(?:\\s+·\\s|\\s*$)')
 const TASK_ROW = /^\|[ \t\n\r\f\v]*T[0-9]+[ \t\n\r\f\v]*\|/
 const BUG_ROW = /^\|[ \t\n\r\f\v]*B[0-9]+[ \t\n\r\f\v]*\|/
 const RULE_ROW = /^[-| :+]*$/
@@ -162,7 +162,7 @@ export function sAppend(text: string, entry: string): string {
 
 export function headerIndex(rows: readonly string[]): number {
   const end = rows.findIndex((row) => row.startsWith('## '))
-  return rows.slice(0, end < 0 ? rows.length : end).findIndex((row) => HEADER_LINE.test(row))
+  return rows.slice(0, end < 0 ? rows.length : end).findIndex((row) => HEADER.test(row))
 }
 
 export function headerState(text: string, state: string): string | undefined {
@@ -177,8 +177,7 @@ export function headerState(text: string, state: string): string | undefined {
 
 export function headerToken(text: string): string {
   const rows = lines(text)
-  const row = rows[headerIndex(rows)]
-  return row === undefined ? '' : trim(row.split('`')[3] ?? '')
+  return strip(HEADER.exec(rows[headerIndex(rows)] ?? '')?.[1] ?? '')
 }
 
 function repoRows(text: string): Generator<[number, string, boolean]> {

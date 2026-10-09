@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { rowFlip, vmFindings } from '../engine/ledger.ts'
+import { headerToken, rowFlip, vmFindings } from '../engine/ledger.ts'
 
 const ROW = '| T1 | . | A | split a \\| b | — | — | v |'
 
@@ -41,4 +41,16 @@ test('vm-checks reads the cite of a row with an escaped pipe', () => {
     findings.filter((line) => line.includes('Vm.3')),
     [],
   )
+})
+
+test('a CRLF header reads as its state', () => {
+  assert.equal(headerToken('# w\r\n\r\n`2026-10-09` · `live`\r\n\r\n## Goal\r\n'), 'live')
+})
+
+test('a header-shaped line under the first section is not the header', () => {
+  assert.equal(headerToken('# w\n\n## Goal\n\n`2026-10-09` · `live`\n'), '')
+})
+
+test('a header whose first field is not a date is not the header', () => {
+  assert.equal(headerToken('# w\n\n`draft` · `live`\n\n## Goal\n'), '')
 })

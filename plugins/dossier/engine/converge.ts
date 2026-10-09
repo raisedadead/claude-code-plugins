@@ -1,4 +1,3 @@
-import { HEADER } from './guards.ts'
 import { CELL, splitLines, strip, unicodeRegex } from './text.ts'
 
 const ROW = unicodeRegex('^\\|(.+)\\|\\s*$')
@@ -132,14 +131,6 @@ export function pyRepr(text: string): string {
     else out += char
   }
   return `${quote}${out}${quote}`
-}
-
-export function headerToken(text: string): string {
-  for (const line of text.split(/\r\n|\r|\n/)) {
-    const match = HEADER.exec(line)
-    if (match) return strip(match[1] ?? '')
-  }
-  return ''
 }
 
 function suffixOf(name: string): string {

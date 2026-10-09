@@ -7,7 +7,6 @@ import {
   detail,
   field,
   hasConsumer,
-  headerToken,
   isCommand,
   layerMix,
   met,
@@ -15,6 +14,7 @@ import {
   pyRepr,
   readableExpect,
 } from '../engine/converge.ts'
+import { headerToken } from '../engine/ledger.ts'
 import { byCodePoint, splitLines, strip } from '../engine/text.ts'
 import { childEnv } from './env.ts'
 

@@ -1,4 +1,5 @@
 import { compilePython, fnmatch } from './pyregex.ts'
+import { HEADER } from './ledger.ts'
 import { splitLines, strip, unicodeRegex } from './text.ts'
 
 const COMMENT_PREFIX = String.raw`^\s*(?://+|#+|--|/\*+|\*(?!/)|<!--|;)\s*`
@@ -6,7 +7,6 @@ const MARKER_PATTERNS = [
   unicodeRegex(COMMENT_PREFIX + String.raw`.*\bPH\d+-[A-Z]\d+\b`),
   unicodeRegex(COMMENT_PREFIX + '.*§[VBTSXGZ]\\d+'),
 ]
-export const HEADER = unicodeRegex('^`\\d[^`]*`\\s+·\\s+`([^`]*)`(?:\\s+·\\s+`|\\s*$)')
 const CANONICAL_STATES = new Set(['live', 'done', 'paused'])
 
 export type Edit = { filePath: string; chunks: string[] }
