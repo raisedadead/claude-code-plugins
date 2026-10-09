@@ -11,7 +11,7 @@
 | id  | command                                                                                                   | expect             |
 | --- | --------------------------------------------------------------------------------------------------------- | ------------------ |
 | 1   | `node_modules/.bin/vitest run`                                                                            | exit 0             |
-| 2   | `git grep -l "from 'node:test'" -- 'plugins/*/tests/'`                                                    | stdout: (nothing)  |
+| 2   | `! git grep -q "from 'node:test'" -- 'plugins/*/tests/'`                                                  | exit 0             |
 | 3   | `s=$(date +%s); node_modules/.bin/vitest run >/dev/null 2>&1; echo "fast=$(( $(date +%s) - s < 13 ))"`     | stdout: fast=1     |
 | 4   | `node_modules/.bin/oxlint --deny-warnings`                                                                | exit 0             |
 | 5   | `node_modules/.bin/oxfmt --check`                                                                         | exit 0             |
