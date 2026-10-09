@@ -1,16 +1,17 @@
 ---
 name: new
-description: Scaffold a new dossier. Sole entrypoint for starting a phase wave. Invoke when the user says "new dossier", "start dossier", "open dossier", "ds:new", or "scaffold dossier <slug>".
-argument-hint: <slug>
+description: Start a dossier wave from a goal sentence; the sole entrypoint. Invoke when the user says "ds:new" or "start a dossier", or when work meets the start rule — more than one session, more than 5 files, or an operator step.
+argument-hint: "<goal sentence>" | <slug>
 ---
 
-# ds:new — scaffold a new dossier
+# ds:new — start a wave
 
 Creates `.scratchpad/dossier/<YYYY-MM-DD>-<slug>/DOSSIER.md` per `${CLAUDE_PLUGIN_ROOT}/FORMAT.md`, then asks the operator for goal, scope and repos.
 
 ## Inputs
 
-- `<slug>` from `$ARGUMENTS` (kebab-case, ≤30 chars). Empty → ask the operator.
+- `"<goal sentence>"` from `$ARGUMENTS` — the normal start. Run `ds:grill "<goal sentence>"` first, then come back with the slug it confirms; step 1.5 consumes its draft. Skip the grill only when the goal is one line with no open decision, and derive the slug from it.
+- `<slug>` (kebab-case, ≤30 chars) — the start after a grill, or for a backfill. Empty → ask for the goal sentence.
 - Date defaults to today (`date +%Y-%m-%d`). Override by prompt when backfilling historical work.
 
 ## Steps
@@ -77,7 +78,7 @@ These fold into the single atomic step-3 Write — no extra commit, no TDD cycle
 
 The repo decides the home. `.dossier/` exists → the repo opted into tracked contracts: write `.dossier/<date>-<slug>.md` and commit it before the first task — citable as evidence, outliving the wave. Otherwise write `<wave-dir>/CONTRACT.md` beside the ledger and price that home out loud: untracked wherever `.scratchpad/` is gitignored (the assumed setup), archived with the wave, citable by nobody, and its criteria run as shell from a file no diff ever showed a reviewer — where a tracked contract's criteria appear in the commit that added them. Name the opt-in (`mkdir .dossier`, track it) so the choice stays the operator's. **Never create `.dossier/` yourself** — a tracked directory appearing in a repo that did not ask for one is the artifact rule this split exists to respect.
 
-Either way the content is FORMAT.md §2.5's — `consumer`, `reached-via`, `budget`, and a `## done-when` table whose every row is a command with an expected result. `ds:converge` and the `UserPromptSubmit` hook resolve both homes, tracked first.
+Either way the content is FORMAT.md §2.5's — `consumer`, `reached-via`, `budget`, an optional `milestone` (the cutover row, when rows run after it), and a `## done-when` table whose every row is a command with an expected result. `ds:converge` and the `UserPromptSubmit` hook resolve both homes, tracked first.
 
 `consumer` is the field that asks whether the work reaches anyone, and the one nobody writes unprompted. Ask for it plainly: who runs this, and by what path does it get to them? A wave once hardened a checker through three review rounds while no consumer could execute it, and no step in this skill had ever asked. `ds:converge` refuses a contract whose `consumer` row is missing or empty (`CONVERGE: PARSE`, exit 2), so a contract written without the answer fails its first run.
 
@@ -91,17 +92,15 @@ Compute fields:
 
 ```
 title = <slug>
-header_line = `<date>` · `live` · `P1/1`
+header_line = `<date>` · `live`
 ```
-
-Stamp all three fields. The third is required — the header parsers match a pattern ending in `` · `` — while its value is never read, and is always `P1/1` because Tasks carries no phase column. A two-field header parses as no header at all.
 
 Write the file at `<dir>/DOSSIER.md` per FORMAT.md §2 section order:
 
 ```markdown
 # <slug>
 
-`<date>` · `live` · `P1/1`
+`<date>` · `live`
 
 ## Goal
 

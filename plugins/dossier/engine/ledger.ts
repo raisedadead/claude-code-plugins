@@ -24,7 +24,7 @@ export const Z = {
   slug: /^[a-z0-9][a-z0-9-]*$/,
 }
 
-const HEADER_LINE = /^`.*` · `.*` · /
+const HEADER_LINE = /^`[^`]*` · `[^`]*`(?: · |[ \t]*$)/
 const TASK_ROW = /^\|[ \t\n\r\f\v]*T[0-9]+[ \t\n\r\f\v]*\|/
 const BUG_ROW = /^\|[ \t\n\r\f\v]*B[0-9]+[ \t\n\r\f\v]*\|/
 const RULE_ROW = /^[-| :+]*$/

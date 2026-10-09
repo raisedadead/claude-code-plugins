@@ -52,7 +52,7 @@ Headings are fixed. Order is fixed.
 ```markdown
 # <slug>
 
-`<YYYY-MM-DD>` · `<state>` · `P1/1`
+`<YYYY-MM-DD>` · `<state>`
 
 ## Goal
 ## Constraints
@@ -67,17 +67,7 @@ Headings are fixed. Order is fixed.
 
 Readers match headings through `engine/ledger.ts` (`SEC`), which holds one pattern per section and accepts both this spelling and the `## §G — Goal` … `## §Z — Closeout` sigils every dossier written before 2026-08-05 carries. A descriptive tail is allowed after either form. `ds:new` writes the worded spelling; nothing rewrites an existing ledger, so the sigil form stays readable indefinitely.
 
-The third field is **required, and its value is never read**. Five parsers demand it. `ds header-state`, `ds regen-index` and `ds reconcile` share the pattern `` /^`.*` · `.*` · / `` (`engine/ledger.ts`, `HEADER_LINE`); `engine/guards.ts` (`HEADER`), which `engine/converge.ts` imports, carries a stricter regex that wants those two `·` separators plus a first field that is backticked *and* starts with a digit. A two-field header matches none of the five. Two of them say so out loud, a third leaves a visible mark, and two go quiet:
-
-| parser             | two-field header                                                            |
-| ------------------ | --------------------------------------------------------------------------- |
-| `ds header-state`  | exit 1, `header metadata line not found` — `ds:close` + pause/resume fail   |
-| `ds regen-index`   | exit 0, writes `drift!` as that dossier's INDEX state                       |
-| `ds reconcile`     | exit 0, leaves an archived §Z-closed dossier still reading `live`           |
-| `engine/guards.ts` | allows the write; its refusal of a non-canonical state token never fires    |
-| `ds converge`      | exit 2, `CONVERGE: PARSE — no live wave`: the wave never joins the live set |
-
-All five then read field two. Field three's contents are never examined: it is always `P1/1` because Tasks carries no phase column. Dropping it means relaxing all five patterns in the same commit, not deleting a spare field — miss `engine/guards.ts` and the header deny goes permanently quiet with no other signal. The digit anchor those last two share already means `` `v1` · `sealed` · `P1/1` `` passes the header guard while `` `2026-08-05` · `sealed` · `P1/1` `` is denied.
+Ledgers written before 2026-10-09 carry a third field, `` · `P1/1` ``. Its value is never read, and every reader accepts the header with or without it. Two patterns hold that: `HEADER_LINE` in `engine/ledger.ts` (read by `ds header-state`, `ds regen-index` and `ds reconcile`) and `HEADER` in `engine/guards.ts` (read by the header guard and by `engine/converge.ts`). The guard pattern also wants a first field that starts with a digit, so `` `v1` · `sealed` `` passes the guard while `` `2026-08-05` · `sealed` `` is denied. A change to one pattern needs the same change to the other: `tests/test_header.ts` and the header-guard tests in `tests/gates.test.ts` fail when the two disagree on a two-field header.
 
 State values: `live` | `done` | `paused`. Default at `ds:new` = `live`. The header state token is flipped atomically by `ds header-state` (§15): `ds:close` sets `done`; the `ds:status` pause/resume actions toggle `live` ↔ `paused`. A `paused` dossier stays a direct child of `dossier/` (not archived — pause is reversible) and is excluded from the live-count + the SessionStart "current live" pick.
 

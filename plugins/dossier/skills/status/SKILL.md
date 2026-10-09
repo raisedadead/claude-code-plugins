@@ -20,7 +20,7 @@ No `.scratchpad/dossier/` in cwd → LIGHT sit-rep, the small-work path with no 
 
 - `git status -sb` + `git log --oneline -${DS_LIGHT_LOG:-5}` for working state (skip git cleanly outside a repo).
 - `$DS_HEALTH_CMD` when set: run it and fold its output in (the operator wires a repo/rig health check; unset stays portable).
-- One block: `LIGHT (no dossier): <branch> · <ahead/behind> · <N> dirty · last: <subject>`, then suggest `ds:new <slug>` once the work grows into phases.
+- One block: `LIGHT (no dossier): <branch> · <ahead/behind> · <N> dirty · last: <subject>`, then suggest `ds:new "<goal>"` when the work meets the start rule: it spans more than one session, touches more than 5 files, or needs an operator step.
 
 Exit 0 after the light sit-rep.
 

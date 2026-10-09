@@ -64,6 +64,11 @@ describe('header guard', () => {
     expect(verdict.deny).toContain("non-canonical header state 'sealed'")
   })
 
+  test('denies a non-canonical token in a two-field header', async () => {
+    const verdict = await editGate(io(OPTED_IN), ROOT, { tool: 'Write', file_path: doss, content: '`2026-01-01` · `sealed`' })
+    expect(verdict.deny).toContain("non-canonical header state 'sealed'")
+  })
+
   test('DOSSIER_MARKER_GUARD=off turns the header check off', async () => {
     const off = io(OPTED_IN, { env: async (name) => (name === 'DOSSIER_MARKER_GUARD' ? 'off' : undefined) })
     const verdict = await editGate(off, ROOT, { tool: 'Write', file_path: doss, content: '`2026-01-01` · `sealed` · `P1/1`' })
@@ -71,7 +76,7 @@ describe('header guard', () => {
   })
 
   test('allows a canonical token and header-shaped prose', async () => {
-    for (const line of ['`2026-01-01` · `live` · `P1/1`', '`lib-regen-index.sh` emits `drift!` not a live state', '- `drift!` is a derived sentinel · never a header token']) {
+    for (const line of ['`2026-01-01` · `live` · `P1/1`', '`2026-01-01` · `live`', '`lib-regen-index.sh` emits `drift!` not a live state', '- `drift!` is a derived sentinel · never a header token']) {
       expect(await editGate(io(OPTED_IN), ROOT, edit(doss, line))).toEqual({})
     }
     expect(await editGate(io(OPTED_IN), ROOT, edit('src/app.ts', '`2026-01-01` · `x` · `y`'))).toEqual({})

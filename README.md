@@ -34,9 +34,11 @@ dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globa
 | Command                                    | What it does                                                                                 |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------- |
 | `/dossier:status` (or "ds", "what's next") | Session-open driver. Decision-first sit-rep. `--full` for tables, `--recover` after a crash. |
-| `/dossier:new <slug>`                      | Start a wave. Prompts goal, scope, repos; pins current library versions.                     |
+| `/dossier:new "<goal>"`                    | Start a wave. Grills the goal first, then prompts scope and repos; pins library versions.    |
 | `/dossier:check`                           | Read-only drift audit across every repo the wave touches.                                    |
-| `/dossier:close`                           | `--complete` · `--successor <slug>` · `--abandon "<why>"`. Validate, close, archive.         |
+| `/dossier:close`                           | `--complete` · `--successor <slug>` · `--abandon "<why>"`. Shows the plan, then closes.      |
+
+**When to start a wave:** the work spans more than one session, touches more than 5 files, or needs a step only you can do. Smaller work runs without a dossier.
 
 Everything else fires automatically or is power-user: `build` (the TDD engine, `--auto` to loop hands-off), `backprop` (bug → invariant), `grill`, `ship`, `verify`.
 
@@ -66,7 +68,7 @@ whetstone also ships its scripts as commands on the Bash tool's `PATH` while it 
 ## Quickstart
 
 ```
-/dossier:new auth-cache
+/dossier:new "Cache auth tokens in Valkey with a TTL clamp"
 /goal Keep running ds:build --auto until it prints DONE or PAUSE. Stop on PAUSE.
 /dossier:status
 /dossier:close --successor auth-rollout
@@ -78,12 +80,12 @@ whetstone also ships its scripts as commands on the Bash tool's `PATH` while it 
 
 In-session hooks. The three write-time gates scope themselves to projects that opted in — with no `.scratchpad/dossier/` directory they do nothing — and inside such a repo they cover ad-hoc edits too, not just work driven by a command. The fake-impl backstop is the exception on both counts: it runs at Stop rather than at write time, and it is keyed to its env var alone, so once you set that it applies in any repo. Gate strength matches signal strength — see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-| Gate                   | Default | Toggle                               | What it catches                                                                                 |
-| ---------------------- | ------- | ------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| **marker guard**       | on      | `DOSSIER_MARKER_GUARD=off`           | Phase and audit-id markers leaking into source; bad state tokens in a ledger.                   |
-| **invariant guard**    | on      | `DOSSIER_INVARIANT_GUARD=off`        | Edits matching a project-registered pattern. Fail-open until you register one.                  |
-| **freshness verify**   | on      | `# verify-skip: <rule>` on the line  | Stale version, EOL, SHA and deprecated-model claims. Advisory; never blocks.                    |
-| **fake-impl backstop** | off     | `DOSSIER_FAKEIMPL_CMD='<fast test>'` | On stop with a dirty tree — untracked files included — runs your test command; non-zero blocks. |
+| Gate                   | Default | Toggle                               | What it catches                                                                                                                                                                     |
+| ---------------------- | ------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **marker guard**       | on      | `DOSSIER_MARKER_GUARD=off`           | Phase and audit-id markers leaking into source; bad state tokens in a ledger.                                                                                                       |
+| **invariant guard**    | on      | `DOSSIER_INVARIANT_GUARD=off`        | Edits matching a project-registered pattern. Fail-open until you register one.                                                                                                      |
+| **freshness verify**   | on      | `# verify-skip: <rule>` on the line  | Stale version, EOL, SHA and deprecated-model claims. Advisory; never blocks.                                                                                                        |
+| **fake-impl backstop** | off     | `DOSSIER_FAKEIMPL_CMD='<fast test>'` | On stop with a dirty tree — untracked files included — runs your test command; non-zero blocks.                                                                                     |
 | **claim gate**         | on      | disable whetstone                    | whetstone. A final reply that says something blocks, enforces, gates, denies, prevents or refuses, with no exit code, citation or honesty label. Sends the turn back once per turn. |
 
 The invariant guard is where the ratchet lands: `ds:backprop` promotes a recurring bug class into a write-time block. Registry is a JSON list at `.scratchpad/dossier/.invariant-guards.json` — gitignored by design, so the suite leaves no artifact in a project that did not ask for one:
