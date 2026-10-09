@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test } from 'node:test'
+import { test } from 'vitest'
 
 const CLI = join(import.meta.dirname, '..', 'skills', 'skill-smith', 'scripts', 'lint-skill-cli.ts')
 const SKILL = '---\nname: foo\ndescription: Use when a test needs a skill.\n---\n# foo\n\nSee [deep](reference/a/deep.md).\n'

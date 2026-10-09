@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { test } from 'node:test'
+import { test } from 'vitest'
 import { sessionReport } from '../engine/session.ts'
 
 const LEDGER = readFileSync(join(import.meta.dirname, 'fixtures', 'progress', 'DOSSIER.md'), 'utf8')

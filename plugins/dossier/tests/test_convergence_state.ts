@@ -3,7 +3,7 @@ import { spawnSync, type SpawnSyncReturns } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
-import { test } from 'node:test'
+import { test } from 'vitest'
 
 const DS = join(import.meta.dirname, '..', 'cli', 'ds')
 

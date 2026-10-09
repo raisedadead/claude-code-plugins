@@ -59,6 +59,8 @@ git config user.email test@example.invalid
 git config user.name test
 git config core.hooksPath .githooks
 git config core.excludesFile /dev/null
+ln -s "$ROOT/node_modules" node_modules
+printf 'node_modules\n' >>.git/info/exclude
 git add -A
 git commit -q -m "chore: snapshot"
 git remote add origin "$TMP/remote.git"

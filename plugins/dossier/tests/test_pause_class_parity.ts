@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { cpSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test } from 'node:test'
+import { test } from 'vitest'
 
 const REPO = join(import.meta.dirname, '..', '..', '..')
 const FORMAT = join('plugins', 'dossier', 'FORMAT.md')

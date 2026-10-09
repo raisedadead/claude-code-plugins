@@ -3,7 +3,7 @@ import { spawnSync, type SpawnSyncReturns } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { test } from 'node:test'
+import { test } from 'vitest'
 
 const CHECK = join(import.meta.dirname, '..', 'skills', 'tiger-style', 'scripts', 'tiger-check-cli.ts')
 const CLEAN = 0

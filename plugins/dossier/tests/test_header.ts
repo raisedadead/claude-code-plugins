@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test } from 'node:test'
+import { test } from 'vitest'
 
 const DS = join(import.meta.dirname, '..', 'cli', 'ds')
 const SECTIONS = ['Goal', 'Constraints', 'Interfaces', 'Invariants', 'Tasks', 'Bugs', 'Repos', 'Status', 'Closeout']

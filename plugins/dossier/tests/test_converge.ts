@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
-import { test } from 'node:test'
+import { test } from 'vitest'
 
 const PLUGIN = join(import.meta.dirname, '..')
 const DS = join(PLUGIN, 'cli', 'ds')

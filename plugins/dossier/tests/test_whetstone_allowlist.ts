@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { test } from 'node:test'
+import { test } from 'vitest'
 import { WHETSTONE } from '../hooks/gates.ts'
 
 test('the skill gate names every shipped whetstone skill and nothing else', () => {

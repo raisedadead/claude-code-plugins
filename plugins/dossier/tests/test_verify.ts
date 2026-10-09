@@ -5,7 +5,7 @@ import { createServer } from 'node:http'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test } from 'node:test'
+import { test } from 'vitest'
 import { cachedLookup } from '../cli/verify.ts'
 import { compilePython } from '../engine/pyregex.ts'
 import {

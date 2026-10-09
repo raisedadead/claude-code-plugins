@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, normalize, relative, sep } from 'node:path'
-import { test } from 'node:test'
+import { test } from 'vitest'
 import { shlexWords } from '../engine/converge.ts'
 
 const ROOT = realpathSync(join(import.meta.dirname, '..', '..', '..'))

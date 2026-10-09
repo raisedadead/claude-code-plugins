@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { test } from 'node:test'
+import { test } from 'vitest'
 import { headerToken, rowFlip, unpushedRepos, vmFindings } from '../engine/ledger.ts'
 
 const ROW = '| T1 | . | A | split a \\| b | — | — | v |'
