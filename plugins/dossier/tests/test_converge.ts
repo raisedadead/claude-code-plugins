@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile, spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createInterface } from 'node:readline'
@@ -87,13 +87,14 @@ async function withTmp(body: (root: string) => Promise<void>): Promise<void> {
   }
 }
 
-async function withFixture(name: string, text: string, body: (path: string) => Promise<void>): Promise<void> {
-  const path = join(FIXTURES, name)
-  writeFileSync(path, text)
+async function withFixture(name: string, text: (path: string) => string, body: (path: string) => Promise<void>): Promise<void> {
+  const dir = mkdtempSync(join(tmpdir(), 'converge-fixture-'))
+  const path = join(dir, name)
+  writeFileSync(path, text(path))
   try {
     await body(path)
   } finally {
-    unlinkSync(path)
+    rmSync(dir, { recursive: true, force: true })
   }
 }
 
@@ -243,10 +244,14 @@ test('a criterion pointed at another contract is allowed', async () => {
     '| id  | command | expect |\n' +
     '| --- | ------- | ------ |\n' +
     '| 1   | `sh plugins/dossier/cli/ds converge plugins/dossier/tests/fixtures/met.md` | exit 0 |\n'
-  await withFixture('sibling.md', text, async (sibling) => {
-    const result = await run(sibling)
-    assert.equal(verdict(result), 'CONVERGE: MET 1/1', out(result))
-  })
+  await withFixture(
+    'sibling.md',
+    () => text,
+    async (sibling) => {
+      const result = await run(sibling)
+      assert.equal(verdict(result), 'CONVERGE: MET 1/1', out(result))
+    },
+  )
 })
 
 test('a name containing the runner is not the runner', async () => {
@@ -256,19 +261,23 @@ test('a name containing the runner is not the runner', async () => {
     '| id  | command | expect |\n' +
     '| --- | ------- | ------ |\n' +
     '| 1   | `test -f plugins/dossier/tests/test_converge.ts` | exit 0 |\n'
-  await withFixture('lookalike.md', text, async (lookalike) => {
-    const result = await run(lookalike)
-    assert.equal(verdict(result), 'CONVERGE: MET 1/1', out(result))
-  })
+  await withFixture(
+    'lookalike.md',
+    () => text,
+    async (lookalike) => {
+      const result = await run(lookalike)
+      assert.equal(verdict(result), 'CONVERGE: MET 1/1', out(result))
+    },
+  )
 })
 
 test('a self-referencing contract terminates', async () => {
-  const text =
+  const text = (path: string): string =>
     '# loop\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n' +
     '## done-when\n\n' +
     '| id  | command | expect |\n' +
     '| --- | ------- | ------ |\n' +
-    '| 1   | `sh plugins/dossier/cli/ds converge plugins/dossier/tests/fixtures/loop.md` | exit 0 |\n'
+    `| 1   | \`sh plugins/dossier/cli/ds converge ${path}\` | exit 0 |\n`
   await withFixture('loop.md', text, async (loop) => {
     const result = await converge(REPO, [loop], cleanEnv(), 60_000)
     assert.ok(result.status === UNMET || result.status === PARSE, out(result))
@@ -288,10 +297,14 @@ test('one level of nesting is allowed', async () => {
     '| id  | command | expect |\n' +
     '| --- | ------- | ------ |\n' +
     '| 1   | `sh plugins/dossier/cli/ds converge plugins/dossier/tests/fixtures/met.md` | exit 0 |\n'
-  await withFixture('nested.md', text, async (nested) => {
-    const result = await run(nested)
-    assert.equal(verdict(result), 'CONVERGE: MET 1/1', out(result))
-  })
+  await withFixture(
+    'nested.md',
+    () => text,
+    async (nested) => {
+      const result = await run(nested)
+      assert.equal(verdict(result), 'CONVERGE: MET 1/1', out(result))
+    },
+  )
 })
 
 test('the shell wrapper agrees with the module', async () => {
