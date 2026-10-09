@@ -78,6 +78,30 @@ git commit -q -am "docs: add a negation to CLAUDE.md"
 refused rails 'RAILS:' main
 git reset -q --hard origin/main
 
+printf 'export const x = {a:1}\n' >plugins/dossier/engine/zz.ts
+git add plugins/dossier/engine/zz.ts
+git commit -q -m "chore: add an unformatted file"
+refused format 'Format issues' main
+git reset -q --hard origin/main
+
+printf 'export const r = new Array(3)\n' >plugins/dossier/engine/zz.ts
+git add plugins/dossier/engine/zz.ts
+git commit -q -m "chore: add a lint warning"
+refused lint 'no-new-array' main
+git reset -q --hard origin/main
+
+printf "export const n: number = 'x'\n" >plugins/dossier/engine/zz.ts
+git add plugins/dossier/engine/zz.ts
+git commit -q -m "chore: add a type error"
+refused type 'TS2322' main
+git reset -q --hard origin/main
+
+printf "import { expect, test } from 'vitest'\n\ntest('fails', () => {\n  expect(1).toBe(2)\n})\n" >plugins/dossier/tests/test_zz.ts
+git add plugins/dossier/tests/test_zz.ts
+git commit -q -m "test: add a failing test"
+refused tests 'FAIL' main
+git reset -q --hard origin/main
+
 printf 'note\n' >notes.txt
 git add notes.txt
 git commit -q -m "docs: add a note"

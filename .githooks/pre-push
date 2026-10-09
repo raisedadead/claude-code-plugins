@@ -23,4 +23,7 @@ fi
 python3 tools/check_rows.py
 bash tools/rails_ceiling.sh
 git ls-files -z '*.md' | grep -zv tests/fixtures/ | xargs -0 plugins/whetstone/bin/claim-check
+node_modules/.bin/oxfmt --check
+node_modules/.bin/oxlint --deny-warnings
+node_modules/.bin/tsc -p .
 node_modules/.bin/vitest run --reporter=dot
