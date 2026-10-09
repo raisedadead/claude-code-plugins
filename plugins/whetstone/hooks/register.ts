@@ -13,7 +13,8 @@ function claimReason(reply: string): string | undefined {
   return (
     'Unbacked claim in the reply:\n' +
     `${body}\n` +
-    'Name the exit code, cite the source, or label it advisory / model-judgment / opt-in — or drop the blocks / enforces / gates / denies / prevents / refuses verb.'
+    'Name the exit code, cite the source, or label it advisory / model-judgment / opt-in — or drop the blocks / enforces / gates / denies / prevents / refuses verb.\n' +
+    'Then send the whole reply again with the fix. In focus mode the operator sees only your last message.'
   )
 }
 

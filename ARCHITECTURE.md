@@ -69,7 +69,7 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 | dossier bug-invariant nag       | a §B row whose `invariant added` and `fix cite` cells are both empty or `—`, after an Edit or Write of `DOSSIER.md` | PostToolUse context, never blocks |
 | dossier grilling reminder       | an outside grilling skill invoked in a repo with `.scratchpad/dossier/` | PreToolUse context, never blocks |
 | `ds close` changelog advisory   | no `CHANGELOG.md` changed since the contract commit    | `⚠` line, never blocks |
-| whetstone claim gate            | unbacked enforcement verb in the final reply           | Stop `additionalContext`, once per turn, never blocks; the model continues with the flagged lines in context, and the fix is model-judgment |
+| whetstone claim gate            | unbacked enforcement verb in the final reply           | Stop `additionalContext`, once per turn, never blocks; the model continues with the flagged lines in context and is asked to send the whole reply again, since focus mode shows only the last message; the fix is model-judgment |
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.
 

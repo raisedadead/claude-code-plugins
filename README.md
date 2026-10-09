@@ -86,7 +86,7 @@ In-session hooks. The three write-time gates scope themselves to projects that o
 | **invariant guard**    | on      | `DOSSIER_INVARIANT_GUARD=off`        | Edits matching a project-registered pattern. Fail-open until you register one.                                                                                      |
 | **freshness verify**   | on      | `# verify-skip: <rule>` on the line  | Stale version, EOL, SHA and deprecated-model claims. Advisory; never blocks.                                                                                        |
 | **fake-impl backstop** | off     | `DOSSIER_FAKEIMPL_CMD='<fast test>'` | On stop with a dirty tree — untracked files included — runs your test command; non-zero blocks.                                                                     |
-| **claim gate**         | on      | disable whetstone                    | whetstone. A final reply that claims enforcement with no exit code, citation or honesty label. Sends the flagged lines back as context once per turn; never blocks. |
+| **claim gate**         | on      | disable whetstone                    | whetstone. A final reply that claims enforcement with no exit code, citation or honesty label. Sends the flagged lines back as context once per turn and asks for the whole reply again with the fix, because focus mode shows only the last message; never blocks. |
 
 The invariant guard is where the ratchet lands: `ds:backprop` promotes a recurring bug class into a write-time block. Registry is a JSON list at `.scratchpad/dossier/.invariant-guards.json` — gitignored by design, so the suite leaves no artifact in a project that did not ask for one:
 

@@ -171,7 +171,7 @@ export const register: Register = (on) => {
 
   on('classic.Stop', async ($, e, next) => {
     const result = await next(e)
-    if (result.block) return result
+    if (result.block || e.stop_hook_active) return result
     const block = await stopGate(ioOf($), e.cwd)
     return block ? { ...result, block } : result
   })

@@ -114,4 +114,25 @@ describe('dossier mod wiring', () => {
     const result = await $.classic.Stop({ cwd: '/w', stop_hook_active: false })
     expect(result.block).toBe('not verified')
   })
+
+  test('the fake-impl backstop stays silent on a continued stop', async ($, on) => {
+    let runs = 0
+    on('env.get', async (_, e) => ({ value: e.name === 'DOSSIER_FAKEIMPL_CMD' ? 'false' : undefined }))
+    on('process.run', async () => {
+      runs += 1
+      return {
+        value: {
+          exitCode: 0,
+          stdout: JSON.stringify({ decision: 'block', reason: 'not verified' }),
+          stderr: '',
+          isStdoutTruncated: false,
+          isStderrTruncated: false,
+        },
+      }
+    })
+    on('classic.Stop', async () => ({}))
+    const result = await $.classic.Stop({ cwd: '/w', stop_hook_active: true })
+    expect(result.block).toBeUndefined()
+    expect(runs).toBe(0)
+  })
 })
