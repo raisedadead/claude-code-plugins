@@ -14,7 +14,7 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 - **A tasks pane and a status line entry.** The `dossier-tasks` command opens a read-only pane with the §T needs tree under the progress line. The status line shows the progress line of the live wave.
 - **`ds:grill` takes a goal sentence and the model can start it.** Each entry goes through `ds grill-add`. "Discuss more" forks a decision into `n.k` children, and `ds assert-grill` exits 2 while a child is open. `ds:new "<goal>"` runs the grill first.
 - **Ledgers migrate on their first write.** `ds row-flip`, `ds s-append`, `ds x-refresh`, `ds header-state`, `ds z-write` and the `ds close` carry into a successor apply the migration steps first and log one `ds:migrate — <step>` line per step. `ds migrate <dir>` applies them alone. A wave that comes back from `paused` or `_archive/` migrates on its first write.
-- **Advisory nags for autonomous work.** The mod adds context after an edit leaves a §B row with no invariant and no fix cite, and when an outside grilling skill runs in a dossier repo. `ds close --plan` prints a `⚠` line when §S has no `ds:ship` DONE. `ds:build --auto` proposes its own `/goal`. None of them blocks.
+- **Advisory nags for autonomous work.** The mod adds context after an edit leaves a §B row with no invariant and no fix cite, and when an outside grilling skill runs in a dossier repo. `ds close --plan` prints a `⚠` line when no `CHANGELOG.md` changed since the contract commit. `ds:build --auto` proposes its own `/goal`. None of them blocks.
 - **`ds ds-check` names an archived wave with no §Z key, an unfinished close, and a tracked contract whose wave is closed.**
 
 ### Changed
@@ -23,9 +23,14 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 - **INDEX has no `P` column.**
 - **One parser pairs §S ops** for `ds vm-checks`, the session start, `ds close` and `ds ds-check`.
 
+### Removed
+
+- **`ds:ship` and `ds changelog-write`.** Write the CHANGELOG entry by hand; `ds close --plan` says when none changed.
+
 ### Fixed
 
 - **Converge criteria run without the ledger env vars**, and a tracked contract resolves from the worktree top level before the ledger root.
+- **Ledger rows split only on an unescaped pipe.** A `\|` in a cell stays in that cell, and `ds row-flip` escapes a pipe in a cite.
 
 ## 2026-10-07
 
