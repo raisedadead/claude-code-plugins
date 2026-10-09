@@ -31,7 +31,8 @@ type Options = {
   cites: string
 }
 
-const USAGE = 'usage: ds close <wave> (--complete | --successor <slug> | --abandon <reason>) [--plan] [--carry T<n>,...] [--accept-unmet] [--summary <text>] [--cites <text>]'
+const USAGE =
+  'usage: ds close <wave> (--complete | --successor <slug> | --abandon <reason>) [--plan] [--carry T<n>,...] [--accept-unmet] [--summary <text>] [--cites <text>]'
 const EXIT_USAGE = 64
 const EMPTY: readonly string[] = ['', '—', '-']
 
@@ -59,7 +60,11 @@ function parse(args: string[]): Options {
     else if (arg === '--abandon') modes.push({ kind: 'abandoned', flag: arg, value: value(at++, arg) })
     else if (arg === '--plan') options.plan = true
     else if (arg === '--accept-unmet') options.acceptUnmet = true
-    else if (arg === '--carry') options.carry = value(at++, arg).split(',').map((id) => id.trim()).filter(Boolean)
+    else if (arg === '--carry')
+      options.carry = value(at++, arg)
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean)
     else if (arg === '--summary') options.summary = value(at++, arg)
     else if (arg === '--cites') options.cites = value(at++, arg)
     else if (!arg.startsWith('--') && !options.target) options.target = arg
@@ -296,8 +301,23 @@ function run(options: Options, tools: CloseTools, at: Wave, rows: Row[], record:
         const moved = target ? carryInto(tools, target, at.slug, carried) : []
         if (moved.length) tools.append(dir, `ds:close — carried=${moved.join(',')} into ${mode.value}`)
       }
-      const cites = options.cites || rows.filter((row) => row.state === 'x').map((row) => row.cite).join(', ') || '—'
-      const result = zWrite(readFileSync(file(), 'utf8'), file(), mode.kind, mode.value, options.summary, cites, tools.stamp(), carried.map(carryNote).join('; '))
+      const cites =
+        options.cites ||
+        rows
+          .filter((row) => row.state === 'x')
+          .map((row) => row.cite)
+          .join(', ') ||
+        '—'
+      const result = zWrite(
+        readFileSync(file(), 'utf8'),
+        file(),
+        mode.kind,
+        mode.value,
+        options.summary,
+        cites,
+        tools.stamp(),
+        carried.map(carryNote).join('; '),
+      )
       if ('error' in result) throw new Stop(`ds close: ${result.error}`, 1)
       tools.write(file(), result.text)
     }

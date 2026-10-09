@@ -2,19 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { readdirSync, readFileSync, statSync, writeSync } from 'node:fs'
 import { constants } from 'node:os'
 import { dirname, join } from 'node:path'
-import {
-  contractPaths,
-  DATE_PREFIX,
-  detail,
-  field,
-  hasConsumer,
-  isCommand,
-  layerMix,
-  met,
-  numberedRows,
-  pyRepr,
-  readableExpect,
-} from '../engine/converge.ts'
+import { contractPaths, DATE_PREFIX, detail, field, hasConsumer, isCommand, layerMix, met, numberedRows, pyRepr, readableExpect } from '../engine/converge.ts'
 import { headerToken } from '../engine/ledger.ts'
 import { byCodePoint, splitLines, strip } from '../engine/text.ts'
 import { childEnv } from './env.ts'
@@ -138,7 +126,7 @@ function run(command: string, root: string, level: number): { code: number; out:
 function resolveContract(root: string, from: string): string | number {
   const slugs = liveSlugs(root)
   if (!slugs.length) {
-    return fail('no live wave under .scratchpad/dossier/ — a closed wave\'s contract runs only by explicit path')
+    return fail("no live wave under .scratchpad/dossier/ — a closed wave's contract runs only by explicit path")
   }
   const owners = slugs.flatMap((slug) => {
     const contract = contractFor(root, slug, from)

@@ -9,7 +9,24 @@ const DS = join(import.meta.dirname, '..', 'cli', 'ds')
 const TASKS = ['| id | state | who | task | needs | cite | verify |', '|----|-------|-----|------|-------|------|--------|', '| T1 | . | A | t | — | — | v |']
 
 function ledger(header: string): string {
-  return ['# old', '', header, '', '## Tasks', '', ...TASKS, '', '## Status', '', '2026-06-01 09:00 ds:new — created slug=old', '', '## Closeout', '', '_(empty)_', ''].join('\n')
+  return [
+    '# old',
+    '',
+    header,
+    '',
+    '## Tasks',
+    '',
+    ...TASKS,
+    '',
+    '## Status',
+    '',
+    '2026-06-01 09:00 ds:new — created slug=old',
+    '',
+    '## Closeout',
+    '',
+    '_(empty)_',
+    '',
+  ].join('\n')
 }
 
 function withWave(header: string, body: (root: string, dir: string, read: () => string) => void): void {

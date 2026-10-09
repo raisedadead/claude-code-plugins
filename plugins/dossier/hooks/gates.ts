@@ -9,10 +9,7 @@ export type Io = {
   exists: (path: string) => Promise<boolean>
   list: (path: string) => Promise<string[]>
   env: (name: 'DOSSIER_MARKER_GUARD' | 'DOSSIER_INVARIANT_GUARD' | 'DOSSIER_FAKEIMPL_CMD') => Promise<string | undefined>
-  run: (
-    argv: string[],
-    init: { stdin: string; timeoutMs: number; cwd?: string },
-  ) => Promise<{ exitCode: number; stdout: string; stderr: string }>
+  run: (argv: string[], init: { stdin: string; timeoutMs: number; cwd?: string }) => Promise<{ exitCode: number; stdout: string; stderr: string }>
   cli?: string
 }
 

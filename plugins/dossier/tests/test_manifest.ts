@@ -169,9 +169,7 @@ test('every skill or agent id a shipped doc names exists', () => {
     'plugins/dossier/agents/dossier-reviewer.md': 'agent\n',
     'plugins/dossier/CHANGELOG.md': 'removed dossier:old\n',
   })
-  withTree(unknown, (root) =>
-    assert.deepEqual(idProblems(root), ['plugins/dossier/FORMAT.md -> dossier:nope', 'plugins/dossier/FORMAT.md -> whetstone:gone']),
-  )
+  withTree(unknown, (root) => assert.deepEqual(idProblems(root), ['plugins/dossier/FORMAT.md -> dossier:nope', 'plugins/dossier/FORMAT.md -> whetstone:gone']))
 })
 
 test("FORMAT.md's cli/ds roster names only verbs the dispatcher knows", () => {
@@ -187,7 +185,10 @@ test("FORMAT.md's cli/ds roster names only verbs the dispatcher knows", () => {
 test('every discovery grep written in FORMAT.md runs clean from the repo root', () => {
   assert.deepEqual(grepProblems(ROOT), [])
   withTree(GOOD_TREE, (root) => assert.deepEqual(grepProblems(root), []))
-  const stale = broken({ 'plugins/dossier/FORMAT.md': 'run `grep -q absent plugins/dossier/skills/build/SKILL.md`, `grep -q x plugins/dossier/gone.md` and `grep -q "open plugins/dossier/x`\n' })
+  const stale = broken({
+    'plugins/dossier/FORMAT.md':
+      'run `grep -q absent plugins/dossier/skills/build/SKILL.md`, `grep -q x plugins/dossier/gone.md` and `grep -q "open plugins/dossier/x`\n',
+  })
   withTree(stale, (root) =>
     assert.deepEqual(grepProblems(root), [
       'grep -q absent plugins/dossier/skills/build/SKILL.md -> exit 1 (no match)',

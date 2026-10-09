@@ -844,11 +844,7 @@ test('fullwidth characters count as two columns', () => {
 test('editorconfig comments are not settings', () => {
   withRepo((repo) => {
     init(repo)
-    write(
-      repo,
-      '.editorconfig',
-      'root = true\n\n[*.py]\n; max_line_length = 20\n# max_line_length = 20\nmax_line_length = 40\n',
-    )
+    write(repo, '.editorconfig', 'root = true\n\n[*.py]\n; max_line_length = 20\n# max_line_length = 20\nmax_line_length = 40\n')
     write(repo, 'a.py', line(30))
     git(repo, 'add', '.editorconfig', 'a.py')
     assert.equal(run(repo).status, CLEAN)

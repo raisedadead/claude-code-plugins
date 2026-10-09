@@ -300,8 +300,15 @@ test('--successor copies carried rows into the successor once, even when a crash
       const next = join(root, '.scratchpad', 'dossier', '2026-10-10-next')
       mkdirSync(next)
       const copied = '| T2 | . | H | task T2 (from wave T2) | — | — | v |'
-      writeFileSync(join(next, 'DOSSIER.md'), ledger([['T1', '.', 'A']]).replace('# wave', '# next').replace(/^(\| T1 .*)$/m, `$1\n${copied}`))
-      execFileSync('sh', [DS, 's-append', join(root, '.scratchpad', 'dossier', SLUG), 'ds:close — START mode=successor carry=T2 converge=met:1/1'], { cwd: root })
+      writeFileSync(
+        join(next, 'DOSSIER.md'),
+        ledger([['T1', '.', 'A']])
+          .replace('# wave', '# next')
+          .replace(/^(\| T1 .*)$/m, `$1\n${copied}`),
+      )
+      execFileSync('sh', [DS, 's-append', join(root, '.scratchpad', 'dossier', SLUG), 'ds:close — START mode=successor carry=T2 converge=met:1/1'], {
+        cwd: root,
+      })
       const done = close(root, '--successor', 'next', '--carry', 'T2', '--summary', 's')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       const text = readFileSync(join(next, 'DOSSIER.md'), 'utf8')
@@ -323,7 +330,10 @@ test('--successor appends a delayed carried row under the successor tasks and re
       writeFileSync(join(next, 'DOSSIER.md'), ledger([['T1', '.', 'A']]).replace('# wave', '# next'))
       const done = close(root, '--successor', 'next', '--carry', 'T2', '--summary', 's')
       assert.equal(done.status, 0, done.stdout + done.stderr)
-      assert.match(readFileSync(join(next, 'DOSSIER.md'), 'utf8'), /^\| T1 .*\n\| T2 \| \. \| A \| task T2 \(from wave T2, after wave T1\+7d\) \| — \| — \| v \|$/m)
+      assert.match(
+        readFileSync(join(next, 'DOSSIER.md'), 'utf8'),
+        /^\| T1 .*\n\| T2 \| \. \| A \| task T2 \(from wave T2, after wave T1\+7d\) \| — \| — \| v \|$/m,
+      )
       assert.match(archived(root), /ds:close — carried=T2→T2 into next/)
       assert.match(archived(root), /^after: T2 task T2 \(T1\+7d\)$/m)
     },
@@ -432,7 +442,9 @@ test('a held lock refuses a fresh close and a resume of a sealed one', () => {
 test('an unfinished close that started with another mode refuses', () => {
   within(
     (root) => {
-      execFileSync('sh', [DS, 's-append', join(root, '.scratchpad', 'dossier', SLUG), 'ds:close — START mode=abandoned carry=— converge=skipped'], { cwd: root })
+      execFileSync('sh', [DS, 's-append', join(root, '.scratchpad', 'dossier', SLUG), 'ds:close — START mode=abandoned carry=— converge=skipped'], {
+        cwd: root,
+      })
       assert.match(refusal(root, '--complete', '--summary', 's'), /an unfinished close started with another mode/)
     },
     [['T1', 'x', 'A']],
@@ -454,7 +466,10 @@ test('a merge in progress refuses the contract retire and leaves the close resum
 test('a contract that converge cannot parse refuses unless --accept-unmet', () => {
   within(
     (root) => {
-      writeFileSync(join(root, '.dossier', `${SLUG}.md`), '# wave\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | `true` | exit 0 |\n')
+      writeFileSync(
+        join(root, '.dossier', `${SLUG}.md`),
+        '# wave\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | `true` | exit 0 |\n',
+      )
       assert.match(refusal(root, '--complete', '--plan'), /✗ converge did not run/)
       const done = close(root, '--complete', '--plan', '--accept-unmet')
       assert.equal(done.status, 0, done.stdout + done.stderr)

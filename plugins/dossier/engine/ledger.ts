@@ -213,16 +213,7 @@ export function xRefresh(text: string, label: string, values: [string, string, s
   return unlines(out)
 }
 
-export function zWrite(
-  text: string,
-  file: string,
-  kind: string,
-  value: string,
-  summary: string,
-  cites: string,
-  stamp: string,
-  after = '',
-): Result {
+export function zWrite(text: string, file: string, kind: string, value: string, summary: string, cites: string, stamp: string, after = ''): Result {
   let body: string
   if (kind === 'complete') body = 'complete: true'
   else if (kind === 'successor') {
@@ -327,7 +318,9 @@ export function unpushedRepos(text: string): string[] {
 }
 
 export function indexNames(index: string, state: string): string[] {
-  const [names = [], ...body] = lines(index).map(cells).filter((row) => row.length)
+  const [names = [], ...body] = lines(index)
+    .map(cells)
+    .filter((row) => row.length)
   const at = (name: string): number => names.indexOf(name)
   return body.filter((row) => row[at('state')] === state).map((row) => `${row[at('date')]}-${row[at('slug')]}`)
 }
@@ -480,14 +473,8 @@ function byCodeUnit(a: string, b: string): number {
 }
 
 export function renderIndex(rows: IndexRow[]): string {
-  const sorted = [...rows].sort(
-    (a, b) =>
-      byCodeUnit(b.date, a.date) ||
-      (RANK[a.state] ?? 3) - (RANK[b.state] ?? 3) ||
-      byCodeUnit(a.row, b.row),
-  )
-  let out =
-    '# .scratchpad index\n\n| date | slug | state | T | B | mtime | §Z |\n|------|------|-------|---|---|-------|-----|\n'
+  const sorted = [...rows].sort((a, b) => byCodeUnit(b.date, a.date) || (RANK[a.state] ?? 3) - (RANK[b.state] ?? 3) || byCodeUnit(a.row, b.row))
+  let out = '# .scratchpad index\n\n| date | slug | state | T | B | mtime | §Z |\n|------|------|-------|---|---|-------|-----|\n'
   out += sorted.map((row) => `${row.row}\n`).join('')
   const drift = rows.filter((row) => row.state === 'drift!')
   if (drift.length) out += `\n<!-- drift:${drift.length} slugs:${drift.map((row) => `${row.date}-${row.slug}`).join(' ')} -->\n`

@@ -1,11 +1,5 @@
 import { describe, expect, test } from 'claude-code/testing'
-import {
-  computeRates,
-  InputError,
-  newFlags,
-  quarantine,
-  reportLines,
-} from '../skills/flaky-test-audit/scripts/compute-flakiness.ts'
+import { computeRates, InputError, newFlags, quarantine, reportLines } from '../skills/flaky-test-audit/scripts/compute-flakiness.ts'
 
 describe('compute-flakiness', () => {
   test('flags only mixed outcomes as flaky', () => {

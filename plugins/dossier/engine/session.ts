@@ -68,7 +68,11 @@ export function sessionReport(input: SessionInput): SessionOutput {
   const text = wave?.text
   if (liveSlug && text !== undefined && view) {
     context.push(lead, ownerLine(view), ...stuckRows(text), ...repoSummary(text))
-    context.push(...filled(statusSection(text)).slice(-2).map((row) => `just did: ${row}`))
+    context.push(
+      ...filled(statusSection(text))
+        .slice(-2)
+        .map((row) => `just did: ${row}`),
+    )
     context.push('(ds:status for the dashboard)')
   }
   if (liveCount > 1) {

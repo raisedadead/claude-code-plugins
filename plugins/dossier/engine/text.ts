@@ -50,7 +50,6 @@ export function splitLines(text: string): string[] {
   return lines
 }
 
-
 export function byCodePoint(a: string, b: string): number {
   const left = [...a]
   const right = [...b]

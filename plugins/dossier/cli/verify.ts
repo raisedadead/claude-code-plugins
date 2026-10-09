@@ -2,16 +2,7 @@ import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync, writeSync } from 'node:fs'
 import { join } from 'node:path'
 import { isDossierPath } from '../engine/guards.ts'
-import {
-  CACHE_TTL_DEFAULT,
-  HTTP_TIMEOUT_S,
-  type Lookup,
-  patterns,
-  type Pin,
-  resolvePin,
-  scan,
-  type Status,
-} from '../engine/verify.ts'
+import { CACHE_TTL_DEFAULT, HTTP_TIMEOUT_S, type Lookup, patterns, type Pin, resolvePin, scan, type Status } from '../engine/verify.ts'
 
 const USER_AGENT = 'dossier-verify/0.2 (+https://github.com/raisedadead/claude-code-plugins)'
 const EXIT_USAGE = 2

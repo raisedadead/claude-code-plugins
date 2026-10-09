@@ -1,5 +1,3 @@
 {
-  "modules": [
-    "./register.tsx"
-  ]
+  "modules": ["./register.tsx"]
 }

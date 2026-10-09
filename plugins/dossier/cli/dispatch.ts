@@ -282,7 +282,8 @@ function grillArtifact(root: string, slug: string): string | undefined {
 
 function grillAddVerb(args: string[]): number {
   const [root = '', slug = '', entry = ''] = args
-  if (args.length !== 3 || !/^[a-z0-9][a-z0-9-]{0,29}$/.test(slug)) throw new Refusal('usage: ds grill-add <scratchpad-root> <slug> "<FACT:|DECISION:|FRONTIER:|CONFIRMED: entry>"', EXIT_USAGE)
+  if (args.length !== 3 || !/^[a-z0-9][a-z0-9-]{0,29}$/.test(slug))
+    throw new Refusal('usage: ds grill-add <scratchpad-root> <slug> "<FACT:|DECISION:|FRONTIER:|CONFIRMED: entry>"', EXIT_USAGE)
   const error = entryError(entry)
   if (error) throw new Refusal(`ds grill-add: ${error}`, EXIT_USAGE)
   const existing = grillArtifact(root, slug)
@@ -299,10 +300,7 @@ function assertGrillVerb(args: string[]): number {
   const consume = args[0] === '--consume'
   const rest = consume ? args.slice(1) : args
   if (rest.length !== (consume ? 3 : 2)) {
-    throw new Refusal(
-      'usage: ds assert-grill <scratchpad-root> <slug> | --consume <scratchpad-root> <slug> <dossier-dir-key>',
-      EXIT_USAGE,
-    )
+    throw new Refusal('usage: ds assert-grill <scratchpad-root> <slug> | --consume <scratchpad-root> <slug> <dossier-dir-key>', EXIT_USAGE)
   }
   const [root = '', slug = '', key = ''] = rest
   const grill = grillArtifact(root, slug)
@@ -467,9 +465,7 @@ function reconcileVerb(args: string[]): number {
     if (!zClosed(readFileSync(`${dir}/DOSSIER.md`, 'utf8'))) continue
     if (quietly(() => archiveMove(dir, archive))) {
       quietly(() => setHeader(`${archive}/${name}`, 'done'))
-      quietly(() =>
-        sAppendTo(`${archive}/${name}`, 'ds:reconcile — auto-archived closed dossier (§Z-backed, was not under _archive)'),
-      )
+      quietly(() => sAppendTo(`${archive}/${name}`, 'ds:reconcile — auto-archived closed dossier (§Z-backed, was not under _archive)'))
     }
   }
   for (const name of subdirs(archive)) {
@@ -639,7 +635,11 @@ function sessionStartVerb(): number {
 function scratchpadEntry(entry: string): boolean {
   let path = entry.length > 3 ? entry.slice(3).trim() : ''
   if (path.includes(' -> ')) path = path.slice(path.lastIndexOf(' -> ') + 4)
-  return path.trim().replace(/^"+|"+$/g, '').split('/').includes('.scratchpad')
+  return path
+    .trim()
+    .replace(/^"+|"+$/g, '')
+    .split('/')
+    .includes('.scratchpad')
 }
 
 function fakeimplVerb(): number {
@@ -707,7 +707,24 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
 
 const PRIMARY = /^worktree (.+)$/m
 const GIT_TIMEOUT_MS = 5000
-const LEDGER_VERBS = new Set(['archive-move', 'assert-grill', 'assert-scaffold', 'clear-locks', 'ds-check', 'grill-add', 'header-state', 'migrate', 'reconcile', 'regen-index', 'row-flip', 's-append', 'session-start', 'vm-checks', 'x-refresh', 'z-write'])
+const LEDGER_VERBS = new Set([
+  'archive-move',
+  'assert-grill',
+  'assert-scaffold',
+  'clear-locks',
+  'ds-check',
+  'grill-add',
+  'header-state',
+  'migrate',
+  'reconcile',
+  'regen-index',
+  'row-flip',
+  's-append',
+  'session-start',
+  'vm-checks',
+  'x-refresh',
+  'z-write',
+])
 
 function hasLedger(dir: string): boolean {
   return existsSync(join(dir, '.scratchpad', 'dossier'))

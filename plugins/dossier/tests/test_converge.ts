@@ -87,11 +87,7 @@ function tracked(root: string, name: string, text = contractText()): void {
 }
 
 function singleCriterion(header: string, rule: string, row: string): string {
-  return (
-    '# c\n\n| field    | value |\n| -------- | ----- |\n| consumer | tests |\n\n' +
-    '## done-when\n\n' +
-    `${header}\n${rule}\n${row}\n`
-  )
+  return '# c\n\n| field    | value |\n| -------- | ----- |\n| consumer | tests |\n\n' + '## done-when\n\n' + `${header}\n${rule}\n${row}\n`
 }
 
 function runText(name: string, text: string): Run {
@@ -400,10 +396,7 @@ test('an archived contract is not resolved', () => {
 })
 
 test('a contract without a consumer fails the parse', () => {
-  const result = runText(
-    'no-consumer.md',
-    '# c\n\n## done-when\n\n| id  | command | expect |\n| --- | ------- | ------ |\n| 1   | `true`  | exit 0 |\n',
-  )
+  const result = runText('no-consumer.md', '# c\n\n## done-when\n\n| id  | command | expect |\n| --- | ------- | ------ |\n| 1   | `true`  | exit 0 |\n')
   const line = verdict(result)
   assert.ok(line.startsWith('CONVERGE: PARSE'), out(result))
   assert.ok(line.includes('consumer'), result.stdout)
@@ -423,11 +416,7 @@ test('a consumer row with an empty value fails the parse', () => {
 test('an empty stdout expect fails the parse', () => {
   const result = runText(
     'empty-expect.md',
-    singleCriterion(
-      '| id  | command              | expect  |',
-      '| --- | -------------------- | ------- |',
-      '| 1   | `echo totally-wrong` | stdout: |',
-    ),
+    singleCriterion('| id  | command              | expect  |', '| --- | -------------------- | ------- |', '| 1   | `echo totally-wrong` | stdout: |'),
   )
   assert.ok(verdict(result).startsWith('CONVERGE: PARSE'), result.stdout)
   assert.equal(result.status, PARSE, result.stdout)
@@ -451,11 +440,7 @@ test('a numbered row with an extra cell fails the parse', () => {
 test('the prompt hook counts the rows this runner refuses', async () => {
   const { numberedRows } = await import('../engine/converge.ts')
   const text =
-    '# c\n\n## done-when\n\n' +
-    '| id  | command | expect |\n' +
-    '| --- | ------- | ------ |\n' +
-    '| 1   | `true`  | exit 0 |\n' +
-    '| 2   | `false` |\n'
+    '# c\n\n## done-when\n\n' + '| id  | command | expect |\n' + '| --- | ------- | ------ |\n' + '| 1   | `true`  | exit 0 |\n' + '| 2   | `false` |\n'
   assert.equal(numberedRows(text).length, 2)
   withTmp((root) => {
     writeFileSync(join(wave(root, '2026-08-01-c'), 'CONTRACT.md'), text)
@@ -500,11 +485,7 @@ test('the plan block reaches a pipe while the run is still going', async () => {
     const contract = join(root, 'slow.md')
     writeFileSync(
       contract,
-      singleCriterion(
-        '| id  | command           | expect |',
-        '| --- | ----------------- | ------ |',
-        "| 1   | `sh -c 'sleep 4'` | exit 0 |",
-      ),
+      singleCriterion('| id  | command           | expect |', '| --- | ----------------- | ------ |', "| 1   | `sh -c 'sleep 4'` | exit 0 |"),
     )
     const started = performance.now()
     const child = spawn('sh', [DS, 'converge', contract], { cwd: REPO, env: cleanEnv(), stdio: ['ignore', 'pipe', 'inherit'] })

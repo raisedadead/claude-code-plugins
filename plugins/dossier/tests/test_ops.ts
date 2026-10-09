@@ -3,10 +3,12 @@ import { test } from 'vitest'
 import { vmFindings } from '../engine/ledger.ts'
 import { sessionReport } from '../engine/session.ts'
 
-const INDEX = '# .scratchpad index\n\n| date | slug | state | T | B | mtime | §Z |\n|---|---|---|---|---|---|---|\n| 2026-10-09 | w | live | 0/1 | 0 | x | — |\n'
+const INDEX =
+  '# .scratchpad index\n\n| date | slug | state | T | B | mtime | §Z |\n|---|---|---|---|---|---|---|\n| 2026-10-09 | w | live | 0/1 | 0 | x | — |\n'
 
 function ledger(...status: string[]): string {
-  const tasks = '## Tasks\n\n| id | state | who | task | needs | cite | verify |\n|----|-------|-----|------|-------|------|--------|\n| T3 | ~ | A | t | — | — | v |\n'
+  const tasks =
+    '## Tasks\n\n| id | state | who | task | needs | cite | verify |\n|----|-------|-----|------|-------|------|--------|\n| T3 | ~ | A | t | — | — | v |\n'
   return `# w\n\n\`2026-10-09\` · \`live\` · \`P1/1\`\n\n${tasks}\n## Status\n\n${status.join('\n\n')}\n`
 }
 

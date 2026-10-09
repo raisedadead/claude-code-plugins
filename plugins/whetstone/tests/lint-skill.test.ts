@@ -25,9 +25,7 @@ describe('lint-skill', () => {
   })
 
   test('passes quoted values and a plain pipe', () => {
-    const quoted = skill(
-      'name: quoted\ndescription: \'Does it. Use when the user says "bug: <x>".\'\nargument-hint: \'[--preview] | --all\'',
-    )
+    const quoted = skill("name: quoted\ndescription: 'Does it. Use when the user says \"bug: <x>\".'\nargument-hint: '[--preview] | --all'")
     const piped = skill('name: build\ndescription: Builds. Use when the user asks to build.\nargument-hint: <T-id> | --next | --auto')
     expect(has(lintSkill(quoted, 'quoted', []), (f) => f.includes('YAML-safe'))).toBe(false)
     expect(has(lintSkill(piped, 'build', []), (f) => f.includes('YAML-safe'))).toBe(false)

@@ -12,8 +12,13 @@ function io(files: Record<string, string>, extra: Partial<Io> = {}): Io {
       return text
     },
     exists: async (path) => path in files || Object.keys(files).some((f) => f.startsWith(`${path}/`)),
-    list: async (path) =>
-      [...new Set(Object.keys(files).filter((f) => f.startsWith(`${path}/`)).map((f) => f.slice(path.length + 1).split('/')[0] ?? ''))],
+    list: async (path) => [
+      ...new Set(
+        Object.keys(files)
+          .filter((f) => f.startsWith(`${path}/`))
+          .map((f) => f.slice(path.length + 1).split('/')[0] ?? ''),
+      ),
+    ],
     env: async () => undefined,
     run: async () => ({ exitCode: 0, stdout: '', stderr: '' }),
     ...extra,
@@ -35,7 +40,14 @@ describe('marker rule', () => {
   })
 
   test('allows bare Phase, Stage and Step words and RFC sections', async () => {
-    for (const line of ['// Phase 1: validate input', '          # Step 1: dump the database', '# Stage 3: integration', '// V11 (Phase 3 / A7): note', '// RFC 7519 §4.1.4 exp claim', '// workaround for upstream bug #1234']) {
+    for (const line of [
+      '// Phase 1: validate input',
+      '          # Step 1: dump the database',
+      '# Stage 3: integration',
+      '// V11 (Phase 3 / A7): note',
+      '// RFC 7519 §4.1.4 exp claim',
+      '// workaround for upstream bug #1234',
+    ]) {
       expect(await editGate(io(OPTED_IN), ROOT, edit('src/foo.ts', line))).toEqual({})
     }
   })
@@ -76,7 +88,12 @@ describe('header guard', () => {
   })
 
   test('allows a canonical token and header-shaped prose', async () => {
-    for (const line of ['`2026-01-01` · `live` · `P1/1`', '`2026-01-01` · `live`', '`lib-regen-index.sh` emits `drift!` not a live state', '- `drift!` is a derived sentinel · never a header token']) {
+    for (const line of [
+      '`2026-01-01` · `live` · `P1/1`',
+      '`2026-01-01` · `live`',
+      '`lib-regen-index.sh` emits `drift!` not a live state',
+      '- `drift!` is a derived sentinel · never a header token',
+    ]) {
       expect(await editGate(io(OPTED_IN), ROOT, edit(doss, line))).toEqual({})
     }
     expect(await editGate(io(OPTED_IN), ROOT, edit('src/app.ts', '`2026-01-01` · `x` · `y`'))).toEqual({})
@@ -132,7 +149,8 @@ describe('invariant guard', () => {
 
 describe('bug gate', () => {
   const LEDGER = `${ROOT}/.scratchpad/dossier/2026-01-01-foo/DOSSIER.md`
-  const bugs = (row: string) => `## Bugs\n\n| id | bug | root cause | invariant added | fix cite |\n|----|-----|------------|-----------------|----------|\n${row}\n`
+  const bugs = (row: string) =>
+    `## Bugs\n\n| id | bug | root cause | invariant added | fix cite |\n|----|-----|------------|-----------------|----------|\n${row}\n`
 
   test('names a bug row with no invariant once per session', async () => {
     const seen = new Set<string>()
@@ -204,7 +222,9 @@ describe('skill gate', () => {
   })
 
   test('lists paused rows at dossier:close and is silent without them', async () => {
-    expect(await skillGate(io({ [INDEX]: LIVE + PAUSED.slice(HEAD.length) }), ROOT, 'dossier:close', new Set())).toContain('1 paused dossier(s) alongside this close: 2026-01-02-bar.')
+    expect(await skillGate(io({ [INDEX]: LIVE + PAUSED.slice(HEAD.length) }), ROOT, 'dossier:close', new Set())).toContain(
+      '1 paused dossier(s) alongside this close: 2026-01-02-bar.',
+    )
     expect(await skillGate(io({ [INDEX]: LIVE }), ROOT, 'dossier:close', new Set())).toBeUndefined()
   })
 })
@@ -349,11 +369,25 @@ describe('ledger root', () => {
   })
 
   test('a checkout with its own ledger keeps it', async () => {
-    expect(await ledgerRoot(io({ '/main.feature/.scratchpad/dossier/.keep': '', '/main/.scratchpad/dossier/.keep': '' }, git), '/main.feature')).toBe('/main.feature')
+    expect(await ledgerRoot(io({ '/main.feature/.scratchpad/dossier/.keep': '', '/main/.scratchpad/dossier/.keep': '' }, git), '/main.feature')).toBe(
+      '/main.feature',
+    )
   })
 
   test('no ledger anywhere, or no git, stays on the session directory', async () => {
     expect(await ledgerRoot(io({}, git), '/elsewhere')).toBe('/elsewhere')
-    expect(await ledgerRoot(io({ '/main/.scratchpad/dossier/.keep': '' }, { run: async () => { throw new Error('no git') } }), '/x')).toBe('/x')
+    expect(
+      await ledgerRoot(
+        io(
+          { '/main/.scratchpad/dossier/.keep': '' },
+          {
+            run: async () => {
+              throw new Error('no git')
+            },
+          },
+        ),
+        '/x',
+      ),
+    ).toBe('/x')
   })
 })

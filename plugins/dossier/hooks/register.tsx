@@ -152,7 +152,8 @@ export const register: Register = (on) => {
     const root = await ledgerRoot(ioOf($), e.cwd)
     const verdict = await sessionGate(ioOf($), root, { source: e.source, session_title: e.session_title ?? '' })
     if (verdict.toast) $.ui.toast(verdict.toast)
-    const away = root === e.cwd ? [] : [`dossier ledger: ${root}/.scratchpad — this session works in ${e.cwd}; read and write the ledger by that absolute path.`]
+    const away =
+      root === e.cwd ? [] : [`dossier ledger: ${root}/.scratchpad — this session works in ${e.cwd}; read and write the ledger by that absolute path.`]
     const context = [...(verdict.context ? [verdict.context] : []), ...(verdict.context ? away : [])]
     return {
       ...result,

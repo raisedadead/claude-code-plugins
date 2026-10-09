@@ -53,10 +53,7 @@ function nameFindings(name: string, hint: string): string[] {
   const found: string[] = []
   if (name !== hint) found.push(`FAIL ${hint}: name '${name}' does not match parent dir '${hint}'`)
   if (!NAME.test(name)) {
-    found.push(
-      `FAIL ${hint}: name '${name}' breaks the kebab charset ` +
-        '(lowercase/digits/hyphen, no leading/trailing/double hyphen)',
-    )
+    found.push(`FAIL ${hint}: name '${name}' breaks the kebab charset ` + '(lowercase/digits/hyphen, no leading/trailing/double hyphen)')
   }
   return found
 }

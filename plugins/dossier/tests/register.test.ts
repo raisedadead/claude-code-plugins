@@ -42,7 +42,9 @@ describe('dossier mod wiring', () => {
 
   test('a typed /simplify mid-build gets the reminder as context', async ($, on) => {
     on('fs.read', async (_, e) => ({
-      value: e.path.endsWith('INDEX.md') ? '| date | slug | state | T | B | mtime | §Z |\n|------|------|-------|---|---|-------|-----|\n| 2026-01-01 | foo | live | 1/2 | 0 | x | — |\n' : '{"skill":"ds:build","target":"T3"}',
+      value: e.path.endsWith('INDEX.md')
+        ? '| date | slug | state | T | B | mtime | §Z |\n|------|------|-------|---|---|-------|-----|\n| 2026-01-01 | foo | live | 1/2 | 0 | x | — |\n'
+        : '{"skill":"ds:build","target":"T3"}',
     }))
     on('fs.stat', async () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }))
     on('fs.list', async () => ({ value: [{ name: '2026-01-01-foo', kind: 'dir', size: 0, mtimeMs: 0, isLink: false }] }))
@@ -64,8 +66,7 @@ describe('dossier mod wiring', () => {
       value: e.path === ledger ? '## Bugs\n\n| id | bug | root cause | invariant added | fix cite |\n|---|---|---|---|---|\n| B4 | x | y | — | — |\n' : '',
     }))
     on('classic.PostToolUse', async () => ({}))
-    const raise = (file_path: string) =>
-      $.classic.PostToolUse({ tool_name: 'Edit', tool_input: { file_path }, tool_response: {}, tool_use_id: 'u1' } as never)
+    const raise = (file_path: string) => $.classic.PostToolUse({ tool_name: 'Edit', tool_input: { file_path }, tool_response: {}, tool_use_id: 'u1' } as never)
     expect((await raise(ledger)).additionalContext?.[0]).toContain('ds:backprop B4')
     expect((await raise('/w/src/a.ts')).additionalContext).toBeUndefined()
   })
@@ -85,7 +86,9 @@ describe('dossier mod wiring', () => {
   test('a session start in a dossier project gets the report as context', async ($, on) => {
     on('fs.stat', async () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }))
     on('process.run', async () => ({
-      value: { exitCode: 0, stdout: JSON.stringify({ hookSpecificOutput: { additionalContext: '## INDEX' } }),
+      value: {
+        exitCode: 0,
+        stdout: JSON.stringify({ hookSpecificOutput: { additionalContext: '## INDEX' } }),
         stderr: '',
         isStdoutTruncated: false,
         isStderrTruncated: false,

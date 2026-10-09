@@ -148,11 +148,7 @@ function isTest(path: string): boolean {
   const parts = path.split('/').filter((part) => part !== '' && part !== '.')
   const name = parts[parts.length - 1] ?? ''
   const stem = name.slice(0, name.length - suffixOf(name).length)
-  return (
-    parts.some((part) => TEST_DIRS.has(part)) ||
-    name.startsWith('test_') ||
-    ['_test', '.test', '_spec', '.spec'].some((end) => stem.endsWith(end))
-  )
+  return parts.some((part) => TEST_DIRS.has(part)) || name.startsWith('test_') || ['_test', '.test', '_spec', '.spec'].some((end) => stem.endsWith(end))
 }
 
 export function layerMix(numstat: string): string {

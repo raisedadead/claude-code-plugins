@@ -90,8 +90,14 @@ test('from a linked worktree, x-refresh reads the worktree repo and converge fin
   try {
     const wave = join(main, '.scratchpad', 'dossier', '2026-10-03-w')
     mkdirSync(wave, { recursive: true })
-    writeFileSync(join(wave, 'DOSSIER.md'), '# w\n\n`2026-10-03` · `live` · `P1/1`\n\n## Repos\n\n| repo | branch | ahead | tag | pushed | notes |\n|------|--------|-------|-----|--------|-------|\n| app | main | 0 | — | no | |\n')
-    writeFileSync(join(wave, 'CONTRACT.md'), '| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | \`test -f here.txt\` | exit 0 |\n')
+    writeFileSync(
+      join(wave, 'DOSSIER.md'),
+      '# w\n\n`2026-10-03` · `live` · `P1/1`\n\n## Repos\n\n| repo | branch | ahead | tag | pushed | notes |\n|------|--------|-------|-----|--------|-------|\n| app | main | 0 | — | no | |\n',
+    )
+    writeFileSync(
+      join(wave, 'CONTRACT.md'),
+      '| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | \`test -f here.txt\` | exit 0 |\n',
+    )
     const git = (...args: string[]) => execFileSync('git', ['-C', main, ...args], { stdio: 'ignore' })
     git('init', '-q', '-b', 'main')
     git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init')
@@ -113,7 +119,10 @@ test('a criterion does not inherit the ledger root ds set for itself, and keeps 
     mkdirSync(wave)
     writeFileSync(join(wave, 'DOSSIER.md'), '# w\n\n`2026-10-09` · `live` · `P1/1`\n')
     const probe = '`test -z "$DOSSIER_LEDGER_ROOT$DOSSIER_SCRATCHPAD_ROOT"`'
-    writeFileSync(join(wave, 'CONTRACT.md'), `| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | ${probe} | exit 0 |\n`)
+    writeFileSync(
+      join(wave, 'CONTRACT.md'),
+      `| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | ${probe} | exit 0 |\n`,
+    )
     const env = { ...process.env }
     delete env.DOSSIER_LEDGER_ROOT
     delete env.DOSSIER_SCRATCHPAD_ROOT
@@ -137,7 +146,10 @@ test('from a linked worktree, converge and the prompt state find a tracked contr
     git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init')
     git('worktree', 'add', '-q', feature, '-b', 'feature')
     mkdirSync(join(feature, '.dossier'))
-    writeFileSync(join(feature, '.dossier', '2026-10-09-w.md'), '# w\n\n| field | value |\n|---|---|\n| consumer | t |\n| budget | 5 commits |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | `true` | exit 0 |\n')
+    writeFileSync(
+      join(feature, '.dossier', '2026-10-09-w.md'),
+      '# w\n\n| field | value |\n|---|---|\n| consumer | t |\n| budget | 5 commits |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | `true` | exit 0 |\n',
+    )
     execFileSync('git', ['-C', feature, 'add', '.dossier'], { stdio: 'ignore' })
     execFileSync('git', ['-C', feature, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'contract'], { stdio: 'ignore' })
     const converge = spawnSync('sh', [DS, 'converge'], { cwd: feature, encoding: 'utf8' })

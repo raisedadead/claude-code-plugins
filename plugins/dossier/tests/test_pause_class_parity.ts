@@ -41,7 +41,12 @@ function parity(root: string): Verdict {
   if (sets.length !== 1) return { code: UNPARSEABLE, notes: [`FORMAT.md must carry exactly one 'reason class' brace set, found ${sets.length}`] }
   const tokens = (sets[0]?.[1] ?? '')
     .split(',')
-    .map((token) => token.trim().replace(/^`+|`+$/g, '').trim())
+    .map((token) =>
+      token
+        .trim()
+        .replace(/^`+|`+$/g, '')
+        .trim(),
+    )
     .filter(Boolean)
   const repeated = [...new Set(tokens.filter((token, at) => tokens.indexOf(token) !== at))].sort()
   if (repeated.length) return { code: DIVERGENT, notes: [`duplicated brace-set tokens: ${repeated.join(', ')}`] }
@@ -99,7 +104,10 @@ test('an unmutated copy passes', () => {
 })
 
 test('dropping a class from the excuse table diverges', () => {
-  const verdict = mutated(BUILD, inExcuse((tail) => tail.replace(X_STALE, '')))
+  const verdict = mutated(
+    BUILD,
+    inExcuse((tail) => tail.replace(X_STALE, '')),
+  )
   assert.equal(verdict.code, DIVERGENT)
   assert.match(verdict.notes.join('\n'), /excuse table diverges: missing=x-stale/)
 })
@@ -124,7 +132,10 @@ test('a repeated brace-set token diverges', () => {
 })
 
 test('a repeated row inside a PAUSE table diverges', () => {
-  const verdict = mutated(BUILD, inExcuse((tail) => tail.replace(X_STALE, (row) => row + row)))
+  const verdict = mutated(
+    BUILD,
+    inExcuse((tail) => tail.replace(X_STALE, (row) => row + row)),
+  )
   assert.equal(verdict.code, DIVERGENT)
   assert.match(verdict.notes.join('\n'), /duplicated rows: x-stale/)
 })

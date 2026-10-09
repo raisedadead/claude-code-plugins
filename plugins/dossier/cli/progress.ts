@@ -44,9 +44,7 @@ export function progressVerb(args: string[]): number {
   }
   const root = process.env.DOSSIER_LEDGER_ROOT || process.cwd()
   const dirs =
-    given === undefined
-      ? liveSlugs(root).map((slug) => join(root, '.scratchpad', 'dossier', slug))
-      : [existsSync(given) ? resolve(given) : join(root, given)]
+    given === undefined ? liveSlugs(root).map((slug) => join(root, '.scratchpad', 'dossier', slug)) : [existsSync(given) ? resolve(given) : join(root, given)]
   try {
     const out = dirs.map((dir) => report(dir, root, mode))
     if (given === undefined && mode !== '--json') out.push(...later(root))

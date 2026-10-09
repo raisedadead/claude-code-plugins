@@ -27,8 +27,7 @@ const GO_MAJOR_PROBE_TIMEOUT_S = 12
 const GO_MAJOR_PROBE_WORKERS = 6
 const GO_MAJOR_SUFFIX = /\/v[0-9]+(?=\n?$)/
 const EOL_API = 'https://endoflife.date/api/v1/products/'
-const ACTIONS_HARDENING =
-  'https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions'
+const ACTIONS_HARDENING = 'https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions'
 const IMAGE_SUFFIXES = ['-alpine', '-slim', '-bullseye', '-bookworm', '-buster', '-jammy', '-noble', '-focal', '-trusty']
 const SYMBOLIC_TAGS = new Set(['latest', 'stable', 'main', 'edge'])
 const FLOATING_PINS = new Set(['latest', 'next', 'main', 'master', 'edge'])
@@ -150,11 +149,7 @@ export async function checkEol(lookup: Lookup, slug: string, version: string): P
   const eolFrom = get(release, 'eolFrom')
   const eol = get(release, 'eol')
   const date = truthy(eolFrom) ? eolFrom : truthy(eol) ? eol : '?'
-  return [
-    `${slug} ${version}`,
-    `current: ${slug} ${pyStr(current)}. v${pyStr(get(release, 'name'))} EOL ${pyStr(date)}.`,
-    `${EOL_API}${slug}`,
-  ]
+  return [`${slug} ${version}`, `current: ${slug} ${pyStr(current)}. v${pyStr(get(release, 'name'))} EOL ${pyStr(date)}.`, `${EOL_API}${slug}`]
 }
 
 export async function checkFreetext(lookup: Lookup, alias: string, version: string): Promise<Finding | undefined> {
@@ -194,9 +189,7 @@ async function goLatest(lookup: Lookup, pkg: string): Promise<Detail | undefined
   const [status, base] = await goProbe(lookup, pkg, GO_MAJOR_PROBE_TIMEOUT_S)
   if (status === 'offline' || GO_MAJOR_SUFFIX.test(pkg)) return base ? [base[0], base[1], undefined] : undefined
   const majors = Array.from({ length: GO_MAJOR_PROBE_MAX - 1 }, (_, at) => at + 2)
-  const probed = await inPool(majors, GO_MAJOR_PROBE_WORKERS, (major) =>
-    goProbe(lookup, `${pkg}/v${major}`, GO_MAJOR_PROBE_TIMEOUT_S),
-  )
+  const probed = await inPool(majors, GO_MAJOR_PROBE_WORKERS, (major) => goProbe(lookup, `${pkg}/v${major}`, GO_MAJOR_PROBE_TIMEOUT_S))
   let best = base
   let bestMajor = 1
   probed.forEach(([found, answer], at) => {
@@ -248,19 +241,16 @@ function digitValue(digit: string): number {
 }
 
 function semverMajor(version: string): number | undefined {
-  const bare = strip(version).replace(/^v+/, '').replace(/^[\^~>=<*]+/, '')
+  const bare = strip(version)
+    .replace(/^v+/, '')
+    .replace(/^[\^~>=<*]+/, '')
   if (!bare || bare === 'latest' || bare === 'next' || bare === '*') return undefined
   const head = bare.split('.')[0] ?? ''
   if (!DIGITS.test(head)) return undefined
   return [...head].reduce((total, digit) => total * 10 + digitValue(digit), 0)
 }
 
-export async function checkPkgOutdated(
-  lookup: Lookup,
-  ecosystem: string,
-  pkg: string,
-  version: string,
-): Promise<Finding | undefined> {
+export async function checkPkgOutdated(lookup: Lookup, ecosystem: string, pkg: string, version: string): Promise<Finding | undefined> {
   const pinned = version.replace(LEADING_SPACE, '').replace(/^["']+|["']+$/g, '')
   if (/^[\^~><*]/.test(pinned) || FLOATING_PINS.has(pinned)) return undefined
   const pinnedMajor = semverMajor(pinned)
@@ -323,8 +313,7 @@ const isDockerfile = (path: string): boolean => {
   const name = baseName(path)
   return name === 'Dockerfile' || name.startsWith('Dockerfile.') || endsWithAny(name, ['.dockerfile', '.Dockerfile'])
 }
-const isCompose = (path: string): boolean =>
-  ['docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml'].includes(baseName(path))
+const isCompose = (path: string): boolean => ['docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml'].includes(baseName(path))
 const isRequirements = (path: string): boolean => {
   const name = baseName(path)
   return name === 'requirements.txt' || (name.startsWith('requirements-') && name.endsWith('.txt'))

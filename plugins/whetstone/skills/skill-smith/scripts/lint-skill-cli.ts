@@ -33,7 +33,12 @@ function byParts(a: string, b: string): number {
 }
 
 function parentName(dir: string): string {
-  return dir.split(sep).filter((part) => part !== '' && part !== '.').pop() ?? ''
+  return (
+    dir
+      .split(sep)
+      .filter((part) => part !== '' && part !== '.')
+      .pop() ?? ''
+  )
 }
 
 function lintFile(skillMd: string): string[] {

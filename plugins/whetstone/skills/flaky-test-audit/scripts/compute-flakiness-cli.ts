@@ -28,7 +28,11 @@ function load(path: string, missingOk = false): Record<string, unknown> {
 }
 
 function sortedJson(record: Record<string, number>): string {
-  const sorted = Object.fromEntries(Object.keys(record).sort(byCodePoint).map((key) => [key, record[key]]))
+  const sorted = Object.fromEntries(
+    Object.keys(record)
+      .sort(byCodePoint)
+      .map((key) => [key, record[key]]),
+  )
   return JSON.stringify(sorted, null, 2) + '\n'
 }
 

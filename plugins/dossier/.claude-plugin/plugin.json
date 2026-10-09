@@ -11,12 +11,5 @@
   "repository": "https://github.com/raisedadead/claude-code-plugins",
   "license": "ISC",
   "types": "./types/index.d.ts",
-  "keywords": [
-    "dossier",
-    "spec-driven",
-    "tdd",
-    "workflow",
-    "scratchpad",
-    "phase"
-  ]
+  "keywords": ["dossier", "spec-driven", "tdd", "workflow", "scratchpad", "phase"]
 }
