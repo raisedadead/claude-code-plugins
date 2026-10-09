@@ -64,6 +64,6 @@ In a repo with a live dossier ledger, record the verdict as one §S line through
 
 Read the `CLAIMS:` line before the exit code. A missing `node`, or a `node` older than 22.18, exits 1 with no `CLAIMS:` line, and 1 is also the flagged code.
 
-A claim passes by naming an exit code, carrying a citation, or labelling itself advisory / model-judgment / opt-in / a nag. It decides **shape, never fact**: whether the exit code named is the real one stays a reader's question. That is the mechanical half of a defect class this repo keeps shipping: `RESEARCH.md` F19 counts six false documented claims, F25 six instances across one wave.
+A claim passes by naming an exit code, carrying a citation, or labelling itself advisory / model-judgment / opt-in / a nag. It decides **shape, never fact**: whether the exit code named is the real one stays a reader's question. That is the mechanical half of a defect class this repo keeps shipping (`RESEARCH.md` F25).
 
 Deliberately narrow. The subject is a backticked name or a definite machinery noun (`the runner`, `this hook`, `the script`, `the gate`, `the check`/`checker`, `the guard`, `the linter`) followed by a finite verb; a verb trailed by a past participle reads as a noun and is left alone. Matching the bare verbs instead flagged 113 lines here, nearly all nouns and adjectives — "doubt gate", "env-gated backstops", "the three write-time gates". The narrowing trades misses for false positives on purpose: a lint that flags honest prose gets deleted, and then it catches nothing.
