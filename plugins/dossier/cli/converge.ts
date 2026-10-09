@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { readdirSync, readFileSync, statSync, writeSync } from 'node:fs'
 import { constants } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import {
   DATE_PREFIX,
   detail,
@@ -16,6 +16,7 @@ import {
   readableExpect,
 } from '../engine/converge.ts'
 import { byCodePoint, splitLines, strip } from '../engine/text.ts'
+import { childEnv } from './env.ts'
 
 const MET = 0
 const UNMET = 1
@@ -78,15 +79,26 @@ function liveSlugs(root: string): string[] {
   })
 }
 
-function contractFor(root: string, slug: string): string | undefined {
+function topLevel(dir: string): string {
+  return strip(git(dir, 'rev-parse', '--show-toplevel')) || dir
+}
+
+function trackedContract(repo: string, slug: string): string | undefined {
   const undated = slug.replace(DATE_PREFIX, '')
-  const folder = join(root, '.dossier')
-  if (isDir(folder)) {
-    for (const name of visible(folder)) {
-      if (!name.endsWith('.md') || name === '.md' || !isFile(join(folder, name))) continue
-      const stem = name.slice(0, -3)
-      if (stem === slug || stem === undated) return join(folder, name)
-    }
+  const folder = join(repo, '.dossier')
+  if (!isDir(folder)) return undefined
+  for (const name of visible(folder)) {
+    if (!name.endsWith('.md') || name === '.md' || !isFile(join(folder, name))) continue
+    const stem = name.slice(0, -3)
+    if (stem === slug || stem === undated) return join(folder, name)
+  }
+  return undefined
+}
+
+function contractFor(root: string, slug: string, from: string = root): string | undefined {
+  for (const repo of new Set([topLevel(from), root])) {
+    const tracked = trackedContract(repo, slug)
+    if (tracked) return tracked
   }
   const fallback = join(root, '.scratchpad', 'dossier', slug, 'CONTRACT.md')
   return isFile(fallback) ? fallback : undefined
@@ -106,7 +118,7 @@ function run(command: string, root: string, level: number): { code: number; out:
   const done = spawnSync('/bin/sh', ['-c', command], {
     cwd: root,
     encoding: 'utf8',
-    env: { ...process.env, [DEPTH_VAR]: String(level + 1) },
+    env: childEnv({ [DEPTH_VAR]: String(level + 1) }),
     maxBuffer: MAX_BUFFER,
     timeout: TIMEOUT_SECONDS * 1000,
     killSignal: 'SIGKILL',
@@ -118,13 +130,13 @@ function run(command: string, root: string, level: number): { code: number; out:
   return { code, out: done.stdout ?? '', err: done.stderr ?? '' }
 }
 
-function resolveContract(root: string): string | number {
+function resolveContract(root: string, from: string): string | number {
   const slugs = liveSlugs(root)
   if (!slugs.length) {
     return fail('no live wave under .scratchpad/dossier/ — a closed wave\'s contract runs only by explicit path')
   }
   const owners = slugs.flatMap((slug) => {
-    const contract = contractFor(root, slug)
+    const contract = contractFor(root, slug, from)
     return contract ? [{ slug, contract }] : []
   })
   if (!owners.length) return fail(`live wave ${slugs[0]} has no contract — ds:new writes one`)
@@ -139,7 +151,7 @@ export function convergeVerb(args: string[]): number {
   const level = depth()
   if (level >= MAX_DEPTH) return fail(`converge nested ${level} deep; refusing to recurse further`)
   const root = process.cwd()
-  const resolved = args[0] === undefined ? resolveContract(process.env.DOSSIER_LEDGER_ROOT || root) : pyPath(args[0])
+  const resolved = args[0] === undefined ? resolveContract(process.env.DOSSIER_LEDGER_ROOT || root, root) : pyPath(args[0])
   if (typeof resolved === 'number') return resolved
   const contract = resolved
   if (!isFile(contract)) return fail(`no contract at ${contract}`)
@@ -180,7 +192,7 @@ function git(root: string, ...args: string[]): string {
   return done.status === 0 ? (done.stdout ?? '') : ''
 }
 
-function report(root: string, contract: string): string[] {
+function report(contract: string): string[] {
   const text = readFileSync(contract, 'utf8').replace(/\r\n?/g, '\n')
   const name = contract.split('/').pop() ?? ''
   let slug = name.slice(0, name.lastIndexOf('.') > 0 ? name.lastIndexOf('.') : name.length)
@@ -189,6 +201,7 @@ function report(root: string, contract: string): string[] {
   const count = numberedRows(text).length
   if (!count) return []
   const out = [`wave ${slug} · ${count} criteria · run ds:converge for the verdict`]
+  const root = topLevel(dirname(contract))
   const relative = contract.startsWith(`${root}/`) ? contract.slice(root.length + 1) : contract
   const first = git(root, 'log', '--format=%H', '--reverse', '--', relative).split('\n')[0] ?? ''
   if (first) {
@@ -202,12 +215,12 @@ function report(root: string, contract: string): string[] {
   return out
 }
 
-function payloadCwd(raw: string): string | undefined {
+function payloadPath(raw: string, key: 'cwd' | 'from'): string | undefined {
   try {
     const payload: unknown = raw.trim() ? JSON.parse(raw) : {}
     if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return undefined
-    const cwd = (payload as Record<string, unknown>).cwd
-    return typeof cwd === 'string' && cwd ? cwd : undefined
+    const value = (payload as Record<string, unknown>)[key]
+    return typeof value === 'string' && value ? value : undefined
   } catch {
     return undefined
   }
@@ -220,18 +233,20 @@ export function convergenceStateVerb(): number {
   } catch {
     return 0
   }
-  const given = payloadCwd(raw)
+  const given = payloadPath(raw, 'cwd')
   if (given === undefined || !isDir(given)) return 0
   const root = pyPath(given)
+  const session = payloadPath(raw, 'from')
+  const from = session !== undefined && isDir(session) ? session : root
   const out: string[] = []
   for (const slug of liveSlugs(root)) {
-    const contract = contractFor(root, slug)
+    const contract = contractFor(root, slug, from)
     if (contract === undefined) {
       out.push(`wave ${slug} · no contract · ds:new writes one, ds:converge reads it`)
       continue
     }
     try {
-      out.push(...report(root, contract))
+      out.push(...report(contract))
     } catch {}
   }
   if (out.length) say(out.join('\n'))

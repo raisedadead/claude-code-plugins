@@ -18,6 +18,7 @@ import {
 import { constants, tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { convergenceStateVerb, convergeVerb } from './converge.ts'
+import { claimRoots } from './env.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
 import { sessionReport } from '../engine/session.ts'
@@ -644,8 +645,7 @@ function ledgerRoot(): string {
 export async function main(args: string[]): Promise<number> {
   const [verb, ...rest] = args
   const ledger = ledgerRoot()
-  process.env.DOSSIER_LEDGER_ROOT ??= ledger
-  process.env.DOSSIER_SCRATCHPAD_ROOT ??= ledger
+  claimRoots(ledger)
   if (verb === 'x-refresh' && rest[2] !== undefined) rest[2] = resolve(rest[2])
   if (verb !== undefined && LEDGER_VERBS.has(verb)) process.chdir(ledger)
   const run = verb === undefined ? undefined : VERBS[verb]

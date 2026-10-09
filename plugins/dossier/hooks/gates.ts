@@ -237,11 +237,11 @@ export async function sessionGate(io: Io, root: string, input: { source: string;
   return { context: text(specific.additionalContext), title: text(specific.sessionTitle), toast: text(output.systemMessage) }
 }
 
-export async function promptGate(io: Io, root: string): Promise<string | undefined> {
+export async function promptGate(io: Io, root: string, from: string = root): Promise<string | undefined> {
   if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return undefined
   try {
     const argv = ['sh', io.cli ?? 'cli/ds', 'convergence-state']
-    const done = await io.run(argv, { stdin: JSON.stringify({ cwd: root }), timeoutMs: PROMPT_TIMEOUT_MS, cwd: root })
+    const done = await io.run(argv, { stdin: JSON.stringify({ cwd: root, from }), timeoutMs: PROMPT_TIMEOUT_MS, cwd: root })
     const text = done.stdout.trim()
     return done.exitCode === 0 && text ? text : undefined
   } catch {

@@ -106,3 +106,47 @@ test('from a linked worktree, x-refresh reads the worktree repo and converge fin
     rmSync(base, { recursive: true, force: true })
   }
 })
+
+test('a criterion does not inherit the ledger root ds set for itself, and keeps one the caller set', () => {
+  withRoot((root) => {
+    const wave = join(root, '.scratchpad', 'dossier', '2026-10-09-w')
+    mkdirSync(wave)
+    writeFileSync(join(wave, 'DOSSIER.md'), '# w\n\n`2026-10-09` · `live` · `P1/1`\n')
+    const probe = '`printenv DOSSIER_LEDGER_ROOT DOSSIER_SCRATCHPAD_ROOT \\|\\| echo unset`'
+    writeFileSync(join(wave, 'CONTRACT.md'), `| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | ${probe} | stdout: unset |\n`)
+    const env = { ...process.env }
+    delete env.DOSSIER_LEDGER_ROOT
+    delete env.DOSSIER_SCRATCHPAD_ROOT
+    const clean = spawnSync('sh', [DS, 'converge'], { cwd: root, encoding: 'utf8', env })
+    assert.match(clean.stdout, /CONVERGE: MET/, clean.stdout + clean.stderr)
+    const given = spawnSync('sh', [DS, 'converge', join(wave, 'CONTRACT.md')], { cwd: root, encoding: 'utf8', env: { ...env, DOSSIER_LEDGER_ROOT: '/given' } })
+    assert.match(given.stdout, /UNMET 1/, given.stdout + given.stderr)
+  })
+})
+
+test('from a linked worktree, converge and the prompt state find a tracked contract on the feature branch', () => {
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'ds-wt3-')))
+  const main = join(base, 'repo')
+  const feature = join(base, 'repo.feature')
+  try {
+    const wave = join(main, '.scratchpad', 'dossier', '2026-10-09-w')
+    mkdirSync(wave, { recursive: true })
+    writeFileSync(join(wave, 'DOSSIER.md'), '# w\n\n`2026-10-09` · `live` · `P1/1`\n')
+    const git = (...args: string[]) => execFileSync('git', ['-C', main, ...args], { stdio: 'ignore' })
+    git('init', '-q', '-b', 'main')
+    git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init')
+    git('worktree', 'add', '-q', feature, '-b', 'feature')
+    mkdirSync(join(feature, '.dossier'))
+    writeFileSync(join(feature, '.dossier', '2026-10-09-w.md'), '# w\n\n| field | value |\n|---|---|\n| consumer | t |\n| budget | 5 commits |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | `true` | exit 0 |\n')
+    execFileSync('git', ['-C', feature, 'add', '.dossier'], { stdio: 'ignore' })
+    execFileSync('git', ['-C', feature, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'contract'], { stdio: 'ignore' })
+    const converge = spawnSync('sh', [DS, 'converge'], { cwd: feature, encoding: 'utf8' })
+    assert.match(converge.stdout, /contract: .*repo\.feature\/\.dossier\/2026-10-09-w\.md/, converge.stdout + converge.stderr)
+    assert.match(converge.stdout, /CONVERGE: MET/)
+    const state = spawnSync('sh', [DS, 'convergence-state'], { cwd: main, encoding: 'utf8', input: JSON.stringify({ cwd: main, from: feature }) })
+    assert.match(state.stdout, /wave w · 1 criteria/, state.stdout + state.stderr)
+    assert.match(state.stdout, /commits: 0 of 5/)
+  } finally {
+    rmSync(base, { recursive: true, force: true })
+  }
+})

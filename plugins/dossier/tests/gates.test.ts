@@ -220,6 +220,16 @@ describe('prompt convergence state', () => {
     expect(await promptGate(io(OPTED_IN, { run }), ROOT)).toBe('wave demo · 2 criteria · run ds:converge for the verdict')
   })
 
+  test('hands the session cwd to the cli so a worktree contract resolves', async () => {
+    let stdin = ''
+    const run: Io['run'] = async (_argv, init) => {
+      stdin = String(init?.stdin ?? '')
+      return { exitCode: 0, stdout: '', stderr: '' }
+    }
+    await promptGate(io(OPTED_IN, { run }), ROOT, '/repo.feature')
+    expect(JSON.parse(stdin)).toEqual({ cwd: ROOT, from: '/repo.feature' })
+  })
+
   test('stays silent on empty output, a failure or no dossier', async () => {
     const empty: Io['run'] = async () => ({ exitCode: 0, stdout: '\n', stderr: '' })
     expect(await promptGate(io(OPTED_IN, { run: empty }), ROOT)).toBeUndefined()

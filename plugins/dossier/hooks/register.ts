@@ -68,7 +68,7 @@ export const register: Register = (on) => {
 
   on('classic.UserPromptSubmit', async ($, e, next) => {
     const result = await next(e)
-    const context = await promptGate(ioOf($), await ledgerRoot(ioOf($), e.cwd))
+    const context = await promptGate(ioOf($), await ledgerRoot(ioOf($), e.cwd), e.cwd)
     if (!context) return result
     return { ...result, additionalContext: [...(result.additionalContext ?? []), context] }
   })
