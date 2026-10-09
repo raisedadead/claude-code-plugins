@@ -4,7 +4,14 @@ set -euo pipefail
 pattern='\bnever\b|\bdo not\b|\bdon.t\b|\bmust not\b'
 files=(plugins/dossier/skills/build/SKILL.md plugins/dossier/agents/dossier-reviewer.md CLAUDE.md)
 
-count() { grep -oiE "$pattern" "$@" | wc -l | tr -d ' '; }
+count() { { grep -oiE "$pattern" "$@" || true; } | wc -l | tr -d ' '; }
+
+for file in "${files[@]}"; do
+	[[ -f $file ]] || {
+		printf 'RAILS: %s is missing\n' "$file" >&2
+		exit 1
+	}
+done
 
 [[ "$(count plugins/dossier/skills/build/SKILL.md)" -le 13 ]] || {
 	printf 'RAILS: build/SKILL.md is over 13\n' >&2
