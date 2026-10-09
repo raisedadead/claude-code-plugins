@@ -213,6 +213,7 @@ export function zWrite(
   summary: string,
   cites: string,
   stamp: string,
+  after = '',
 ): Result {
   let body: string
   if (kind === 'complete') body = 'complete: true'
@@ -228,6 +229,7 @@ export function zWrite(
     ['key cites', `key cites: ${cites}`],
   ]
   if (kind === 'abandoned') checks.push(['reason', `reason: ${value}`])
+  if (after) checks.push(['after', `after: ${after}`])
   for (const [label, rendered] of checks) {
     if (lines(rendered).some(closureLine)) {
       return { error: `${label} reads as a §Z closure key and would flip the INDEX §Z column; reword it` }
@@ -237,7 +239,8 @@ export function zWrite(
   const at = rows.findIndex((row) => SEC.closeout.test(row))
   if (at < 0) return { error: `no Closeout heading in ${file}` }
   const head = unlines(rows.slice(0, at))
-  return { text: `${head}${rows[at]}\n\n${stamp} — closed\n\n${body}\n\nsummary: ${summary}\n\nkey cites: ${cites}\n` }
+  const carried = after ? `\n\nafter: ${after}` : ''
+  return { text: `${head}${rows[at]}\n\n${stamp} — closed\n\n${body}${carried}\n\nsummary: ${summary}\n\nkey cites: ${cites}\n` }
 }
 
 export function missingSections(text: string): string[] {
@@ -281,6 +284,16 @@ export function zColumn(text: string): string {
 const STAMP = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}(?::[0-9]{2})?'
 const ENTRY = new RegExp(`^${STAMP} (ds:[a-z]+) (\\S+) (.*)$`)
 const JOINED = new RegExp(` (?=${STAMP} ds:[a-z]+ )`)
+
+export function statusSection(text: string): string[] {
+  const out: string[] = []
+  let inside = false
+  for (const row of lines(text)) {
+    if (SEC.any.test(row)) inside = SEC.status.test(row)
+    else if (inside) out.push(row)
+  }
+  return out
+}
 
 export function openOps(entries: string[]): Map<string, string> {
   const open = new Map<string, string>()

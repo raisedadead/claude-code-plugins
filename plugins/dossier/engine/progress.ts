@@ -14,12 +14,12 @@ export type Progress = {
   waiting: string[]
 }
 
-type Row = { id: string; state: string; who: string; needs: string[] }
+export type Row = { id: string; state: string; who: string; task: string; needs: string[]; cite: string; verify: string }
 
 const TASK_ID = /^T\d+$/
-const DELAYED = /^(T\d+)\+\d+d$/
+export const DELAYED = /^(T\d+)\+\d+d$/
 
-function taskRows(text: string): Row[] {
+export function taskRows(text: string): Row[] {
   const lines = splitLines(text)
   const start = lines.findIndex((line) => /^##\s+(§T\b|Tasks\b)/.test(line))
   if (start < 0) return []
@@ -39,7 +39,7 @@ function taskRows(text: string): Row[] {
       .split(',')
       .map((need) => need.trim())
       .filter((need) => need && need !== '—' && need !== '-')
-    rows.push({ id: at('id'), state: at('state'), who: at('who').toUpperCase(), needs })
+    rows.push({ id: at('id'), state: at('state'), who: at('who').toUpperCase(), task: at('task'), needs, cite: at('cite'), verify: at('verify') })
   }
   return rows
 }

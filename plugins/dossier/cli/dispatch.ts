@@ -18,6 +18,7 @@ import {
 import { constants, tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { convergenceStateVerb, convergeVerb, staleContracts } from './converge.ts'
+import { closeVerb } from './close.ts'
 import { claimRoots } from './env.ts'
 import { progressVerb } from './progress.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
@@ -39,6 +40,8 @@ import {
   unlines,
   vmFindings,
   xRefresh,
+  openOps,
+  statusSection,
   zClosed,
   zWrite,
 } from '../engine/ledger.ts'
@@ -385,6 +388,31 @@ function clearLocks(dossierDir: string, dryRun: boolean): string[] {
   return out
 }
 
+function lockHeld(dir: string): string | undefined {
+  const path = `${dir}/.ds-lock`
+  if (!isFile(path) || staleLocks(dir).some(([stale]) => stale === path)) return undefined
+  try {
+    const data: unknown = JSON.parse(readFileSync(path, 'utf8'))
+    const skill = typeof data === 'object' && data !== null ? (data as Record<string, unknown>).skill : undefined
+    return typeof skill === 'string' && skill ? skill : 'another op'
+  } catch {
+    return 'another op'
+  }
+}
+
+function dsCloseVerb(args: string[]): number {
+  return closeVerb(args, {
+    write: (file, text) => atomicWrite(file, text),
+    append: sAppendTo,
+    setHeader,
+    archiveMove,
+    regenIndex,
+    lockHeld,
+    stamp: () => stamp(new Date()),
+    cli: join(import.meta.dirname, 'ds'),
+  })
+}
+
 function clearLocksVerb(args: string[]): number {
   const dryRun = args.includes('--dry-run')
   const dir = args.filter((arg) => arg !== '--dry-run').pop() || '.scratchpad/dossier'
@@ -457,9 +485,12 @@ function regenIndexVerb(args: string[]): number {
 
 function advisories(scratchpad: string): string[] {
   const archive = `${scratchpad}/dossier/_archive`
-  const out = subdirs(archive)
-    .filter((name) => isFile(`${archive}/${name}/DOSSIER.md`) && !zClosed(readFileSync(`${archive}/${name}/DOSSIER.md`, 'utf8')))
-    .map((name) => `advisory: ${name} is archived with no §Z closure key — \`ds close\` on it writes one`)
+  const out: string[] = []
+  for (const name of subdirs(archive).filter((entry) => isFile(`${archive}/${entry}/DOSSIER.md`))) {
+    const text = readFileSync(`${archive}/${name}/DOSSIER.md`, 'utf8')
+    if (openOps(statusSection(text)).has('ds:close —')) out.push(`advisory: ${name} close did not finish — \`ds close ${name}\` resumes it`)
+    else if (!zClosed(text)) out.push(`advisory: ${name} is archived with no §Z closure key — \`ds close\` on it writes one`)
+  }
   const root = resolve(scratchpad, '..')
   const own = resolve(process.env.DOSSIER_LEDGER_ROOT ?? '') === root
   for (const path of staleContracts(root, own ? process.env.PWD || root : root)) {
@@ -622,6 +653,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'assert-scaffold': assertScaffoldVerb,
   'changelog-write': changelogWriteVerb,
   'clear-locks': clearLocksVerb,
+  close: dsCloseVerb,
   converge: convergeVerb,
   'convergence-state': convergenceStateVerb,
   'ds-check': dsCheckVerb,

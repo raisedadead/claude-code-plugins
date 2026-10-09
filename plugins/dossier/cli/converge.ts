@@ -79,7 +79,7 @@ export function liveSlugs(root: string): string[] {
   })
 }
 
-function topLevel(dir: string): string {
+export function topLevel(dir: string): string {
   return strip(git(dir, 'rev-parse', '--show-toplevel')) || dir
 }
 
