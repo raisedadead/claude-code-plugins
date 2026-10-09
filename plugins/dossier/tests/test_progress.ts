@@ -57,6 +57,10 @@ test('an all-done wave reads as ready to close', () => {
   assert.equal(progressLine('w', progress(done)), 'w 100% · 19/19 · ready to close')
 })
 
+test('a wave with no task rows never reads as ready to close', () => {
+  assert.equal(progressLine('w', progress('## Tasks\n')), 'w 0% · 0/0')
+})
+
 test('the table rounds down so an unfinished wave never shows 100%', () => {
   const table = progressTable('single-worker', progress(LEDGER, 'T16'))
   assert.match(table, /^single-worker · 9 of 19 done · 47%$/m)

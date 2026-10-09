@@ -376,12 +376,9 @@ export function vmFindings(file: string, text: string): string[] {
 
 export type IndexRow = { date: string; slug: string; state: string; row: string }
 
-function phases(rows: string[]): { max: number; current: number; done: number; total: number; noState: boolean } {
+function taskCount(rows: string[]): { done: number; total: number; noState: boolean } {
   let header = false
   let colState = 0
-  let colPhase = 0
-  let max = 0
-  let current = 0
   let done = 0
   let total = 0
   let noState = false
@@ -389,32 +386,20 @@ function phases(rows: string[]): { max: number; current: number; done: number; t
     if (SEC.tasks.test(row)) {
       header = false
       colState = 0
-      colPhase = 0
       continue
     }
     if (!inside) continue
     if (TASK_ROW.test(row)) total++
     if (!row.startsWith('|') || RULE_ROW.test(row)) continue
-    const cells = row.split('|')
     if (!header) {
       header = true
-      const named = columns(row, ['state', 'P'])
-      colState = named.state ?? 0
-      colPhase = named.P ?? 0
+      colState = columns(row, ['state']).state ?? 0
       if (!colState) noState = true
       continue
     }
-    if (!TASK_ROW.test(row)) continue
-    const state = colState ? trim(cells[colState] ?? '') : ''
-    if (colState && state === 'x') done++
-    const phase = colPhase ? trim(cells[colPhase] ?? '') : ''
-    if (!/^P[0-9]+$/.test(phase)) continue
-    const p = Number(phase.slice(1))
-    if (p > max) max = p
-    if (colState && state !== 'x' && (current === 0 || p < current)) current = p
+    if (TASK_ROW.test(row) && colState && trim(row.split('|')[colState] ?? '') === 'x') done++
   }
-  const pMax = max || 1
-  return { max: pMax, current: current || pMax, done, total, noState }
+  return { done, total, noState }
 }
 
 export function indexRow(dir: string, text: string, archived: boolean, mtime: string): IndexRow & { warning?: string } {
@@ -423,7 +408,7 @@ export function indexRow(dir: string, text: string, archived: boolean, mtime: st
   const slug = chars.slice(11).join('')
   const rows = lines(text)
   const token = headerToken(text)
-  const { max, current, done, total, noState } = phases(rows)
+  const { done, total, noState } = taskCount(rows)
   let bugs = 0
   for (const [, row, inside] of inSection(rows, SEC.bugs)) if (inside && BUG_ROW.test(row)) bugs++
   const z = zColumn(text)
@@ -433,7 +418,7 @@ export function indexRow(dir: string, text: string, archived: boolean, mtime: st
   else if (closed) state = 'drift!'
   else if (token === 'live' || token === 'paused') state = token
   else state = 'drift!'
-  const row = `| ${date} | ${slug} | ${state} | P${current}/${max} | ${done}/${total} | ${bugs} | ${mtime} | ${z} |`
+  const row = `| ${date} | ${slug} | ${state} | ${done}/${total} | ${bugs} | ${mtime} | ${z} |`
   return { date, slug, state, row, ...(noState ? { warning: 'Tasks header names no state column, so its rows count as not-done' } : {}) }
 }
 
@@ -451,7 +436,7 @@ export function renderIndex(rows: IndexRow[]): string {
       byCodeUnit(a.row, b.row),
   )
   let out =
-    '# .scratchpad index\n\n| date | slug | state | P | T | B | mtime | §Z |\n|------|------|-------|---|---|---|-------|-----|\n'
+    '# .scratchpad index\n\n| date | slug | state | T | B | mtime | §Z |\n|------|------|-------|---|---|-------|-----|\n'
   out += sorted.map((row) => `${row.row}\n`).join('')
   const drift = rows.filter((row) => row.state === 'drift!')
   if (drift.length) out += `\n<!-- drift:${drift.length} slugs:${drift.map((row) => `${row.date}-${row.slug}`).join(' ')} -->\n`

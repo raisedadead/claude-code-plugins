@@ -6,12 +6,15 @@ import { liveSlugs, waveContract } from './converge.ts'
 
 const USAGE = 'usage: ds progress [<dossier-dir>] [--line | --json]'
 
+export function milestoneOf(dir: string, root: string): string | undefined {
+  const contract = waveContract(dir, root)
+  return contract ? field(readFileSync(contract, 'utf8'), 'milestone') || undefined : undefined
+}
+
 function report(dir: string, root: string, mode: string): string {
   const file = join(dir, 'DOSSIER.md')
   if (!existsSync(file)) throw new Error(`ds progress: not found: ${file}`)
-  const contract = waveContract(dir, root)
-  const milestone = contract ? field(readFileSync(contract, 'utf8'), 'milestone') || undefined : undefined
-  const view = progress(readFileSync(file, 'utf8'), milestone)
+  const view = progress(readFileSync(file, 'utf8'), milestoneOf(dir, root))
   const slug = (dir.split('/').filter(Boolean).pop() ?? '').replace(DATE_PREFIX, '')
   if (mode === '--json') return JSON.stringify({ slug, ...view })
   return mode === '--line' ? progressLine(slug, view) : progressTable(slug, view)

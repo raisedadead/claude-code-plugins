@@ -139,7 +139,7 @@ layout_row() {
 		printf '## §Z — Closeout\n\n_(empty)_\n'
 	} >"$dir/DOSSIER.md"
 	(cd "$ws" && "$DS" regen-index .scratchpad >/dev/null 2>&1)
-	grep 'shape' "$ws/.scratchpad/INDEX.md" | awk -F'|' '{gsub(/ /,"",$6); print $6}'
+	grep 'shape' "$ws/.scratchpad/INDEX.md" | awk -F'|' '{gsub(/ /,"",$5); print $5}'
 }
 
 WS4="$TMP/ws4"
@@ -201,7 +201,7 @@ EOF
 z_of() {
 	awk -F'|' -v slug="$1" '
     NR>2 && $3 ~ slug {
-      s=$9; gsub(/^[ \t]+|[ \t]+$/,"",s); print s; exit
+      s=$8; gsub(/^[ \t]+|[ \t]+$/,"",s); print s; exit
     }' "$INDEX"
 }
 

@@ -392,14 +392,14 @@ Auto-maintained by hook + every `ds:*` skill. Never source-of-truth; regenerable
 ```markdown
 # .scratchpad index
 
-| date       | slug              | state | P    | T     | B   | mtime            | §Z       |
-| ---------- | ----------------- | ----- | ---- | ----- | --- | ---------------- | -------- |
-| 2026-05-14 | auth-1            | live  | P1/2 | 2/5   | 2   | 2026-05-14 14:50 | —        |
-| 2026-05-12 | artemis-staleness | done  | P3/3 | 12/12 | 4   | 2026-05-13 21:38 | →auth-1  |
-| 2026-04-28 | k3s-bootstrap     | done  | P1/1 | 8/8   | 1   | 2026-04-29 09:12 | complete |
+| date       | slug              | state | T     | B   | mtime            | §Z       |
+| ---------- | ----------------- | ----- | ----- | --- | ---------------- | -------- |
+| 2026-05-14 | auth-1            | live  | 2/5   | 2   | 2026-05-14 14:50 | —        |
+| 2026-05-12 | artemis-staleness | done  | 12/12 | 4   | 2026-05-13 21:38 | →auth-1  |
+| 2026-04-28 | k3s-bootstrap     | done  | 8/8   | 1   | 2026-04-29 09:12 | complete |
 ```
 
-Sort: date desc. Live dossiers first.
+Sort: date desc. Live dossiers first. An INDEX written before 2026-10-09 has a `P` column after `state`. It still reads until the next regen rewrites it: `engine/session.ts` finds its columns by header name, and the mod's skill gate reads only `date`, `slug` and `state`, which did not move.
 
 `state` ∈ `live | paused | done | drift!` — reconciled from THREE witnesses (directory location, header state token, §Z closure). Concordant renders: `_archive/` + header `done` + §Z-closed ⇒ `done`; direct child + header `live` ⇒ `live`; header `paused` ⇒ `paused` (sorts after live). ANY disagreement or a non-canonical header token ⇒ `drift!` — a live-located `done`/`sealed` header, an archived `live` header, or a §Z-closed non-archived dir — never silently coerced to `live`. `drift!` sorts to the top. A trailing `<!-- drift:N slugs:... -->` comment records the count.
 

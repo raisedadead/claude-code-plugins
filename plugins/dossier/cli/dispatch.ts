@@ -20,7 +20,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { convergenceStateVerb, convergeVerb, staleContracts } from './converge.ts'
 import { closeVerb } from './close.ts'
 import { claimRoots } from './env.ts'
-import { progressVerb } from './progress.ts'
+import { milestoneOf, progressVerb } from './progress.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
 import { addEntry, entryError, openDecisions } from '../engine/grill.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
@@ -442,6 +442,14 @@ function clearLocksVerb(args: string[]): number {
   return 0
 }
 
+function safeMilestone(dir: string, root: string): string | undefined {
+  try {
+    return milestoneOf(dir, root)
+  } catch {
+    return undefined
+  }
+}
+
 function quietly(action: () => void): boolean {
   try {
     action()
@@ -609,7 +617,11 @@ function sessionStartVerb(): number {
   const index = `${scratchpad}/INDEX.md`
   const ledgers = subdirs(dossiers)
     .filter((name) => name !== '_archive' && isFile(`${dossiers}/${name}/DOSSIER.md`))
-    .map((name) => ({ name, text: readFileSync(`${dossiers}/${name}/DOSSIER.md`, 'utf8') }))
+    .map((name) => ({
+      name,
+      text: readFileSync(`${dossiers}/${name}/DOSSIER.md`, 'utf8'),
+      milestone: safeMilestone(`${dossiers}/${name}`, resolve(scratchpad, '..')),
+    }))
   let notes: string[] = []
   quietly(() => {
     notes = advisories(scratchpad)

@@ -94,10 +94,20 @@ function percent({ done, total }: Count): string {
 export function progressLine(slug: string, view: Progress): string {
   const head = `${slug} ${percent(view.all)} · ${view.all.done}/${view.all.total}`
   if (view.all.total && view.all.done === view.all.total) return `${head} · ready to close`
+  const later = [...new Set(view.tail.map((entry) => entry.split(' ')[0] ?? ''))]
+  if (later.length && later.length === view.all.total - view.all.done) return `${head} · ready to close · carry ${later.join(' ')}`
   const parts = [head]
   if (view.next[0]) parts.push(`next ${view.next[0]}`)
   if (view.waiting.length) parts.push(`waits on you: ${view.waiting.join(' ')}`)
   if (!view.next.length && !view.waiting.length && view.active.length) parts.push(`in progress ${view.active.join(' ')}`)
+  return parts.join(' · ')
+}
+
+export function ownerLine(view: Progress): string {
+  const parts = [`Agent ${view.agent.done}/${view.agent.total}`, `You ${view.operator.done}/${view.operator.total}`]
+  if (view.milestone) parts.push(`Up to ${view.milestone.id} ${view.milestone.done}/${view.milestone.total}`)
+  if (view.active.length) parts.push(`in progress ${view.active.join(' ')}`)
+  if (view.tail.length) parts.push(`later ${view.tail.map((entry) => entry.replace(' ', ' (') + ')').join(', ')}`)
   return parts.join(' · ')
 }
 

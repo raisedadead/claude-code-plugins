@@ -81,27 +81,25 @@ For each §X row run `git status -sb` + `git rev-list --count` and compare again
 
 ### 5. Report (decision-first)
 
-Lead with the ONE decision. Full §T/§X tables on `--full`.
+Lead with the progress line, then the ONE decision. Run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds progress <dir> --line` and `"${CLAUDE_PLUGIN_ROOT}"/cli/ds ds-check .scratchpad`, and print their lines as they come. A bracketed line prints only when its condition holds.
 
 ```
+<slug> 47% · 9/19 · next T3                    # ds progress --line, verbatim
 DECISION: <the one thing the operator must decide, or "NONE → proceeding">
   └ <why a human is needed / what unblocks if NONE>
-BLOCKERS (§T !/?):
-  T5 rolling-restart — needs ops review        # state=!/? rows; verify/task cell = the "why"
-  (none) if empty
+[BLOCKED: T5 rolling-restart — needs ops review]       # state=!/? rows
 JUST DID: <last 1–2 §S cite-bearing entries>
-NOW: <slug> P<cur>/<tot> · T <done>/<tot> · TaskList <active>/<blocked>
-NEXT (auto): ds:build --auto   (or a specific ds:build <T-id>, or "BLOCKED → decision above")
-  ⚠ §X stale <Nm> → confirm before flip          # only if flagged (step 4)
-[CONSOLIDATE: <N> live — pause/close the stale ones]   # only if >1 live (step 1a)
-PAUSED (<N>): <slug> · <T done/tot> · idle <Nd>          # every state=paused row (step 1); "(none)" when empty
-[⚠ resume: ds:build T<N> --resume]                     # only if incomplete op (step 3)
-Locks: <none | <slug>: <skill> pid <pid> since <time>>
-
-[--full for §T / §X tables]
+NEXT: ds:build --auto                                   # or ds:build <T-id>; "ready to close" → ds close <slug> <mode> --plan
+[⚠ §X stale <Nm> → confirm before flip]                 # step 4
+[DRIFT: <advisory line>]                                # each ds ds-check advisory
+[LATER: <later: line>]                                  # each later: line of `ds progress` with no dir
+[CONSOLIDATE: <N> live — pause/close the stale ones]    # >1 live (step 1a)
+PAUSED (<N>): <slug> · <T done/tot> · idle <Nd>         # every state=paused row (step 1); "(none)" when empty
+[⚠ resume: ds:build T<N> --resume]                      # incomplete op (step 3)
+[Locks: <slug>: <skill> pid <pid> since <time>]
 ```
 
-`--full` adds the complete §T + §X tables and the §S tail — the deep-inspection dump.
+`--full` adds the `ds progress <dir>` table, the complete §T + §X tables and the §S tail.
 
 ### 6. What writes, and when
 

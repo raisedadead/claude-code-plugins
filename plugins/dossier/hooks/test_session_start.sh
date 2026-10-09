@@ -233,7 +233,7 @@ for spelling in "## §T — Task ledger|## §S — Rolling status log" "## Tasks
 	ledger_with "2026-08-05-sitrep" "$tasks_h" "$status_h"
 	run_hook '{"hook_event_name":"SessionStart","source":"startup"}'
 	assert_valid_json "sitrep $tasks_h"
-	ctx_of | grep -q 'Tasks: 1/2 done' ||
+	ctx_of | grep -q ' 50% · 1/2' ||
 		fail "$tasks_h: task summary must count by header name, got: $(ctx_of)"
 	[[ "$(ctx_of | grep -c 'just did:')" == "2" ]] ||
 		fail "$status_h: the two most recent Status entries must reach the sit-rep, got: $(ctx_of)"
@@ -245,7 +245,7 @@ run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":"
 assert_valid_json "live-nudge"
 sys_of | grep -q '2026-06-05-foo' || fail "one live dossier must raise a systemMessage naming the slug, got: $(sys_of)"
 sys_of | grep -q 'ds:status\|/dossier:status' || fail "the live nudge must route to the sit-rep"
-sys_of | grep -q 'P1/1 · T 0/1 · B 0' || fail "the live nudge must carry the INDEX P/T/B cells in that order, got: $(sys_of)"
+sys_of | grep -q '2026-06-05-foo 0% · ' || fail "the live nudge must carry the progress line, got: $(sys_of)"
 
 for src in resume fork clear; do
 	run_hook "{\"hook_event_name\":\"SessionStart\",\"source\":\"$src\",\"session_title\":\"\"}"
