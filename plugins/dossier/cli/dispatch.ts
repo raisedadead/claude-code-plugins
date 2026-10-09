@@ -17,7 +17,7 @@ import {
 } from 'node:fs'
 import { constants, tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
-import { convergenceStateVerb, convergeVerb } from './converge.ts'
+import { convergenceStateVerb, convergeVerb, staleContracts } from './converge.ts'
 import { claimRoots } from './env.ts'
 import { progressVerb } from './progress.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
@@ -455,11 +455,26 @@ function regenIndexVerb(args: string[]): number {
   return 0
 }
 
+function advisories(scratchpad: string): string[] {
+  const archive = `${scratchpad}/dossier/_archive`
+  const out = subdirs(archive)
+    .filter((name) => isFile(`${archive}/${name}/DOSSIER.md`) && !zClosed(readFileSync(`${archive}/${name}/DOSSIER.md`, 'utf8')))
+    .map((name) => `advisory: ${name} is archived with no §Z closure key — \`ds close\` on it writes one`)
+  const root = resolve(scratchpad, '..')
+  const own = resolve(process.env.DOSSIER_LEDGER_ROOT ?? '') === root
+  for (const path of staleContracts(root, own ? process.env.PWD || root : root)) {
+    out.push(`advisory: ${path} belongs to no open wave — move it to .dossier/_archive/`)
+  }
+  return out
+}
+
 function dsCheckVerb(args: string[]): number {
   const scratchpad = args[0] || '.scratchpad'
   regenIndex(scratchpad)
   const index = `${scratchpad}/INDEX.md`
   if (!isFile(index)) return 0
+  const notes = advisories(scratchpad)
+  if (notes.length) console.log(notes.join('\n'))
   const drift = /<!-- drift:([0-9]+) slugs:([^>]*) -->/.exec(readFileSync(index, 'utf8'))
   if (!drift) return 0
   console.error(`ds:check: Vm.1/Vm.4 DRIFT — ${drift[1]} dossier(s) with header/location/§Z disagreement: ${drift[2]}`)
@@ -542,6 +557,10 @@ function sessionStartVerb(): number {
   const ledgers = subdirs(dossiers)
     .filter((name) => name !== '_archive' && isFile(`${dossiers}/${name}/DOSSIER.md`))
     .map((name) => ({ name, text: readFileSync(`${dossiers}/${name}/DOSSIER.md`, 'utf8') }))
+  let notes: string[] = []
+  quietly(() => {
+    notes = advisories(scratchpad)
+  })
   const report = sessionReport({
     index: isFile(index) ? readFileSync(index, 'utf8') : undefined,
     ledgers,
@@ -549,6 +568,7 @@ function sessionStartVerb(): number {
     title: text(payload.session_title),
     titleFlag: process.env.DOSSIER_SESSION_TITLE ?? '0',
     nudgeFlag: process.env.DOSSIER_LIVE_NUDGE ?? '1',
+    notes,
   })
   const specific = { hookEventName: 'SessionStart', additionalContext: report.context, ...(report.title ? { sessionTitle: report.title } : {}) }
   console.log(JSON.stringify({ continue: true, hookSpecificOutput: specific, ...(report.system ? { systemMessage: report.system } : {}) }))

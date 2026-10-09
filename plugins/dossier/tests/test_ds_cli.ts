@@ -150,3 +150,39 @@ test('from a linked worktree, converge and the prompt state find a tracked contr
     rmSync(base, { recursive: true, force: true })
   }
 })
+
+function wave(root: string, rel: string, token: string, closeout = ''): void {
+  const dir = join(root, '.scratchpad', 'dossier', rel)
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, 'DOSSIER.md'), `# w\n\n\`2026-10-09\` · \`${token}\` · \`P1/1\`\n\n## Closeout\n\n${closeout}\n`)
+}
+
+test('ds-check names a hand-closed archive and a contract with no open wave, and exits 0 on them', () => {
+  withRoot((root) => {
+    wave(root, '_archive/2026-09-29-handmade', 'done', 'closed by hand')
+    wave(root, '_archive/2026-09-28-proper', 'done', 'complete: true')
+    wave(root, '2026-10-09-open', 'live')
+    mkdirSync(join(root, '.dossier'))
+    writeFileSync(join(root, '.dossier', '2026-09-28-proper.md'), '# c\n')
+    writeFileSync(join(root, '.dossier', '2026-10-09-open.md'), '# c\n')
+    const done = spawnSync('sh', [DS, 'ds-check', '.scratchpad'], { cwd: root, encoding: 'utf8' })
+    assert.equal(done.status, 0, done.stderr)
+    assert.deepEqual(done.stdout.trim().split('\n'), [
+      'advisory: 2026-09-29-handmade is archived with no §Z closure key — `ds close` on it writes one',
+      'advisory: .dossier/2026-09-28-proper.md belongs to no open wave — move it to .dossier/_archive/',
+    ])
+  })
+})
+
+test('ds-check prints nothing on a tree whose archives and contracts agree', () => {
+  withRoot((root) => {
+    wave(root, '_archive/2026-09-28-proper', 'done', 'complete: true')
+    wave(root, '2026-10-09-open', 'live')
+    mkdirSync(join(root, '.dossier', '_archive'), { recursive: true })
+    writeFileSync(join(root, '.dossier', '_archive', '2026-09-28-proper.md'), '# c\n')
+    writeFileSync(join(root, '.dossier', '2026-10-09-open.md'), '# c\n')
+    const done = spawnSync('sh', [DS, 'ds-check', '.scratchpad'], { cwd: root, encoding: 'utf8' })
+    assert.equal(done.status, 0, done.stderr)
+    assert.equal(done.stdout, '')
+  })
+})

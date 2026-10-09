@@ -34,6 +34,13 @@ test('two entries a formatter joined into one line read as two events for both r
   assert.deepEqual(verdicts(text), { hint: false, vm6: false })
 })
 
+test('session start carries the close advisories, and none when there are none', () => {
+  const base = { index: INDEX, ledgers: [], source: 'startup', title: '', titleFlag: '0', nudgeFlag: '0' }
+  const note = 'advisory: .dossier/old.md belongs to no open wave — move it to .dossier/_archive/'
+  assert.ok(sessionReport({ ...base, notes: [note] }).context.includes(note))
+  assert.ok(!sessionReport(base).context.includes('advisory:'))
+})
+
 test('a START word inside a reason does not open an op for either reader', () => {
   const text = ledger('2026-10-09 10:02 ds:pause — paused reason=ds:build T9 START blocked on CI')
   assert.deepEqual(verdicts(text), { hint: false, vm6: false })

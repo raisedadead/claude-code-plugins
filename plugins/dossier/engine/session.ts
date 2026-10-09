@@ -7,6 +7,7 @@ export type SessionInput = {
   title: string
   titleFlag: string
   nudgeFlag: string
+  notes?: string[]
 }
 
 export type SessionOutput = { context: string; title: string; system: string }
@@ -166,6 +167,7 @@ export function sessionReport(input: SessionInput): SessionOutput {
     system = system ? `${system} ${message}` : message
     context.push('', `⚠ drift (${driftCount}): ${driftSlugs} — header/Closeout/location disagreement, reconcile via ds:status`)
   }
+  if (input.notes?.length) context.push('', ...input.notes)
   if (hints.length) context.push('', '## resume needed', ...hints)
   const text = input.ledgers.find((ledger) => ledger.name === liveSlug)?.text
   if (liveSlug && text !== undefined) {

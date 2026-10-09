@@ -95,6 +95,23 @@ function trackedContract(repo: string, slug: string): string | undefined {
   return undefined
 }
 
+export function staleContracts(root: string, from: string): string[] {
+  const open = visible(join(root, '.scratchpad', 'dossier')).filter((name) => {
+    const ledger = join(root, '.scratchpad', 'dossier', name, 'DOSSIER.md')
+    if (!isFile(ledger)) return false
+    return ['live', 'paused'].includes(headerToken(readFileSync(ledger, 'utf8')))
+  })
+  const names = new Set(open.flatMap((name) => [name, name.replace(DATE_PREFIX, '')]))
+  const out: string[] = []
+  for (const repo of new Set([topLevel(from), root])) {
+    for (const name of visible(join(repo, '.dossier'))) {
+      if (!name.endsWith('.md') || names.has(name.slice(0, -3))) continue
+      if (!out.includes(`.dossier/${name}`)) out.push(`.dossier/${name}`)
+    }
+  }
+  return out
+}
+
 export function waveContract(dir: string, root: string): string | undefined {
   const slug = dir.split('/').filter(Boolean).pop() ?? ''
   for (const repo of new Set([topLevel(process.cwd()), root])) {
