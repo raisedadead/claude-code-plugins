@@ -19,6 +19,10 @@ test('a lone START is an open op for both readers', () => {
   assert.deepEqual(verdicts(ledger('2026-10-09 10:00 ds:build T3 START')), { hint: true, vm6: true })
 })
 
+test('a START with no timestamp is still an open op for both readers', () => {
+  assert.deepEqual(verdicts(ledger('ds:build T3 START')), { hint: true, vm6: true })
+})
+
 test('prose after START and a DONE inside a joined event list close the op for both readers', () => {
   const text = ledger('2026-10-09 10:00 ds:build T3 START (figure block dropped)', '2026-10-09 10:05 ds:build T3 §X=refreshed; DONE → x cite=abc1234')
   assert.deepEqual(verdicts(text), { hint: false, vm6: false })

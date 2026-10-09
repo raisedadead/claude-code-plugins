@@ -282,7 +282,7 @@ export function zColumn(text: string): string {
 }
 
 const STAMP = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}(?::[0-9]{2})?'
-const ENTRY = new RegExp(`^${STAMP} (ds:[a-z]+) (\\S+) (.*)$`)
+const ENTRY = new RegExp(`^(?:${STAMP} )?(ds:[a-z]+) (\\S+) (.*)$`)
 const JOINED = new RegExp(` (?=${STAMP} ds:[a-z]+ )`)
 
 export function statusSection(text: string): string[] {
