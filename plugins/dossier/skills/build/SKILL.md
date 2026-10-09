@@ -283,7 +283,7 @@ ds:build --auto printed DONE or PAUSE for <slug>, and §S records the matching a
 | `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                                                                                                                                              |
 | `tiger`             | `tiger-check` exit 1 (§7 tiger route) — an added line exceeds a limit the repo itself declared. Exit 2 is advisory and never pauses                                                                                                                          |
 | `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — the operator answers it                                                                                                                                                                                            |
-| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`. Clean landing: commit WIP work to the task's files (a `~` row never enters the ds:ship pipeline), row stays `~`, §S handoff note — the tree is recorded before the loop stops |
+| `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`. Clean landing: commit WIP work to the task's files, row stays `~`, §S handoff note — the tree is recorded before the loop stops |
 
 **Excuse table — the rationalization each class invites, and the answer that holds.** Prose rails, model-enforced; the PAUSE itself stays the contract:
 

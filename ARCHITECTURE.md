@@ -68,7 +68,7 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 | dossier verify advisory         | network-dependent freshness claim, read from the cache | never blocks |
 | dossier bug-invariant nag       | a §B row whose `invariant added` and `fix cite` cells are both empty or `—`, after an Edit or Write of `DOSSIER.md` | PostToolUse context, never blocks |
 | dossier grilling reminder       | an outside grilling skill invoked in a repo with `.scratchpad/dossier/` | PreToolUse context, never blocks |
-| `ds close` ship advisory        | no `ds:ship` DONE line in §S                           | `⚠` line, never blocks |
+| `ds close` changelog advisory   | no `CHANGELOG.md` changed since the contract commit    | `⚠` line, never blocks |
 | whetstone claim gate            | unbacked enforcement verb in the final reply           | Stop `additionalContext`, once per turn, never blocks; the model continues with the flagged lines in context, and the fix is model-judgment |
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.
@@ -97,7 +97,6 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | `flaky-test-audit`  | per-test rate; anything between 0 and 1 is flaky                                | code — computed rate     |
 | `tiger-style` check | `TIGER: CLEAN <n> file(s)[, <m> skipped]`, `BLOCK <n>` or `NAG <n>`; exit 0/1/2 | code — `tiger-check`     |
 | `ds:converge`       | `CONVERGE: MET <n>/<n>`, `UNMET <n> of <m>` or `PARSE — <why>`; exit 0/1/2      | code — `cli/ds converge` |
-| `ds:ship` bump      | `recommend: <BUMP>`                                                             | advisory; model-mapped   |
 | `ds close`          | `✗` lines refuse with exit 1; `⚠` lines are advisory; `ready` on `--plan`      | code — `cli/ds close`    |
 | `ds assert-grill`   | exit 0 complete, 1 no artifact, 2 open decision or open fork child, 3 unconfirmed, 4 consumed | code — `cli/ds assert-grill` |
 
@@ -148,7 +147,7 @@ The ledger format has the same gap: a wave's constraints and rejected options go
 
 - **No fusion.** The two plugins stay separable.
 - **No required adapters.** Every host-environment integration detects and skips. Nothing is a dependency.
-- **No new operator verbs by default.** A verb must earn its place against the four that exist. The budget counts what an operator must remember; lifecycle verbs (`ds:build`, `ds:ship`, `ds:converge`) ride a stage of the wave and sit outside it — D3 holds the taxonomy.
+- **No new operator verbs by default.** A verb must earn its place against the four that exist. The budget counts what an operator must remember; lifecycle verbs (`ds:build`, `ds:converge`) ride a stage of the wave and sit outside it — D3 holds the taxonomy.
 - **No cross-agent portability.** Claude Code only. Deferred deliberately, recorded as an open stride.
 - **No third-party plugin dependencies.** See adoption order.
 - **No version pinning.** The commit SHA is the version. See `RESEARCH.md`.

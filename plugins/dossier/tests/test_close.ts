@@ -118,21 +118,36 @@ test('--plan on a finished wave reports ready with exit 0 and writes nothing', (
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(done.stdout, /✓ converge 1\/1/)
       assert.match(done.stdout, /^ready$/m)
-      assert.match(done.stdout, /⚠ no ds:ship in §S/)
+      assert.match(done.stdout, /⚠ no CHANGELOG\.md changed since the contract commit/)
       assert.equal(live(root), before)
     },
     [['T1', 'x', 'A']],
   )
 })
 
-test('--plan stays silent on the ship advisory once §S records a ds:ship DONE', () => {
+test('--plan says the changelog check did not run when the contract is untracked', () => {
   within(
     (root) => {
-      const path = join(root, '.scratchpad', 'dossier', SLUG, 'DOSSIER.md')
-      writeFileSync(path, live(root).replace('slug=wave\n', 'slug=wave\n\n2026-10-09 10:00:05 ds:ship — DONE changelog=CHANGELOG.md section=abc\n'))
+      rmSync(join(root, '.dossier'), { recursive: true, force: true })
+      writeFileSync(join(root, '.scratchpad', 'dossier', SLUG, 'CONTRACT.md'), contract())
       const done = close(root, '--complete', '--plan')
       assert.equal(done.status, 0, done.stdout + done.stderr)
-      assert.doesNotMatch(done.stdout, /ds:ship/)
+      assert.match(done.stdout, /⚠ no tracked contract — the CHANGELOG\.md check did not run/)
+    },
+    [['T1', 'x', 'A']],
+  )
+})
+
+test('--plan stays silent on the changelog advisory once a CHANGELOG.md changes after the contract', () => {
+  within(
+    (root) => {
+      mkdirSync(join(root, 'plugins', 'p'), { recursive: true })
+      writeFileSync(join(root, 'plugins', 'p', 'CHANGELOG.md'), '# Changelog\n')
+      execFileSync('git', ['-C', root, 'add', '.'])
+      execFileSync('git', ['-C', root, 'commit', '-q', '-m', 'docs: changelog'])
+      const done = close(root, '--complete', '--plan')
+      assert.equal(done.status, 0, done.stdout + done.stderr)
+      assert.doesNotMatch(done.stdout, /CHANGELOG/)
     },
     [['T1', 'x', 'A']],
   )

@@ -41,9 +41,9 @@ dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globa
 
 **When to start a wave:** the work spans more than one session, touches more than 5 files, or needs a step only you can do. Smaller work runs without a dossier.
 
-Everything else fires automatically or is power-user: `build` (the TDD engine, `--auto` to loop hands-off), `backprop` (bug → invariant), `grill`, `ship`, `verify`.
+Everything else fires automatically or is power-user: `build` (the TDD engine, `--auto` to loop hands-off), `backprop` (bug → invariant), `grill`, `verify`.
 
-Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes tasks, `/dossier:converge` runs the wave contract's done-when criteria ("are we done"), `/dossier:ship` writes the changelog, and `backprop` / `grill` / `verify` fire at their moments. In a live wave the `UserPromptSubmit` hook prints the contract's state beside every prompt, naming `ds:converge` for the verdict.
+Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes tasks, `/dossier:converge` runs the wave contract's done-when criteria ("are we done"), and `backprop` / `grill` / `verify` fire at their moments. In a live wave the `UserPromptSubmit` hook prints the contract's state beside every prompt, naming `ds:converge` for the verdict.
 
 ### Wave contracts
 

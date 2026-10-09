@@ -29,7 +29,6 @@ import { migrate } from '../engine/migrate.ts'
 import { sessionReport } from '../engine/session.ts'
 import { splitLines, strip } from '../engine/text.ts'
 import {
-  changelogInsert,
   hasRepo,
   headerState,
   headerToken,
@@ -328,23 +327,6 @@ function assertGrillVerb(args: string[]): number {
     renameSync(temp, grill)
   }
   console.log(grill)
-  return 0
-}
-
-function changelogWriteVerb(args: string[]): number {
-  const [changelog = '', section = '', key = ''] = args
-  if (args.length !== 3 || !isFile(section)) {
-    throw new Refusal('usage: ds changelog-write <changelog-path> <section-file> <idempotency-key>', EXIT_USAGE)
-  }
-  if (!isFile(changelog)) throw new Refusal(`changelog missing: ${changelog} (scaffold it first)`)
-  const text = readFileSync(changelog, 'utf8')
-  const keys = key.split('\n')
-  if (lines(text).some((row) => keys.some((part) => row.includes(part)))) {
-    throw new Refusal(`section already present (key ${key}) in ${changelog} — refusing duplicate write`, 3)
-  }
-  const body = unlines(lines(readFileSync(section, 'utf8')))
-  atomicWrite(changelog, changelogInsert(text, body), tempName(changelog, 'tmp.'))
-  console.log(changelog)
   return 0
 }
 
@@ -699,7 +681,6 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'archive-move': archiveMoveVerb,
   'assert-grill': assertGrillVerb,
   'assert-scaffold': assertScaffoldVerb,
-  'changelog-write': changelogWriteVerb,
   migrate: migrateVerb,
   'clear-locks': clearLocksVerb,
   close: dsCloseVerb,

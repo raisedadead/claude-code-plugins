@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
 import { DATE_PREFIX } from '../engine/converge.ts'
-import { headerToken, lines, namedRows, openOps, SEC, STAMP, statusSection, unlines, unpushedRepos, zClosed, zColumn, zWrite } from '../engine/ledger.ts'
+import { headerToken, lines, namedRows, openOps, SEC, statusSection, unlines, unpushedRepos, zClosed, zColumn, zWrite } from '../engine/ledger.ts'
 import { migrate } from '../engine/migrate.ts'
 import { DELAYED, type Row, taskRows } from '../engine/progress.ts'
 import { childEnv } from './env.ts'
@@ -227,7 +227,15 @@ function takeLock(dir: string): void {
   writeFileSync(join(dir, '.ds-lock'), JSON.stringify({ pid: process.pid, started: new Date().toISOString(), skill: 'ds close', target: '—' }))
 }
 
-const SHIPPED = new RegExp(`^(?:${STAMP} )?ds:ship — DONE\\b`, 'm')
+function changelogAdvisory(contract: string | undefined): string | undefined {
+  if (!contract || contract.endsWith('/CONTRACT.md')) return 'no tracked contract — the CHANGELOG.md check did not run'
+  const top = dirname(dirname(contract))
+  const added = git(top, 'log', '--diff-filter=A', '--format=%H', '--', relative(top, contract)).out.split('\n').pop()
+  if (!added) return 'the contract is not committed — the CHANGELOG.md check did not run'
+  const changed = git(top, 'diff', '--name-only', added).out.split('\n')
+  if (changed.some((path) => basename(path) === 'CHANGELOG.md')) return undefined
+  return 'no CHANGELOG.md changed since the contract commit — write the entry first, or close without one'
+}
 
 function check(options: Options, tools: CloseTools, at: Wave, text: string, rows: Row[]): Check {
   const { mode } = options
@@ -265,7 +273,8 @@ function check(options: Options, tools: CloseTools, at: Wave, text: string, rows
     result.record = verdict.record
   }
   for (const repo of unpushedRepos(text)) result.findings.push(`⚠ ${repo} not pushed — the push stays yours`)
-  if (mode.kind !== 'abandoned' && !SHIPPED.test(text)) result.findings.push('⚠ no ds:ship in §S — run ds:ship for the changelog first, or close without one')
+  const changelog = mode.kind === 'abandoned' ? undefined : changelogAdvisory(waveContract(at.dir, at.root))
+  if (changelog) result.findings.push(`⚠ ${changelog}`)
   return result
 }
 

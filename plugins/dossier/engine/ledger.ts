@@ -491,16 +491,3 @@ export function renderIndex(rows: IndexRow[]): string {
   if (drift.length) out += `\n<!-- drift:${drift.length} slugs:${drift.map((row) => `${row.date}-${row.slug}`).join(' ')} -->\n`
   return out
 }
-
-export function changelogInsert(text: string, section: string): string {
-  const out: string[] = []
-  let done = false
-  for (const row of lines(text)) {
-    if (!done && row.startsWith('## ')) {
-      out.push(`${section}`)
-      done = true
-    }
-    out.push(row)
-  }
-  return done ? unlines(out) : `${unlines(out)}\n${section}`
-}

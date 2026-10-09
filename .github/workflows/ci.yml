@@ -36,7 +36,6 @@ jobs:
           bash plugins/dossier/hooks/test_closure_parity.sh
           bash plugins/dossier/hooks/test_vm6_parity.sh
           bash plugins/dossier/hooks/test_lib_assert_grill.sh
-          bash plugins/dossier/hooks/test_lib_changelog_write.sh
           bash plugins/dossier/hooks/test_fakeimpl_stop.sh
 
       - name: skill lint (all dossier skills)
