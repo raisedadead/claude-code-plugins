@@ -1,4 +1,4 @@
-import { SEC } from './ledger.ts'
+import { openOps, SEC } from './ledger.ts'
 
 export type SessionInput = {
   index?: string
@@ -50,31 +50,7 @@ function liveRows(index: string): string[][] {
 }
 
 function resumeHints(name: string, text: string): string[] {
-  const open = new Map<string, string>()
-  const pending = new Map<string, string>()
-  let inside = false
-  for (const row of textLines(text)) {
-    if (SEC.status.test(row)) {
-      inside = true
-      continue
-    }
-    if (SEC.any.test(row)) inside = false
-    if (!inside) continue
-    const fields = row.split(/[ \t\n]+/).filter(Boolean)
-    const [, , verb = '', target = '', event = ''] = fields
-    if (event === 'START') {
-      open.set(`${verb}:${target}`, row)
-      if (target === 'pending') pending.set(verb, `${verb}:${target}`)
-    } else if (event === 'DONE') {
-      open.delete(`${verb}:${target}`)
-      const parked = pending.get(verb)
-      if (parked !== undefined) {
-        open.delete(parked)
-        pending.delete(verb)
-      }
-    }
-  }
-  return [...open.values()].map((row) => `  ⚠ resume needed [${name}]: ${row}`)
+  return [...openOps(sectionLines(text, SEC.status)).values()].map((row) => `  ⚠ resume needed [${name}]: ${row}`)
 }
 
 function taskSummary(text: string): string[] {

@@ -278,10 +278,38 @@ export function zColumn(text: string): string {
   return `→${hit.replace(/^.*successor:[ \t\n\r\f\v]*/, '').replace(/[ \t\n\r\f\v]+$/, '')}`
 }
 
+const STAMP = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}(?::[0-9]{2})?'
+const ENTRY = new RegExp(`^${STAMP} (ds:[a-z]+) (\\S+) (.*)$`)
+const JOINED = new RegExp(` (?=${STAMP} ds:[a-z]+ )`)
+
+export function openOps(entries: string[]): Map<string, string> {
+  const open = new Map<string, string>()
+  const pending = new Map<string, string>()
+  for (const entry of entries.flatMap((line) => trim(line).split(JOINED))) {
+    const match = ENTRY.exec(entry)
+    if (!match) continue
+    const [, verb = '', target = '', rest = ''] = match
+    const key = `${verb} ${target}`
+    const events = rest.split(/;[ \t]*/).map((part) => part.trim().split(/[ \t]+/)[0] ?? '')
+    if (events.includes('START')) {
+      open.set(key, entry)
+      if (target === 'pending') pending.set(verb, key)
+    }
+    if (events.includes('DONE')) {
+      open.delete(key)
+      const parked = pending.get(verb)
+      if (parked !== undefined) {
+        open.delete(parked)
+        pending.delete(verb)
+      }
+    }
+  }
+  return open
+}
+
 export function vmFindings(file: string, text: string): string[] {
   const out: string[] = []
-  const open = new Map<string, true>()
-  const pending = new Map<string, string>()
+  const status: string[] = []
   let sec = ''
   let header = false
   let colState = 0
@@ -303,24 +331,7 @@ export function vmFindings(file: string, text: string): string[] {
       if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}/.test(line)) {
         out.push(`WARN Vm.2 ${file}: Status line missing ISO timestamp: ${line}`)
       }
-      const start = /ds:[a-z]+ [^ ]+ START/.exec(line)
-      if (start) {
-        const key = start[0].replace(/ START$/, '')
-        open.set(key, true)
-        const [verb, target] = key.split(/[ \t\n]+/)
-        if (target === 'pending' && verb) pending.set(verb, key)
-      }
-      const done = /ds:[a-z]+ [^ ]+ DONE/.exec(line)
-      if (done) {
-        const key = done[0].replace(/ DONE$/, '')
-        open.delete(key)
-        const [verb] = key.split(/[ \t\n]+/)
-        const parked = verb === undefined ? undefined : pending.get(verb)
-        if (verb !== undefined && parked !== undefined) {
-          open.delete(parked)
-          pending.delete(verb)
-        }
-      }
+      status.push(line)
     }
     if (sec === 'T') {
       if (!row.startsWith('|') || RULE_ROW.test(row)) continue
@@ -346,7 +357,7 @@ export function vmFindings(file: string, text: string): string[] {
       }
     }
   }
-  for (const key of open.keys()) out.push(`WARN Vm.6 ${file}: Status ${key} START without DONE`)
+  for (const key of openOps(status).keys()) out.push(`WARN Vm.6 ${file}: Status ${key} START without DONE`)
   return out
 }
 
