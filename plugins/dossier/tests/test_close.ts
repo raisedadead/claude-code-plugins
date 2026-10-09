@@ -144,7 +144,7 @@ test('a run writes §Z, archives the wave, commits the contract move alone and l
       const done = close(root, '--complete', '--summary', 'shipped it')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       const text = archived(root)
-      assert.match(text, /^`2026-10-09` · `done` ·/m)
+      assert.match(text, /^`2026-10-09` · `done`$/m)
       assert.match(text, /^complete: true$/m)
       assert.match(text, /^summary: shipped it$/m)
       const sha = execFileSync('git', ['-C', root, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim()
@@ -300,7 +300,7 @@ test('a rerun finishes a close that a crash left after §Z on a live wave', () =
       const done = close(root, '--complete')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.ok(!existsSync(dir))
-      assert.match(archived(root), /^`2026-10-09` · `done` ·/m)
+      assert.match(archived(root), /^`2026-10-09` · `done`$/m)
       assert.match(archived(root), /ds:close — DONE/)
     },
     [['T1', 'x', 'A']],

@@ -39,7 +39,7 @@ EOF
 }
 
 hdr_of() {
-	awk '/^`.*` · `.*` · / { n=split($0,p,"`"); gsub(/^[ \t]+|[ \t]+$/,"",p[4]); print p[4]; exit }' "$1"
+	awk '/^`[^`]*` · `[^`]*`/ { n=split($0,p,"`"); gsub(/^[ \t]+|[ \t]+$/,"",p[4]); print p[4]; exit }' "$1"
 }
 
 make_doss "2026-06-05-zombie" "done" "complete: true"

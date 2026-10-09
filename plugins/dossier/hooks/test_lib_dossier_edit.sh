@@ -166,7 +166,7 @@ grep -q 'ds:check — drift=0' "$D3/DOSSIER.md" || fail "append-EOF fallback fai
 [[ -z "$(find "$D2" -name 'DOSSIER.md.*' 2>/dev/null)" ]] || fail "append left .tmp orphan"
 
 hdr_state() {
-	awk '/^`.*` · `.*` · / { n = split($0, p, "`"); gsub(/^[ \t]+|[ \t]+$/, "", p[4]); print p[4]; exit }' "$1"
+	awk '/^`[^`]*` · `[^`]*`/ { n = split($0, p, "`"); gsub(/^[ \t]+|[ \t]+$/, "", p[4]); print p[4]; exit }' "$1"
 }
 D4="$TMP/hstate"
 make_fixture "$D4"

@@ -24,6 +24,7 @@ import { milestoneOf, progressVerb } from './progress.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
 import { addEntry, entryError, openDecisions } from '../engine/grill.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
+import { migrate } from '../engine/migrate.ts'
 import { sessionReport } from '../engine/session.ts'
 import { splitLines, strip } from '../engine/text.ts'
 import {
@@ -115,7 +116,7 @@ function dossierFile(dir: string): string {
 function readDossier(verb: string, dir: string): [string, string] {
   const file = dossierFile(dir)
   if (!isFile(file)) refuse(verb, `not found: ${file}`)
-  return [file, readFileSync(file, 'utf8')]
+  return [file, migrate(readFileSync(file, 'utf8'), stamp(new Date(), process.env.DS_TS_SECONDS === '1')).text]
 }
 
 function subdirs(parent: string): string[] {
@@ -422,6 +423,19 @@ function lockHeld(dir: string): string | undefined {
   }
 }
 
+function migrateVerb(args: string[]): number {
+  const dir = required('migrate', args[0], 'ds migrate <dossier-dir>')
+  const holder = lockHeld(dir)
+  if (holder) refuse('migrate', `${dir} locked by ${holder} — rerun when it finishes`)
+  const file = dossierFile(dir)
+  if (!isFile(file)) refuse('migrate', `not found: ${file}`)
+  const result = migrate(readFileSync(file, 'utf8'), stamp(new Date(), process.env.DS_TS_SECONDS === '1'))
+  if (!result.applied.length) return 0
+  atomicWrite(file, result.text)
+  console.log(`migrated ${dir}: ${result.applied.join(', ')}`)
+  return 0
+}
+
 function dsCloseVerb(args: string[]): number {
   return closeVerb(args, {
     write: (file, text) => atomicWrite(file, text),
@@ -686,6 +700,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'assert-grill': assertGrillVerb,
   'assert-scaffold': assertScaffoldVerb,
   'changelog-write': changelogWriteVerb,
+  migrate: migrateVerb,
   'clear-locks': clearLocksVerb,
   close: dsCloseVerb,
   converge: convergeVerb,
@@ -711,7 +726,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
 
 const PRIMARY = /^worktree (.+)$/m
 const GIT_TIMEOUT_MS = 5000
-const LEDGER_VERBS = new Set(['archive-move', 'assert-grill', 'assert-scaffold', 'clear-locks', 'ds-check', 'grill-add', 'header-state', 'reconcile', 'regen-index', 'row-flip', 's-append', 'session-start', 'vm-checks', 'x-refresh', 'z-write'])
+const LEDGER_VERBS = new Set(['archive-move', 'assert-grill', 'assert-scaffold', 'clear-locks', 'ds-check', 'grill-add', 'header-state', 'migrate', 'reconcile', 'regen-index', 'row-flip', 's-append', 'session-start', 'vm-checks', 'x-refresh', 'z-write'])
 
 function hasLedger(dir: string): boolean {
   return existsSync(join(dir, '.scratchpad', 'dossier'))
