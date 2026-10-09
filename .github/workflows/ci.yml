@@ -42,28 +42,10 @@ jobs:
         run: plugins/whetstone/bin/lint-skill plugins/dossier/skills
 
       - name: positive-rails ceiling
-        run: |
-          pattern='\bnever\b|\bdo not\b|\bdon.t\b|\bmust not\b'
-          files='plugins/dossier/skills/build/SKILL.md plugins/dossier/agents/dossier-reviewer.md CLAUDE.md'
-          test "$(grep -oiE "$pattern" plugins/dossier/skills/build/SKILL.md | wc -l)" -le 13
-          test "$(grep -oiE "$pattern" plugins/dossier/agents/dossier-reviewer.md | wc -l)" -le 9
-          test "$(grep -oiE "$pattern" CLAUDE.md | wc -l)" -le 1
-          # ds:close archives a tracked contract, so look in both homes.
-          contract=$(find .dossier -maxdepth 1 -name '*positive-rails*.md' 2>/dev/null | LC_ALL=C sort | head -n 1)
-          if [ -z "$contract" ]; then
-            contract=$(find .dossier/_archive -maxdepth 1 -name '*positive-rails*.md' 2>/dev/null | LC_ALL=C sort | head -n 1)
-          fi
-          if [ -z "$contract" ]; then
-            echo "no positive-rails contract under .dossier/ or .dossier/_archive/" >&2
-            exit 1
-          fi
-          rows=$(sed -n '/^## survivors/,/^## what changes/p' "$contract" | grep -c -e '| fact' -e '| guarded' -e '| hatch' || true)
-          # shellcheck disable=SC2086
-          total=$(grep -oiE "$pattern" $files | wc -l | tr -d ' ')
-          if [ "$rows" -ne "$total" ]; then
-            echo "$contract lists $rows survivors; the rails carry $total occurrences" >&2
-            exit 1
-          fi
+        run: bash tools/rails_ceiling.sh
+
+      - name: pre-push hook
+        run: bash tools/test_pre_push.sh
 
       - name: every test file is named in this workflow
         run: |
