@@ -171,7 +171,7 @@ async function goProbe(lookup: Lookup, module: string, timeout = HTTP_TIMEOUT_S)
 }
 
 async function inPool<T, R>(items: T[], workers: number, task: (item: T) => Promise<R>): Promise<R[]> {
-  const results: R[] = new Array(items.length)
+  const results: R[] = []
   let next = 0
   const worker = async (): Promise<void> => {
     while (next < items.length) {

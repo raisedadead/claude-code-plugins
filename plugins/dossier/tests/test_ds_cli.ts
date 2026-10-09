@@ -96,7 +96,7 @@ test('from a linked worktree, x-refresh reads the worktree repo and converge fin
     )
     writeFileSync(
       join(wave, 'CONTRACT.md'),
-      '| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | \`test -f here.txt\` | exit 0 |\n',
+      '| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | `test -f here.txt` | exit 0 |\n',
     )
     const git = (...args: string[]) => execFileSync('git', ['-C', main, ...args], { stdio: 'ignore' })
     git('init', '-q', '-b', 'main')

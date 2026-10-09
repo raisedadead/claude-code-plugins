@@ -25,13 +25,14 @@ function ledger(row: string): string {
 
 test('row-flip writes state and cite to their cells past an escaped pipe', () => {
   const done = rowFlip(ledger(ROW), 'DOSSIER.md', 'T1', 'x', 'abc123')
-  assert.equal(done.error, undefined)
-  assert.match(done.text ?? '', /^\| T1 \| x \| A \| split a \\\| b \| — \| abc123 \| v \|$/m)
+  assert.ok('text' in done, 'error' in done ? done.error : '')
+  assert.match(done.text, /^\| T1 \| x \| A \| split a \\\| b \| — \| abc123 \| v \|$/m)
 })
 
 test('row-flip escapes a pipe in the cite it writes', () => {
   const done = rowFlip(ledger(ROW), 'DOSSIER.md', 'T1', 'x', 'a|b')
-  assert.match(done.text ?? '', /\| a\\\|b \| v \|$/m)
+  assert.ok('text' in done)
+  assert.match(done.text, /\| a\\\|b \| v \|$/m)
 })
 
 test('vm-checks reads the cite of a row with an escaped pipe', () => {

@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "overrides": [
+    {
+      "files": ["plugins/*/engine/text.ts", "plugins/whetstone/hooks/text.ts"],
+      "rules": {
+        "no-control-regex": "off"
+      }
+    }
+  ]
+}

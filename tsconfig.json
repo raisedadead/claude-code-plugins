@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": [
+    "plugins/*/engine/*.ts",
+    "plugins/*/cli/*.ts",
+    "plugins/dossier/hooks/gates.ts",
+    "plugins/whetstone/hooks/claim-check*.ts",
+    "plugins/whetstone/hooks/text.ts",
+    "plugins/*/skills/*/scripts/*.ts",
+    "plugins/*/tests/test_*.ts",
+    "vitest.config.ts"
+  ]
+}
