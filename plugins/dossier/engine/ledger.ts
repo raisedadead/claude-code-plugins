@@ -306,8 +306,8 @@ export function namedRows(text: string, heading: RegExp): Cell[] {
       names = []
       continue
     }
-    const values = inside ? cells(row) : []
-    if (!values.length || /^-+$/.test(values[0] ?? '')) continue
+    const values = inside && !RULE_ROW.test(row) ? cells(row) : []
+    if (!values.length) continue
     if (!names.length) {
       names = values.map((name) => name.toLowerCase())
       continue

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { headerToken, rowFlip, vmFindings } from '../engine/ledger.ts'
+import { headerToken, rowFlip, unpushedRepos, vmFindings } from '../engine/ledger.ts'
 
 const ROW = '| T1 | . | A | split a \\| b | — | — | v |'
 
@@ -53,4 +53,9 @@ test('a header-shaped line under the first section is not the header', () => {
 
 test('a header whose first field is not a date is not the header', () => {
   assert.equal(headerToken('# w\n\n`draft` · `live`\n\n## Goal\n'), '')
+})
+
+test('an aligned rule row is not a repo', () => {
+  const text = ['## Repos', '', '| repo | pushed |', '| :--- | ---: |', '| a | no |', ''].join('\n')
+  assert.deepEqual(unpushedRepos(text), ['a'])
 })

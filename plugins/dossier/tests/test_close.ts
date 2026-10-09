@@ -153,6 +153,19 @@ test('--plan stays silent on the changelog advisory once a CHANGELOG.md changes 
   )
 })
 
+test('--plan stays silent on the changelog advisory for a staged CHANGELOG.md not yet committed', () => {
+  within(
+    (root) => {
+      writeFileSync(join(root, 'CHANGELOG.md'), '# Changelog\n')
+      execFileSync('git', ['-C', root, 'add', 'CHANGELOG.md'])
+      const done = close(root, '--complete', '--plan')
+      assert.equal(done.status, 0, done.stdout + done.stderr)
+      assert.doesNotMatch(done.stdout, /CHANGELOG/)
+    },
+    [['T1', 'x', 'A']],
+  )
+})
+
 test('a run writes §Z, archives the wave, commits the contract move alone and logs DONE', () => {
   within(
     (root) => {

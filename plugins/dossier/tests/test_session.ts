@@ -50,3 +50,18 @@ test('an INDEX that still carries the P column names the same live wave', () => 
   const legacy = `# .scratchpad index\n\n| date | slug | state | P | T | B | mtime | §Z |\n|---|---|---|---|---|---|---|---|\n| 2026-10-08 | single-worker | live | P1/1 | 9/19 | 0 | x | — |\n`
   assert.match(report(LEDGER, legacy).context, new RegExp(`^dossier live: ${NAME} 47%`))
 })
+
+test('the repos line skips an aligned rule row and counts only pushed=no', () => {
+  const repos = [
+    '',
+    '## Repos',
+    '',
+    '| repo | branch | ahead | tag | pushed | notes |',
+    '| :--- | :---: | ---: | --- | --- | --- |',
+    '| a | main | 0 | — | yes | |',
+    '| b | main | 0 | — | — | |',
+    '| c | main | 2 | — | no | |',
+    '',
+  ].join('\n')
+  assert.match(report(LEDGER + repos).context, /^repos 3 · unpushed 1$/m)
+})
