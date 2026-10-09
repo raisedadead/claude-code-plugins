@@ -2,9 +2,9 @@
 
 Notable changes to the **whetstone** plugin.
 
-Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
+Releases follow semver and are tagged `whetstone-vX.Y.Z`. release-please writes each section from the conventional commit subjects. `plugin.json` has no `version`, so `claude plugin update` still installs every commit. Sections before 1.0.0 are grouped by date.
 
-## 2026-10-09
+## 1.0.0 (2026-10-09)
 
 ### Changed
 

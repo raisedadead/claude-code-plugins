@@ -6,7 +6,7 @@ Read [`ARCHITECTURE.md`](./ARCHITECTURE.md) before changing anything under `plug
 
 Check [`RESEARCH.md`](./RESEARCH.md) §D first. Several obvious-looking improvements here were already made, deliberately, in the other direction. A gap you spot may be a decision you cannot see the reason for.
 
-The standing example: the commit SHA is the version, so both `plugin.json` files ship without a `version` key and stay that way. See D1.
+The standing example: the commit SHA is the version, so both `plugin.json` files ship without a `version` key and stay that way. See D1. Semver lives in release tags; a `feat` or `fix` subject becomes a CHANGELOG line (D46).
 
 Then read §O. Work worth doing here is already listed there, with the reason it has not been done yet — starting from §O beats inventing a task, and re-filing something already tracked is the most common way a session wastes its first hour. Count what is live with `grep -cE '^\| O[0-9]+ .*\| *(open|partial)' RESEARCH.md` rather than trusting a number written in prose; O-rows flip state as work lands.
 

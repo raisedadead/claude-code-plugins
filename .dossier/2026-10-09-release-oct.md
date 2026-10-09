@@ -17,7 +17,7 @@
 | 5   | `plugins/whetstone/bin/lint-skill plugins/dossier/skills plugins/whetstone/skills`                        | exit 0    |
 | 6   | `test -e plugins/dossier/skills/ship; echo $?`                                                            | stdout: 1 |
 | 7   | `git ls-files '*.md' \| grep -v tests/fixtures/ \| xargs plugins/whetstone/bin/claim-check`               | exit 0    |
-| 8   | `git tag --points-at HEAD \| grep -cE '^[0-9]{4}-[0-9]{2}-[0-9]{2}$'`                                     | stdout: 1 |
+| 8   | `git tag --points-at HEAD \| grep -cE '^(dossier\|whetstone)-v1\.0\.0$'` | stdout: 2 |
 | 9   | `grep -c 'Keep an instruction to 20 words' ~/.dotfiles/dot_claude/output-styles/terse.md`                 | stdout: 1 |
 | 10  | `test -f ~/.dotfiles/docs/CREDITS.md`                                                                     | exit 0    |
 | 11  | `ls .dossier \| grep -c 'md$'`                                                                            | stdout: 1 |

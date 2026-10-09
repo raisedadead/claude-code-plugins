@@ -25,7 +25,7 @@ Needs Claude Code 2.1.287 or later (the first build with [mods](https://code.cla
 
 dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globally, or per clone with `echo .scratchpad/ >> .git/info/exclude`. `/dossier:new` says so when it finds the directory unignored, and leaves the choice to you.
 
-**Updating.** No `version` field, so Claude Code versions each plugin by this repo's commit SHA and `claude plugin update dossier@raisedadead-plugins` picks up every commit ([how versions are computed](https://code.claude.com/docs/en/plugins/loading#versions-and-updates); [D1](./RESEARCH.md)).
+**Updating.** No `version` field, so Claude Code versions each plugin by this repo's commit SHA and `claude plugin update dossier@raisedadead-plugins` picks up every commit ([how versions are computed](https://code.claude.com/docs/en/plugins/loading#versions-and-updates); [D1](./RESEARCH.md)). Releases are semver per plugin, tagged `dossier-vX.Y.Z` and `whetstone-vX.Y.Z`, with notes in each plugin's `CHANGELOG.md`.
 
 ## Commands
 
