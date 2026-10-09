@@ -28,6 +28,8 @@ function ioOf($: EngineInterface): Io {
   }
 }
 
+const RESEND = 'Then send the whole reply again. In focus mode the operator sees only your last message.'
+
 const seen = new Set<string>()
 const verified = new Set<string>()
 const bugsSeen = new Set<string>()
@@ -171,8 +173,8 @@ export const register: Register = (on) => {
 
   on('classic.Stop', async ($, e, next) => {
     const result = await next(e)
-    if (result.block || e.stop_hook_active) return result
+    if (result.block) return result
     const block = await stopGate(ioOf($), e.cwd)
-    return block ? { ...result, block } : result
+    return block ? { ...result, block: `${block}\n${RESEND}` } : result
   })
 }

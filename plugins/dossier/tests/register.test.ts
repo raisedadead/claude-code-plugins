@@ -112,27 +112,22 @@ describe('dossier mod wiring', () => {
     }))
     on('classic.Stop', async () => ({}))
     const result = await $.classic.Stop({ cwd: '/w', stop_hook_active: false })
-    expect(result.block).toBe('not verified')
+    expect(result.block).toMatch(/^not verified\n/)
   })
 
-  test('the fake-impl backstop stays silent on a continued stop', async ($, on) => {
-    let runs = 0
+  test('the fake-impl backstop checks a continued stop and asks for the whole reply', async ($, on) => {
     on('env.get', async (_, e) => ({ value: e.name === 'DOSSIER_FAKEIMPL_CMD' ? 'false' : undefined }))
-    on('process.run', async () => {
-      runs += 1
-      return {
-        value: {
-          exitCode: 0,
-          stdout: JSON.stringify({ decision: 'block', reason: 'not verified' }),
-          stderr: '',
-          isStdoutTruncated: false,
-          isStderrTruncated: false,
-        },
-      }
-    })
+    on('process.run', async () => ({
+      value: {
+        exitCode: 0,
+        stdout: JSON.stringify({ decision: 'block', reason: 'not verified' }),
+        stderr: '',
+        isStdoutTruncated: false,
+        isStderrTruncated: false,
+      },
+    }))
     on('classic.Stop', async () => ({}))
     const result = await $.classic.Stop({ cwd: '/w', stop_hook_active: true })
-    expect(result.block).toBeUndefined()
-    expect(runs).toBe(0)
+    expect(result.block).toBe('not verified\nThen send the whole reply again. In focus mode the operator sees only your last message.')
   })
 })
