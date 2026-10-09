@@ -66,7 +66,7 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 | dossier header guard            | non-canonical state token in a file named `DOSSIER.md` | PreToolUse `deny` |
 | dossier marker guard            | regex over comment prefixes, in a project with `.scratchpad/dossier/` | PreToolUse `deny`, opt-out `DOSSIER_MARKER_GUARD=off` (D33: an operator decision against F20's measured false positives) |
 | dossier verify advisory         | network-dependent freshness claim, read from the cache | never blocks |
-| dossier bug-invariant nag       | a §B row with an empty `invariant added` cell after an Edit or Write of `DOSSIER.md` | PostToolUse context, never blocks |
+| dossier bug-invariant nag       | a §B row whose `invariant added` and `fix cite` cells are both empty or `—`, after an Edit or Write of `DOSSIER.md` | PostToolUse context, never blocks |
 | dossier grilling reminder       | an outside grilling skill invoked in a repo with `.scratchpad/dossier/` | PreToolUse context, never blocks |
 | `ds close` ship advisory        | no `ds:ship` DONE line in §S                           | `⚠` line, never blocks |
 | whetstone claim gate            | unbacked enforcement verb in the final reply           | Stop `block`, once per turn |

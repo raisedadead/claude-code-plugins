@@ -58,6 +58,26 @@ test('a two-field ledger writes no migrate line', () => {
   })
 })
 
+test('a header-shaped line under a section heading is not a header and does not migrate', () => {
+  withWave('no header here', (root, dir, read) => {
+    const path = join(dir, 'DOSSIER.md')
+    writeFileSync(path, read().replace('## Tasks', '## Goal\n\n`foo` · `bar` · baz\n\n## Tasks'))
+    const before = read()
+    const done = ds(root, 'migrate', dir)
+    assert.equal(done.status, 0, done.stderr)
+    assert.equal(done.stdout, '')
+    assert.equal(read(), before)
+  })
+})
+
+test('a kept third field loses its semicolons so it cannot open a status op', () => {
+  withWave('`2026-06-01` · `live` · note; START', (root, dir, read) => {
+    assert.equal(ds(root, 'migrate', dir).status, 0)
+    assert.match(read(), /ds:migrate — header-two-field kept: note, START$/m)
+    assert.equal(ds(root, 'vm-checks', join(dir, 'DOSSIER.md')).stdout.includes('START without DONE'), false)
+  })
+})
+
 test('a refused write leaves a legacy ledger untouched', () => {
   withWave('`2026-06-01` · `live` · `P1/1`', (root, dir, read) => {
     const before = read()

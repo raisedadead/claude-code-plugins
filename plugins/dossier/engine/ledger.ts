@@ -158,9 +158,14 @@ export function sAppend(text: string, entry: string): string {
   return done ? unlines(out) : `${unlines(out)}\n${entry}\n`
 }
 
+export function headerIndex(rows: readonly string[]): number {
+  const end = rows.findIndex((row) => row.startsWith('## '))
+  return rows.slice(0, end < 0 ? rows.length : end).findIndex((row) => HEADER_LINE.test(row))
+}
+
 export function headerState(text: string, state: string): string | undefined {
   const rows = lines(text)
-  const at = rows.findIndex((row) => HEADER_LINE.test(row))
+  const at = headerIndex(rows)
   if (at < 0) return undefined
   const parts = (rows[at] ?? '').split('`')
   parts[3] = state
@@ -169,7 +174,8 @@ export function headerState(text: string, state: string): string | undefined {
 }
 
 export function headerToken(text: string): string {
-  const row = lines(text).find((line) => HEADER_LINE.test(line))
+  const rows = lines(text)
+  const row = rows[headerIndex(rows)]
   return row === undefined ? '' : trim(row.split('`')[3] ?? '')
 }
 
@@ -281,7 +287,7 @@ export function zColumn(text: string): string {
   return `→${hit.replace(/^.*successor:[ \t\n\r\f\v]*/, '').replace(/[ \t\n\r\f\v]+$/, '')}`
 }
 
-const STAMP = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}(?::[0-9]{2})?'
+export const STAMP = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}(?::[0-9]{2})?'
 const ENTRY = new RegExp(`^(?:${STAMP} )?(ds:[a-z]+) (\\S+) (.*)$`)
 const JOINED = new RegExp(` (?=${STAMP} ds:[a-z]+ )`)
 

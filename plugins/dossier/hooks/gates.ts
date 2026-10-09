@@ -183,7 +183,9 @@ export async function bugGate(io: Io, filePath: string, seen: Set<string>): Prom
     const values = inside ? cells(line) : []
     if (!values.length || /^-+$/.test(values[0] ?? '')) continue
     if (!names.length) names = values.map((name) => name.toLowerCase())
-    else if (/^B\d+$/.test(values[0] ?? '') && EMPTY_CELL.has(values[names.indexOf('invariant added')] ?? '')) bare.push(values[0] ?? '')
+    else if (/^B\d+$/.test(values[0] ?? '') && ['invariant added', 'fix cite'].every((name) => EMPTY_CELL.has(values[names.indexOf(name)] ?? ''))) {
+      bare.push(values[0] ?? '')
+    }
   }
   const fresh = bare.filter((id) => !seen.has(`${filePath}#${id}`))
   for (const id of fresh) seen.add(`${filePath}#${id}`)

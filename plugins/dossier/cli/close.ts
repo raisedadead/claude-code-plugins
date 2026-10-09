@@ -2,7 +2,8 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
 import { cells, DATE_PREFIX } from '../engine/converge.ts'
-import { headerToken, lines, openOps, SEC, statusSection, unlines, zClosed, zWrite } from '../engine/ledger.ts'
+import { headerToken, lines, openOps, SEC, STAMP, statusSection, unlines, zClosed, zWrite } from '../engine/ledger.ts'
+import { migrate } from '../engine/migrate.ts'
 import { DELAYED, type Row, taskRows } from '../engine/progress.ts'
 import { childEnv } from './env.ts'
 import { topLevel, waveContract } from './converge.ts'
@@ -168,7 +169,7 @@ function successorDir(dossiers: string, slug: string): string | undefined {
 
 function carryInto(tools: CloseTools, target: string, slug: string, rows: Row[]): string[] {
   const file = join(target, 'DOSSIER.md')
-  const text = readFileSync(file, 'utf8')
+  const text = migrate(readFileSync(file, 'utf8'), tools.stamp()).text
   const present = (row: Row): boolean => [')', ','].some((end) => text.includes(`(from ${slug} ${row.id}${end}`))
   const fresh = rows.filter((row) => !present(row))
   if (!fresh.length) return []
@@ -256,7 +257,7 @@ function takeLock(dir: string): void {
   writeFileSync(join(dir, '.ds-lock'), JSON.stringify({ pid: process.pid, started: new Date().toISOString(), skill: 'ds close', target: '—' }))
 }
 
-const SHIPPED = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2} ds:ship — DONE\b/m
+const SHIPPED = new RegExp(`^(?:${STAMP} )?ds:ship — DONE\\b`, 'm')
 
 function check(options: Options, tools: CloseTools, at: Wave, text: string, rows: Row[]): Check {
   const { mode } = options

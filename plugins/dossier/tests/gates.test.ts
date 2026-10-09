@@ -143,6 +143,7 @@ describe('bug gate', () => {
 
   test('stays silent on a bug row with an invariant and on a file outside the ledger', async () => {
     expect(await bugGate(io({ [LEDGER]: bugs('| B1 | leak | env | V3 | — |') }), LEDGER, new Set())).toBeUndefined()
+    expect(await bugGate(io({ [LEDGER]: bugs('| B1 | leak | env | — | abc1234 |') }), LEDGER, new Set())).toBeUndefined()
     expect(await bugGate(io({ '/w/src/a.md': bugs('| B1 | leak | env | — | — |') }), '/w/src/a.md', new Set())).toBeUndefined()
   })
 })

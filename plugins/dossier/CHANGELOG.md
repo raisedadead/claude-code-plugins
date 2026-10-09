@@ -13,8 +13,8 @@ This plugin ships in commit-SHA versioning mode (no pinned `version` in `plugin.
 - **The session start and `ds:status` lead with the progress line.** A wave whose open rows are all later rows reads `ready to close`.
 - **A tasks pane and a status line entry.** The `dossier-tasks` command opens a read-only pane with the §T needs tree under the progress line. The status line shows the progress line of the live wave.
 - **`ds:grill` takes a goal sentence and the model can start it.** Each entry goes through `ds grill-add`. "Discuss more" forks a decision into `n.k` children, and `ds assert-grill` exits 2 while a child is open. `ds:new "<goal>"` runs the grill first.
-- **Ledgers migrate on their first write.** `ds row-flip`, `ds s-append`, `ds x-refresh`, `ds header-state` and `ds z-write` apply the migration steps first and log one `ds:migrate — <step>` line per step. `ds migrate <dir>` applies them alone. A wave that comes back from `paused` or `_archive/` migrates on its first write.
-- **Advisory nags for autonomous work.** The mod adds context after an edit leaves a §B row with an empty invariant cell, and when an outside grilling skill runs in a dossier repo. `ds close --plan` prints a `⚠` line when §S has no `ds:ship` DONE. `ds:build --auto` proposes its own `/goal`. None of them blocks.
+- **Ledgers migrate on their first write.** `ds row-flip`, `ds s-append`, `ds x-refresh`, `ds header-state`, `ds z-write` and the `ds close` carry into a successor apply the migration steps first and log one `ds:migrate — <step>` line per step. `ds migrate <dir>` applies them alone. A wave that comes back from `paused` or `_archive/` migrates on its first write.
+- **Advisory nags for autonomous work.** The mod adds context after an edit leaves a §B row with no invariant and no fix cite, and when an outside grilling skill runs in a dossier repo. `ds close --plan` prints a `⚠` line when §S has no `ds:ship` DONE. `ds:build --auto` proposes its own `/goal`. None of them blocks.
 - **`ds ds-check` names an archived wave with no §Z key, an unfinished close, and a tracked contract whose wave is closed.**
 
 ### Changed
