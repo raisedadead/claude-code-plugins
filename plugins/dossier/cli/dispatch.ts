@@ -22,7 +22,8 @@ import { closeVerb } from './close.ts'
 import { claimRoots } from './env.ts'
 import { milestoneOf, progressVerb } from './progress.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
-import { addEntry, entryError, openDecisions } from '../engine/grill.ts'
+import { DATE_PREFIX } from '../engine/converge.ts'
+import { addEntry, entryError, FRONTIER_CLOSED, openDecisions } from '../engine/grill.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
 import { migrate } from '../engine/migrate.ts'
 import { sessionReport } from '../engine/session.ts'
@@ -276,8 +277,7 @@ function grillArtifact(root: string, slug: string): string | undefined {
   } catch {
     names = []
   }
-  const pattern = /^[0-9]{4}-[0-9]{2}-[0-9]{2}-/
-  const matches = names.filter((name) => pattern.test(name) && name.slice(11) === `${slug}.md`).map((name) => `${dir}/${name}`)
+  const matches = names.filter((name) => DATE_PREFIX.test(name) && name.slice(11) === `${slug}.md`).map((name) => `${dir}/${name}`)
   return matches.length ? matches.reduce((best, path) => (path > best ? path : best)) : undefined
 }
 
@@ -315,7 +315,7 @@ function assertGrillVerb(args: string[]): number {
   }
   const open = openDecisions(rows)
   if (open.length) throw new Refusal(`grill incomplete: open decision(s): ${open.join(', ')} in ${grill} (finish via ds:grill --resume)`, 2)
-  if (!rows.some((row) => /^FRONTIER: (empty|empty-except-external n=[0-9]+)$/.test(row))) {
+  if (!rows.some((row) => FRONTIER_CLOSED.test(row))) {
     throw new Refusal(`grill incomplete: no closed FRONTIER footer in ${grill} (finish via ds:grill --resume)`, 2)
   }
   if (!rows.some((row) => row.startsWith('CONFIRMED: '))) {

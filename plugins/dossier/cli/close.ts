@@ -1,8 +1,8 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
-import { cells, DATE_PREFIX } from '../engine/converge.ts'
-import { headerToken, lines, openOps, SEC, STAMP, statusSection, unlines, zClosed, zWrite } from '../engine/ledger.ts'
+import { DATE_PREFIX } from '../engine/converge.ts'
+import { headerToken, lines, namedRows, openOps, SEC, STAMP, statusSection, unlines, unpushedRepos, zClosed, zColumn, zWrite } from '../engine/ledger.ts'
 import { migrate } from '../engine/migrate.ts'
 import { DELAYED, type Row, taskRows } from '../engine/progress.ts'
 import { childEnv } from './env.ts'
@@ -99,40 +99,10 @@ function git(repo: string, ...args: string[]): { ok: boolean; out: string; err: 
   return { ok: done.status === 0, out: (done.stdout ?? '').trim(), err: (done.stderr ?? '').trim() }
 }
 
-type Cell = (name: string) => string
-
-function table(text: string, heading: RegExp): Cell[] {
-  const out: Cell[] = []
-  let inside = false
-  let names: string[] = []
-  for (const row of lines(text)) {
-    if (SEC.any.test(row)) {
-      inside = heading.test(row)
-      names = []
-      continue
-    }
-    const values = inside ? cells(row) : []
-    if (!values.length || /^-+$/.test(values[0] ?? '')) continue
-    if (!names.length) {
-      names = values.map((name) => name.toLowerCase())
-      continue
-    }
-    const named = names
-    out.push((name) => values[named.indexOf(name)] ?? '')
-  }
-  return out
-}
-
 function bugsOpen(text: string): string[] {
-  return table(text, SEC.bugs)
+  return namedRows(text, SEC.bugs)
     .filter((row) => /^B\d+$/.test(row('id')) && EMPTY.includes(row('fix cite')))
     .map((row) => row('id'))
-}
-
-function repoRowsUnpushed(text: string): string[] {
-  return table(text, SEC.repos)
-    .filter((row) => row('pushed') !== 'yes')
-    .map((row) => row('repo'))
 }
 
 function carriable(row: Row): boolean {
@@ -294,7 +264,7 @@ function check(options: Options, tools: CloseTools, at: Wave, text: string, rows
     if (verdict.blocks) result.blocked = true
     result.record = verdict.record
   }
-  for (const repo of repoRowsUnpushed(text)) result.findings.push(`⚠ ${repo} not pushed — the push stays yours`)
+  for (const repo of unpushedRepos(text)) result.findings.push(`⚠ ${repo} not pushed — the push stays yours`)
   if (mode.kind !== 'abandoned' && !SHIPPED.test(text)) result.findings.push('⚠ no ds:ship in §S — run ds:ship for the changelog first, or close without one')
   return result
 }
@@ -347,8 +317,7 @@ function run(options: Options, tools: CloseTools, at: Wave, rows: Row[], record:
 
 function report(at: Wave, dir: string): string {
   const closed = readFileSync(join(dir, 'DOSSIER.md'), 'utf8')
-  const successor = /^successor: (\S+)$/m.exec(closed)?.[1]
-  const kind = /^abandoned: true$/m.test(closed) ? 'abandoned' : successor ? `→${successor}` : 'complete'
+  const kind = zColumn(closed)
   const after = /^after: (.*)$/m.exec(closed)?.[1]
   return [`ds close ${at.slug} → done`, `  §Z: ${kind}`, `  archived: ${relative(at.root, dir)}`, ...(after ? [`  after: ${after}`] : [])].join('\n')
 }

@@ -20,7 +20,7 @@ export type Hit = { rule: Rule; finding: Finding; key: string }
 export type Pin = Record<string, string | boolean | null>
 
 export const CACHE_TTL_DEFAULT = 86400
-export const CACHE_TTL_IMMUTABLE = 86400 * 30
+const CACHE_TTL_IMMUTABLE = 86400 * 30
 export const HTTP_TIMEOUT_S = 5
 export const GO_MAJOR_PROBE_MAX = 12
 const GO_MAJOR_PROBE_TIMEOUT_S = 12
@@ -97,7 +97,7 @@ async function eolReleases(lookup: Lookup, slug: string): Promise<unknown[]> {
   return Array.isArray(data) ? data : []
 }
 
-export async function latestEol(lookup: Lookup, slug: string): Promise<[string, string, string] | undefined> {
+async function latestEol(lookup: Lookup, slug: string): Promise<[string, string, string] | undefined> {
   const releases = await eolReleases(lookup, slug)
   const current = releases.find((release) => !truthy(get(release, 'isEol')))
   if (current === undefined) return undefined
@@ -289,14 +289,14 @@ export async function checkActionSha(lookup: Lookup, repo: string, ref: string):
   return [`uses: ${repo}@${ref}`, suggestion, ACTIONS_HARDENING]
 }
 
-export function checkK8sApiVersion(matched: string): Finding | undefined {
+function checkK8sApiVersion(matched: string): Finding | undefined {
   const replacement = own(K8S_DEPRECATED, matched)
   return replacement === undefined
     ? undefined
     : [`apiVersion: ${matched}`, `apiVersion: ${replacement}`, 'https://kubernetes.io/docs/reference/using-api/deprecation-guide/']
 }
 
-export function checkAiModel(model: string): Finding | undefined {
+function checkAiModel(model: string): Finding | undefined {
   if (!model) return undefined
   const name = strip(model).replace(/^["']+|["']+$/g, '')
   const entry = own(AI_MODEL_DEPRECATED, name) || own(AI_MODEL_DEPRECATED, name.toLowerCase())

@@ -42,7 +42,7 @@ describe('dossier mod wiring', () => {
 
   test('a typed /simplify mid-build gets the reminder as context', async ($, on) => {
     on('fs.read', async (_, e) => ({
-      value: e.path.endsWith('INDEX.md') ? '| 2026-01-01 | foo | live | P1/1 |\n' : '{"skill":"ds:build","target":"T3"}',
+      value: e.path.endsWith('INDEX.md') ? '| date | slug | state | T | B | mtime | §Z |\n|------|------|-------|---|---|-------|-----|\n| 2026-01-01 | foo | live | 1/2 | 0 | x | — |\n' : '{"skill":"ds:build","target":"T3"}',
     }))
     on('fs.stat', async () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }))
     on('fs.list', async () => ({ value: [{ name: '2026-01-01-foo', kind: 'dir', size: 0, mtimeMs: 0, isLink: false }] }))

@@ -427,7 +427,7 @@ Vm.8: no skill writes a real file directly. Always tmp + rename.
 
 ### Bundled mutation helpers
 
-Seven verbs of `${CLAUDE_PLUGIN_ROOT}/cli/ds` own the common DOSSIER.md mutations — the seven rows below are the whole roster. The six that rewrite a file are atomic by tmp + rename; `ds archive-move` mutates no file, so it is a bare directory rename with no temp. All ship with the plugin — always available, no adapter detection. Skills call them as `"${CLAUDE_PLUGIN_ROOT}"/cli/ds <verb>`. `cli/ds` needs Node.js 22.18+: it exits 69 without it and 70 on an internal error.
+The verbs of `${CLAUDE_PLUGIN_ROOT}/cli/ds` in the table below own the common DOSSIER.md mutations. Each verb that rewrites a file is atomic by tmp + rename; `ds archive-move` mutates no file, so it is a bare directory rename with no temp. All ship with the plugin — always available, no adapter detection. Skills call them as `"${CLAUDE_PLUGIN_ROOT}"/cli/ds <verb>`. `cli/ds` needs Node.js 22.18+: it exits 69 without it and 70 on an internal error.
 
 | verb              | mutates                                                    | usage                                                   |
 | ----------------- | ---------------------------------------------------------- | ------------------------------------------------------- |

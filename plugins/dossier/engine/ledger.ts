@@ -1,3 +1,4 @@
+import { cells } from './converge.ts'
 import { CELL, strip, unicodeRegex } from './text.ts'
 
 const SPACE = '[ \\t\\n\\r\\f\\v]'
@@ -269,7 +270,7 @@ export function missingSections(text: string): string[] {
   return missing
 }
 
-export function closeoutLines(text: string): string[] {
+function closeoutLines(text: string): string[] {
   const rows = lines(text)
   const at = rows.findIndex((row) => SEC.closeout.test(row))
   return at < 0 ? [] : rows.slice(at)
@@ -289,17 +290,58 @@ export function zColumn(text: string): string {
 }
 
 export const STAMP = '[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}(?::[0-9]{2})?'
+const STAMPED = new RegExp(`^${STAMP}`)
 const ENTRY = new RegExp(`^(?:${STAMP} )?(ds:[a-z]+) (\\S+) (.*)$`)
 const JOINED = new RegExp(` (?=${STAMP} ds:[a-z]+ )`)
 
-export function statusSection(text: string): string[] {
+export type Cell = (name: string) => string
+
+export function namedRows(text: string, heading: RegExp): Cell[] {
+  const out: Cell[] = []
+  let inside = false
+  let names: string[] = []
+  for (const row of lines(text)) {
+    if (SEC.any.test(row)) {
+      inside = heading.test(row)
+      names = []
+      continue
+    }
+    const values = inside ? cells(row) : []
+    if (!values.length || /^-+$/.test(values[0] ?? '')) continue
+    if (!names.length) {
+      names = values.map((name) => name.toLowerCase())
+      continue
+    }
+    const named = names
+    out.push((name) => values[named.indexOf(name)] ?? '')
+  }
+  return out
+}
+
+export function unpushedRepos(text: string): string[] {
+  return namedRows(text, SEC.repos)
+    .filter((row) => row('pushed') !== 'yes')
+    .map((row) => row('repo'))
+}
+
+export function indexNames(index: string, state: string): string[] {
+  const [names = [], ...body] = lines(index).map(cells).filter((row) => row.length)
+  const at = (name: string): number => names.indexOf(name)
+  return body.filter((row) => row[at('state')] === state).map((row) => `${row[at('date')]}-${row[at('slug')]}`)
+}
+
+export function sectionRows(text: string, heading: RegExp): string[] {
   const out: string[] = []
   let inside = false
   for (const row of lines(text)) {
-    if (SEC.any.test(row)) inside = SEC.status.test(row)
+    if (SEC.any.test(row)) inside = heading.test(row)
     else if (inside) out.push(row)
   }
   return out
+}
+
+export function statusSection(text: string): string[] {
+  return sectionRows(text, SEC.status)
 }
 
 export function openOps(entries: string[]): Map<string, string> {
@@ -348,7 +390,7 @@ export function vmFindings(file: string, text: string): string[] {
     if (sec === 'S') {
       const line = trim(row)
       if (line === '' || line.startsWith('<!--')) continue
-      if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}/.test(line)) {
+      if (!STAMPED.test(line)) {
         out.push(`WARN Vm.2 ${file}: Status line missing ISO timestamp: ${line}`)
       }
       status.push(line)

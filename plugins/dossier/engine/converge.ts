@@ -10,6 +10,12 @@ const TEST_DIRS = new Set(['test', 'tests', '__tests__', 'spec'])
 
 export const DATE_PREFIX = unicodeRegex('^\\d{4}-\\d{2}-\\d{2}-')
 
+export function contractPaths(repos: readonly string[], waveDir: string): string[] {
+  const name = waveDir.split('/').filter(Boolean).pop() ?? ''
+  const stems = [...new Set([name, name.replace(DATE_PREFIX, '')])]
+  return [...repos.flatMap((repo) => stems.map((stem) => `${repo}/.dossier/${stem}.md`)), `${waveDir}/CONTRACT.md`]
+}
+
 function rstrip(text: string): string {
   return text.replace(unicodeRegex('\\s+$'), '')
 }
@@ -138,7 +144,7 @@ function suffixOf(name: string): string {
   return at <= 0 || at === name.length - 1 ? '' : name.slice(at)
 }
 
-export function isTest(path: string): boolean {
+function isTest(path: string): boolean {
   const parts = path.split('/').filter((part) => part !== '' && part !== '.')
   const name = parts[parts.length - 1] ?? ''
   const stem = name.slice(0, name.length - suffixOf(name).length)

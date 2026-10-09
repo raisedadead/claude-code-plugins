@@ -1,7 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 import type { DossierWave } from '../types'
-import { field } from '../engine/converge.ts'
+import { contractPaths, DATE_PREFIX, field } from '../engine/converge.ts'
 import { headerToken } from '../engine/ledger.ts'
 import { needsTree, ownerLine, progress, progressLine, taskRows } from '../engine/progress.ts'
 import { BUILTINS, bugGate, editGate, type Io, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from './gates.ts'
@@ -55,12 +55,10 @@ async function liveWave($: EngineInterface, cwd: string): Promise<DossierWave | 
   for (const name of names.sort().reverse()) {
     const ledger = await readOr($, `${dossiers}/${name}/DOSSIER.md`)
     if (ledger === undefined || headerToken(ledger) !== 'live') continue
-    const contract =
-      (await readOr($, `${cwd}/.dossier/${name}.md`)) ??
-      (await readOr($, `${root}/.dossier/${name}.md`)) ??
-      (await readOr($, `${dossiers}/${name}/CONTRACT.md`))
+    let contract: string | undefined
+    for (const path of contractPaths([cwd, root], `${dossiers}/${name}`)) contract ??= await readOr($, path)
     const milestone = contract ? field(contract, 'milestone') || undefined : undefined
-    return { slug: name.replace(/^\d{4}-\d{2}-\d{2}-/, ''), text: ledger, ...(milestone ? { milestone } : {}) }
+    return { slug: name.replace(DATE_PREFIX, ''), text: ledger, ...(milestone ? { milestone } : {}) }
   }
   return null
 }

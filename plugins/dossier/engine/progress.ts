@@ -146,7 +146,7 @@ export function progressTable(slug: string, view: Progress): string {
   return out.join('\n')
 }
 
-export const LATER_DAYS = 30
+const LATER_DAYS = 30
 
 export function laterLine(slug: string, text: string, now: Date): string | undefined {
   const after = /^after: (.+)$/m.exec(text)?.[1]

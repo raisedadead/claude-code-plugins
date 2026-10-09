@@ -1,5 +1,5 @@
 import { readFileSync, statSync } from 'node:fs'
-import { flaggedVerdict, scanText } from './claim-check.ts'
+import { scanText } from './claim-check.ts'
 
 const CLEAN = 0
 const FLAGGED = 1
@@ -16,7 +16,7 @@ function isFile(path: string): boolean {
 function report(flagged: string[], clean: string): number {
   for (const entry of flagged) console.log(entry)
   if (flagged.length) {
-    console.log(flaggedVerdict(flagged.length))
+    console.log(`CLAIMS: FLAGGED ${flagged.length}`)
     return FLAGGED
   }
   console.log(`CLAIMS: CLEAN ${clean}`)

@@ -150,8 +150,9 @@ describe('bug gate', () => {
 
 describe('skill gate', () => {
   const INDEX = `${ROOT}/.scratchpad/INDEX.md`
-  const LIVE = '| 2026-01-01 | foo | live | P1/1 | 1/2 | 0 | x | open |\n'
-  const PAUSED = '| 2026-01-02 | bar | paused | P1/1 | 1/2 | 0 | x | open |\n'
+  const HEAD = '| date | slug | state | T | B | mtime | §Z |\n|------|------|-------|---|---|-------|-----|\n'
+  const LIVE = `${HEAD}| 2026-01-01 | foo | live | 1/2 | 0 | x | — |\n`
+  const PAUSED = `${HEAD}| 2026-01-02 | bar | paused | 1/2 | 0 | x | — |\n`
   const LOCK = `${ROOT}/.scratchpad/dossier/2026-01-01-foo/.ds-lock`
 
   test('reminds a built-in review while a build is in flight', async () => {
@@ -203,7 +204,7 @@ describe('skill gate', () => {
   })
 
   test('lists paused rows at dossier:close and is silent without them', async () => {
-    expect(await skillGate(io({ [INDEX]: LIVE + PAUSED }), ROOT, 'dossier:close', new Set())).toContain('1 paused dossier(s) alongside this close: 2026-01-02-bar.')
+    expect(await skillGate(io({ [INDEX]: LIVE + PAUSED.slice(HEAD.length) }), ROOT, 'dossier:close', new Set())).toContain('1 paused dossier(s) alongside this close: 2026-01-02-bar.')
     expect(await skillGate(io({ [INDEX]: LIVE }), ROOT, 'dossier:close', new Set())).toBeUndefined()
   })
 })

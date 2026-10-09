@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, statSync, writeSync } from 'node:fs'
 import { constants } from 'node:os'
 import { dirname, join } from 'node:path'
 import {
+  contractPaths,
   DATE_PREFIX,
   detail,
   field,
@@ -83,18 +84,6 @@ export function topLevel(dir: string): string {
   return strip(git(dir, 'rev-parse', '--show-toplevel')) || dir
 }
 
-function trackedContract(repo: string, slug: string): string | undefined {
-  const undated = slug.replace(DATE_PREFIX, '')
-  const folder = join(repo, '.dossier')
-  if (!isDir(folder)) return undefined
-  for (const name of visible(folder)) {
-    if (!name.endsWith('.md') || name === '.md' || !isFile(join(folder, name))) continue
-    const stem = name.slice(0, -3)
-    if (stem === slug || stem === undated) return join(folder, name)
-  }
-  return undefined
-}
-
 export function staleContracts(root: string, from: string): string[] {
   const open = visible(join(root, '.scratchpad', 'dossier')).filter((name) => {
     const ledger = join(root, '.scratchpad', 'dossier', name, 'DOSSIER.md')
@@ -112,23 +101,12 @@ export function staleContracts(root: string, from: string): string[] {
   return out
 }
 
-export function waveContract(dir: string, root: string): string | undefined {
-  const slug = dir.split('/').filter(Boolean).pop() ?? ''
-  for (const repo of new Set([topLevel(process.cwd()), root])) {
-    const tracked = trackedContract(repo, slug)
-    if (tracked) return tracked
-  }
-  const local = join(dir, 'CONTRACT.md')
-  return isFile(local) ? local : undefined
+export function waveContract(dir: string, root: string, from: string = process.cwd()): string | undefined {
+  return contractPaths([...new Set([topLevel(from), root])], dir).find(isFile)
 }
 
 function contractFor(root: string, slug: string, from: string = root): string | undefined {
-  for (const repo of new Set([topLevel(from), root])) {
-    const tracked = trackedContract(repo, slug)
-    if (tracked) return tracked
-  }
-  const fallback = join(root, '.scratchpad', 'dossier', slug, 'CONTRACT.md')
-  return isFile(fallback) ? fallback : undefined
+  return waveContract(join(root, '.scratchpad', 'dossier', slug), root, from)
 }
 
 function depth(): number {

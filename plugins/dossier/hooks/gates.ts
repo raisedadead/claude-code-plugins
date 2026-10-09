@@ -1,7 +1,7 @@
 import { cells } from '../engine/converge.ts'
 import { editOf, headerDenial, isDossierPath, markerDenial } from '../engine/guards.ts'
-import { SEC } from '../engine/ledger.ts'
-import { byCodePoint, strip } from '../engine/text.ts'
+import { indexNames, SEC } from '../engine/ledger.ts'
+import { byCodePoint } from '../engine/text.ts'
 
 export type Io = {
   isDir: (path: string) => Promise<boolean>
@@ -125,14 +125,6 @@ export async function verifyGate(io: Io, root: string, input: Record<string, unk
   return lines.length ? `${lines.join('\n')}${VERIFY_FOOTER}` : undefined
 }
 
-function rows(index: string, state: string): string[] {
-  return index
-    .split('\n')
-    .map((line) => line.split('|').map(strip))
-    .filter((cells) => cells.length > 3 && cells[3] === state)
-    .map((cells) => `${cells[1]}-${cells[2]}`)
-}
-
 async function inFlight(io: Io, root: string, live: string[]): Promise<string | undefined> {
   const dossiers = `${root}/.scratchpad/dossier`
   let names: string[]
@@ -232,8 +224,8 @@ export async function skillGate(io: Io, root: string, name: string, seen: Set<st
   } catch {
     return undefined
   }
-  const live = rows(index, 'live')
-  const paused = name === CLOSE ? rows(index, 'paused') : []
+  const live = indexNames(index, 'live')
+  const paused = name === CLOSE ? indexNames(index, 'paused') : []
   const flight = BUILTINS.has(name) && live.length ? await inFlight(io, root, live) : undefined
   const text = reminder(name, paused, live[0], flight)
   if (text) seen.add(name)

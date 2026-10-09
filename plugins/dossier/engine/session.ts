@@ -1,4 +1,4 @@
-import { openOps, SEC } from './ledger.ts'
+import { indexNames, namedRows, openOps, SEC, sectionRows, statusSection, unpushedRepos } from './ledger.ts'
 import { ownerLine, progress, progressLine, taskRows } from './progress.ts'
 
 export type SessionInput = {
@@ -13,49 +13,12 @@ export type SessionInput = {
 
 export type SessionOutput = { context: string; title: string; system: string }
 
-const RULE = /^\|[ :|-]+$/
-
-function trim(text: string): string {
-  return text.replace(/^[ \t]+|[ \t]+$/g, '')
-}
-
-function textLines(text: string): string[] {
-  const rows = text.split('\n')
-  if (rows[rows.length - 1] === '') rows.pop()
-  return rows
-}
-
-function sectionLines(text: string, pattern: RegExp): string[] {
-  const out: string[] = []
-  let inside = false
-  for (const row of textLines(text)) {
-    if (pattern.test(row)) {
-      inside = true
-      continue
-    }
-    if (inside && SEC.any.test(row)) inside = false
-    if (inside) out.push(row)
-  }
-  return out
-}
-
 function filled(rows: string[]): string[] {
   return rows.filter((row) => !/^[ \t\n\r\f\v]*$/.test(row))
 }
 
-function liveNames(index: string): string[] {
-  const rows = textLines(index).filter((row) => row.startsWith('|'))
-  const names = (rows[0] ?? '').split('|').map(trim)
-  const [date, slug, state] = ['date', 'slug', 'state'].map((name) => names.indexOf(name))
-  return rows
-    .slice(1)
-    .map((row) => row.split('|').map(trim))
-    .filter((cells) => cells[state ?? -1] === 'live')
-    .map((cells) => `${cells[date ?? -1] ?? ''}-${cells[slug ?? -1] ?? ''}`)
-}
-
 function resumeHints(name: string, text: string): string[] {
-  return [...openOps(sectionLines(text, SEC.status)).values()].map((row) => `  ⚠ resume needed [${name}]: ${row}`)
+  return [...openOps(statusSection(text)).values()].map((row) => `  ⚠ resume needed [${name}]: ${row}`)
 }
 
 function stuckRows(text: string): string[] {
@@ -67,25 +30,8 @@ function stuckRows(text: string): string[] {
 }
 
 function repoSummary(text: string): string[] {
-  let inside = false
-  let header = false
-  let count = 0
-  let unpushed = 0
-  for (const row of textLines(text)) {
-    if (SEC.repos.test(row)) {
-      inside = true
-      continue
-    }
-    if (SEC.any.test(row)) inside = false
-    if (!inside || !row.startsWith('|') || RULE.test(row)) continue
-    if (!header) {
-      header = true
-      continue
-    }
-    count++
-    if (trim(row.split('|')[5] ?? '') === 'no') unpushed++
-  }
-  return count ? [`repos ${count} · unpushed ${unpushed}`] : []
+  const count = namedRows(text, SEC.repos).length
+  return count ? [`repos ${count} · unpushed ${unpushedRepos(text).length}`] : []
 }
 
 export function sessionReport(input: SessionInput): SessionOutput {
@@ -97,7 +43,7 @@ export function sessionReport(input: SessionInput): SessionOutput {
   let driftCount = 0
   let driftSlugs = ''
   if (index !== undefined) {
-    const live = liveNames(index)
+    const live = indexNames(index, 'live')
     liveSlug = live[0] ?? ''
     liveCount = live.length
     liveAll = live.map((name) => `${name} `).join('')
@@ -122,7 +68,7 @@ export function sessionReport(input: SessionInput): SessionOutput {
   const text = wave?.text
   if (liveSlug && text !== undefined && view) {
     context.push(lead, ownerLine(view), ...stuckRows(text), ...repoSummary(text))
-    context.push(...filled(sectionLines(text, SEC.status)).slice(-2).map((row) => `just did: ${row}`))
+    context.push(...filled(statusSection(text)).slice(-2).map((row) => `just did: ${row}`))
     context.push('(ds:status for the dashboard)')
   }
   if (liveCount > 1) {
@@ -136,7 +82,7 @@ export function sessionReport(input: SessionInput): SessionOutput {
   }
   if (hints.length) context.push('', '## resume needed', ...hints)
   if (text !== undefined && hints.some((hint) => hint.includes(`[${liveSlug}]`))) {
-    context.push('', '### Tasks (resume context)', ...filled(sectionLines(text, SEC.tasks)), '### Repos', ...filled(sectionLines(text, SEC.repos)))
+    context.push('', '### Tasks (resume context)', ...filled(sectionRows(text, SEC.tasks)), '### Repos', ...filled(sectionRows(text, SEC.repos)))
   }
   if (input.notes?.length) context.push('', ...input.notes)
   return { context: context.join('\n').replace(/^\n+|\n+$/g, ''), title, system }

@@ -9,7 +9,6 @@ import { shlexWords } from '../engine/converge.ts'
 const ROOT = realpathSync(join(import.meta.dirname, '..', '..', '..'))
 const PLUGINS = ['dossier', 'whetstone']
 const DEAD_SCHEMA = 'https://json.schemastore.org/claude-code-plugin.json'
-const NUMBERS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 }
 
 function walk(dir: string): string[] {
   let entries
@@ -94,10 +93,8 @@ function idProblems(root: string): string[] {
 }
 
 function verbProblems(body: string, usage: string): string[] {
-  const lead = /^(\w+) verbs of `\$\{CLAUDE_PLUGIN_ROOT\}\/cli\/ds`/m.exec(body)
-  if (!lead) return ["FORMAT.md carries no 'N verbs of ${CLAUDE_PLUGIN_ROOT}/cli/ds' sentence"]
-  const stated = NUMBERS[(lead[1] ?? '').toLowerCase()]
-  if (!stated) return [`the verb count is not a number word: ${lead[1]}`]
+  const lead = /^.*verbs of `\$\{CLAUDE_PLUGIN_ROOT\}\/cli\/ds`.*$/m.exec(body)
+  if (!lead) return ["FORMAT.md carries no 'verbs of ${CLAUDE_PLUGIN_ROOT}/cli/ds' sentence"]
   const table: string[] = []
   for (const line of body.slice(lead.index + lead[0].length).split('\n')) {
     if (line.startsWith('|')) table.push(line)
@@ -107,7 +104,7 @@ function verbProblems(body: string, usage: string): string[] {
   const verbs = /usage: ds <([a-z0-9|-]+)>/.exec(usage)
   if (!verbs) return [`cli/ds printed no verb list: ${usage.trim()}`]
   const known = new Set((verbs[1] ?? '').split('|'))
-  const out = roster.length === stated ? [] : [`the sentence says ${stated}, the table lists ${roster.join(', ')}`]
+  const out: string[] = []
   for (const verb of roster) if (!known.has(verb)) out.push(`the table names a verb cli/ds does not dispatch: ${verb}`)
   return out
 }
@@ -177,15 +174,13 @@ test('every skill or agent id a shipped doc names exists', () => {
   )
 })
 
-test("FORMAT.md's cli/ds verb count agrees with its roster table and the dispatcher", () => {
+test("FORMAT.md's cli/ds roster names only verbs the dispatcher knows", () => {
   const usage = spawnSync(join(ROOT, 'plugins', 'dossier', 'cli', 'ds'), { encoding: 'utf8' }).stderr ?? ''
   assert.deepEqual(verbProblems(readFileSync(join(ROOT, 'plugins', 'dossier', 'FORMAT.md'), 'utf8'), usage), [])
-  const table = 'Two verbs of `${CLAUDE_PLUGIN_ROOT}/cli/ds` own it:\n\n| verb |\n| --- |\n| `ds a` |\n| `ds b` |\n'
+  const table = 'The verbs of `${CLAUDE_PLUGIN_ROOT}/cli/ds` below:\n\n| verb |\n| --- |\n| `ds a` |\n| `ds b` |\n'
   assert.deepEqual(verbProblems(table, 'usage: ds <a|b>'), [])
-  assert.deepEqual(verbProblems(table.replace('Two', 'Three'), 'usage: ds <a|b>'), ['the sentence says 3, the table lists a, b'])
   assert.deepEqual(verbProblems(table, 'usage: ds <a>'), ['the table names a verb cli/ds does not dispatch: b'])
-  assert.deepEqual(verbProblems('no sentence', 'usage: ds <a>'), ["FORMAT.md carries no 'N verbs of ${CLAUDE_PLUGIN_ROOT}/cli/ds' sentence"])
-  assert.deepEqual(verbProblems(table.replace('Two', 'Many'), 'usage: ds <a|b>'), ['the verb count is not a number word: Many'])
+  assert.deepEqual(verbProblems('no sentence', 'usage: ds <a>'), ["FORMAT.md carries no 'verbs of ${CLAUDE_PLUGIN_ROOT}/cli/ds' sentence"])
   assert.deepEqual(verbProblems(table, ''), ['cli/ds printed no verb list: '])
 })
 

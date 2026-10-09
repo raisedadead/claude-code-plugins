@@ -59,7 +59,3 @@ export function flaggedUnits(text: string): [number, string][] {
 export function scanText(text: string, label: string): string[] {
   return flaggedUnits(text).map(([number, unit]) => `${label}:${number}: ${unit}`)
 }
-
-export function flaggedVerdict(count: number): string {
-  return `CLAIMS: FLAGGED ${count}`
-}

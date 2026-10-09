@@ -23,11 +23,13 @@ export function openDecisions(rows: readonly string[]): string[] {
   return open
 }
 
+export const FRONTIER_CLOSED = /^FRONTIER: (empty|empty-except-external n=[0-9]+)$/
+
 export function entryError(entry: string): string | undefined {
   if (entry.includes('\n')) return 'an entry is one line'
   if (entry.startsWith('FACT: ')) return /\bcite=\S/.test(entry) ? undefined : 'a FACT needs cite=<file|command|url>'
   if (entry.startsWith('DECISION: ')) return / recommended=\S/.test(entry) ? undefined : 'a DECISION needs recommended=<option>'
-  if (/^FRONTIER: (empty|empty-except-external n=[0-9]+)$/.test(entry)) return undefined
+  if (FRONTIER_CLOSED.test(entry)) return undefined
   if (entry.startsWith('CONFIRMED: ')) return undefined
   return 'an entry starts with FACT:, DECISION:, FRONTIER: or CONFIRMED: — ds:new alone writes CONSUMED:'
 }
