@@ -33,7 +33,7 @@ One wave of work is one file: `.scratchpad/dossier/<date>-<slug>/DOSSIER.md`. Di
 | Invariant    | A testable rule that must hold.                                                    |
 | Repo         | A touched repository, with ahead-count, tag and push state.                        |
 | Status entry | An append-only, timestamped timeline line.                                         |
-| Closeout     | The final postscript. Requires a successor or an explicit completion.              |
+| Closeout     | The final postscript. Requires a successor or an explicit completion. `ds close` writes it. |
 
 Ordering is per-row, not per-phase: `ds:build --auto` selects the first frontier row with `who=A`, which is what those two columns buy. Tasks carries no phase column, so a wave that runs in stages says so in `needs`.
 
@@ -66,6 +66,9 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 | dossier header guard            | non-canonical state token in a file named `DOSSIER.md` | PreToolUse `deny` |
 | dossier marker guard            | regex over comment prefixes, in a project with `.scratchpad/dossier/` | PreToolUse `deny`, opt-out `DOSSIER_MARKER_GUARD=off` (D33: an operator decision against F20's measured false positives) |
 | dossier verify advisory         | network-dependent freshness claim, read from the cache | never blocks |
+| dossier bug-invariant nag       | a §B row with an empty `invariant added` cell after an Edit or Write of `DOSSIER.md` | PostToolUse context, never blocks |
+| dossier grilling reminder       | an outside grilling skill invoked in a repo with `.scratchpad/dossier/` | PreToolUse context, never blocks |
+| `ds close` ship advisory        | no `ds:ship` DONE line in §S                           | `⚠` line, never blocks |
 | whetstone claim gate            | unbacked enforcement verb in the final reply           | Stop `block`, once per turn |
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.
@@ -95,6 +98,8 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | `tiger-style` check | `TIGER: CLEAN <n> file(s)[, <m> skipped]`, `BLOCK <n>` or `NAG <n>`; exit 0/1/2 | code — `tiger-check`     |
 | `ds:converge`       | `CONVERGE: MET <n>/<n>`, `UNMET <n> of <m>` or `PARSE — <why>`; exit 0/1/2      | code — `cli/ds converge` |
 | `ds:ship` bump      | `recommend: <BUMP>`                                                             | advisory; model-mapped   |
+| `ds close`          | `✗` lines refuse with exit 1; `⚠` lines are advisory; `ready` on `--plan`      | code — `cli/ds close`    |
+| `ds assert-grill`   | exit 0 complete, 1 no artifact, 2 open decision or open fork child, 3 unconfirmed, 4 consumed | code — `cli/ds assert-grill` |
 
 ## Tenets
 

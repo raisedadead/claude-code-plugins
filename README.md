@@ -37,6 +37,7 @@ dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globa
 | `/dossier:new "<goal>"`                    | Start a wave. Grills the goal first, then prompts scope and repos; pins library versions.    |
 | `/dossier:check`                           | Read-only drift audit across every repo the wave touches.                                    |
 | `/dossier:close`                           | `--complete` · `--successor <slug>` · `--abandon "<why>"`. Shows the plan, then closes.      |
+| `/dossier-tasks`                           | Opens the task pane: the needs tree under the progress line. The status line shows that line too. |
 
 **When to start a wave:** the work spans more than one session, touches more than 5 files, or needs a step only you can do. Smaller work runs without a dossier.
 
