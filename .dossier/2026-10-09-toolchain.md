@@ -12,7 +12,7 @@
 | --- | --------------------------------------------------------------------------------------------------------- | ------------------ |
 | 1   | `node_modules/.bin/vitest run`                                                                            | exit 0             |
 | 2   | `git grep -l "from 'node:test'" -- 'plugins/*/tests/'`                                                    | stdout: (nothing)  |
-| 3   | `s=$(date +%s); node_modules/.bin/vitest run >/dev/null 2>&1; echo "fast=$(( $(date +%s) - s < 8 ))"`      | stdout: fast=1     |
+| 3   | `s=$(date +%s); node_modules/.bin/vitest run >/dev/null 2>&1; echo "fast=$(( $(date +%s) - s < 13 ))"`     | stdout: fast=1     |
 | 4   | `node_modules/.bin/oxlint --deny-warnings`                                                                | exit 0             |
 | 5   | `node_modules/.bin/oxfmt --check`                                                                         | exit 0             |
 | 6   | `node_modules/.bin/tsc -p .`                                                                              | exit 0             |

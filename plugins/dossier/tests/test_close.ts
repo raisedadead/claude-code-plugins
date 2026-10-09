@@ -1,14 +1,37 @@
 import assert from 'node:assert/strict'
-import { execFileSync, spawnSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { test } from 'vitest'
+import { promisify } from 'node:util'
+import { test as base } from 'vitest'
+
+const test = base.concurrent
+const execFileAsync = promisify(execFile)
 
 const DS = join(import.meta.dirname, '..', 'cli', 'ds')
 const SLUG = '2026-10-09-wave'
 
 type Row = [id: string, state: string, who: string, needs?: string]
+
+type Run = { status: number; stdout: string; stderr: string }
+
+async function run(file: string, args: string[], cwd?: string): Promise<Run> {
+  try {
+    const { stdout, stderr } = await execFileAsync(file, args, { cwd, encoding: 'utf8' })
+    return { status: 0, stdout, stderr }
+  } catch (error) {
+    const failed = error as { code?: unknown; stdout?: string; stderr?: string }
+    if (typeof failed.code !== 'number') throw error
+    return { status: failed.code, stdout: failed.stdout ?? '', stderr: failed.stderr ?? '' }
+  }
+}
+
+async function must(file: string, args: string[], cwd?: string): Promise<string> {
+  const done = await run(file, args, cwd)
+  assert.equal(done.status, 0, `${file} ${args.join(' ')}: ${done.stderr}`)
+  return done.stdout
+}
 
 function ledger(rows: Row[], bugs = ''): string {
   const tasks = rows.map(([id, state, who, needs = '—']) => `| ${id} | ${state} | ${who} | task ${id} | ${needs} | ${state === 'x' ? 'abc1234' : '—'} | v |`)
@@ -53,24 +76,24 @@ function contract(criterion = '`true`'): string {
   return `# wave\n\n| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | ${criterion} | exit 0 |\n`
 }
 
-function repo(rows: Row[], options: { criterion?: string; bugs?: string } = {}): string {
+async function repo(rows: Row[], options: { criterion?: string; bugs?: string } = {}): Promise<string> {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'ds-close-')))
-  const git = (...args: string[]) => execFileSync('git', ['-C', root, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { stdio: 'ignore' })
-  git('init', '-q', '-b', 'main')
-  git('config', 'user.email', 't@t')
-  git('config', 'user.name', 't')
+  const git = (...args: string[]) => must('git', ['-C', root, ...args])
+  await git('init', '-q', '-b', 'main')
+  await git('config', 'user.email', 't@t')
+  await git('config', 'user.name', 't')
   writeFileSync(join(root, '.gitignore'), '.scratchpad/\n')
   mkdirSync(join(root, '.dossier'))
   writeFileSync(join(root, '.dossier', `${SLUG}.md`), contract(options.criterion))
-  git('add', '.')
-  git('commit', '-q', '-m', 'init')
+  await git('add', '.')
+  await git('commit', '-q', '-m', 'init')
   mkdirSync(join(root, '.scratchpad', 'dossier', SLUG), { recursive: true })
   writeFileSync(join(root, '.scratchpad', 'dossier', SLUG, 'DOSSIER.md'), ledger(rows, options.bugs))
   return root
 }
 
-function close(root: string, ...args: string[]) {
-  return spawnSync('sh', [DS, 'close', SLUG, ...args], { cwd: root, encoding: 'utf8' })
+function close(root: string, ...args: string[]): Promise<Run> {
+  return run('sh', [DS, 'close', SLUG, ...args], root)
 }
 
 function live(root: string): string {
@@ -81,24 +104,24 @@ function archived(root: string): string {
   return readFileSync(join(root, '.scratchpad', 'dossier', '_archive', SLUG, 'DOSSIER.md'), 'utf8')
 }
 
-function lastSubject(root: string): string {
-  return execFileSync('git', ['-C', root, 'log', '-1', '--format=%s'], { encoding: 'utf8' }).trim()
+async function lastSubject(root: string): Promise<string> {
+  return (await must('git', ['-C', root, 'log', '-1', '--format=%s'])).trim()
 }
 
-function within(body: (root: string) => void, rows: Row[], options: { criterion?: string; bugs?: string } = {}): void {
-  const root = repo(rows, options)
+async function within(body: (root: string) => Promise<void>, rows: Row[], options: { criterion?: string; bugs?: string } = {}): Promise<void> {
+  const root = await repo(rows, options)
   try {
-    body(root)
+    await body(root)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
 }
 
-test('--plan names the open agent rows, refuses with exit 1 and writes nothing', () => {
-  within(
-    (root) => {
+test('--plan names the open agent rows, refuses with exit 1 and writes nothing', async () => {
+  await within(
+    async (root) => {
       const before = live(root)
-      const done = close(root, '--complete', '--plan')
+      const done = await close(root, '--complete', '--plan')
       assert.equal(done.status, 1, done.stdout + done.stderr)
       assert.match(done.stdout, /✗ T2 open/)
       assert.equal(live(root), before)
@@ -110,11 +133,11 @@ test('--plan names the open agent rows, refuses with exit 1 and writes nothing',
   )
 })
 
-test('--plan on a finished wave reports ready with exit 0 and writes nothing', () => {
-  within(
-    (root) => {
+test('--plan on a finished wave reports ready with exit 0 and writes nothing', async () => {
+  await within(
+    async (root) => {
       const before = live(root)
-      const done = close(root, '--complete', '--plan')
+      const done = await close(root, '--complete', '--plan')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(done.stdout, /✓ converge 1\/1/)
       assert.match(done.stdout, /^ready$/m)
@@ -125,12 +148,12 @@ test('--plan on a finished wave reports ready with exit 0 and writes nothing', (
   )
 })
 
-test('--plan says the changelog check did not run when the contract is untracked', () => {
-  within(
-    (root) => {
+test('--plan says the changelog check did not run when the contract is untracked', async () => {
+  await within(
+    async (root) => {
       rmSync(join(root, '.dossier'), { recursive: true, force: true })
       writeFileSync(join(root, '.scratchpad', 'dossier', SLUG, 'CONTRACT.md'), contract())
-      const done = close(root, '--complete', '--plan')
+      const done = await close(root, '--complete', '--plan')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(done.stdout, /⚠ no tracked contract — the CHANGELOG\.md check did not run/)
     },
@@ -138,14 +161,14 @@ test('--plan says the changelog check did not run when the contract is untracked
   )
 })
 
-test('--plan stays silent on the changelog advisory once a CHANGELOG.md changes after the contract', () => {
-  within(
-    (root) => {
+test('--plan stays silent on the changelog advisory once a CHANGELOG.md changes after the contract', async () => {
+  await within(
+    async (root) => {
       mkdirSync(join(root, 'plugins', 'p'), { recursive: true })
       writeFileSync(join(root, 'plugins', 'p', 'CHANGELOG.md'), '# Changelog\n')
-      execFileSync('git', ['-C', root, 'add', '.'])
-      execFileSync('git', ['-C', root, 'commit', '-q', '-m', 'docs: changelog'])
-      const done = close(root, '--complete', '--plan')
+      await must('git', ['-C', root, 'add', '.'])
+      await must('git', ['-C', root, 'commit', '-q', '-m', 'docs: changelog'])
+      const done = await close(root, '--complete', '--plan')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.doesNotMatch(done.stdout, /CHANGELOG/)
     },
@@ -153,12 +176,12 @@ test('--plan stays silent on the changelog advisory once a CHANGELOG.md changes 
   )
 })
 
-test('--plan stays silent on the changelog advisory for a staged CHANGELOG.md not yet committed', () => {
-  within(
-    (root) => {
+test('--plan stays silent on the changelog advisory for a staged CHANGELOG.md not yet committed', async () => {
+  await within(
+    async (root) => {
       writeFileSync(join(root, 'CHANGELOG.md'), '# Changelog\n')
-      execFileSync('git', ['-C', root, 'add', 'CHANGELOG.md'])
-      const done = close(root, '--complete', '--plan')
+      await must('git', ['-C', root, 'add', 'CHANGELOG.md'])
+      const done = await close(root, '--complete', '--plan')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.doesNotMatch(done.stdout, /CHANGELOG/)
     },
@@ -166,11 +189,11 @@ test('--plan stays silent on the changelog advisory for a staged CHANGELOG.md no
   )
 })
 
-test('--plan stays silent on the changelog advisory for a CHANGELOG.md not yet added', () => {
-  within(
-    (root) => {
+test('--plan stays silent on the changelog advisory for a CHANGELOG.md not yet added', async () => {
+  await within(
+    async (root) => {
       writeFileSync(join(root, 'CHANGELOG.md'), '# Changelog\n')
-      const done = close(root, '--complete', '--plan')
+      const done = await close(root, '--complete', '--plan')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.doesNotMatch(done.stdout, /CHANGELOG/)
     },
@@ -178,26 +201,26 @@ test('--plan stays silent on the changelog advisory for a CHANGELOG.md not yet a
   )
 })
 
-test('a run writes §Z, archives the wave, commits the contract move alone and logs DONE', () => {
-  within(
-    (root) => {
+test('a run writes §Z, archives the wave, commits the contract move alone and logs DONE', async () => {
+  await within(
+    async (root) => {
       writeFileSync(join(root, 'unrelated.txt'), 'x')
-      execFileSync('git', ['-C', root, 'add', 'unrelated.txt'])
-      const done = close(root, '--complete', '--summary', 'shipped it')
+      await must('git', ['-C', root, 'add', 'unrelated.txt'])
+      const done = await close(root, '--complete', '--summary', 'shipped it')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       const text = archived(root)
       assert.match(text, /^`2026-10-09` · `done`$/m)
       assert.match(text, /^complete: true$/m)
       assert.match(text, /^summary: shipped it$/m)
-      const sha = execFileSync('git', ['-C', root, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim()
+      const sha = (await must('git', ['-C', root, 'rev-parse', '--short', 'HEAD'])).trim()
       for (const step of ['START mode=complete', '§Z=written', 'archived', `contract=${sha}`, 'DONE']) {
         assert.ok(text.includes(`ds:close — ${step}`), step)
       }
       assert.ok(!existsSync(join(root, '.scratchpad', 'dossier', SLUG)))
       assert.ok(!existsSync(join(root, '.scratchpad', 'dossier', '_archive', SLUG, '.ds-lock')))
       assert.ok(existsSync(join(root, '.dossier', '_archive', `${SLUG}.md`)))
-      assert.equal(lastSubject(root), `chore(dossier): archive wave contract ${SLUG}`)
-      const staged = execFileSync('git', ['-C', root, 'diff', '--cached', '--name-only'], { encoding: 'utf8' })
+      assert.equal(await lastSubject(root), `chore(dossier): archive wave contract ${SLUG}`)
+      const staged = await must('git', ['-C', root, 'diff', '--cached', '--name-only'])
       assert.equal(staged.trim(), 'unrelated.txt')
       assert.match(readFileSync(join(root, '.scratchpad', 'INDEX.md'), 'utf8'), /\| wave \| done \|/)
     },
@@ -205,14 +228,14 @@ test('a run writes §Z, archives the wave, commits the contract move alone and l
   )
 })
 
-test('--carry takes an operator row and a delayed row into an after line, and refuses a plain agent row', () => {
-  within(
-    (root) => {
-      const refused = close(root, '--complete', '--plan', '--carry', 'T2,T3,T4')
+test('--carry takes an operator row and a delayed row into an after line, and refuses a plain agent row', async () => {
+  await within(
+    async (root) => {
+      const refused = await close(root, '--complete', '--plan', '--carry', 'T2,T3,T4')
       assert.equal(refused.status, 1)
       assert.match(refused.stdout, /✗ T4 cannot carry/)
-      execFileSync('sh', [DS, 'row-flip', join(root, '.scratchpad', 'dossier', SLUG), 'T4', 'x', 'def5678'], { cwd: root })
-      const done = close(root, '--complete', '--carry', 'T2,T3', '--summary', 's')
+      await must('sh', [DS, 'row-flip', join(root, '.scratchpad', 'dossier', SLUG), 'T4', 'x', 'def5678'], root)
+      const done = await close(root, '--complete', '--carry', 'T2,T3', '--summary', 's')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(archived(root), /^after: T2 task T2 \(H\); T3 task T3 \(T1\+7d\)$/m)
     },
@@ -225,14 +248,14 @@ test('--carry takes an operator row and a delayed row into an after line, and re
   )
 })
 
-test('an unmet criterion refuses unless --accept-unmet, which records the ids', () => {
-  within(
-    (root) => {
-      const refused = close(root, '--complete', '--summary', 's')
+test('an unmet criterion refuses unless --accept-unmet, which records the ids', async () => {
+  await within(
+    async (root) => {
+      const refused = await close(root, '--complete', '--summary', 's')
       assert.equal(refused.status, 1)
       assert.match(refused.stdout, /✗ converge unmet 1/)
       assert.ok(existsSync(join(root, '.scratchpad', 'dossier', SLUG)))
-      const done = close(root, '--complete', '--accept-unmet', '--summary', 's')
+      const done = await close(root, '--complete', '--accept-unmet', '--summary', 's')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(archived(root), /ds:close — START mode=complete carry=— converge=unmet:1 accepted/)
     },
@@ -241,12 +264,12 @@ test('an unmet criterion refuses unless --accept-unmet, which records the ids', 
   )
 })
 
-test('an open bug refuses --complete, and --abandon closes over open rows and bugs', () => {
-  within(
-    (root) => {
-      const refused = close(root, '--complete', '--plan')
+test('an open bug refuses --complete, and --abandon closes over open rows and bugs', async () => {
+  await within(
+    async (root) => {
+      const refused = await close(root, '--complete', '--plan')
       assert.match(refused.stdout, /✗ B1 has no fix cite/)
-      const done = close(root, '--abandon', 'dropped', '--summary', 'not needed')
+      const done = await close(root, '--abandon', 'dropped', '--summary', 'not needed')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(archived(root), /^abandoned: true$/m)
     },
@@ -258,15 +281,15 @@ test('an open bug refuses --complete, and --abandon closes over open rows and bu
   )
 })
 
-test('a rerun finishes a close that a crash left after §Z, even once reconcile archived it', () => {
-  within(
-    (root) => {
+test('a rerun finishes a close that a crash left after §Z, even once reconcile archived it', async () => {
+  await within(
+    async (root) => {
       const dir = join(root, '.scratchpad', 'dossier', SLUG)
-      execFileSync('sh', [DS, 'z-write', dir, 'complete', '—', 'early', 'abc1234'], { cwd: root })
-      execFileSync('sh', [DS, 'header-state', dir, 'done'], { cwd: root })
-      execFileSync('sh', [DS, 'reconcile', '.scratchpad'], { cwd: root })
+      await must('sh', [DS, 'z-write', dir, 'complete', '—', 'early', 'abc1234'], root)
+      await must('sh', [DS, 'header-state', dir, 'done'], root)
+      await must('sh', [DS, 'reconcile', '.scratchpad'], root)
       assert.ok(existsSync(join(root, '.scratchpad', 'dossier', '_archive', SLUG)))
-      const done = close(root, '--complete')
+      const done = await close(root, '--complete')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.ok(existsSync(join(root, '.dossier', '_archive', `${SLUG}.md`)))
       assert.match(archived(root), /ds:close — DONE/)
@@ -275,28 +298,28 @@ test('a rerun finishes a close that a crash left after §Z, even once reconcile 
   )
 })
 
-test('a refused contract commit leaves the close resumable, and the rerun commits the move', () => {
-  within(
-    (root) => {
+test('a refused contract commit leaves the close resumable, and the rerun commits the move', async () => {
+  await within(
+    async (root) => {
       const hook = join(root, '.git', 'hooks', 'pre-commit')
       writeFileSync(hook, '#!/bin/sh\nexit 1\n')
       chmodSync(hook, 0o755)
-      const first = close(root, '--complete', '--summary', 's')
+      const first = await close(root, '--complete', '--summary', 's')
       assert.equal(first.status, 1, first.stdout + first.stderr)
       assert.doesNotMatch(archived(root), /ds:close — DONE/)
       rmSync(hook)
-      const second = close(root, '--complete')
+      const second = await close(root, '--complete')
       assert.equal(second.status, 0, second.stdout + second.stderr)
-      assert.equal(lastSubject(root), `chore(dossier): archive wave contract ${SLUG}`)
+      assert.equal(await lastSubject(root), `chore(dossier): archive wave contract ${SLUG}`)
       assert.match(archived(root), /ds:close — DONE/)
     },
     [['T1', 'x', 'A']],
   )
 })
 
-test('--successor copies carried rows into the successor once, even when a crash left the copy before §Z', () => {
-  within(
-    (root) => {
+test('--successor copies carried rows into the successor once, even when a crash left the copy before §Z', async () => {
+  await within(
+    async (root) => {
       const next = join(root, '.scratchpad', 'dossier', '2026-10-10-next')
       mkdirSync(next)
       const copied = '| T2 | . | H | task T2 (from wave T2) | — | — | v |'
@@ -306,10 +329,8 @@ test('--successor copies carried rows into the successor once, even when a crash
           .replace('# wave', '# next')
           .replace(/^(\| T1 .*)$/m, `$1\n${copied}`),
       )
-      execFileSync('sh', [DS, 's-append', join(root, '.scratchpad', 'dossier', SLUG), 'ds:close — START mode=successor carry=T2 converge=met:1/1'], {
-        cwd: root,
-      })
-      const done = close(root, '--successor', 'next', '--carry', 'T2', '--summary', 's')
+      await must('sh', [DS, 's-append', join(root, '.scratchpad', 'dossier', SLUG), 'ds:close — START mode=successor carry=T2 converge=met:1/1'], root)
+      const done = await close(root, '--successor', 'next', '--carry', 'T2', '--summary', 's')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       const text = readFileSync(join(next, 'DOSSIER.md'), 'utf8')
       assert.equal(text.match(/\(from wave T2\)/g)?.length, 1)
@@ -322,13 +343,13 @@ test('--successor copies carried rows into the successor once, even when a crash
   )
 })
 
-test('--successor appends a delayed carried row under the successor tasks and records it', () => {
-  within(
-    (root) => {
+test('--successor appends a delayed carried row under the successor tasks and records it', async () => {
+  await within(
+    async (root) => {
       const next = join(root, '.scratchpad', 'dossier', '2026-10-10-next')
       mkdirSync(next)
       writeFileSync(join(next, 'DOSSIER.md'), ledger([['T1', '.', 'A']]).replace('# wave', '# next'))
-      const done = close(root, '--successor', 'next', '--carry', 'T2', '--summary', 's')
+      const done = await close(root, '--successor', 'next', '--carry', 'T2', '--summary', 's')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(
         readFileSync(join(next, 'DOSSIER.md'), 'utf8'),
@@ -344,12 +365,12 @@ test('--successor appends a delayed carried row under the successor tasks and re
   )
 })
 
-test('a rerun finishes a close that a crash left after §Z on a live wave', () => {
-  within(
-    (root) => {
+test('a rerun finishes a close that a crash left after §Z on a live wave', async () => {
+  await within(
+    async (root) => {
       const dir = join(root, '.scratchpad', 'dossier', SLUG)
-      execFileSync('sh', [DS, 'z-write', dir, 'complete', '—', 'early', 'abc1234'], { cwd: root })
-      const done = close(root, '--complete')
+      await must('sh', [DS, 'z-write', dir, 'complete', '—', 'early', 'abc1234'], root)
+      const done = await close(root, '--complete')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.ok(!existsSync(dir))
       assert.match(archived(root), /^`2026-10-09` · `done`$/m)
@@ -359,17 +380,17 @@ test('a rerun finishes a close that a crash left after §Z on a live wave', () =
   )
 })
 
-test('a hand-closed archive gets its §Z written in place, and ds-check names an unfinished close', () => {
-  within(
-    (root) => {
+test('a hand-closed archive gets its §Z written in place, and ds-check names an unfinished close', async () => {
+  await within(
+    async (root) => {
       const archive = join(root, '.scratchpad', 'dossier', '_archive')
       mkdirSync(archive)
-      execFileSync('sh', [DS, 'header-state', join(root, '.scratchpad', 'dossier', SLUG), 'done'], { cwd: root })
-      execFileSync('mv', [join(root, '.scratchpad', 'dossier', SLUG), archive])
-      execFileSync('sh', [DS, 's-append', join(archive, SLUG), 'ds:close — START mode=complete carry=— converge=skipped'], { cwd: root })
-      const check = spawnSync('sh', [DS, 'ds-check', '.scratchpad'], { cwd: root, encoding: 'utf8' })
+      await must('sh', [DS, 'header-state', join(root, '.scratchpad', 'dossier', SLUG), 'done'], root)
+      await must('mv', [join(root, '.scratchpad', 'dossier', SLUG), archive])
+      await must('sh', [DS, 's-append', join(archive, SLUG), 'ds:close — START mode=complete carry=— converge=skipped'], root)
+      const check = await run('sh', [DS, 'ds-check', '.scratchpad'], root)
       assert.match(check.stdout, new RegExp(`advisory: ${SLUG} close did not finish — \`ds close ${SLUG}\` resumes it`))
-      const done = close(root, '--complete', '--summary', 'closed by hand earlier')
+      const done = await close(root, '--complete', '--summary', 'closed by hand earlier')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(archived(root), /^complete: true$/m)
       assert.match(archived(root), /ds:close — DONE/)
@@ -378,44 +399,44 @@ test('a hand-closed archive gets its §Z written in place, and ds-check names an
   )
 })
 
-test('a run without a summary or a mode is a usage error', () => {
-  within(
-    (root) => {
-      assert.equal(close(root, '--complete').status, 64)
-      assert.equal(close(root, '--summary', 's').status, 64)
+test('a run without a summary or a mode is a usage error', async () => {
+  await within(
+    async (root) => {
+      assert.equal((await close(root, '--complete')).status, 64)
+      assert.equal((await close(root, '--summary', 's')).status, 64)
     },
     [['T1', 'x', 'A']],
   )
 })
 
-function refusal(root: string, ...args: string[]): string {
-  const done = close(root, ...args)
+async function refusal(root: string, ...args: string[]): Promise<string> {
+  const done = await close(root, ...args)
   assert.equal(done.status, 1, done.stdout + done.stderr)
   return done.stdout + done.stderr
 }
 
-test('a done row with no cite refuses --complete', () => {
-  within(
-    (root) => {
+test('a done row with no cite refuses --complete', async () => {
+  await within(
+    async (root) => {
       const file = join(root, '.scratchpad', 'dossier', SLUG, 'DOSSIER.md')
       writeFileSync(file, live(root).replace('| abc1234 |', '| — |'))
-      assert.match(refusal(root, '--complete', '--plan'), /✗ T1 done with no cite/)
+      assert.match(await refusal(root, '--complete', '--plan'), /✗ T1 done with no cite/)
     },
     [['T1', 'x', 'A']],
   )
 })
 
-test('a successor that does not exist refuses', () => {
-  within((root) => assert.match(refusal(root, '--successor', 'ghost', '--plan'), /✗ successor ghost not found/), [['T1', 'x', 'A']])
+test('a successor that does not exist refuses', async () => {
+  await within(async (root) => assert.match(await refusal(root, '--successor', 'ghost', '--plan'), /✗ successor ghost not found/), [['T1', 'x', 'A']])
 })
 
-test('a successor with no Tasks table refuses the carry and leaves §Z unwritten', () => {
-  within(
-    (root) => {
+test('a successor with no Tasks table refuses the carry and leaves §Z unwritten', async () => {
+  await within(
+    async (root) => {
       const next = join(root, '.scratchpad', 'dossier', '2026-10-10-next')
       mkdirSync(next)
       writeFileSync(join(next, 'DOSSIER.md'), '# next\n\n## Goal\n\ng\n')
-      assert.match(refusal(root, '--successor', 'next', '--carry', 'T2', '--summary', 's'), /successor 2026-10-10-next has no Tasks table/)
+      assert.match(await refusal(root, '--successor', 'next', '--carry', 'T2', '--summary', 's'), /successor 2026-10-10-next has no Tasks table/)
       assert.doesNotMatch(live(root), /^successor: next$/m)
     },
     [
@@ -425,37 +446,35 @@ test('a successor with no Tasks table refuses the carry and leaves §Z unwritten
   )
 })
 
-test('a held lock refuses a fresh close and a resume of a sealed one', () => {
-  within(
-    (root) => {
+test('a held lock refuses a fresh close and a resume of a sealed one', async () => {
+  await within(
+    async (root) => {
       const dir = join(root, '.scratchpad', 'dossier', SLUG)
       writeFileSync(join(dir, '.ds-lock'), JSON.stringify({ pid: process.pid, started: new Date().toISOString(), skill: 'ds:build', target: 'T1' }))
-      assert.match(refusal(root, '--complete', '--summary', 's'), /✗ locked by ds:build/)
-      execFileSync('sh', [DS, 'z-write', dir, 'complete', '—', 'early', 'abc1234'], { cwd: root })
-      assert.match(refusal(root, '--complete'), /✗ locked by ds:build/)
+      assert.match(await refusal(root, '--complete', '--summary', 's'), /✗ locked by ds:build/)
+      await must('sh', [DS, 'z-write', dir, 'complete', '—', 'early', 'abc1234'], root)
+      assert.match(await refusal(root, '--complete'), /✗ locked by ds:build/)
       assert.ok(existsSync(dir))
     },
     [['T1', 'x', 'A']],
   )
 })
 
-test('an unfinished close that started with another mode refuses', () => {
-  within(
-    (root) => {
-      execFileSync('sh', [DS, 's-append', join(root, '.scratchpad', 'dossier', SLUG), 'ds:close — START mode=abandoned carry=— converge=skipped'], {
-        cwd: root,
-      })
-      assert.match(refusal(root, '--complete', '--summary', 's'), /an unfinished close started with another mode/)
+test('an unfinished close that started with another mode refuses', async () => {
+  await within(
+    async (root) => {
+      await must('sh', [DS, 's-append', join(root, '.scratchpad', 'dossier', SLUG), 'ds:close — START mode=abandoned carry=— converge=skipped'], root)
+      assert.match(await refusal(root, '--complete', '--summary', 's'), /an unfinished close started with another mode/)
     },
     [['T1', 'x', 'A']],
   )
 })
 
-test('a merge in progress refuses the contract retire and leaves the close resumable', () => {
-  within(
-    (root) => {
-      writeFileSync(join(root, '.git', 'MERGE_HEAD'), execFileSync('git', ['-C', root, 'rev-parse', 'HEAD'], { encoding: 'utf8' }))
-      assert.match(refusal(root, '--complete', '--summary', 's'), /has a merge in progress/)
+test('a merge in progress refuses the contract retire and leaves the close resumable', async () => {
+  await within(
+    async (root) => {
+      writeFileSync(join(root, '.git', 'MERGE_HEAD'), await must('git', ['-C', root, 'rev-parse', 'HEAD']))
+      assert.match(await refusal(root, '--complete', '--summary', 's'), /has a merge in progress/)
       assert.doesNotMatch(archived(root), /ds:close — DONE/)
       assert.ok(existsSync(join(root, '.dossier', `${SLUG}.md`)))
     },
@@ -463,15 +482,15 @@ test('a merge in progress refuses the contract retire and leaves the close resum
   )
 })
 
-test('a contract that converge cannot parse refuses unless --accept-unmet', () => {
-  within(
-    (root) => {
+test('a contract that converge cannot parse refuses unless --accept-unmet', async () => {
+  await within(
+    async (root) => {
       writeFileSync(
         join(root, '.dossier', `${SLUG}.md`),
         '# wave\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | `true` | exit 0 |\n',
       )
-      assert.match(refusal(root, '--complete', '--plan'), /✗ converge did not run/)
-      const done = close(root, '--complete', '--plan', '--accept-unmet')
+      assert.match(await refusal(root, '--complete', '--plan'), /✗ converge did not run/)
+      const done = await close(root, '--complete', '--plan', '--accept-unmet')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(done.stdout, /⚠ converge did not run: .* — accepted/)
     },
