@@ -10,10 +10,10 @@ Two layers of confidence that a `SKILL.md` **description** steers the router to 
 - **Missing trigger clause** — a `description` with no `Invoke when` / `Use when` clause. `FAIL`.
 
 ```bash
-node --test plugins/dossier/tests/test_skill_routing.ts
+pnpm vitest run plugins/dossier/tests/test_skill_routing.ts
 ```
 
-Exit 1 on any finding. CI runs it with the other node tests (`the shipped skill descriptions lint clean`).
+Exit 1 on any finding. CI runs it with the other Vitest suites (`the shipped skill descriptions lint clean`).
 
 ## Layer 2 — live-model routing (manual, not in CI)
 
