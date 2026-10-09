@@ -112,8 +112,8 @@ test('a criterion does not inherit the ledger root ds set for itself, and keeps 
     const wave = join(root, '.scratchpad', 'dossier', '2026-10-09-w')
     mkdirSync(wave)
     writeFileSync(join(wave, 'DOSSIER.md'), '# w\n\n`2026-10-09` · `live` · `P1/1`\n')
-    const probe = '`printenv DOSSIER_LEDGER_ROOT DOSSIER_SCRATCHPAD_ROOT \\|\\| echo unset`'
-    writeFileSync(join(wave, 'CONTRACT.md'), `| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | ${probe} | stdout: unset |\n`)
+    const probe = '`test -z "$DOSSIER_LEDGER_ROOT$DOSSIER_SCRATCHPAD_ROOT"`'
+    writeFileSync(join(wave, 'CONTRACT.md'), `| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | ${probe} | exit 0 |\n`)
     const env = { ...process.env }
     delete env.DOSSIER_LEDGER_ROOT
     delete env.DOSSIER_SCRATCHPAD_ROOT

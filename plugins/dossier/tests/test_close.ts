@@ -57,6 +57,8 @@ function repo(rows: Row[], options: { criterion?: string; bugs?: string } = {}):
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'ds-close-')))
   const git = (...args: string[]) => execFileSync('git', ['-C', root, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { stdio: 'ignore' })
   git('init', '-q', '-b', 'main')
+  git('config', 'user.email', 't@t')
+  git('config', 'user.name', 't')
   writeFileSync(join(root, '.gitignore'), '.scratchpad/\n')
   mkdirSync(join(root, '.dossier'))
   writeFileSync(join(root, '.dossier', `${SLUG}.md`), contract(options.criterion))
