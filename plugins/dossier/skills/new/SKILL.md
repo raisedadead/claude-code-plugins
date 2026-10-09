@@ -150,7 +150,7 @@ _(empty — populate when first contract lands)_
 _(empty — written by ds:close)_
 ```
 
-Write `<dir>/DOSSIER.md.new`, then `mv` it over `<dir>/DOSSIER.md` (Vm.8).
+Write `<dir>/DOSSIER.md` directly: the file is new, and step 3.5 catches a partial write.
 
 ### 3.5. Assert scaffold completeness
 

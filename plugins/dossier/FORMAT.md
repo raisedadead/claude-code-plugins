@@ -421,7 +421,7 @@ Concurrent-session safety. JSON file at `.scratchpad/dossier/<slug>/.ds-lock`:
 
 Every DOSSIER.md / INDEX.md mutation writes a unique temp beside the target (`<file>.<6 hex>`, created exclusively, so concurrent writers never share a temp) and renames it over the target (POSIX rename, atomic on the same file system).
 
-A failed rename removes its temp. A hard kill mid-write leaves a `<file>.<hex>` (or legacy `.tmp`) orphan beside an untouched target; `ds vm-checks` reports it as `WARN Vm.8 orphan temp file`.
+A failed rename removes its temp. A hard kill mid-write leaves a `<file>.<hex>` (or legacy `.tmp`) orphan beside an untouched target; `ds vm-checks` reports one beside a DOSSIER.md as `WARN Vm.8 orphan temp file`.
 
 Vm.8: no skill writes a real file directly. Always tmp + rename.
 
