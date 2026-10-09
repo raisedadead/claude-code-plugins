@@ -103,6 +103,24 @@ export function progressLine(slug: string, view: Progress): string {
   return parts.join(' · ')
 }
 
+export type Branch = { row: Row; depth: number; also: string[] }
+
+export function needsTree(rows: readonly Row[]): Branch[] {
+  const ids = new Set(rows.map((row) => row.id))
+  const parents = (row: Row): string[] => row.needs.map((need) => DELAYED.exec(need)?.[1] ?? need).filter((id) => ids.has(id))
+  const out: Branch[] = []
+  const placed = new Set<string>()
+  const walk = (row: Row, depth: number): void => {
+    if (placed.has(row.id)) return
+    placed.add(row.id)
+    out.push({ row, depth, also: parents(row).slice(1) })
+    for (const child of rows) if (parents(child)[0] === row.id) walk(child, depth + 1)
+  }
+  for (const row of rows) if (!parents(row).length) walk(row, 0)
+  for (const row of rows) walk(row, 0)
+  return out
+}
+
 export function ownerLine(view: Progress): string {
   const parts = [`Agent ${view.agent.done}/${view.agent.total}`, `You ${view.operator.done}/${view.operator.total}`]
   if (view.milestone) parts.push(`Up to ${view.milestone.id} ${view.milestone.done}/${view.milestone.total}`)

@@ -10,6 +10,7 @@
   "homepage": "https://github.com/raisedadead/claude-code-plugins",
   "repository": "https://github.com/raisedadead/claude-code-plugins",
   "license": "ISC",
+  "types": "./types/index.d.ts",
   "keywords": [
     "dossier",
     "spec-driven",

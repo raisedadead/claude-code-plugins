@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
-import { progress, progressLine, progressTable } from '../engine/progress.ts'
+import { needsTree, progress, progressLine, progressTable, taskRows } from '../engine/progress.ts'
 
 const DS = join(import.meta.dirname, '..', 'cli', 'ds')
 const FIXTURE = join(import.meta.dirname, 'fixtures', 'progress')
@@ -55,6 +55,29 @@ test('the one line leads with the percent and the next agent row', () => {
 test('an all-done wave reads as ready to close', () => {
   const done = LEDGER.replaceAll(/\| ([.~]) +\|/g, '| x |')
   assert.equal(progressLine('w', progress(done)), 'w 100% · 19/19 · ready to close')
+})
+
+test('the needs tree puts each row once, under its first need, and names the other needs', () => {
+  const ledger = [
+    '## Tasks',
+    '| id | state | who | task | needs | cite | verify |',
+    '|----|-------|-----|------|-------|------|--------|',
+    '| T1 | x | A | a | — | c | v |',
+    '| T2 | . | A | b | T1 | — | v |',
+    '| T3 | . | A | c | — | — | v |',
+    '| T4 | . | H | d | T2, T3 | — | v |',
+    '| T5 | . | A | e | T4+7d | — | v |',
+  ].join('\n')
+  assert.deepEqual(
+    needsTree(taskRows(ledger)).map(({ row, depth, also }) => [row.id, depth, also.join(' ')]),
+    [
+      ['T1', 0, ''],
+      ['T2', 1, ''],
+      ['T4', 2, 'T3'],
+      ['T5', 3, ''],
+      ['T3', 0, ''],
+    ],
+  )
 })
 
 test('a wave with no task rows never reads as ready to close', () => {

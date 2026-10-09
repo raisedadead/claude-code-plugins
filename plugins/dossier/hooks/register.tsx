@@ -1,4 +1,8 @@
+import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
+import type { DossierWave } from '../types'
+import { field, headerToken } from '../engine/converge.ts'
+import { needsTree, ownerLine, progress, progressLine, taskRows } from '../engine/progress.ts'
 import { BUILTINS, editGate, type Io, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from './gates.ts'
 
 function ioOf($: EngineInterface): Io {
@@ -25,8 +29,89 @@ function ioOf($: EngineInterface): Io {
 
 const seen = new Set<string>()
 const verified = new Set<string>()
+const PANE = 'dossier-tasks'
+const wave = atom({ plugin: 'dossier', key: 'wave' } as const, null)
+const GLYPH: Record<string, string> = { x: '✓', '~': '▸', '.': '·', '!': '‼', '?': '?' }
+
+async function readOr($: EngineInterface, path: string): Promise<string | undefined> {
+  try {
+    return String(await $.fs.read(path))
+  } catch {
+    return undefined
+  }
+}
+
+async function liveWave($: EngineInterface, cwd: string): Promise<DossierWave | null> {
+  const root = await ledgerRoot(ioOf($), cwd)
+  const dossiers = `${root}/.scratchpad/dossier`
+  let names: string[]
+  try {
+    names = (await $.fs.list(dossiers)).filter((entry) => entry.kind === 'dir').map((entry) => entry.name)
+  } catch {
+    return null
+  }
+  for (const name of names.sort().reverse()) {
+    const ledger = await readOr($, `${dossiers}/${name}/DOSSIER.md`)
+    if (ledger === undefined || headerToken(ledger) !== 'live') continue
+    const contract =
+      (await readOr($, `${cwd}/.dossier/${name}.md`)) ??
+      (await readOr($, `${root}/.dossier/${name}.md`)) ??
+      (await readOr($, `${dossiers}/${name}/CONTRACT.md`))
+    const milestone = contract ? field(contract, 'milestone') || undefined : undefined
+    return { slug: name.replace(/^\d{4}-\d{2}-\d{2}-/, ''), text: ledger, ...(milestone ? { milestone } : {}) }
+  }
+  return null
+}
+
+async function refresh($: EngineInterface, cwd: string): Promise<void> {
+  const next = await liveWave($, cwd)
+  await update($, wave, (previous) => (previous?.text === next?.text ? previous : next))
+  $.ui.status(next ? progressLine(next.slug, progress(next.text, next.milestone)) : undefined)
+}
 
 export const register: Register = (on) => {
+  on('session.start', async ($, e, next) => {
+    await $.command.register({ name: PANE, description: 'Show the live dossier tasks and their needs in a pane' })
+    await refresh($, e.cwd)
+    return next(e)
+  })
+
+  on('turn.complete', async ($, e, next) => {
+    await refresh($, await $.session.cwd())
+    return next(e)
+  })
+
+  on('command.run', { command: PANE }, async ($) => {
+    await refresh($, await $.session.cwd())
+    await $.ui.open({ id: PANE, title: 'Dossier tasks' })
+    return { text: 'Dossier tasks pane opened.' }
+  })
+
+  on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
+    const { Box, Text } = $.ui.resolve(e)
+    const live = await read($, wave)
+    if (!live) return <Text dimColor>No live dossier wave.</Text>
+    const view = progress(live.text, live.milestone)
+    const width = Math.max(20, e.props.bodyColumns)
+    return (
+      <Box flexDirection="column">
+        <Text bold>{progressLine(live.slug, view)}</Text>
+        <Text dimColor>{ownerLine(view)}</Text>
+        {needsTree(taskRows(live.text)).map(({ row, depth, also }) => {
+          const head = `${'  '.repeat(depth)}${GLYPH[row.state] ?? row.state} ${row.id}${row.who === 'H' ? ' [you]' : ''} `
+          const tail = also.length ? ` +${also.join(' +')}` : ''
+          const room = Math.max(4, width - head.length - tail.length)
+          const task = row.task.length > room ? `${row.task.slice(0, room - 1)}…` : row.task
+          return (
+            <Text key={row.id} dimColor={row.state === 'x'} bold={row.state === '~'}>
+              {`${head}${task}${tail}`}
+            </Text>
+          )
+        })}
+      </Box>
+    )
+  })
+
   on('classic.PreToolUse', async ($, e, next) => {
     const input = e as unknown as Record<string, unknown>
     const context: string[] = []
