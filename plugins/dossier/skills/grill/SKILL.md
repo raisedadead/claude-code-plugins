@@ -1,8 +1,7 @@
 ---
 name: grill
-description: Define-phase interrogation before ds:new. Separates environment-lookup facts (model looks up, cites, never asks) from operator decisions (asked, never assumed) — serial while an answer adds or removes groups of questions, batched in decision blocks once none does. Stops only when the frontier is empty AND the operator confirms; output feeds §G Goal + §C Constraints so ds:new never re-asks. Invoke when the user says "grill me", "ds:grill", "interrogate before we scaffold", "define this dossier", or before ds:new on anything beyond a one-line goal. Do NOT use for mid-build clarifying questions inside ds:build — Define-phase only.
-argument-hint: <slug> | --resume
-disable-model-invocation: true
+description: Define-phase interrogation before ds:new, from a goal sentence. Facts get looked up and cited; operator decisions get asked, serial while an answer adds or removes groups, batched once none does; "discuss more" forks a decision into sub-decisions. Stops when the frontier is empty AND the operator confirms; output feeds §G + §C so ds:new never re-asks. Invoke when the user says "grill me" / "ds:grill", when ds:new gets a goal with an open decision, or for any design interview in a repo with `.scratchpad/dossier/`. Mid-build questions inside ds:build stay with ds:build.
+argument-hint: "<goal sentence>" | --resume <slug>
 ---
 
 # ds:grill — interrogate before you scaffold
@@ -11,8 +10,10 @@ A vague goal yields vague tasks. This formalises `ds:new` step 2's "clarify befo
 
 ## Inputs
 
-- `<slug>` — dossier slug this grill feeds (kebab-case, same rules as `ds:new`).
-- `--resume` — reopen an incomplete artifact; open frontier nodes resurface.
+- `"<goal sentence>"` — what the wave must achieve, in the operator's words. Derive a slug from it (kebab-case, ≤30 chars, `ds:new` rules) and put it on the first line of the first decision block; the operator's reply confirms or replaces it.
+- `--resume <slug>` — reopen an incomplete artifact. `ds assert-grill` names the open decisions; ask those first.
+
+A bare slug gives the opening scope nothing to stand on. Ask for the goal sentence in one line before the first block.
 
 ## Artifact
 
@@ -20,25 +21,36 @@ A vague goal yields vague tasks. This formalises `ds:new` step 2's "clarify befo
 
 ```
 FACT: <statement> cite=<file|command|url>
-DECISION: <question> recommended=<x> answer=<operator verbatim>[ → (<option>)]
-DECISION: <question> recommended=<x> answer=pending-external → <questionnaire path>
+DECISION: <n>. <topic> recommended=<x>                                  (asked, not yet answered)
+DECISION: <n>. <topic> recommended=<x> answer=<operator verbatim>[ → (<option>)]
+DECISION: <n>. <topic> recommended=<x> answer=<operator verbatim> → forked <n>.1, <n>.2
+DECISION: <n>.<k> <topic> recommended=<x> answer=...
+DECISION: <n>. <topic> recommended=<x> answer=pending-external → <questionnaire path>
 FRONTIER: empty | empty-except-external n=<k>
 CONFIRMED: <ISO timestamp> operator="<verbatim confirmation>"
 CONSUMED: <dossier-dir-key>          (stamped by ds:new, never by grill)
 ```
 
-Footer lines are the machine-checked half: `cli/ds assert-grill` exits non-zero on a half-grilled slug. No hook runs it — `ds:new` invoking the script and refusing on its exit is model-judgment, the same split as the tiger route: the verdict is computed, arriving at it is not.
+Write every entry through the CLI:
 
-**One entry per paragraph — blank line between every FACT/DECISION/footer line.** Markdown formatters join adjacent bare lines into one paragraph, which un-anchors the `^FRONTIER:`/`^CONFIRMED:` greps and turns a complete artifact into a false "incomplete" (the failure class ${CLAUDE_PLUGIN_ROOT}/FORMAT.md §11 solves for §S).
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds grill-add .scratchpad "<slug>" "<entry>"
+```
+
+`ds grill-add` creates the artifact on the first entry and writes each entry as its own paragraph, so a formatter cannot join two entries. A `DECISION` with an id already present replaces that line: record a decision when you ask it, and again when the operator answers. It exits 64 on a `FACT` with no `cite=`, a `DECISION` with no `recommended=`, or a `CONSUMED` line, and 4 on a consumed artifact.
+
+`ds assert-grill` exits 2 while a decision has no answer, has `answer=pending`, or is forked with a missing or open child; a forked parent closes when all its children close. It also exits non-zero on a missing footer. No hook runs it — `ds:new` invoking the script and refusing on its exit is model-judgment, the same split as the tiger route: the verdict is computed, arriving at it is not.
 
 ## Steps
 
 ### 1. Build the tree
 
-Read what the operator has said so far plus the repo state (existing dossiers, git log, configs). Tag every open node:
+Read the goal sentence, what the operator has said so far, and the repo state (existing dossiers, git log, configs). Tag every open node:
 
-- `FACT` — answerable by lookup. Look it up now and record `cite=`. Never ask the operator for a fact the repo answers.
+- `FACT` — answerable by lookup. Look it up and record `cite=`. Never ask the operator for a fact the repo answers.
 - `DECISION` — genuinely the operator's call. Ask it.
+
+A fact that needs a sweep (many files, an external doc, a census) goes to a background `dossier-scout` with a self-contained mission. Ask the decisions that do not depend on it meanwhile, record the `FACT` when the scout reports, and hold back only the decisions that need it.
 
 ### 2. Serial phase
 
@@ -81,6 +93,16 @@ Answer decisions 1–3. You can reply "all recommended" and list only the ones y
 - End the block on the answer line. The host's output style owns the closing format.
 - "all recommended" is an operator answer. Record one `DECISION:` line per decision, with the reply verbatim plus the option it selects: `answer="all recommended" → (a)`, `answer="all recommended, 2b" → (b)`. A decision that a "Skip if" note removes gets `answer=skipped by 1(b)`.
 
+### 3.5. Fork a decision
+
+The operator replies "discuss more", "dig into 2", or asks a question back about decision `n`. Split `n` into the sub-decisions it hides:
+
+1. Record `n` with the reply verbatim and `→ forked n.1, n.2, …`.
+1. Ask `n.1`…`n.k` as one decision block. Each carries its own facts, recommendation and costs. A sub-decision can fork again (`n.1.1`).
+1. Record each child as it is answered. `n` closes when every child closes; `ds assert-grill` computes that.
+
+The other decisions in the same reply keep their answers.
+
 ### 4. Stakeholder fork
 
 A decision the operator cannot answer (it needs someone outside the room) keeps its own slot rather than a guess: write `.scratchpad/dossier/.grill/<date>-<slug>-questionnaire.md` (purpose / from-to / context / how-to-answer / question sections / answer stubs) and mark the node `answer=pending-external`. The frontier may close around it as `empty-except-external n=<k>` — every pending node MUST surface as a §C bullet in the draft, so the gap stays auditable.
@@ -98,13 +120,16 @@ Append the footer lines, then draft §G (one-line outcome + IN/NOT-IN scope bull
 
 ### 7. Hand off
 
-Report the artifact path. `ds:new <slug>` consumes the draft §G/§C and skips its own re-asking; its step 1.5 gate verifies the footers via `ds assert-grill`.
+Report the artifact path and the confirmed slug. `ds:new <slug>` consumes the draft §G/§C and skips its own re-asking; its step 1.5 gate verifies the footers via `ds assert-grill`.
 
 ## Honesty labels
 
 | claim                                         | enforced by                                                               |
 | --------------------------------------------- | ------------------------------------------------------------------------- |
 | footer lines present before ds:new proceeds   | code — `ds assert-grill` footer match + exit code                         |
+| no decision left unanswered or half-forked    | code — `ds assert-grill` exit 2 names the open ids                        |
+| entry shape, one entry per paragraph          | code — `ds grill-add` exit 64 on a bad entry; it writes the paragraphs    |
+| a fork happens when the operator asks for one | model — no script reads the operator's reply                              |
 | every FACT cites a source                     | code-checkable shape (`cite=`); whether the lookup actually ran = model   |
 | every DECISION carries a real operator answer | model — no script distinguishes a typed answer from an assumed one        |
 | "frontier is empty"                           | model — no fixed decision-tree schema exists to verify against            |
@@ -124,4 +149,4 @@ Artifact SHAPE is code-enforced; SUBSTANCE is model-judgment. "ds:grill ran" nev
 ## Cite
 
 - FORMAT.md §4 (§G), §5 (§C), §15 (helpers)
-- cli/ds assert-grill (gate), skills/new/SKILL.md step 1.5 (consumer)
+- cli/ds grill-add (writer), cli/ds assert-grill (gate), skills/new/SKILL.md step 1.5 (consumer)

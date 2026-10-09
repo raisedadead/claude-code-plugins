@@ -16,12 +16,13 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { constants, tmpdir } from 'node:os'
-import { basename, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { convergenceStateVerb, convergeVerb, staleContracts } from './converge.ts'
 import { closeVerb } from './close.ts'
 import { claimRoots } from './env.ts'
 import { progressVerb } from './progress.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
+import { addEntry, entryError, openDecisions } from '../engine/grill.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
 import { sessionReport } from '../engine/session.ts'
 import { splitLines, strip } from '../engine/text.ts'
@@ -266,6 +267,34 @@ function assertScaffoldVerb(args: string[]): number {
   return 0
 }
 
+function grillArtifact(root: string, slug: string): string | undefined {
+  const dir = `${root}/dossier/.grill`
+  let names: string[] = []
+  try {
+    names = readdirSync(dir)
+  } catch {
+    names = []
+  }
+  const pattern = /^[0-9]{4}-[0-9]{2}-[0-9]{2}-/
+  const matches = names.filter((name) => pattern.test(name) && name.slice(11) === `${slug}.md`).map((name) => `${dir}/${name}`)
+  return matches.length ? matches.reduce((best, path) => (path > best ? path : best)) : undefined
+}
+
+function grillAddVerb(args: string[]): number {
+  const [root = '', slug = '', entry = ''] = args
+  if (args.length !== 3 || !/^[a-z0-9][a-z0-9-]{0,29}$/.test(slug)) throw new Refusal('usage: ds grill-add <scratchpad-root> <slug> "<FACT:|DECISION:|FRONTIER:|CONFIRMED: entry>"', EXIT_USAGE)
+  const error = entryError(entry)
+  if (error) throw new Refusal(`ds grill-add: ${error}`, EXIT_USAGE)
+  const existing = grillArtifact(root, slug)
+  const grill = existing ?? `${root}/dossier/.grill/${new Date().toISOString().slice(0, 10)}-${slug}.md`
+  const text = existing ? readFileSync(existing, 'utf8') : `# grill: ${slug}\n`
+  if (/^CONSUMED: /m.test(text)) throw new Refusal(`grill artifact already consumed: ${grill} — start a fresh grill`, 4)
+  mkdirSync(dirname(grill), { recursive: true })
+  atomicWrite(grill, addEntry(text, entry))
+  console.log(grill)
+  return 0
+}
+
 function assertGrillVerb(args: string[]): number {
   const consume = args[0] === '--consume'
   const rest = consume ? args.slice(1) : args
@@ -276,22 +305,15 @@ function assertGrillVerb(args: string[]): number {
     )
   }
   const [root = '', slug = '', key = ''] = rest
-  const dir = `${root}/dossier/.grill`
-  let names: string[] = []
-  try {
-    names = readdirSync(dir)
-  } catch {
-    names = []
-  }
-  const pattern = /^[0-9]{4}-[0-9]{2}-[0-9]{2}-/
-  const matches = names.filter((name) => pattern.test(name) && name.slice(11) === `${slug}.md`).map((name) => `${dir}/${name}`)
-  if (!matches.length) throw new Refusal(`grill artifact missing for slug ${slug}`)
-  const grill = matches.reduce((best, path) => (path > best ? path : best))
+  const grill = grillArtifact(root, slug)
+  if (grill === undefined) throw new Refusal(`grill artifact missing for slug ${slug}`)
   const rows = lines(readFileSync(grill, 'utf8'))
   const consumed = rows.find((row) => row.startsWith('CONSUMED: '))
   if (consumed !== undefined) {
     throw new Refusal(`grill artifact already consumed: ${grill} (${consumed}) — run ds:grill ${slug} for a fresh one`, 4)
   }
+  const open = openDecisions(rows)
+  if (open.length) throw new Refusal(`grill incomplete: open decision(s): ${open.join(', ')} in ${grill} (finish via ds:grill --resume)`, 2)
   if (!rows.some((row) => /^FRONTIER: (empty|empty-except-external n=[0-9]+)$/.test(row))) {
     throw new Refusal(`grill incomplete: no closed FRONTIER footer in ${grill} (finish via ds:grill --resume)`, 2)
   }
@@ -658,6 +680,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'convergence-state': convergenceStateVerb,
   'ds-check': dsCheckVerb,
   fakeimpl: fakeimplVerb,
+  'grill-add': grillAddVerb,
   'header-state': headerStateVerb,
   'invariant-check': invariantCheckVerb,
   progress: progressVerb,
@@ -676,7 +699,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
 
 const PRIMARY = /^worktree (.+)$/m
 const GIT_TIMEOUT_MS = 5000
-const LEDGER_VERBS = new Set(['archive-move', 'assert-grill', 'assert-scaffold', 'clear-locks', 'ds-check', 'header-state', 'reconcile', 'regen-index', 'row-flip', 's-append', 'session-start', 'vm-checks', 'x-refresh', 'z-write'])
+const LEDGER_VERBS = new Set(['archive-move', 'assert-grill', 'assert-scaffold', 'clear-locks', 'ds-check', 'grill-add', 'header-state', 'reconcile', 'regen-index', 'row-flip', 's-append', 'session-start', 'vm-checks', 'x-refresh', 'z-write'])
 
 function hasLedger(dir: string): boolean {
   return existsSync(join(dir, '.scratchpad', 'dossier'))
