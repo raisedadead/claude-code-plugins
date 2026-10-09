@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict'
 import { execFile, spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline'
 import { promisify } from 'node:util'
 import { test as base } from 'vitest'
@@ -277,10 +277,11 @@ test('a self-referencing contract terminates', async () => {
     '## done-when\n\n' +
     '| id  | command | expect |\n' +
     '| --- | ------- | ------ |\n' +
-    `| 1   | \`sh plugins/dossier/cli/ds converge ${path}\` | exit 0 |\n`
+    `| 1   | \`echo x >> ${dirname(path)}/hits; sh plugins/dossier/cli/ds converge ${path}\` | exit 0 |\n`
   await withFixture('loop.md', text, async (loop) => {
     const result = await converge(REPO, [loop], cleanEnv(), 60_000)
     assert.ok(result.status === UNMET || result.status === PARSE, out(result))
+    assert.equal(readFileSync(join(dirname(loop), 'hits'), 'utf8'), 'x\nx\n', out(result))
   })
 })
 
