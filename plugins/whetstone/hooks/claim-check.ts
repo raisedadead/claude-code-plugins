@@ -50,10 +50,14 @@ function shown(unit: string): string {
   return points.slice(0, SHOWN_MAX - 3).join('') + '...'
 }
 
-export function scanText(text: string, label: string): string[] {
+export function flaggedUnits(text: string): [number, string][] {
   return units(text)
     .filter(([, unit]) => CLAIM.test(unit) && !BACKED.test(unit) && !LABELLED.test(unit))
-    .map(([number, unit]) => `${label}:${number}: ${shown(unit)}`)
+    .map(([number, unit]) => [number, shown(unit)])
+}
+
+export function scanText(text: string, label: string): string[] {
+  return flaggedUnits(text).map(([number, unit]) => `${label}:${number}: ${unit}`)
 }
 
 export function flaggedVerdict(count: number): string {

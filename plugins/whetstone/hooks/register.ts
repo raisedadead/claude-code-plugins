@@ -1,23 +1,19 @@
 import type { Register } from 'claude-code'
-import { flaggedVerdict, scanText } from './claim-check.ts'
+import { flaggedUnits } from './claim-check.ts'
 
 const MAX_SHOWN = 10
 const MAX_REASON_CHARS = 2000
 
 function claimReason(reply: string): string | undefined {
-  const flagged = scanText(reply, '<stdin>')
+  const flagged = flaggedUnits(reply).map(([number, unit]) => `line ${number}: "${unit}"`)
   if (!flagged.length) return undefined
-  const lines = [...flagged, flaggedVerdict(flagged.length)]
-  const shown = lines.slice(0, MAX_SHOWN)
-  if (lines.length > MAX_SHOWN) shown.push(`… and ${lines.length - MAX_SHOWN} more`)
+  const shown = flagged.slice(0, MAX_SHOWN)
+  if (flagged.length > MAX_SHOWN) shown.push(`… and ${flagged.length - MAX_SHOWN} more`)
   const body = [...shown.join('\n')].slice(0, MAX_REASON_CHARS).join('')
   return (
-    'Unbacked enforcement claim in the reply:\n' +
+    'Unbacked claim in the reply:\n' +
     `${body}\n` +
-    'A sentence saying something blocks, enforces, gates, denies, prevents ' +
-    'or refuses is a claim about runtime. Name the exit code, cite the ' +
-    'source, or label it advisory / model-judgment / opt-in — or drop the ' +
-    'verb. This gate fires once per turn.'
+    'Name the exit code, cite the source, or label it advisory / model-judgment / opt-in — or drop the verb.'
   )
 }
 
@@ -27,6 +23,6 @@ export const register: Register = (on) => {
     if (e.stop_hook_active) return result
     const reason = claimReason(e.last_assistant_message ?? '')
     if (!reason) return result
-    return { ...result, block: result.block ? `${result.block}\n\n${reason}` : reason }
+    return { ...result, additionalContext: [...(result.additionalContext ?? []), reason] }
   })
 }

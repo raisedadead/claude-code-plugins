@@ -4,6 +4,12 @@ Notable changes to the **whetstone** plugin.
 
 Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — every commit is its own version), so entries are grouped by date.
 
+## 2026-10-09
+
+### Changed
+
+- **The claim gate sends context, not a block.** The Stop hook adds the flagged lines to `additionalContext` as `line N: "<sentence>"` with one rubric line. The model still corrects the reply in the same turn, and the terminal shows `Stop hook feedback:` instead of `Stop hook error:`. `bin/claim-check` output and exit codes are unchanged.
+
 ## 2026-10-07
 
 ### Changed
