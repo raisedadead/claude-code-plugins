@@ -41,8 +41,8 @@ The helper discovers the newest `.grill/<date>-<slug>.md` by slug — grill's ow
 | ------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0      | complete (path printed)                                          | consume its `## Draft` §G/§C in step 2 — do NOT re-ask; after the step-3 Write lands, stamp via `ds assert-grill --consume .scratchpad "<slug>" "<date>-<slug>"` (atomic tmp+mv per Vm.8; refuses a double-consume) |
 | 1      | no artifact                                                      | proceed normally — grill is never required; step 2's clarify lever recommends it                                                                                                                                    |
-| 2, 3   | artifact incomplete / unconfirmed                                | REFUSE scaffold; point at `ds:grill <slug> --resume` (or delete the artifact to abandon)                                                                                                                            |
-| 4      | artifact already consumed                                        | proceed normally; recommend a fresh `ds:grill <slug>` — a consumed grill never feeds twice                                                                                                                          |
+| 2, 3   | artifact incomplete / unconfirmed                                | REFUSE scaffold; point at `ds:grill --resume <slug>` (or delete the artifact to abandon)                                                                                                                            |
+| 4      | artifact already consumed                                        | proceed normally; recommend a fresh `ds:grill "<goal sentence>"` — a consumed grill never feeds twice                                                                                                                          |
 | 69, 70 | `cli/ds` did not run (69: no Node.js 22.18+; 70: internal error) | REFUSE scaffold; report the stderr line                                                                                                                                                                             |
 
 ### 2. Gather inputs (operator-interactive)
@@ -150,7 +150,7 @@ _(empty — populate when first contract lands)_
 _(empty — written by ds:close)_
 ```
 
-Atomic write: `<dir>/DOSSIER.md.tmp` then `mv`. Per Vm.8.
+Write `<dir>/DOSSIER.md.new`, then `mv` it over `<dir>/DOSSIER.md` (Vm.8).
 
 ### 3.5. Assert scaffold completeness
 

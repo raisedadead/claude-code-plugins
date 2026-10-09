@@ -33,7 +33,8 @@ argument-hint: --complete | --successor <slug> | --abandon "<reason>" [--carry T
 | ---- | --------------------------------------------------------------------- |
 | `✗`  | blocks the run — an open row, an uncited `x` row, an open bug, a lock |
 | `✓`  | the contract converged                                                |
-| `⚠`  | advisory — an unpushed repo, an accepted unmet criterion              |
+| `⚠`  | advisory — an unpushed repo, an accepted unmet criterion, CHANGELOG   |
+| `·`  | no contract, so converge did not run                                  |
 | `↷`  | a row this close carries                                              |
 
 The last line before the verdict names the steps still to run.

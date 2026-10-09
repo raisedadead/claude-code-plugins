@@ -316,7 +316,7 @@ Vm.2: every §S line MUST begin with valid ISO timestamp.
 
 ## 12. §Z — Closeout
 
-Written only at `ds:close`. Either `complete: true` OR `successor: <slug>`. Refuse close otherwise.
+Written only at `ds:close`. Exactly one of `complete: true`, `successor: <slug>` or `abandoned: true` (with `reason:`). An optional `after:` line names follow-up work. Refuse close otherwise.
 
 **Formatter-resistant rule:** same as §S — each line of §Z metadata (closed/complete/successor/summary/key cites) is its own paragraph (blank line between). Prevents prettier from joining the structured fields into a single prose paragraph and breaking the parser.
 
@@ -327,7 +327,7 @@ Written only at `ds:close`. Either `complete: true` OR `successor: <slug>`. Refu
 
 successor: auth-2-rollout
 
-summary: P1 shipped (T1-T3 x), P2 deferred to next dossier per ops review.
+summary: T1-T3 shipped; the rollout moves to the next dossier per ops review.
 
 key cites: [a96987b], [b7c8d12]
 ```
@@ -341,7 +341,7 @@ If `complete: true`:
 
 complete: true
 
-summary: All phases shipped. No follow-on dossier needed.
+summary: Every task shipped. No follow-on dossier needed.
 
 key cites: [a96987b], [b7c8d12], [c2d3e45]
 ```
@@ -357,7 +357,7 @@ abandoned: true
 
 reason: superseded by valkey-native approach
 
-summary: P1 shipped (T1–T2), P2 dropped.
+summary: T1-T2 shipped; the rest was dropped.
 
 key cites: [a96987b]
 ```
@@ -415,13 +415,13 @@ Concurrent-session safety. JSON file at `.scratchpad/dossier/<slug>/.ds-lock`:
 
 - Written before mutation, removed after.
 - Stale rule: pid dead OR `started` >30min ago = auto-clear.
-- Vm.9: skills MUST check lock before mutation. Refuse if active.
+- Vm.9: skills check the lock before a mutation and refuse while it is active. `ds migrate` and `ds close` refuse in code; the other skills check it as a step.
 
 ## 15. Atomic writes
 
-Every DOSSIER.md / INDEX.md mutation = write a unique temp beside the target (`mktemp "<file>.XXXXXX"`, so concurrent writers never share a temp) + `mv <temp> <file>` (POSIX rename, atomic on same FS).
+Every DOSSIER.md / INDEX.md mutation writes a unique temp beside the target (`<file>.<6 hex>`, created exclusively, so concurrent writers never share a temp) and renames it over the target (POSIX rename, atomic on the same file system).
 
-Crash mid-write = a `<file>.XXXXXX` (or legacy `.tmp`) orphan + untouched real file. Each helper removes its own temp via an `EXIT` trap; a leftover from a hard kill is swept on the next run.
+A failed rename removes its temp. A hard kill mid-write leaves a `<file>.<hex>` (or legacy `.tmp`) orphan beside an untouched target; `ds vm-checks` reports it as `WARN Vm.8 orphan temp file`.
 
 Vm.8: no skill writes a real file directly. Always tmp + rename.
 
@@ -472,7 +472,7 @@ Pause/resume are NOT multi-step ops: they write a single atomic §S line (`pause
 | Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                                                                                                   | code — `ds session-start` resume scan; `ds vm-checks` |
 | Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                                                                                        | code — `ds regen-index`                               |
 | Vm.8  | all file mutations atomic (tmp + rename)                                                                                                                                          | code — `cli/ds` writers                               |
-| Vm.9  | active lock blocks mutation; stale lock auto-clears                                                                                                                               | code — `ds clear-locks`                               |
+| Vm.9  | an active lock refuses a mutation; a stale lock clears at session start                                                                                                           | code — `ds migrate`, `ds close`, `ds clear-locks`; model — other skills |
 | Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                                                                                       | model — skill resume tables                           |
 | Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `ds:status` warns (advisory, never blocks)                                                                                       | code — `ds session-start` live-count                  |
 | Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt                                                                     | model — `ds:status`                                   |

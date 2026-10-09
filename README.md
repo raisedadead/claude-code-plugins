@@ -6,7 +6,7 @@ An agent will happily report success it cannot demonstrate. These two plugins ma
 
 | Plugin        | What it does                                                                                                                                              |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **dossier**   | Phase-scoped workflow. One resumable `DOSSIER.md` drives a wave — tasks, bugs, invariants, cross-repo state — with in-session quality gates.              |
+| **dossier**   | Wave-scoped workflow. One resumable `DOSSIER.md` drives a wave — tasks, bugs, invariants, cross-repo state — with in-session quality gates.              |
 | **whetstone** | Per-task craft, each skill carrying a deterministic self-verify: red-green TDD, flaky-test audit, doubt review, merge-resolve, skill lint, column budget. |
 
 dossier drives the wave; whetstone is the craft at each gate. Designed to be used together, independent by invariant — either works alone, and every composition route skips silently when its sibling is absent.
@@ -37,13 +37,12 @@ dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globa
 | `/dossier:new "<goal>"`                    | Start a wave. Grills the goal first, then prompts scope and repos; pins library versions.    |
 | `/dossier:check`                           | Read-only drift audit across every repo the wave touches.                                    |
 | `/dossier:close`                           | `--complete` · `--successor <slug>` · `--abandon "<why>"`. Shows the plan, then closes.      |
-| `/dossier-tasks`                           | Opens the task pane: the needs tree under the progress line. The status line shows that line too. |
+
+`/dossier-tasks` opens the task pane: the needs tree under the progress line. The status line shows that line too.
 
 **When to start a wave:** the work spans more than one session, touches more than 5 files, or needs a step only you can do. Smaller work runs without a dossier.
 
-Everything else fires automatically or is power-user: `build` (the TDD engine, `--auto` to loop hands-off), `backprop` (bug → invariant), `grill`, `verify`.
-
-Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes tasks, `/dossier:converge` runs the wave contract's done-when criteria ("are we done"), and `backprop` / `grill` / `verify` fire at their moments. In a live wave the `UserPromptSubmit` hook prints the contract's state beside every prompt, naming `ds:converge` for the verdict.
+Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes tasks (`--auto` loops hands-off), `/dossier:converge` runs the wave contract's done-when criteria ("are we done"), and `backprop` (bug → invariant), `grill` and `verify` fire at their moments. In a live wave the `UserPromptSubmit` hook prints the contract's state beside every prompt, naming `ds:converge` for the verdict.
 
 ### Wave contracts
 

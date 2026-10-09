@@ -6,7 +6,7 @@ disallowed-tools: Edit, Write, NotebookEdit
 
 # ds:status — the dossier driver (sit-rep)
 
-Read-only on files; mutations route through Bash helpers. The only writes are the INDEX regen (derived, idempotent) and TaskList hydration, which projects §T into the session TaskList while §T stays source of truth.
+Read-only on files; mutations route through Bash helpers. The sit-rep writes only the INDEX regen and the TaskList hydration; pause and resume (step 1a) write the ledger on request. Step 6 lists both.
 
 ## Steps
 
