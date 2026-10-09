@@ -8,7 +8,7 @@ Ships in commit-SHA versioning mode (no pinned `version` in `plugin.json` — ev
 
 ### Changed
 
-- **The claim gate sends context, not a block.** The Stop hook adds the flagged lines to `additionalContext` as `line N: "<sentence>"` with one rubric line. The model still corrects the reply in the same turn, and the terminal shows `Stop hook feedback:` instead of `Stop hook error:`. `bin/claim-check` output and exit codes are unchanged.
+- **The claim gate sends context, not a block.** The Stop hook adds the flagged lines to `additionalContext` as `line N: "<sentence>"` with one rubric line. The model still continues in the same turn with the flagged lines in context, and the terminal shows `Stop hook feedback:` instead of `Stop hook error:`. `bin/claim-check` output and exit codes are unchanged.
 
 ## 2026-10-07
 

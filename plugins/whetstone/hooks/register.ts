@@ -13,7 +13,7 @@ function claimReason(reply: string): string | undefined {
   return (
     'Unbacked claim in the reply:\n' +
     `${body}\n` +
-    'Name the exit code, cite the source, or label it advisory / model-judgment / opt-in — or drop the verb.'
+    'Name the exit code, cite the source, or label it advisory / model-judgment / opt-in — or drop the blocks / enforces / gates / denies / prevents / refuses verb.'
   )
 }
 

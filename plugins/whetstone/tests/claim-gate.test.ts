@@ -6,7 +6,7 @@ const BACKED = 'Done. The hook blocks the write and exits 2.'
 const REASON =
   'Unbacked claim in the reply:\n' +
   'line 1: "The hook blocks the write."\n' +
-  'Name the exit code, cite the source, or label it advisory / model-judgment / opt-in — or drop the verb.'
+  'Name the exit code, cite the source, or label it advisory / model-judgment / opt-in — or drop the blocks / enforces / gates / denies / prevents / refuses verb.'
 
 describe('claim gate on Stop', () => {
   test('sends an unbacked claim back as context and does not block', async ($, on) => {
