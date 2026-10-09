@@ -33,6 +33,18 @@ describe('lint-skill', () => {
     expect(has(lintSkill(piped, 'build', []), (f) => f.includes('YAML-safe'))).toBe(false)
   })
 
+  test('reads a block-scalar description whole', () => {
+    const literal = skill('name: s\ndescription: |\n  Does a thing.\n  Use when asked.')
+    const folded = skill('name: s\ndescription: >-\n  Does a thing.\n  Use when asked.')
+    expect(lintSkill(literal, 's', [])).toEqual([])
+    expect(lintSkill(folded, 's', [])).toEqual([])
+  })
+
+  test('fails a block-scalar description with no trigger', () => {
+    const text = skill('name: s\ndescription: |\n  Does a thing.\n  Then another.\nargument-hint: x')
+    expect(lintSkill(text, 's', [])).toEqual(["FAIL s: description has no 'Use when' / 'Invoke when' trigger clause"])
+  })
+
   test('fails a name that differs from its directory', () => {
     const findings = lintSkill(skill('name: wrong-name\ndescription: Thing. Use when asked.'), 'good-skill', [])
     expect(findings).toEqual(["FAIL good-skill: name 'wrong-name' does not match parent dir 'good-skill'"])

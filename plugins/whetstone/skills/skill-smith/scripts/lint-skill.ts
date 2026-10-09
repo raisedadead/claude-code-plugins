@@ -4,6 +4,7 @@ const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const FIRST_PERSON = unicodeRegex("\\bI\\b|\\bI'")
 const TRIGGER_MARKERS = ['use when', 'invoke when']
 const YAML_INDICATORS = '[]{}*&!%@`>|'
+const BLOCK_SCALAR = /^[|>][1-9+-]{0,2}$/
 const LINE_BUDGET = 500
 const LINE_WARN = 400
 const DESC_MAX = 1024
@@ -14,23 +15,33 @@ function unquoted(value: string): string {
 }
 
 function field(frontmatter: string, key: string): string {
-  for (const line of splitLines(frontmatter)) {
+  const lines = splitLines(frontmatter)
+  for (const [at, line] of lines.entries()) {
     const stripped = strip(line)
-    if (stripped.startsWith(`${key}:`)) return unquoted(strip(stripped.slice(key.length + 1)))
+    if (!stripped.startsWith(`${key}:`)) continue
+    const value = strip(stripped.slice(key.length + 1))
+    if (!BLOCK_SCALAR.test(value)) return unquoted(value)
+    const rest = lines.slice(at + 1)
+    const end = rest.findIndex((next) => next !== '' && !/^\s/.test(next))
+    return (end < 0 ? rest : rest.slice(0, end)).map(strip).filter(Boolean).join(' ')
   }
   return ''
 }
 
 function yamlHazards(frontmatter: string): string[] {
   const bad: string[] = []
+  let block = false
   for (const line of splitLines(frontmatter)) {
+    if (block && (line === '' || /^\s/.test(line))) continue
+    block = false
     const stripped = strip(line)
     if (!stripped || stripped.startsWith('#') || !stripped.includes(':')) continue
     const colon = stripped.indexOf(':')
     const key = stripped.slice(0, colon)
     if (!key || strip(key).includes(' ')) continue
     const value = strip(stripped.slice(colon + 1))
-    if (!value || unquoted(value) !== value) continue
+    block = BLOCK_SCALAR.test(value)
+    if (!value || block || unquoted(value) !== value) continue
     if (YAML_INDICATORS.includes(value[0] ?? '')) bad.push(`${strip(key)} (opens with '${value[0]}')`)
     else if (value.includes(': ')) bad.push(`${strip(key)} (contains a colon-space)`)
   }
