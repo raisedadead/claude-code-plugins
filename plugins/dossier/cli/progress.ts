@@ -1,7 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { DATE_PREFIX, field } from '../engine/converge.ts'
-import { progress, progressLine, progressTable } from '../engine/progress.ts'
+import { laterLine, progress, progressLine, progressTable } from '../engine/progress.ts'
 import { liveSlugs, waveContract } from './converge.ts'
 
 const USAGE = 'usage: ds progress [<dossier-dir>] [--line | --json]'
@@ -15,6 +15,21 @@ function report(dir: string, root: string, mode: string): string {
   const slug = (dir.split('/').filter(Boolean).pop() ?? '').replace(DATE_PREFIX, '')
   if (mode === '--json') return JSON.stringify({ slug, ...view })
   return mode === '--line' ? progressLine(slug, view) : progressTable(slug, view)
+}
+
+function later(root: string): string[] {
+  const archive = join(root, '.scratchpad', 'dossier', '_archive')
+  let names: string[] = []
+  try {
+    names = readdirSync(archive).sort()
+  } catch {
+    return []
+  }
+  return names.flatMap((name) => {
+    const file = join(archive, name, 'DOSSIER.md')
+    if (!existsSync(file)) return []
+    return laterLine(name.replace(DATE_PREFIX, ''), readFileSync(file, 'utf8'), new Date()) ?? []
+  })
 }
 
 export function progressVerb(args: string[]): number {
@@ -31,6 +46,7 @@ export function progressVerb(args: string[]): number {
       : [existsSync(given) ? resolve(given) : join(root, given)]
   try {
     const out = dirs.map((dir) => report(dir, root, mode))
+    if (given === undefined && mode !== '--json') out.push(...later(root))
     if (out.length) console.log(out.join(mode === '--line' || mode === '--json' ? '\n' : '\n\n'))
     return 0
   } catch (error) {

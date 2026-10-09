@@ -1,198 +1,82 @@
 ---
 name: close
-description: Close a live dossier; requires --complete or --successor <slug>. Invoke when the user says "ds:close", "close dossier", "wrap dossier", "archive this phase", "ds:close --complete", or "ds:close --successor <slug>".
-argument-hint: --complete | --successor <slug> | --abandon "<reason>" | --resume
+description: Close a dossier wave through `ds close` — plan, show, run. Invoke when the user says "ds:close" or "close the dossier", or when every §T row is `x` and the next step is the close.
+argument-hint: --complete | --successor <slug> | --abandon "<reason>" [--carry T<n>,...]
 ---
 
-# ds:close — close + archive a dossier
+# ds:close — plan, show, run
 
-Closing takes exactly one of `--complete`, `--successor <slug>` or `--abandon "<reason>"`. `--complete`/`--successor` refuse while §T holds non-`x` rows or §B holds unfixed ones; `--abandon` is the escape hatch for a deprioritised, superseded or dead-end wave — it skips the §T-all-x gate and still archives with an audit trail.
+`ds close` is the close. It runs the checks, the contract converge, the §Z write, the header flip, the archive move, the contract retire commit, the INDEX regen and the lock, and it writes a §S checkpoint after each step. This page picks the mode, shows the plan to the operator and runs it.
 
-## Inputs
+## Modes
 
-- `--complete`: project done, no follow-on dossier.
-- `--successor <slug>`: the next phase continues in dossier `<slug>` (validated against INDEX).
-- `--abandon "<reason>"`: close an incomplete wave without finishing §T. The reason is mandatory (written to §Z + §S) and marks the wave dropped rather than done.
-- `--resume`: re-enter an incomplete close op.
+| flag                   | use when                                                        |
+| ---------------------- | --------------------------------------------------------------- |
+| `--complete`           | every row is `x`, or each open row is carried                   |
+| `--successor <slug>`   | the work continues in wave `<slug>`; carried rows go to its §T  |
+| `--abandon "<reason>"` | the wave stops unfinished; open rows and bugs stay as they are  |
+| `--carry T<n>,...`     | a `who=H` row or a row with a `T<n>+<k>d` need runs after close |
+
+`--carry` writes the rows to the §Z `after:` line (FORMAT.md §12). With `--successor` it also copies them into the successor §T, each with a `(from <slug> T<n>)` note. `ds progress` lists the `after:` rows of a wave closed in the last 30 days.
 
 ## Steps
 
-### 0. Helpers
+### 1. Plan
 
-DOSSIER.md writes go through the bundled helpers (${CLAUDE_PLUGIN_ROOT}/FORMAT.md §15): `"${CLAUDE_PLUGIN_ROOT}"/cli/ds s-append <dir> "<event>"` appends §S (the §S code-fences below show the full line — pass only the text **after** the timestamp, which the script prepends). §Z is written via `"${CLAUDE_PLUGIN_ROOT}"/cli/ds z-write <dir> <complete|successor|abandoned> <value> "<summary>" "<cites>"` — atomic, and it guarantees the §12 blank-line separation.
-
-### 1. Locate live dossier
-
-Per `ds:status` step 1. Refuse when there is none.
-
-### 2. Validate flags
-
-Exactly one of `--complete`, `--successor <slug>`, `--abandon "<reason>"`. Anything else:
-
-```
-ds:close requires --complete OR --successor <slug> OR --abandon "<reason>".
-Closing without one orphans the handoff.
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds close <wave> <mode> [--carry T<n>,...] --plan
 ```
 
-`--successor <slug>` → validate the successor exists at `.scratchpad/dossier/<...>-<slug>/DOSSIER.md`, or offer to scaffold it via `ds:new <slug>` first.
+`--plan` writes nothing. Exit 0 prints `ready`; exit 1 prints `refused`. One finding per line:
 
-### 3. Acquire lock
+| mark | meaning                                                               |
+| ---- | --------------------------------------------------------------------- |
+| `✗`  | blocks the run — an open row, an uncited `x` row, an open bug, a lock |
+| `✓`  | the contract converged                                                |
+| `⚠`  | advisory — an unpushed repo, an accepted unmet criterion              |
+| `↷`  | a row this close carries                                              |
 
-Write `<dir>/.ds-lock` with `skill: "ds:close", target: "—"`.
+The last line before the verdict names the steps still to run.
 
-### 4. Resume detection
+### 2. Show
 
-Read §S, grep `ds:close`:
+Put the plan in front of the operator, with a one-line `--summary` proposal. Resolve each `✗` before the run:
 
-| Last event                   | Resume point                       |
-| ---------------------------- | ---------------------------------- |
-| (none)                       | step 5                             |
-| `START`                      | step 5                             |
-| `§Z=written` (header=`done`) | step 7 (guarded move — idempotent) |
-| `DONE` + dir still live      | re-flip header `done`, then step 7 |
-| `DONE` + dir archived        | exit (already closed)              |
+- An open agent row: `ds:build` it, or carry it when it is `who=H` or waits on a `+<k>d` need.
+- An open bug: `ds:backprop B<n>`.
+- An unmet or unparsed contract: fix it, or add `--accept-unmet` on the operator's explicit say-so. The flag records the unmet ids in §S.
+- Work that will not finish: `--abandon "<reason>"` on the operator's say-so.
 
-### 5. VALIDATE
+Then print each `paused` row in `.scratchpad/INDEX.md` with its route: resume it through `ds:status`, or close it with `--abandon`. Name `ds:ship` when the wave changed shipped code and no changelog section cites it.
 
-Pre-flight gates (`--abandon` skips §T all-x, §T cites and §B all-fixed; the §X pushed warning still runs):
+### 3. Run
 
-| Gate         | Rule                               | On fail                                                       |
-| ------------ | ---------------------------------- | ------------------------------------------------------------- |
-| §T all-x     | every row state=`x`                | refuse, list non-`x` rows                                     |
-| §T cites     | every `x` row has `cite`           | refuse, list rows missing cite                                |
-| §B all-fixed | every row has non-empty `fix cite` | refuse, list the open rows; the escape is `--abandon` (below) |
-| §X pushed    | every repo `pushed=yes`            | warn, allow operator decision (push or close anyway)          |
+The same command without `--plan`, plus `--summary "<one line>"` and, when the default list of `x`-row cites is wrong, `--cites "<list>"`.
 
-**No gate has a per-gate override flag.** These gates are model-judgment — no hook fires on close, so what holds them is this page. Step 2's argument rule admits `--complete`, `--successor <slug>` and `--abandon "<reason>"` and nothing else, which leaves `--abandon "<reason>"` as the only route past §T all-x, §T cites or §B all-fixed — and it records the wave as dropped in §Z rather than completing it. Offering the operator a narrower flag means adding it to the argument-hint, the Inputs list and step 2 first.
+| exit | meaning                                                                       |
+| ---- | ----------------------------------------------------------------------------- |
+| 0    | closed; the report names §Z, the archive path and any `after:` rows           |
+| 1    | refused or stopped; stderr names the cause. Fix it and rerun the same command |
+| 64   | usage                                                                         |
 
-Advisory (non-blocking; `--complete`/`--successor` only — an abandoned wave's incomplete §T would make the suggestion a dead end): §T all-`x` with no §X repo changelog carrying this wave's range-cite section → print `consider ds:ship first`. Prints once, refuses nothing.
+A rerun resumes from the last §S checkpoint (`START`, `§Z=written`, `archived`, `contract=<sha>`, `DONE`). It refuses a mode that differs from the open `START`. After §Z is written, `--summary` is no longer needed.
 
-Advisory (non-blocking, every close mode): read `.scratchpad/INDEX.md` and print one line per `state=paused` row — slug, `T <done>/<tot>`, and the age of its §S tail — then name the route for each: resume it through `ds:status` step 1a, or drop it with `ds:close --abandon "<reason>"`. Closing the current wave is the moment the operator has the whole tree in view; a paused sibling that nobody names here keeps its `paused` token until someone stumbles on it. This is model-judgment — this page is what holds it. The dossier mod's skill gate (`hooks/gates.ts`) computes the same list on the `Skill` PreToolUse event and returns it as `additionalContext`, but it reads the skill name from the `skill` argument, so it stays silent on a call shape that carries the name elsewhere. Print the list from the INDEX regardless.
+### 4. Report
 
-Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; this holds for every §S append in this skill):
+Print the `ds close` report. Name the next action: `ds:new <successor>`, the `after:` rows, or nothing.
 
-```
-<YYYY-MM-DD HH:MM> ds:close — START successor=<slug-or-—> complete=<bool> abandon=<bool>
-```
+## Honesty labels
 
-### 5.5. CONVERGE (contract gate; `--abandon` skips it)
-
-Run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds converge <contract>` with the closing wave's own contract: `.dossier/<slug>.md` when that file exists, else `<dir>/CONTRACT.md`. Do not run it bare here — the wave is still `live` at this step, and with a live sibling the bare form exits `PARSE` naming both instead of picking one, which the table below would read as a closable contract gap. The runner prints the resolved path plus every command before running any of them. Read the `CONVERGE:` line before the exit code (`cli/ds` exits 69 without Node.js 22.18+ and 70 on an internal error, and prints no `CONVERGE:` line). Running this at all is model-judgment — no hook fires on close; the verdict is computed.
-
-| verdict        | action                                                                                                                                                                      |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MET n/n`      | append §S `ds:close — converge=met@<n>`; carry the line into §Z `key cites`                                                                                                 |
-| `UNMET n of m` | print the unmet rows. Closing `--complete` over them is an operator call — proceed only on explicit confirmation, §S `converge=unmet@<n> operator-override`                 |
-| `PARSE`        | §S `converge=parse` (or `converge=absent` when the message says no contract). Close proceeds — waves predating contracts stay closable, and a broken contract is not a lock |
-
-### 6. WRITE §Z
-
-Write §Z through the bundled helper (atomic tmp+rename, guaranteeing the §12 blank-line separation so a formatter cannot merge the fields — the markdown blocks below show the resulting shape, not a manual edit):
-
-```
-"${CLAUDE_PLUGIN_ROOT}"/cli/ds z-write <dir> complete   —        "<summary>" "<key cites>"
-"${CLAUDE_PLUGIN_ROOT}"/cli/ds z-write <dir> successor  <slug>   "<summary>" "<key cites>"
-"${CLAUDE_PLUGIN_ROOT}"/cli/ds z-write <dir> abandoned  "<reason>" "<summary>" "<key cites>"
-```
-
-Exit 1 on a `<summary>`, `<reason>` or `<key cites>` that reads as a closure key to the INDEX parser (`successor: <slug>`, `complete: true`, `abandoned: true` — FORMAT.md §12). Nothing is written; reword the prose and re-run.
-
-`--complete`:
-
-```markdown
-## §Z — Closeout
-
-<YYYY-MM-DD HH:MM> — closed
-
-complete: true
-
-summary: <operator-provided one-line summary>
-
-key cites: <list of T-row cites, comma-separated>
-```
-
-`--successor <slug>`:
-
-```markdown
-## §Z — Closeout
-
-<YYYY-MM-DD HH:MM> — closed
-
-successor: <slug>
-
-summary: <operator-provided one-line summary>
-
-key cites: <list of T-row cites>
-```
-
-`--abandon "<reason>"`:
-
-```markdown
-## §Z — Closeout
-
-<YYYY-MM-DD HH:MM> — closed
-
-abandoned: true
-
-reason: <operator reason>
-
-summary: <state at abandonment — what shipped, what was dropped>
-
-key cites: <any T-row cites, or —>
-```
-
-Flip the header state atomically via `"${CLAUDE_PLUGIN_ROOT}"/cli/ds header-state <dir> done` (FORMAT.md §15). This flip lands **before** the `§Z=written` checkpoint below: a checkpoint may only trail a mutation already performed, or a crash resumes past an unflipped header and archives a dir still reading `live` — inverse drift.
-
-Append §S (checkpoint — §Z written AND header now `done`):
-
-```
-<YYYY-MM-DD HH:MM> ds:close — §Z=written
-```
-
-### 7. MOVE TO \_archive/
-
-Guarded, resumable commit-point via the bundled helper — it refuses a pre-existing dest (no nested move), asserts the move landed, and preserves the source on failure (FORMAT.md §15):
-
-```
-"${CLAUDE_PLUGIN_ROOT}"/cli/ds archive-move .scratchpad/dossier/<date>-<slug> .scratchpad/dossier/_archive
-```
-
-Idempotent: re-running after a completed move is a no-op. A non-zero exit leaves the source intact — surface the error and stop, leaving `DONE` unwritten.
-
-Append §S (to the moved file):
-
-```
-<YYYY-MM-DD HH:MM> ds:close — DONE archived
-```
-
-### 7.5. Retire a tracked contract
-
-When the wave's contract lives in `.dossier/` and is tracked (`git ls-files --error-unmatch <path>` exits 0): `mkdir -p .dossier/_archive` (the first close in a repo has no archive yet, and `git mv` needs the dest to exist), then `git mv` the contract to `.dossier/_archive/<same-name>.md` and commit — `chore(dossier): archive wave contract <slug>`. The path stays citable, the active directory stays one wave deep, and the resolver skips `_archive/`. An untracked wave-dir `CONTRACT.md` needs nothing: it rode the ledger's own move in step 7.
-
-### 8. Regen INDEX
-
-Run `ds regen-index`. INDEX flips the dossier row to `state=done` and the `§Z` column to `complete` or `→<slug>`.
-
-### 9. Release lock
-
-`rm <archived-dir>/.ds-lock`.
-
-### 10. Report
-
-```
-ds:close <slug> → done
-§Z: <complete | →<slug>>
-archived: .scratchpad/dossier/_archive/<date>-<slug>/
-next: <ds:new <successor> | nothing — project complete>
-```
-
-## Failure handling
-
-- §T non-`x` rows present: refuse, list them, suggest `ds:build --next`.
-- §B unfixed rows: refuse, list them, suggest `ds:backprop B<N>` per row.
-- §Z written but the move failed (rare crash): `--resume` re-runs `ds archive-move`, which finishes or no-ops.
-- Successor slug missing: offer the `ds:new <successor>` inline scaffold.
+| claim                                                          | enforced by                                      |
+| -------------------------------------------------------------- | ------------------------------------------------ |
+| open rows, uncited rows, open bugs and a held lock block a run | code — `ds close` exit 1                         |
+| an unmet or unparsed contract blocks a run                     | code — `ds close` exit 1 unless `--accept-unmet` |
+| only a `who=H` or `+<k>d` row carries                          | code — `ds close` exit 1                         |
+| the contract retire commit holds only the two contract paths   | code — `git commit -- <old> <new>`               |
+| `--accept-unmet` and `--abandon` follow the operator's say-so  | model — no script reads the operator's reply     |
+| the plan is shown before the run                               | model — no hook fires between the two calls      |
 
 ## Cite
 
-- FORMAT.md §2 (state values), §12 (§Z format), §13 (INDEX update), §14 (locks), §15 (atomic writes), §16 (resume), §17 (Vm.4)
+- `cli/close.ts` (the verb), `tests/test_close.ts` (one test per refusal and per step)
+- FORMAT.md §2.5 (contract), §12 (§Z and `after:`), §13 (INDEX), §14 (locks), §16 (resume)

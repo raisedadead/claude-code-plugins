@@ -85,7 +85,7 @@ State values: `live` | `done` | `paused`. Default at `ds:new` = `live`. The head
 
 A wave's definition of done is a separate file — DOSSIER.md carries no contract heading, and the nine headings above are the whole ledger. It lives at `.dossier/<date>-<slug>.md` where the repo has opted in by creating that directory: tracked, citable as evidence, outliving the wave, and archived to `.dossier/_archive/` by `ds:close`. A repo that never opted in gets `<wave-dir>/CONTRACT.md` instead: untracked, archived with the ledger, citable by nobody — the degraded home is priced at write time rather than hidden. Resolution prefers the tracked home.
 
-Shape: a `field | value` table carrying `consumer`, `reached-via` and `budget`, then a `## done-when` table of `id | command | expect`. Every command is backticked and every `expect` is `exit <n>`, `stdout: <substring>` or `stdout: (nothing)`. `ds:converge` runs them; prose criteria, a missing or empty `consumer`, a bare `stdout:`, and a numbered row that is not exactly `id | command | expect` are each refused at parse time (`CONVERGE: PARSE`, exit 2) rather than reaching a shell. Of the other two fields, `budget` is read by the prompt hook for its commits-spent line — in the tracked home only, since the count starts at the commit that added the contract; `reached-via` is read by no code — it is there for the reviewer.
+Shape: a `field | value` table carrying `consumer`, `reached-via` and `budget`, then a `## done-when` table of `id | command | expect`. Every command is backticked and every `expect` is `exit <n>`, `stdout: <substring>` or `stdout: (nothing)`. `ds:converge` runs them; prose criteria, a missing or empty `consumer`, a bare `stdout:`, and a numbered row that is not exactly `id | command | expect` are each refused at parse time (`CONVERGE: PARSE`, exit 2) rather than reaching a shell. Of the other two fields, `budget` is read by the prompt hook for its commits-spent line — in the tracked home only, since the count starts at the commit that added the contract; `reached-via` is read by no code — it is there for the reviewer. An optional `milestone` row (`T<N>`) names the cutover: `ds progress` adds an `Up to T<N>` count of every row that does not wait on `T<N>` through `needs`.
 
 A pipe inside a command is written `\|` so the row survives; the runner unescapes it. Tables are used rather than prose lists because prettier merges adjacent paragraphs and renumbers ordered lists, and a contract that the formatter rewrites is a contract the runner misreads.
 
@@ -213,7 +213,7 @@ Format rules:
 - `state` = single char from §3 symbols.
 - `who` = `A` the agent can finish it alone · `H` it needs the operator. Set when the row is written, not discovered when the run stalls, so `ds:build --auto` can select against it rather than starting a task it will have to abandon.
 - `task` = imperative one-liner.
-- `needs` = the ids that must reach `x` first, comma-separated, or `—`. Defaults to nothing, so a row states a dependency only where one exists.
+- `needs` = the ids that must reach `x` first, comma-separated, or `—`. Defaults to nothing, so a row states a dependency only where one exists. `T<N>+<k>d` means `k` days after `T<N>` reaches `x`: `ds progress` names the row as tail, and `ds close --carry` accepts it.
 - `cite` = commit SHA, PR ref, or `—` if no artifact yet.
 - `verify` = §V reference, test name, or shell predicate.
 
@@ -374,6 +374,14 @@ key cites: [a96987b]
 
 `reason:` is mandatory. An abandoned dossier archives like any closed one.
 
+`ds close --carry` adds one more paragraph, `after:`, with the rows that run after the close, `;`-separated:
+
+```markdown
+after: T17 smoke test the cutover (T16+7d); T18 approve the rollout (H)
+```
+
+`ds progress` lists the `after:` line of each wave closed in the last 30 days as `later: <slug> · <rows> · closed <date>`.
+
 Vm.4: closed dossier MUST live under `.scratchpad/dossier/_archive/`.
 
 Parser grammar: a closure key opens its own line. The three patterns live once, in `engine/ledger.ts` as `Z.complete` / `Z.abandoned` / `Z.successor`; `ds regen-index`, `ds reconcile` and `ds z-write` all read them from there. §Z carries operator prose in the same region the parser scans, which sets the rest of the grammar:
@@ -456,7 +464,7 @@ For multi-step ops (`ds:build`, `ds:backprop`, `ds:close`):
 1. Identifies last completed step from `<event>` field.
 1. Picks up from next step. Idempotent — re-running completed steps is safe.
 
-Auto-detect default. `--resume` flag is explicit override.
+Auto-detect default. `--resume` flag is explicit override. `ds close` does the scan itself: a rerun of the same command resumes.
 
 Pause/resume are NOT multi-step ops: they write a single atomic §S line (`paused reason=…` / `resumed`) and are exempt from this START/DONE protocol. Resuming a paused dossier (the `ds:status` resume action) un-pauses the header, then re-runs the incomplete-op scan so any mid-build `T<N> START` surfaces and resumes via the task-level protocol above.
 

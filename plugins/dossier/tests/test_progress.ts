@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'node:test'
 import { progress, progressLine, progressTable } from '../engine/progress.ts'
@@ -75,6 +76,28 @@ test('ds progress reads the milestone from the wave contract', () => {
 test('ds progress --line prints one line per wave', () => {
   const done = spawnSync('sh', [DS, 'progress', FIXTURE, '--line'], { encoding: 'utf8' })
   assert.equal(done.stdout, 'progress 47% · 9/19 · next T3\n')
+})
+
+function closedWave(root: string, name: string, daysAgo: number): void {
+  const day = new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10)
+  const dir = join(root, '.scratchpad', 'dossier', '_archive', name)
+  mkdirSync(dir, { recursive: true })
+  const z = `## Closeout\n\n${day} 10:00 — closed\n\ncomplete: true\n\nsummary: s\n\nkey cites: c\n\nafter: T7 smoke test (T6+7d)\n`
+  writeFileSync(join(dir, 'DOSSIER.md'), `# ${name}\n\n\`${day}\` · \`done\`\n\n${z}`)
+}
+
+test('ds progress lists the carried rows of a wave closed in the last 30 days, and drops older ones', () => {
+  const root = mkdtempSync(join(tmpdir(), 'ds-progress-'))
+  try {
+    closedWave(root, '2026-01-01-fresh', 3)
+    closedWave(root, '2026-01-01-stale', 40)
+    const done = spawnSync('sh', [DS, 'progress', '--line'], { cwd: root, encoding: 'utf8', env: { ...process.env, DOSSIER_LEDGER_ROOT: root } })
+    assert.equal(done.status, 0, done.stderr)
+    assert.match(done.stdout, /^later: fresh · T7 smoke test \(T6\+7d\) · closed \d{4}-\d{2}-\d{2}$/m)
+    assert.doesNotMatch(done.stdout, /stale/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
 })
 
 test('ds progress exits 1 on a directory with no ledger', () => {

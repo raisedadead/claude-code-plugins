@@ -117,3 +117,13 @@ export function progressTable(slug: string, view: Progress): string {
   if (view.tail.length) out.push(`After the milestone: ${view.tail.join(', ')}`)
   return out.join('\n')
 }
+
+export const LATER_DAYS = 30
+
+export function laterLine(slug: string, text: string, now: Date): string | undefined {
+  const after = /^after: (.+)$/m.exec(text)?.[1]
+  const closed = /^(\d{4}-\d{2}-\d{2}) \d{2}:\d{2} — closed$/m.exec(text)?.[1]
+  if (!after || !closed) return undefined
+  const age = (now.getTime() - Date.parse(`${closed}T00:00:00Z`)) / 86_400_000
+  return age <= LATER_DAYS ? `later: ${slug} · ${after} · closed ${closed}` : undefined
+}
