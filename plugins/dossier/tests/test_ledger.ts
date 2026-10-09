@@ -72,6 +72,10 @@ test('a hand-typed Yes is pushed', () => {
   assert.deepEqual(unpushedRepos(repos('|---|---|', ['| a | Yes |', '| b | NO |'])), ['b'])
 })
 
+test('a blank pushed cell is not pushed', () => {
+  assert.deepEqual(unpushedRepos(repos('|---|---|', ['| a |  |', '| b | yes |'])), ['a'])
+})
+
 test('a Repos table with no pushed column names no repo', () => {
   const text = ['## Repos', '', '| repo | branch |', '|---|---|', '| a | main |', ''].join('\n')
   assert.deepEqual(unpushedRepos(text), [])

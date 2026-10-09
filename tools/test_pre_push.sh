@@ -34,9 +34,24 @@ if (cd "$TMP/rails" && bash "$ROOT/tools/rails_ceiling.sh") 2>"$TMP/missing.log"
 fi
 grep -q 'RAILS:' "$TMP/missing.log" || fail "the missing-file refusal does not name RAILS:"
 
+printf 'Write the test first.\n' >"$TMP/rails/CLAUDE.md"
+printf '## survivors\n\n| x | y | fact |\n\n## what changes\n' >"$TMP/rails/.dossier/2026-08-02-positive-rails.md"
+if (cd "$TMP/rails" && bash "$ROOT/tools/rails_ceiling.sh") 2>"$TMP/mismatch.log"; then
+	fail "the rails check passed with 1 survivor and 0 negations"
+fi
+grep -q 'lists 1 survivors' "$TMP/mismatch.log" || fail "the mismatch refusal does not name the count"
+
+printf 'You don\342\200\231t.\n' >"$TMP/rails/CLAUDE.md"
+(cd "$TMP/rails" && LC_ALL=C bash "$ROOT/tools/rails_ceiling.sh") ||
+	fail "the rails check missed a curly-apostrophe negation under LC_ALL=C"
+
 mkdir -p "$TMP/work"
-git -C "$ROOT" ls-files -z --cached --others --exclude-standard |
-	tar -C "$ROOT" --null -T - -cf - | tar -C "$TMP/work" -xf -
+(
+	cd "$ROOT"
+	git ls-files -z --cached --others --exclude-standard |
+		while IFS= read -r -d '' path; do [[ -e $path ]] && printf '%s\0' "$path"; done |
+		tar --null -T - -cf -
+) | tar -C "$TMP/work" -xf -
 git init -q --bare "$TMP/remote.git"
 cd "$TMP/work"
 git init -q -b main

@@ -319,8 +319,10 @@ export function namedRows(text: string, heading: RegExp): Cell[] {
 }
 
 export function unpushedRepos(text: string): string[] {
+  const header = cells(sectionRows(text, SEC.repos).find((row) => cells(row).length) ?? '')
+  if (!header.some((name) => name.toLowerCase() === 'pushed')) return []
   return namedRows(text, SEC.repos)
-    .filter((row) => !['', 'yes'].includes(row('pushed').toLowerCase()))
+    .filter((row) => row('pushed').toLowerCase() !== 'yes')
     .map((row) => row('repo'))
 }
 
