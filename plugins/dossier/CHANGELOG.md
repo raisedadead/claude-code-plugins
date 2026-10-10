@@ -4,6 +4,16 @@ Notable changes to the **dossier** plugin.
 
 Releases follow semver and are tagged `dossier-vX.Y.Z`. release-please writes each section from the conventional commit subjects. `plugin.json` has no `version`, so `claude plugin update` still installs every commit. Sections before 1.0.0 are grouped by date.
 
+## [1.0.2](https://github.com/raisedadead/claude-code-plugins/compare/dossier-v1.0.1...dossier-v1.0.2) (2026-10-10)
+
+
+### Bug Fixes
+
+* **dossier:** ask for the reply once per turn ([e6bfa8d](https://github.com/raisedadead/claude-code-plugins/commit/e6bfa8d7b63cefe93b298ca5827405eb5ccfe43b))
+* **dossier:** ask for the whole reply on a block ([ffc40d2](https://github.com/raisedadead/claude-code-plugins/commit/ffc40d22bd5a0bf2881ae2404c2d5faf8cbfd04e))
+* **dossier:** count the resend per turn, not flag ([fb27e04](https://github.com/raisedadead/claude-code-plugins/commit/fb27e0494bd9bc5af484c60ecf25fb39745d568e))
+* **whetstone:** ask for the whole reply again ([e2f84ce](https://github.com/raisedadead/claude-code-plugins/commit/e2f84cece2057e09ecbae048c8044026b73d5db5))
+
 ## [1.0.1](https://github.com/raisedadead/claude-code-plugins/compare/dossier-v1.0.0...dossier-v1.0.1) (2026-10-09)
 
 

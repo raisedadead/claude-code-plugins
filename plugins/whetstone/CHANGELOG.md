@@ -4,6 +4,13 @@ Notable changes to the **whetstone** plugin.
 
 Releases follow semver and are tagged `whetstone-vX.Y.Z`. release-please writes each section from the conventional commit subjects. `plugin.json` has no `version`, so `claude plugin update` still installs every commit. Sections before 1.0.0 are grouped by date.
 
+## [1.0.1](https://github.com/raisedadead/claude-code-plugins/compare/whetstone-v1.0.0...whetstone-v1.0.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **whetstone:** ask for the whole reply again ([e2f84ce](https://github.com/raisedadead/claude-code-plugins/commit/e2f84cece2057e09ecbae048c8044026b73d5db5))
+
 ## 1.0.0 (2026-10-09)
 
 ### Changed
