@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/pre-push.XXXXXX")"
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=maintenance.auto GIT_CONFIG_VALUE_0=false
 
 cleanup() { rm -rf "$TMP"; }
 trap cleanup EXIT
@@ -53,6 +54,7 @@ mkdir -p "$TMP/work"
 		tar --null -T - -cf -
 ) | tar -C "$TMP/work" -xf -
 git init -q --bare "$TMP/remote.git"
+git -C "$TMP/remote.git" config receive.autogc false
 cd "$TMP/work"
 git init -q -b main
 git config user.email test@example.invalid
