@@ -4,6 +4,13 @@ Notable changes to the **dossier** plugin.
 
 Releases follow semver and are tagged `dossier-vX.Y.Z`. release-please writes each section from the conventional commit subjects. `plugin.json` has no `version`, so `claude plugin update` still installs every commit. Sections before 1.0.0 are grouped by date.
 
+## [1.0.3](https://github.com/raisedadead/claude-code-plugins/compare/dossier-v1.0.2...dossier-v1.0.3) (2026-10-10)
+
+
+### Bug Fixes
+
+* **dossier:** key the resend on the prompt id ([c1f52d2](https://github.com/raisedadead/claude-code-plugins/commit/c1f52d289ca9a6cb5b329e88ff356c0edd4ceab8))
+
 ## [1.0.2](https://github.com/raisedadead/claude-code-plugins/compare/dossier-v1.0.1...dossier-v1.0.2) (2026-10-10)
 
 
