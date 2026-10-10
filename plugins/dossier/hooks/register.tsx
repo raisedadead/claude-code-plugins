@@ -33,7 +33,7 @@ const RESEND = 'Then send the whole reply again. In focus mode the operator sees
 const seen = new Set<string>()
 const verified = new Set<string>()
 const bugsSeen = new Set<string>()
-const resent = new Set<string>()
+const resentIn = new Map<string, string | undefined>()
 const PANE = 'dossier-tasks'
 const wave = atom({ plugin: 'dossier', key: 'wave' } as const, null)
 const GLYPH: Record<string, string> = { x: '✓', '~': '▸', '.': '·', '!': '‼', '?': '?' }
@@ -166,7 +166,7 @@ export const register: Register = (on) => {
   })
 
   on('classic.UserPromptSubmit', async ($, e, next) => {
-    resent.delete(e.session_id ?? '')
+    resentIn.delete(e.session_id)
     const result = await next(e)
     const context = await promptGate(ioOf($), await ledgerRoot(ioOf($), e.cwd), e.cwd)
     if (!context) return result
@@ -178,9 +178,8 @@ export const register: Register = (on) => {
     if (result.block) return result
     const block = await stopGate(ioOf($), e.cwd)
     if (!block) return result
-    const sid = e.session_id ?? ''
-    const first = !resent.has(sid)
-    resent.add(sid)
+    const first = !resentIn.has(e.session_id) || resentIn.get(e.session_id) !== e.prompt_id
+    resentIn.set(e.session_id, e.prompt_id)
     return { ...result, block: first ? `${block}\n${RESEND}` : block }
   })
 }
