@@ -175,6 +175,7 @@ export const register: Register = (on) => {
     const result = await next(e)
     if (result.block) return result
     const block = await stopGate(ioOf($), e.cwd)
-    return block ? { ...result, block: `${block}\n${RESEND}` } : result
+    if (!block) return result
+    return { ...result, block: e.stop_hook_active ? block : `${block}\n${RESEND}` }
   })
 }

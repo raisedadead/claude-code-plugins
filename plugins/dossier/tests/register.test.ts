@@ -115,7 +115,7 @@ describe('dossier mod wiring', () => {
     expect(result.block).toMatch(/^not verified\n/)
   })
 
-  test('the fake-impl backstop checks a continued stop and asks for the whole reply', async ($, on) => {
+  test('the fake-impl backstop checks a continued stop without a second resend request', async ($, on) => {
     on('env.get', async (_, e) => ({ value: e.name === 'DOSSIER_FAKEIMPL_CMD' ? 'false' : undefined }))
     on('process.run', async () => ({
       value: {
@@ -128,6 +128,6 @@ describe('dossier mod wiring', () => {
     }))
     on('classic.Stop', async () => ({}))
     const result = await $.classic.Stop({ cwd: '/w', stop_hook_active: true })
-    expect(result.block).toBe('not verified\nThen send the whole reply again. In focus mode the operator sees only your last message.')
+    expect(result.block).toBe('not verified')
   })
 })
