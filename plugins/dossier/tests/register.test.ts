@@ -1,5 +1,13 @@
 import { describe, expect, test } from 'claude-code/testing'
 
+const blocking = {
+  exitCode: 0,
+  stdout: JSON.stringify({ decision: 'block', reason: 'not verified' }),
+  stderr: '',
+  isStdoutTruncated: false,
+  isStderrTruncated: false,
+}
+
 describe('dossier mod wiring', () => {
   test('a marker in a source comment comes back as a denied Edit', async ($, on) => {
     on('session.cwd', async () => ({ value: '/w' }))
@@ -115,19 +123,29 @@ describe('dossier mod wiring', () => {
     expect(result.block).toBe('not verified\nThen send the whole reply again. In focus mode the operator sees only your last message.')
   })
 
-  test('the fake-impl backstop does not block a continued stop', async ($, on) => {
+  test('the fake-impl backstop blocks once per stop chain', async ($, on) => {
     on('env.get', async (_, e) => ({ value: e.name === 'DOSSIER_FAKEIMPL_CMD' ? 'false' : undefined }))
-    on('process.run', async () => ({
-      value: {
-        exitCode: 0,
-        stdout: JSON.stringify({ decision: 'block', reason: 'not verified' }),
-        stderr: '',
-        isStdoutTruncated: false,
-        isStderrTruncated: false,
-      },
-    }))
+    on('process.run', async () => ({ value: blocking }))
     on('classic.Stop', async () => ({}))
-    const result = await $.classic.Stop({ cwd: '/w', session_id: 's1', stop_hook_active: true })
-    expect(result.block).toBeUndefined()
+    expect((await $.classic.Stop({ cwd: '/w', session_id: 's1', stop_hook_active: false })).block).toContain('not verified')
+    expect((await $.classic.Stop({ cwd: '/w', session_id: 's1', stop_hook_active: true })).block).toBeUndefined()
+    expect((await $.classic.Stop({ cwd: '/w', session_id: 's1', stop_hook_active: false })).block).toContain('not verified')
+  })
+
+  test('the fake-impl backstop joins a block from another hook', async ($, on) => {
+    on('env.get', async (_, e) => ({ value: e.name === 'DOSSIER_FAKEIMPL_CMD' ? 'false' : undefined }))
+    on('process.run', async () => ({ value: blocking }))
+    on('classic.Stop', async () => ({ block: 'review first' }))
+    const result = await $.classic.Stop({ cwd: '/w', session_id: 's2', stop_hook_active: false })
+    expect(result.block).toContain('review first')
+    expect(result.block).toContain('not verified')
+  })
+
+  test('the fake-impl backstop runs on a stop that another hook continued', async ($, on) => {
+    on('env.get', async (_, e) => ({ value: e.name === 'DOSSIER_FAKEIMPL_CMD' ? 'false' : undefined }))
+    on('process.run', async () => ({ value: blocking }))
+    on('classic.Stop', async () => ({}))
+    const result = await $.classic.Stop({ cwd: '/w', session_id: 's3', stop_hook_active: true })
+    expect(result.block).toContain('not verified')
   })
 })
