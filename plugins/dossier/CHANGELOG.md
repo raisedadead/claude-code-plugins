@@ -2,7 +2,7 @@
 
 Notable changes to the **dossier** plugin.
 
-Releases follow semver and are tagged `dossier-vX.Y.Z`. release-please writes each section from the conventional commit subjects. `plugin.json` has no `version`, so `claude plugin update` still installs every commit. Sections before 1.0.0 are grouped by date.
+This history stops at `dossier-v1.0.3`. The plugin installs from each `main` commit, and no release tooling writes this file now. Sections before 1.0.0 are grouped by date.
 
 ## [1.0.3](https://github.com/raisedadead/claude-code-plugins/compare/dossier-v1.0.2...dossier-v1.0.3) (2026-10-10)
 

@@ -2,7 +2,7 @@
 
 Notable changes to the **whetstone** plugin.
 
-Releases follow semver and are tagged `whetstone-vX.Y.Z`. release-please writes each section from the conventional commit subjects. `plugin.json` has no `version`, so `claude plugin update` still installs every commit. Sections before 1.0.0 are grouped by date.
+This history stops at `whetstone-v1.0.1`. The plugin installs from each `main` commit, and no release tooling writes this file now. Sections before 1.0.0 are grouped by date.
 
 ## [1.0.1](https://github.com/raisedadead/claude-code-plugins/compare/whetstone-v1.0.0...whetstone-v1.0.1) (2026-10-10)
 
