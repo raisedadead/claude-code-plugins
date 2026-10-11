@@ -27,3 +27,5 @@ node_modules/.bin/oxfmt --check
 node_modules/.bin/oxlint --deny-warnings
 node_modules/.bin/tsc -p .
 node_modules/.bin/vitest run --reporter=dot
+claude plugin test plugins/dossier | grep -v "^(pass)"
+claude plugin test plugins/whetstone | grep -v "^(pass)"

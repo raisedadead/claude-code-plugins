@@ -211,7 +211,7 @@ The **frontier** is every `.` row whose `needs` are all `x`. It is derived on re
 
 Phases are gone. A `P<N>` column made the operator name the shape of the work before the work was understood, which is the pressure the Fog section exists to remove; a wave that genuinely runs in stages expresses that as `needs` edges between its first rows.
 
-**Columns resolve by header name.** Four readers take the positions they need from the header row rather than counting cells, so both this layout and the legacy `id|P|state|task|cite|verify` one are read correctly: `ds vm-checks`, `ds row-flip`, `ds regen-index` and `ds session-start`. A header naming no `state` column is reported by the first three — `WARN Vm.3`, a refusal at exit 1, and a stderr line respectively. `ds session-start` feeds the session context and so degrades quietly, showing no task summary. The first three share one resolver, `columns` in `engine/ledger.ts`; `ds session-start` resolves its own in `engine/session.ts` (`taskSummary`).
+**Columns resolve by header name.** Four readers take the positions they need from the header row rather than counting cells, so both this layout and the legacy `id|P|state|task|cite|verify` one are read correctly: `ds vm-checks`, `ds row-flip`, `ds regen-index` and `ds session-start`. A header naming no `state` column is reported by the first three — `WARN Vm.3`, a refusal at exit 1, and a stderr line respectively. `ds session-start` feeds the session context and so degrades quietly, showing no task summary. The first three share one resolver, `columns` in `engine/ledger.ts`; `ds session-start` resolves its own in `engine/progress.ts` (`taskRows`).
 
 Vm.3: every row with `state=x` MUST have non-empty `cite`.
 

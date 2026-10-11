@@ -55,9 +55,6 @@ jobs:
       - name: positive-rails ceiling
         run: bash tools/rails_ceiling.sh
 
-      - name: pre-push hook
-        run: bash tools/test_pre_push.sh
-
       - name: every test file is named in this workflow
         run: |
           # Three suites once existed, passed locally, and ran nowhere.
@@ -80,6 +77,9 @@ jobs:
 
       - name: mod tests
         run: claude plugin test plugins/dossier
+
+      - name: pre-push hook
+        run: bash tools/test_pre_push.sh
 
       - name: shellcheck
         env:
