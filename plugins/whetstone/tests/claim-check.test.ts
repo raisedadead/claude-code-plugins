@@ -126,19 +126,30 @@ describe('claim-check', () => {
   })
 
   test('ignores a noun use of blocks, gates or denies', () => {
-    const text = [
-      'The audit still has 7 unused `upstream news-<code>` blocks.',
-      'Remove the `news-*` upstream blocks',
-      'A small set of `/` blocks…',
-      'Fixing these changes what the guard denies, so they need their own dossier.',
-      '',
-    ].join('\n')
+    const text = ['The audit still has 7 unused `upstream news-<code>` blocks.', 'Remove the `news-*` upstream blocks', 'A small set of `/` blocks…', ''].join(
+      '\n',
+    )
     expect(flagged(text)).toEqual([])
   })
 
   test('passes a claim labelled UNVERIFIED or no longer', () => {
     const text = 'UNVERIFIED: the `foo` hook blocks the write.\n\nThe hook no longer blocks the reply.\n'
     expect(flagged(text)).toEqual([])
+  })
+
+  test('still flags a verb claim that ends or joins a clause', () => {
+    const claims = [
+      'The hook blocks.',
+      'The hook enforces that every commit is signed.',
+      'The guard prevents in-place edits to settings.',
+      'The gate refuses for any write outside the repo.',
+      'The hook blocks and logs every push.',
+      'The hook blocks in CI too.',
+      'The `pre-push` hook blocks, so the push stops.',
+      'The hook blocks pushes, unverified: none.',
+      'The hook no longer blocks reads, and the guard denies every write.',
+    ]
+    for (const claim of claims) expect(flagged(`${claim}\n`)).toHaveLength(1)
   })
 
   test('does not take a two-word slash token for a path citation', () => {
