@@ -5,21 +5,29 @@ const CLAIM = unicodeRegex(
     '|\\b(?:the|this)\\s+(?:runner|hook|script|gate|check(?:er)?|guard|linter)\\b)' +
     '\\s+(?:\\w[\\w-]*\\s+){0,3}?' +
     '(?:hard-)?(?:blocks|enforces|gates|denies|prevents|refuses)\\b' +
-    '(?!\\s+\\w+ed\\b)',
+    '(?!\\s+\\w+ed\\b)' +
+    '(?!\\s*(?:[.,;:!?…)|]|$)|\\s+(?:are|is|was|were|that|which|of|in|for|with|and|or)\\b)',
   'i',
 )
 
 const BACKED = unicodeRegex(
-  '\\bexits?\\s+\\d+\\b|\\bexit\\s+cod\\w*\\b|\\breturn(?:s|ing)?\\s+exit\\b' +
-    '|\\bnon-zero\\b|\\bexit-code\\b|https?://|#\\d{2,}' +
-    '|(?<![\\w./~-])(?:[\\w.~-]*/[\\w./~-]*' +
-    '|[\\w.~-]*\\.(?:[cm]?[jt]sx?|py|sh|zsh|fish|md|json|jsonc|toml|ya?ml|tmpl|rs|go|rb|lua|css|html|txt)):\\d+\\b',
+  '\\bexits?\\s+\\d+\\b|\\bexit\\s+cod\\w*\\b|\\breturn(?:s|ing)?\\s+exit\\b' + '|\\bnon-zero\\b|\\bexit-code\\b|https?://|#\\d{2,}',
   'i',
 )
+
+const CITATION = unicodeRegex(
+  '(?<![\\w./~-])([\\w.~-]*/[\\w./~-]*' + '|[\\w.~-]*\\.(?:[cm]?[jt]sx?|py|sh|zsh|fish|md|json|jsonc|toml|ya?ml|tmpl|rs|go|rb|lua|css|html|txt)):\\d+\\b',
+  'gi',
+)
+
+const isPath = (token: string): boolean => token.includes('.') || token.split('/').length > 2
+
+const backed = (unit: string): boolean => BACKED.test(unit) || [...unit.matchAll(CITATION)].some(([, token = '']) => isPath(token))
 
 const LABELLED = unicodeRegex(
   '\\badvisory\\b|\\bmodel[\\s-]judge?ment\\b|\\bopt-in\\b|\\bnag\\b' +
     '|\\bnon-blocking\\b|\\bnever blocks\\b|\\bblocks nothing\\b|\\bdoes not block\\b' +
+    '|\\bno longer (?:blocks|enforces|gates|denies|prevents|refuses)\\b|\\bUNVERIFIED:' +
     '|\\bnot a gate\\b' +
     '|\\bcode\\s*[—–-]\\s*`[^`]+`',
   'i',
@@ -52,7 +60,7 @@ function shown(unit: string): string {
 
 export function flaggedUnits(text: string): [number, string][] {
   return units(text)
-    .filter(([, unit]) => CLAIM.test(unit) && !BACKED.test(unit) && !LABELLED.test(unit))
+    .filter(([, unit]) => CLAIM.test(unit) && !backed(unit) && !LABELLED.test(unit))
     .map(([number, unit]) => [number, shown(unit)])
 }
 

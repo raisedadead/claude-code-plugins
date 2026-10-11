@@ -125,6 +125,27 @@ describe('claim-check', () => {
     }
   })
 
+  test('ignores a noun use of blocks, gates or denies', () => {
+    const text = [
+      'The audit still has 7 unused `upstream news-<code>` blocks.',
+      'Remove the `news-*` upstream blocks',
+      'A small set of `/` blocks…',
+      'Fixing these changes what the guard denies, so they need their own dossier.',
+      '',
+    ].join('\n')
+    expect(flagged(text)).toEqual([])
+  })
+
+  test('passes a claim labelled UNVERIFIED or no longer', () => {
+    const text = 'UNVERIFIED: the `foo` hook blocks the write.\n\nThe hook no longer blocks the reply.\n'
+    expect(flagged(text)).toEqual([])
+  })
+
+  test('does not take a two-word slash token for a path citation', () => {
+    const text = 'The hook blocks the write, see a/b:1.\n\nThe gate refuses v1/v2:3 of them.\n\nThe hook blocks it and/or:1.\n'
+    expect(flagged(text).length).toBe(3)
+  })
+
   test('cuts a long sentence to 110 characters', () => {
     const text = `The hook blocks ${'x'.repeat(200)}.\n`
     const [entry = ''] = flagged(text)

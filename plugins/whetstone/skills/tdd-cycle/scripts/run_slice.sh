@@ -12,6 +12,11 @@ shift
 rc=0
 "$@" || rc=$?
 
+if [[ "${rc}" -eq 126 || "${rc}" -eq 127 ]]; then
+	printf 'run_slice: the command did not run (exit %s) — check the argv, one word per argument.\n' "${rc}" >&2
+	exit 1
+fi
+
 case "${PHASE}" in
 red)
 	if [[ "${rc}" -eq 0 ]]; then

@@ -12,6 +12,8 @@ fail() {
 "$SLICE" red false || fail "red with a failing test must exit 0 (RED confirmed)"
 if "$SLICE" red true 2>/dev/null; then fail "red with a passing test must exit non-zero"; fi
 
+if "$SLICE" red /nonexistent/command 2>/dev/null; then fail "red with a command that did not run must exit non-zero"; fi
+
 "$SLICE" green true || fail "green with a passing test must exit 0"
 if "$SLICE" green false 2>/dev/null; then fail "green with a failing test must exit non-zero"; fi
 
