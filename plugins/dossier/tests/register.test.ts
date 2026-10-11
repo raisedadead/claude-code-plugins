@@ -115,7 +115,7 @@ describe('dossier mod wiring', () => {
     expect(result.block).toBe('not verified\nThen send the whole reply again. In focus mode the operator sees only your last message.')
   })
 
-  test('the fake-impl backstop asks for the whole reply on its own first block of each turn', async ($, on) => {
+  test('the fake-impl backstop does not block a continued stop', async ($, on) => {
     on('env.get', async (_, e) => ({ value: e.name === 'DOSSIER_FAKEIMPL_CMD' ? 'false' : undefined }))
     on('process.run', async () => ({
       value: {
@@ -127,12 +127,7 @@ describe('dossier mod wiring', () => {
       },
     }))
     on('classic.Stop', async () => ({}))
-    on('classic.UserPromptSubmit', async () => ({}))
-    const stop = (prompt_id: string) => $.classic.Stop({ cwd: '/w', session_id: 's1', prompt_id, stop_hook_active: true })
-    expect((await stop('p1')).block).toBe('not verified\nThen send the whole reply again. In focus mode the operator sees only your last message.')
-    expect((await stop('p1')).block).toBe('not verified')
-    expect((await stop('p2')).block).toBe('not verified\nThen send the whole reply again. In focus mode the operator sees only your last message.')
-    await $.classic.UserPromptSubmit({ cwd: '/w', session_id: 's1', prompt_id: 'p2', prompt: 'next' })
-    expect((await stop('p2')).block).toBe('not verified\nThen send the whole reply again. In focus mode the operator sees only your last message.')
+    const result = await $.classic.Stop({ cwd: '/w', session_id: 's1', stop_hook_active: true })
+    expect(result.block).toBeUndefined()
   })
 })
