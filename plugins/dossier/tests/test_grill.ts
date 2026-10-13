@@ -54,28 +54,47 @@ test('grill-add writes each entry as its own paragraph and replaces a decision b
   const root = mkdtempSync(join(tmpdir(), 'ds-grill-'))
   try {
     assert.equal(grillAdd(root, 'FACT: two contracts are stale cite=.dossier/').status, 0)
-    assert.equal(grillAdd(root, 'DECISION: 1. Close shape recommended=cli').status, 0)
+    assert.equal(grillAdd(root, 'DECISION: 1. Close shape recommended=cli probe=cli/ds:12').status, 0)
     const open = spawnSync('sh', [DS, 'assert-grill', root, 'wave'], { encoding: 'utf8' })
     assert.equal(open.status, 2)
     assert.match(open.stderr, /open decision\(s\): 1 /)
-    assert.equal(grillAdd(root, 'DECISION: 1. Close shape recommended=cli answer="a" → (a)').status, 0)
+    assert.equal(grillAdd(root, 'DECISION: 1. Close shape recommended=cli probe=cli/ds:12 answer="a" → (a)').status, 0)
     assert.equal(grillAdd(root, 'FRONTIER: empty').status, 0)
     assert.equal(grillAdd(root, 'CONFIRMED: 2026-10-09T10:00:00Z operator="go"').status, 0)
     const done = spawnSync('sh', [DS, 'assert-grill', root, 'wave'], { encoding: 'utf8' })
     assert.equal(done.status, 0, done.stderr)
     const text = readFileSync(done.stdout.trim(), 'utf8')
     assert.equal(text.match(/^DECISION: 1\. /gm)?.length, 1)
-    assert.match(text, /cite=\.dossier\/\n\nDECISION: 1\. Close shape recommended=cli answer="a" → \(a\)\n\nFRONTIER/)
+    assert.match(text, /cite=\.dossier\/\n\nDECISION: 1\. Close shape recommended=cli probe=cli\/ds:12 answer="a" → \(a\)\n\nFRONTIER/)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
 })
 
-test('grill-add refuses a fact with no cite, a decision with no recommendation and a CONSUMED line', () => {
+test('grill-add takes a taste probe and reads a backticked probe that names answer= as unanswered', () => {
+  const root = mkdtempSync(join(tmpdir(), 'ds-grill-'))
+  try {
+    assert.equal(grillAdd(root, 'DECISION: 1. Shape recommended=cli probe=—').status, 0)
+    assert.equal(grillAdd(root, "DECISION: 2. Move recommended=keep both probe=`rg 'answer=(' engine/grill.ts:9`").status, 0)
+    assert.equal(grillAdd(root, 'DECISION: 3. Name recommended=short probe=— answer="3: a" → (a)').status, 0)
+    const open = spawnSync('sh', [DS, 'assert-grill', root, 'wave'], { encoding: 'utf8' })
+    assert.equal(open.status, 2)
+    assert.match(open.stderr, /open decision\(s\): 1, 2 /)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('grill-add refuses a fact with no cite, a decision with no recommendation or probe and a CONSUMED line', () => {
   const root = mkdtempSync(join(tmpdir(), 'ds-grill-'))
   try {
     assert.equal(grillAdd(root, 'FACT: the sky is blue').status, 64)
     assert.equal(grillAdd(root, 'DECISION: 1. Shape').status, 64)
+    const unprobed = grillAdd(root, 'DECISION: 1. Shape recommended=cli')
+    assert.equal(unprobed.status, 64)
+    assert.match(unprobed.stderr, /probe=/)
+    assert.equal(grillAdd(root, 'DECISION: 1. Topic about probe=x recommended=cli').status, 64)
+    assert.equal(grillAdd(root, "DECISION: 1. Move recommended=keep probe=rg 'answer=(' engine/grill.ts").status, 64)
     assert.equal(grillAdd(root, 'CONSUMED: 2026-10-09-wave').status, 64)
   } finally {
     rmSync(root, { recursive: true, force: true })

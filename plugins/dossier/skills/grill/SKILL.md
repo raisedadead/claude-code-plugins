@@ -1,6 +1,6 @@
 ---
 name: grill
-description: Define-phase interrogation before ds:new, from a goal sentence. Facts get looked up and cited; operator decisions get asked, serial while an answer adds or removes groups, batched once none does; "discuss more" forks a decision into sub-decisions. Stops when the frontier is empty AND the operator confirms; output feeds §G + §C so ds:new never re-asks. Invoke when the user says "grill me" / "ds:grill", when ds:new gets a goal with an open decision, or for any design interview in a repo with `.scratchpad/dossier/`. Mid-build questions inside ds:build stay with ds:build.
+description: Define-phase interrogation before ds:new, from a goal sentence. Facts get looked up and cited; operator decisions get asked, serial while an answer adds or removes groups, batched once none does; "discuss more" forks a decision into sub-decisions. Stops when the frontier is empty, the decision set survives an audit (when whetstone is installed) AND the operator confirms; output feeds §G + §C so ds:new never re-asks. Invoke when the user says "grill me" / "ds:grill", when ds:new gets a goal with an open decision, or for any design interview in a repo with `.scratchpad/dossier/`. Mid-build questions inside ds:build stay with ds:build.
 argument-hint: "<goal sentence>" | --resume <slug>
 ---
 
@@ -21,11 +21,11 @@ A bare slug gives the opening scope nothing to stand on. Ask for the goal senten
 
 ```
 FACT: <statement> cite=<file|command|url>
-DECISION: <n>. <topic> recommended=<x>                                  (asked, not yet answered)
-DECISION: <n>. <topic> recommended=<x> answer=<operator verbatim>[ → (<option>)]
-DECISION: <n>. <topic> recommended=<x> answer=<operator verbatim> → forked <n>.1, <n>.2
-DECISION: <n>.<k> <topic> recommended=<x> answer=...
-DECISION: <n>. <topic> recommended=<x> answer=pending-external → <questionnaire path>
+DECISION: <n>. <topic> recommended=<x> probe=<p>                        (asked, not yet answered)
+DECISION: <n>. <topic> recommended=<x> probe=<p> answer=<operator verbatim>[ → (<option>)]
+DECISION: <n>. <topic> recommended=<x> probe=<p> answer=<operator verbatim> → forked <n>.1, <n>.2
+DECISION: <n>.<k> <topic> recommended=<x> probe=<p> answer=...
+DECISION: <n>. <topic> recommended=<x> probe=<p> answer=pending-external → <questionnaire path>
 FRONTIER: empty | empty-except-external n=<k>
 CONFIRMED: <ISO timestamp> operator="<verbatim confirmation>"
 CONSUMED: <dossier-dir-key>          (stamped by ds:new, never by grill)
@@ -37,7 +37,7 @@ Write every entry through the CLI:
 "${CLAUDE_PLUGIN_ROOT}"/cli/ds grill-add .scratchpad "<slug>" "<entry>"
 ```
 
-`ds grill-add` creates the artifact on the first entry and writes each entry as its own paragraph, so a formatter cannot join two entries. A `DECISION` with an id already present replaces that line: record a decision when you ask it, and again when the operator answers. It exits 64 on a `FACT` with no `cite=`, a `DECISION` with no `recommended=`, or a `CONSUMED` line, and 4 on a consumed artifact.
+`ds grill-add` creates the artifact on the first entry and writes each entry as its own paragraph, so a formatter cannot join two entries. A `DECISION` with an id already present replaces that line: record a decision when you ask it, and again when the operator answers. It exits 64 on a `FACT` with no `cite=`, a `DECISION` with no `recommended=` or no `probe=`, or a `CONSUMED` line, and 4 on a consumed artifact.
 
 `ds assert-grill` exits 2 while a decision has no answer, has `answer=pending`, or is forked with a missing or open child; a forked parent closes when all its children close. It also exits non-zero on a missing footer. No hook runs it — `ds:new` invoking the script and refusing on its exit is model-judgment, the same split as the tiger route: the verdict is computed, arriving at it is not.
 
@@ -48,7 +48,7 @@ Write every entry through the CLI:
 Read the goal sentence, what the operator has said so far, and the repo state (existing dossiers, git log, configs). Tag every open node:
 
 - `FACT` — answerable by lookup. Look it up and record `cite=`. Never ask the operator for a fact the repo answers.
-- `DECISION` — genuinely the operator's call. Ask it.
+- `DECISION` — genuinely the operator's call. Ask it. Its `probe=` names the file:line, command or URL you read this session that backs the recommendation, in backticks when it has spaces; `probe=—` declares a pure taste call with nothing to read. A recommendation that moves, renames or removes a thing probes every reference to that thing first.
 
 A fact that needs a sweep (many files, an external doc, a census) goes to a background `dossier-scout` with a self-contained mission. Ask the decisions that do not depend on it meanwhile, record the `FACT` when the scout reports, and hold back only the decisions that need it.
 
@@ -88,7 +88,7 @@ Answer decisions 1–3. You can reply "all recommended" and list only the ones y
 
 - Number decisions across groups, so a reply reads "2b, 3c".
 - Write each fact once, in plain English, above the group that uses it.
-- Put the recommended option first, labelled `Recommended:`. Every option states what it changes or costs.
+- Put the recommended option first, labelled `Recommended:`. Every option states what it changes or costs. The recommended option names what backs it — the file, command or source behind its `probe=`.
 - Put a decision outside the grill's scope in its own last group. Its answer goes to the draft as a §G NOT-IN bullet.
 - End the block on the answer line. The host's output style owns the closing format.
 - "all recommended" is an operator answer. Record one `DECISION:` line per decision, with the reply verbatim plus the option it selects: `answer="all recommended" → (a)`, `answer="all recommended, 2b" → (b)`. A decision that a "Skip if" note removes gets `answer=skipped by 1(b)`.
@@ -107,11 +107,16 @@ The other decisions in the same reply keep their answers.
 
 A decision the operator cannot answer (it needs someone outside the room) keeps its own slot rather than a guess: write `.scratchpad/dossier/.grill/<date>-<slug>-questionnaire.md` (purpose / from-to / context / how-to-answer / question sections / answer stubs) and mark the node `answer=pending-external`. The frontier may close around it as `empty-except-external n=<k>` — every pending node MUST surface as a §C bullet in the draft, so the gap stays auditable.
 
+### 4.5. Premise change
+
+The operator states a fact that voids a reason. Find every `DECISION` whose recommendation used that reason, answered or not, re-derive it from a fresh probe, and record the new line. An answered decision whose recommendation changed is asked again.
+
 ### 5. Stop gate
 
-Two-part, both required:
+Two parts always, a third when whetstone is installed:
 
 1. Frontier empty (or empty-except-external with every pending node §C-surfaced).
+1. Set audit, when whetstone is installed. Send the `DECISION` lines and the constraints the operator stated to `whetstone-doubter` (`subagent_type: whetstone:whetstone-doubter`) as one artifact, with the constraints as its contract. Fold actionable findings back through step 4.5, then ask the operator — one audit cycle per grill; a second round is the operator's call. Without whetstone, skip it and say so in the hand-off.
 1. Explicit operator confirmation — verbatim, recorded in the `CONFIRMED:` footer. Acceptance is something the operator typed; silence and an unanswered recommendation are neither.
 
 ### 6. Synthesize
@@ -131,6 +136,9 @@ Report the artifact path and the confirmed slug. `ds:new <slug>` consumes the dr
 | entry shape, one entry per paragraph          | code — `ds grill-add` exit 64 on a bad entry; it writes the paragraphs    |
 | a fork happens when the operator asks for one | model — no script reads the operator's reply                              |
 | every FACT cites a source                     | code-checkable shape (`cite=`); whether the lookup actually ran = model   |
+| every DECISION names its probe                | code-checkable shape (`probe=`); whether the probe ran = model            |
+| decisions re-derived after a premise change   | model — no script links a FACT to the decisions that used it              |
+| the decision set survives the set audit       | model-judgment, parsed — `DOUBT:` line from `whetstone-doubter`           |
 | every DECISION carries a real operator answer | model — no script distinguishes a typed answer from an assumed one        |
 | "frontier is empty"                           | model — no fixed decision-tree schema exists to verify against            |
 | serial-vs-batch phase choice                  | model — governed by the group add/remove rule, not mechanically checkable |
@@ -140,7 +148,7 @@ Artifact SHAPE is code-enforced; SUBSTANCE is model-judgment. "ds:grill ran" nev
 
 ## Anti-patterns
 
-- Ending on "asked enough" instead of the two-part stop gate.
+- Ending on "asked enough" instead of the stop gate.
 - Asking the operator anything the repo already answers.
 - Authoring §T rows — grill stops at §G/§C; tasks belong to `ds:new`/`ds:build`.
 - Treating an unanswered `recommended=` as an operator decision.

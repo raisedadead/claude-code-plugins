@@ -110,6 +110,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 1. **Bound every loop.** Doubt-pass caps at three cycles. `ds:build --auto` has explicit pause classes. Any new loop states its bound.
 1. **Zero technical debt.** A caught bug becomes an enforced invariant, not a comment promising a fix — `ds:backprop` is the mechanism. Denying debt markers at write time is a coding standard, so it lives in the operator's harness rather than here; a plugin should not ship one person's style opinion to everyone who installs it.
 1. **Extend built-ins, don't reinvent.** Claude Code ships `/review`, `/security-review`, `/simplify`. Gate them; do not rebuild them.
+1. **Recommend from probes.** A recommendation cites the file:line or command that backs it, for every file it moves, renames or depends on. When a premise changes, re-derive every decision that rested on it. Audit a decision set against its own constraints before the operator confirms it. `ds:grill` checks the shape in code — `ds grill-add` exits 64 on a DECISION with no `probe=` — and leaves coverage to model-judgment, since `probe=—` declares a taste call (D48).
 
 ## Testing standard
 

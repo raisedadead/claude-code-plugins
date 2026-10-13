@@ -10,7 +10,7 @@ Decision ids (D2, D4, D18) refer to [RESEARCH.md](https://github.com/raisedadead
 | ------------------ | ------------------------------------------------------------ | -------------------------------------------------------- | ------------------------- |
 | `context7` MCP     | a tool ending `__resolve-library-id` / `__query-docs`        | `ds:build` step 5.5 — ground the current API of a pin    | WebFetch the official docs |
 | `Workflow` tool    | `Workflow` in the tool list (native harness tool)            | `ds:check` step 2 — scout fan-out when §X > 2 repos      | parallel `Agent` spawns   |
-| `whetstone` plugin | `whetstone:whetstone-doubter` in the agent list; `bin/` on `PATH` | `ds:build` doubt, TDD, lint, tiger, conflict routes; `ds:backprop` flake triage | graceful skip, §S-noted   |
+| `whetstone` plugin | `whetstone:whetstone-doubter` in the agent list; `bin/` on `PATH` | `ds:build` doubt, TDD, lint, tiger, conflict routes; `ds:grill` set audit (skip noted in the hand-off; a grill has no §S); `ds:backprop` flake triage | graceful skip, §S-noted   |
 
 Personal tooling — output compressors, memory servers, alternative edit tools — belongs in the operator's own harness, not here. The same test D18 applies to gates applies to adapters: this file carries what helps anyone who installs the plugin, not one operator's preferences.
 
@@ -49,7 +49,7 @@ What it buys over raw spawns: schema-validated rows, no barrier idle, a budget-g
 
 whetstone ships the craft dossier composes at its gates. Neither plugin declares the other a dependency; every route below skips when whetstone is absent (D2).
 
-**Agent route (`whetstone:whetstone-doubter`, `ds:build` step 5.6).** Present iff the session's agent list names it. If an `Agent` call is made anyway and the type is absent, the harness returns a recoverable tool error naming the available agents — on that error append §S `doubt=skipped-absent` and continue. Verdict line `DOUBT: FAILURES | NO FAILURE FOUND` — model-judgment, parsed.
+**Agent route (`whetstone:whetstone-doubter`, `ds:build` step 5.6 and `ds:grill` step 5).** Present iff the session's agent list names it. If an `Agent` call is made anyway and the type is absent, the harness returns a recoverable tool error naming the available agents — on that error append §S `doubt=skipped-absent` and continue. Verdict line `DOUBT: FAILURES | NO FAILURE FOUND` — model-judgment, parsed.
 
 **Skill route (`whetstone:merge-resolve`, `ds:build` step 6).** Present iff the available-skills list names it. Plain `git merge` conflicts only; `rebase` / `cherry-pick` conflicts stay operator-driven, since their `--continue` commits escape `ds:build`'s task-scoped commit discipline. Absent → inline resolution, §S-noted.
 
