@@ -10,7 +10,7 @@ Decision ids (D2, D4, D18) refer to [RESEARCH.md](https://github.com/raisedadead
 | ------------------ | ------------------------------------------------------------ | -------------------------------------------------------- | ------------------------- |
 | `context7` MCP     | a tool ending `__resolve-library-id` / `__query-docs`        | `ds:build` step 5.5 — ground the current API of a pin    | WebFetch the official docs |
 | `Workflow` tool    | `Workflow` in the tool list (native harness tool)            | `ds:check` step 2 — scout fan-out when §X > 2 repos      | parallel `Agent` spawns   |
-| `whetstone` plugin | `whetstone:whetstone-doubter` in the agent list; `bin/` on `PATH` | `ds:build` doubt, TDD, lint, tiger, conflict routes; `ds:grill` set audit (skip noted in the hand-off; a grill has no §S); `ds:backprop` flake triage | graceful skip, §S-noted   |
+| `whetstone` plugin | `whetstone:whetstone-doubter` in the agent list; `bin/` on `PATH` | `ds:build` doubt, TDD, lint, tiger, conflict routes; `ds:grill` set audit (skip noted in the hand-off; a grill has no §S); `ds:backprop` flake triage and loop-first method (`whetstone:diagnose`) | graceful skip, §S-noted   |
 
 Personal tooling — output compressors, memory servers, alternative edit tools — belongs in the operator's own harness, not here. The same test D18 applies to gates applies to adapters: this file carries what helps anyone who installs the plugin, not one operator's preferences.
 
@@ -52,6 +52,8 @@ whetstone ships the craft dossier composes at its gates. Neither plugin declares
 **Agent route (`whetstone:whetstone-doubter`, `ds:build` step 5.6 and `ds:grill` step 5).** Present iff the session's agent list names it. If an `Agent` call is made anyway and the type is absent, the harness returns a recoverable tool error naming the available agents — on that error append §S `doubt=skipped-absent` and continue. Verdict line `DOUBT: FAILURES | NO FAILURE FOUND` — model-judgment, parsed.
 
 **Skill route (`whetstone:merge-resolve`, `ds:build` step 6).** Present iff the available-skills list names it. Plain `git merge` conflicts only; `rebase` / `cherry-pick` conflicts stay operator-driven, since their `--continue` commits escape `ds:build`'s task-scoped commit discipline. Absent → inline resolution, §S-noted.
+
+**Skill route (`whetstone:diagnose`, `ds:backprop` step 4).** Present iff the available-skills list names it. It builds the red feedback loop before any hypothesis. Absent → the agent builds the loop itself; either way the command goes in the START line as `loop=<command>`.
 
 **Script routes.** Claude Code puts an enabled plugin's `bin/` on the Bash tool's `PATH`, and `${CLAUDE_PLUGIN_ROOT}` names only the running plugin's own root, so `bin/` is the one supported way for dossier to reach a whetstone script ([plugins reference](https://code.claude.com/docs/en/plugins-reference)). Each route calls a bare command name; not on `PATH` means whetstone is absent.
 

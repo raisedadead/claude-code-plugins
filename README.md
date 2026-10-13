@@ -7,7 +7,7 @@ An agent will happily report success it cannot demonstrate. These two plugins ma
 | Plugin        | What it does                                                                                                                                              |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **dossier**   | Wave-scoped workflow. One resumable `DOSSIER.md` drives a wave — tasks, bugs, invariants, cross-repo state — with in-session quality gates.               |
-| **whetstone** | Per-task craft, each skill carrying a deterministic self-verify: red-green TDD, flaky-test audit, doubt review, merge-resolve, skill lint, column budget. |
+| **whetstone** | Per-task craft — red-green TDD, flaky-test audit, diagnosis, doubt review, grilling, merge-resolve, research and HTML reports, skill lint, column budget. Every gate among them carries a deterministic self-verify. |
 
 dossier drives the wave; whetstone is the craft at each gate. Designed to be used together, independent by invariant — either works alone, and every composition route skips silently when its sibling is absent.
 
@@ -62,8 +62,12 @@ The home is the repo's choice. `mkdir .dossier` opts into tracked contracts at `
 | `/whetstone:merge-resolve`    | zero markers, pass-count at or above baseline |
 | `/whetstone:skill-smith`      | frontmatter, line budget, reference depth     |
 | `/whetstone:tiger-style`      | column budget computed from the staged diff   |
+| `/whetstone:html-report`      | exit 1 on a diagram that does not parse       |
+| `/whetstone:research-report`  | every claim gets a verdict or `UNRULED`       |
 
-whetstone also ships its scripts as commands on the Bash tool's `PATH` while it is enabled, which is how dossier's composed routes reach them in any project: `run-slice`, `lint-skill`, `flake-runner`, `tiger-check <repo>` (column budget of the lines a commit adds) and `claim-check <path>...` (prose asserting enforcement that names nothing checkable).
+The other whetstone skills are methods with no computed gate: `grill`, `diagnose`, `prototype`, `wizard`, `domain-modeling` and `codebase-design`. They are adapted from [mattpocock/skills](https://github.com/mattpocock/skills) under its MIT licence; [THIRD_PARTY_NOTICES.md](./plugins/whetstone/THIRD_PARTY_NOTICES.md) lists each file. whetstone also ships the `whetstone-scout` and `whetstone-grounder` agents and the `verify-claims` workflow.
+
+whetstone also ships its scripts as commands on the Bash tool's `PATH` while it is enabled, which is how dossier's composed routes reach them in any project: `run-slice`, `lint-skill`, `flake-runner`, `tiger-check <repo>` (column budget of the lines a commit adds), `claim-check <path>...` (prose asserting enforcement that names nothing checkable) and `html-report <report.md> <report.html>`.
 
 ## Quickstart
 

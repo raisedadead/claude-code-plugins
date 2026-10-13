@@ -23,7 +23,7 @@
     {
       "name": "whetstone",
       "source": "./plugins/whetstone",
-      "description": "Engineering-craft skills that sharpen the edge: red-green TDD, flaky-test audit, pre-decision doubt review, merge-resolve, skill linting, and a staged-diff column budget. Each with a deterministic self-verify. Auto-composed by the dossier plugin at its phase gates when both are installed — fully functional standalone.",
+      "description": "Engineering-craft skills: red-green TDD, flaky-test audit, diagnosis, doubt review, grilling, merge-resolve, grounded research reports, HTML reports, skill linting and a staged-diff column budget. Every gate among them carries a deterministic self-verify. Auto-composed by the dossier plugin at its phase gates when both are installed — fully functional standalone.",
       "category": "workflow",
       "keywords": ["tdd", "testing", "code-review", "git", "skills"],
       "license": "ISC",

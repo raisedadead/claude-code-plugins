@@ -8,11 +8,11 @@ Companion: [`RESEARCH.md`](./RESEARCH.md) holds decisions with their rejected al
 
 An agent will happily report success it cannot demonstrate. These two plugins exist to make "done" a checkable fact rather than a claim: a wave of work is tracked in one resumable ledger, and every gate along the way ends in an exit code, a computed number, or a verdict line that is honestly labelled as a judgment.
 
-Built by one operator for many projects, and published for anyone. The operator's conventions are the defaults — that is what makes these plugins opinionated rather than generic — but what ships has to make sense on a machine that is not the operator's: integrations with personal tooling live in that operator's harness, not here (D26). A capability that helps in a consuming project is in scope; a file left behind in that project is not. Behave everywhere; leave nothing behind.
+Built by one operator for their own projects. The operator's conventions are the defaults — that is what makes these plugins opinionated rather than generic — but what ships works without the operator's harness: integrations with personal tooling live in that harness, not here (D26). A capability that helps in a consuming project is in scope; a file left behind in that project is not. Behave everywhere; leave nothing behind.
 
 ## The pair
 
-`dossier` drives the wave. `whetstone` is the craft applied at each gate — doubt before code, red/green during, merge-resolve on conflict, lint after authoring.
+`dossier` drives the wave. `whetstone` is the craft applied at each gate — grill and doubt before code, red/green and diagnose during, merge-resolve on conflict, lint after authoring — plus the research and HTML reports that carry evidence to a human reader (D49, D50).
 
 They are designed to be installed together and used together. They are also independent: either works alone, every composition route detects its sibling and skips when absent, and neither declares the other as a dependency. That independence is a hard invariant, not a nicety — `whetstone` stays independently publishable.
 
@@ -41,7 +41,7 @@ Encoding lives in [`plugins/dossier/FORMAT.md`](./plugins/dossier/FORMAT.md), wh
 
 **Resumability is structural, not best-effort.** Every multi-step operation writes a start line before it mutates anything, and a line per completed step as it goes. A session lost mid-operation is recovered by re-invoking the same verb: it reads the log, finds the last completed step, and continues. Locks guard concurrent mutation and self-clear when stale.
 
-**Subagents run fresh and read-only.** `dossier-scout` investigates; `dossier-reviewer` reviews a staged diff before commit; `whetstone-doubter` attacks a plan before code exists. Each receives an artifact-only mission — the diff, the plan, the contract — and never the parent's reasoning, so it falsifies the work instead of rationalising it. All three declare `disallowedTools: Edit, Write, NotebookEdit` in their frontmatter; `whetstone-doubter` is also granted only `Read, Grep, Glob`. `dossier-scout` and `dossier-reviewer` are granted `Bash`, and shell redirection can write, so for those two, read-only holds by prompt alone for `Bash`.
+**Subagents run fresh and read-only.** `dossier-scout` investigates; `dossier-reviewer` reviews a staged diff before commit; `whetstone-doubter` attacks a plan before code exists; `whetstone-scout` gathers sourced claims and `whetstone-grounder` re-checks them. Each receives an artifact-only mission — the diff, the plan, the contract — and never the parent's reasoning, so it falsifies the work instead of rationalising it. All five declare `disallowedTools: Edit, Write, NotebookEdit` in their frontmatter; `whetstone-doubter` is also granted only `Read, Grep, Glob`. The other four are granted `Bash`, and shell redirection can write, so for those four, read-only holds by prompt alone for `Bash`.
 
 ## Priorities
 
@@ -69,6 +69,8 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 | dossier bug-invariant nag       | a §B row whose `invariant added` and `fix cite` cells are both empty or `—`, after an Edit or Write of `DOSSIER.md` | PostToolUse context, never blocks |
 | dossier grilling reminder       | an outside grilling skill invoked in a repo with `.scratchpad/dossier/` | PreToolUse context, never blocks |
 | `ds close` changelog advisory   | no `CHANGELOG.md` changed since the contract commit    | `⚠` line, never blocks |
+| whetstone html-report           | a Mermaid diagram its parser rejects, or no local browser | `bin/html-report` exit 1 or 69; no new page is written |
+| whetstone verify-claims         | a claim whose grounder returned no verdict with a quote | `UNRULED` in the tally, never blocks |
 | whetstone claim gate            | unbacked enforcement verb in the final reply           | Stop `additionalContext`, once per turn, never blocks; the model continues with the flagged lines in context and is asked to send the whole reply again, since focus mode shows only the last message; the fix is model-judgment |
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.
@@ -80,6 +82,8 @@ A consumer installs `hooks/`, `skills/` and `agents/`. They never receive `.gith
 **The rule is about reach, not content.** A gate encoding a fact about correctness belongs in the plugin, where it travels. A gate encoding one operator's preference belongs in that operator's harness, however well it would travel — shipping a taste to everyone who installs the plugin is the failure this rule invites when read too far. The split test is whether the threshold is a fact or a preference: an unbacked-claim lint is the first, a reply-length ceiling the second. D18 holds the worked example, where one wave built both and sent them to different homes.
 
 Skill and agent bodies reach bundled files through `${CLAUDE_PLUGIN_ROOT}`, braced: Claude Code substitutes that form when it loads the text, and the Bash tool's environment carries no plugin variable, so the bare `$CLAUDE_PLUGIN_ROOT` reads as empty (F38). `tests/test_manifest.ts` fails on the bare form and on a repo-relative `plugins/dossier/` or `plugins/whetstone/` path, since neither exists at the install path.
+
+`${CLAUDE_PLUGIN_DATA}` follows the same rule, so a skill passes it to its script on the command line: `html-report` keeps its renderer there, and falls back to `${XDG_CACHE_HOME:-~/.cache}/whetstone/html-report` when the variable is empty (D49).
 
 A plugin's `bin/` is documented as reaching the Bash tool's `PATH`. Whether it also reaches a hook, an MCP server or an LSP server is not stated either way, so a hook that calls a plugin executable resolves the full path itself rather than relying on a bare name. The cost is asymmetric: a full path works whether or not the `PATH` would have carried it. F31 carries the scope, the inference and the wave that read it too far.
 
@@ -99,6 +103,8 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | `ds:converge`       | `CONVERGE: MET <n>/<n>`, `UNMET <n> of <m>` or `PARSE — <why>`; exit 0/1/2      | code — `cli/ds converge` |
 | `ds close`          | `✗` lines refuse with exit 1; `⚠` lines are advisory; `ready` on `--plan`      | code — `cli/ds close`    |
 | `ds assert-grill`   | exit 0 complete, 1 no artifact, 2 open decision or open fork child, 3 unconfirmed, 4 consumed | code — `cli/ds assert-grill` |
+| `html-report`       | exit 0 written, 1 a diagram did not parse, 64 usage, 69 no browser or install failed | code — `bin/html-report` |
+| `verify-claims`     | per claim `CONFIRMED`, `UNSUPPORTED`, `CONTRADICTED`, `SOURCE-DEAD` or `UNRULED` | model-judgment for the verdict; code for `UNRULED` (no verdict with a quote) |
 
 ## Tenets
 

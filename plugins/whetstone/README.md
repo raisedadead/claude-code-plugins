@@ -1,6 +1,6 @@
 # whetstone
 
-Engineering-craft skills that sharpen the edge before you cut. Six small, composable skills — each carries a deterministic self-verify, so "done" is a checkable fact.
+Engineering-craft skills that sharpen the edge before you cut. Every gate among them carries a deterministic self-verify, so "done" is a checkable fact. The method skills — `grill`, `diagnose`, `prototype`, `wizard`, `domain-modeling`, `codebase-design` — have no computed gate.
 
 Docs live at the repository root, which is not shipped to the install path — these are absolute so they resolve from the plugin cache too:
 
@@ -11,3 +11,4 @@ Docs live at the repository root, which is not shipped to the install path — t
 Local to this plugin:
 
 - [CHANGELOG.md](./CHANGELOG.md)
+- [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) — files adapted from mattpocock/skills, MIT
