@@ -47,16 +47,18 @@ Read §S, grep `ds:backprop <target>`:
 
 ### 4. CLAIM + scope
 
+Before any hypothesis, have a feedback loop: one command, already run, that goes red on this bug. A failing test is the usual one. When none exists yet or the bug resists a first look, `whetstone:diagnose`, when installed, builds the loop.
+
 Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; this holds for every §S append in this skill):
 
 ```
-<YYYY-MM-DD HH:MM> ds:backprop <B-or-pending> START
+<YYYY-MM-DD HH:MM> ds:backprop <B-or-pending> START loop=<command>
 ```
 
 Define:
 
 - bug short label (≤80 chars)
-- root cause hypothesis (≤2 lines)
+- root cause hypothesis (≤2 lines), stated against the loop
 - recurrence likelihood (low / mid / high)
 
 A fuzzy root cause or a class-of-bug question: **spawn a `dossier-scout` subagent** with the mission "research <bug-label>: where does this class manifest? Prior occurrences? Test gaps?".

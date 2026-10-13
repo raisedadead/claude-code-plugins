@@ -36,14 +36,15 @@ Fix the reported `FAIL`s, re-run, repeat — cap at **3 rounds**. Findings still
 
 ## Manual pass (what the script cannot judge)
 
-Two things stay judgement calls. After the lint is clean, read the change against them:
+Three things stay judgement calls. Before you write, read `reference/writing-for-agents.md`; after the lint is clean, read the change against the other two:
 
+- `reference/writing-for-agents.md` — the rubric for any document an agent reads: context pointers, the information hierarchy, completion criteria, leading words and pruning. A skill also reads `reference/skill-mechanics.md`.
 - `reference/anatomy.md` — the canonical section order and the frontmatter contract. Diff a new skill's shape against it.
 - `reference/failure-modes.md` — the six ways a skill rots (premature completion, duplication, sediment, sprawl, no-op, negation). Use it as a read-through checklist.
 
 ## Verification
 
-Done = `lint-skill <path>` exits 0 **and** you have read the change against both reference checklists. The exit code is the gate; the checklists are the judgement.
+Done = `lint-skill <path>` exits 0 **and** you have read the change against all three references. The exit code is the gate; the checklists are the judgement.
 
 ## Dossier breadcrumb
 

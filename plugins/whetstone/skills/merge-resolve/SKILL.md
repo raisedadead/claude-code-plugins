@@ -16,7 +16,7 @@ Two numbers make "done" checkable: zero conflict markers left, and a test pass-c
 
 1. **Capture the baseline first.** Before touching any conflicted file, run the suite and record the passing-test count. That count is the floor. (When the suite cannot run pre-resolution, pass `-` in step 3.)
 
-1. **Resolve hunk by hunk**, per `reference/resolution-heuristics.md`. Read both sides' diffs and pick per hunk, so each side's intent is seen before one of them loses. Regenerate lockfiles and generated files from source.
+1. **Resolve hunk by hunk**, per `reference/resolution-heuristics.md`. Read both sides' diffs and pick per hunk, so each side's intent is seen before one of them loses. Read each side's commit messages, and its PR or issue when one is linked, for the reason behind the change. Regenerate lockfiles and generated files from source.
 
 1. **Verify:**
 

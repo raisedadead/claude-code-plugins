@@ -54,6 +54,8 @@ Ask one block at a time, tersely, no preamble:
 1. **§X repos** — each repo this dossier touches, as `<org>/<name>` or an absolute path. Operator-provided; no git-remote magic.
 1. **Initial §T tasks** (optional) — T1..Tn now, or later via `ds:build`.
 
+**A wide refactor is sequenced expand–contract.** One mechanical change whose blast radius breaks many call sites at once (rename a column, retype a shared symbol) cannot land green as one task. Expand first: add the new form beside the old. Then migrate the call sites in batches, one task each, each `needs` the expand. Contract last: delete the old form in a task that `needs` every batch.
+
 **Clarify before freezing (the highest-value lever):** an underspecified §G or §C decision — ambiguous scope, an unstated choice, more than one plausible approach — gets its resolving question NOW, before §T is authored. A vague goal yields vague tasks, and one or two sharp questions here beat a wrong build. More than a couple of open questions → recommend `ds:grill <slug>` (full interrogation protocol, artifact-gated). "Just go" → record the assumption as a §C bullet so it stays auditable.
 
 §I, §V, §B, §S and §Z grow during the build; the scaffold leaves them empty.

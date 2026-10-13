@@ -24,7 +24,7 @@ Before the first assertion, name the **seam**: the public boundary you test thro
    "${CLAUDE_PLUGIN_ROOT}"/skills/tdd-cycle/scripts/run_slice.sh red <test-command>
    ```
 
-   `run_slice red` exits non-zero when the test *passed* — a test that never failed characterises nothing. Check the test against `reference/anti-patterns.md` before running it.
+   `run_slice red` exits non-zero when the test *passed* — a test that never failed characterises nothing. Check the test against `reference/anti-patterns.md` and `reference/examples.md` before running it; mock only where `reference/mocking.md` allows.
 
 1. **GREEN — minimum code to pass:**
 
