@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'vitest'
@@ -63,6 +63,19 @@ test('ds exits 69 when node is not on PATH', () => {
   const done = spawnSync('/bin/sh', [DS, 'invariant-check'], { encoding: 'utf8', env: { PATH: '/nonexistent' } })
   assert.equal(done.status, 69)
   assert.match(done.stderr, /node 22\.18\+ required/)
+})
+
+test('ds exits 70 with one internal-error line when a verb throws', () => {
+  withRoot((root) => {
+    const ledger = join(root, '.scratchpad', 'dossier', 'w', 'DOSSIER.md')
+    mkdirSync(join(ledger, '..'))
+    writeFileSync(ledger, '# w\n')
+    chmodSync(ledger, 0o000)
+    const done = spawnSync('sh', [DS, 'regen-index'], { cwd: root, encoding: 'utf8' })
+    chmodSync(ledger, 0o644)
+    assert.equal(done.status, 70, done.stderr)
+    assert.match(done.stderr, /^ds: internal error: EACCES/)
+  })
 })
 
 test('a verb run from a linked worktree writes the primary checkout ledger', () => {
