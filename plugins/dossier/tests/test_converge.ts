@@ -156,7 +156,9 @@ test('the plan block reaches a pipe while the run is still going', async () => {
       singleCriterion('| id  | command           | expect |', '| --- | ----------------- | ------ |', "| 1   | `sh -c 'sleep 4'` | exit 0 |"),
     )
     const started = performance.now()
-    const child = spawn('sh', [DS, 'converge', contract], { cwd: REPO, env: cleanEnv(), stdio: ['ignore', 'pipe', 'inherit'] })
+    const child = spawn('sh', [DS, 'converge', contract], { cwd: REPO, env: cleanEnv(), stdio: ['ignore', 'pipe', 'pipe'] })
+    let stderr = ''
+    child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()))
     const exited = new Promise((resolve) => child.on('close', resolve))
     let planned: number | undefined
     const lines = createInterface({ input: child.stdout })
@@ -168,9 +170,11 @@ test('the plan block reaches a pipe while the run is still going', async () => {
     }
     lines.close()
     child.stdout.destroy()
-    await exited
+    const code = await exited
     assert.ok(planned !== undefined, 'no will-run line')
     assert.ok(planned < 2.0, `plan block arrived after ${planned.toFixed(2)}s`)
+    assert.equal(stderr, '')
+    assert.equal(code, 141)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

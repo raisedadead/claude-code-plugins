@@ -23,6 +23,7 @@ No argument → the runner resolves the live wave's contract: the tracked `.doss
 | 2    | `CONVERGE: PARSE — <why>`    | the contract could not be read            |
 | 69   | none                         | `cli/ds` needs Node.js 22.18+             |
 | 70   | none                         | `cli/ds` internal error                   |
+| 141  | none                         | the reader closed the pipe; the run stopped at the next write |
 
 **Read the `CONVERGE:` line before the exit code.** No `CONVERGE:` line means nothing ran.
 
