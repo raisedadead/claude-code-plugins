@@ -83,7 +83,8 @@ function idProblems(root: string): string[] {
     for (const path of walk(join(root, 'plugins', plugin)).filter((file) => file.endsWith('.md') && !file.endsWith(`${sep}CHANGELOG.md`))) {
       for (const [, owner = '', id = ''] of readFileSync(path, 'utf8').matchAll(/\b(dossier|whetstone):([a-z][a-z0-9-]*)\b/g)) {
         const home = join(root, 'plugins', owner)
-        if (!exists(join(home, 'skills', id, 'SKILL.md')) && !exists(join(home, 'agents', `${id}.md`))) {
+        const known = [`skills/${id}/SKILL.md`, `agents/${id}.md`, `workflows/${id}.js`].some((file) => exists(join(home, file)))
+        if (!known) {
           out.add(`${relative(root, path)} -> ${owner}:${id}`)
         }
       }
@@ -161,12 +162,13 @@ test('no shipped markdown link escapes its plugin root', () => {
   withTree(escaping, (root) => assert.deepEqual(linkProblems(root), ['plugins/dossier/skills/build/SKILL.md -> ../../../../README.md']))
 })
 
-test('every skill or agent id a shipped doc names exists', () => {
+test('every skill, agent or workflow id a shipped doc names exists', () => {
   assert.deepEqual(idProblems(ROOT), [])
   withTree(GOOD_TREE, (root) => assert.deepEqual(idProblems(root), []))
   const unknown = broken({
-    'plugins/dossier/FORMAT.md': 'see dossier:nope, whetstone:gone and dossier:dossier-reviewer\n',
+    'plugins/dossier/FORMAT.md': 'see dossier:nope, whetstone:gone, whetstone:verify-claims and dossier:dossier-reviewer\n',
     'plugins/dossier/agents/dossier-reviewer.md': 'agent\n',
+    'plugins/whetstone/workflows/verify-claims.js': 'export const meta = {}\n',
     'plugins/dossier/CHANGELOG.md': 'removed dossier:old\n',
   })
   withTree(unknown, (root) => assert.deepEqual(idProblems(root), ['plugins/dossier/FORMAT.md -> dossier:nope', 'plugins/dossier/FORMAT.md -> whetstone:gone']))
