@@ -12,16 +12,31 @@ Map the request as a **design tree**: each decision branches into the decisions 
 ## Steps
 
 1. **Find the facts yourself.** A question the repository, the tools or the web can answer is a fact, not a decision. Look it up, or send a subagent for a long search, and ask the other questions while it runs. Only the questions that depend on that fact wait. Done when each open node is a fact with its source or a decision for the user.
-1. **Ask the frontier in one round.** Number the questions across rounds. Give each a recommended answer that names what backs it: the `path:line`, the command or the URL you probed. A taste call says so. Word each question so that "yes" accepts the recommendation. Use the format below, then wait for the answers.
-1. **Recompute the frontier.** Each answer settles nodes and unblocks others. A question that depends on another question still open goes to a later round. When an answer changes a premise, re-derive each earlier recommendation that rested on it and ask again the ones that change.
+1. **Ask the frontier in one round.** Ask it as one decision block, in the format below, then wait for the answers. Number the decisions across groups and rounds, so a reply reads "2b, 3c". Put the recommended option first, labelled `Recommended:`. It names what backs it: the `path:line`, the command or the URL you probed. A taste call says so. Every option states what it changes or costs.
+1. **Recompute the frontier.** Each answer settles nodes and unblocks others. A decision that depends on an open one rides in the block with a "Skip if" note. When its answer adds or removes whole groups, it goes to a later round. When an answer changes a premise, re-derive each earlier recommendation that rested on it and ask again the ones that change.
 1. **Audit the set.** Before the last round closes, read the decisions together against the constraints the user stated. Two decisions that conflict, or a decision that breaks a constraint, go back to the user as a new question.
 1. **Stop on an empty frontier and a confirmation.** Every branch is visited and nothing is silently assumed. Summarise the decisions, one line each, and act only after the user confirms the summary.
 
 ```
-❓ **Q<n>** - **<question title>**: <the question, with the options when there are several>
+<the fact that is dangerous now, with its source; omit when none>
 
-➡️ <recommended answer> — <what backs it>
+Below are the decisions, in plain English. Each has my recommendation first.
+
+A. <group topic>
+
+<facts the group's decisions share, one bullet each, with source; omit when none>
+
+1. <question, one sentence>
+   - (a) Recommended: <option>. <what it changes or costs>, backed by <source>
+   - (b) <option>. <what it changes or costs>
+2. <question> Skip if 1(b).
+   - ...
+
+Answer decisions 1–2. You can reply "all recommended" and list only the ones you want differently.
 ```
+
+- Write each fact once, above the group that uses it.
+- End the block on the answer line.
 
 ## A decision the user cannot answer
 
