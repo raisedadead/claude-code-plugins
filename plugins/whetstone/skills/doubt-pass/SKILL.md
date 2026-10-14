@@ -12,7 +12,7 @@ The cheapest bug is the one caught before the code exists. A fresh-context revie
 - Before a non-trivial architecture or design decision.
 - The user asks for a plan to be stress-tested, holes poked, a second opinion — while it is still a plan, no diff yet.
 
-Neighbours: `/code-review` needs a diff that already exists; `grill-me` interviews _you_ for requirements. This one sends a fresh agent at an artifact.
+Neighbours: `/code-review` needs a diff that already exists; `whetstone:grill` interviews _you_ for requirements. This one sends a fresh agent at an artifact.
 
 ## Protocol
 
