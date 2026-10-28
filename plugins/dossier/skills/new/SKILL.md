@@ -42,7 +42,7 @@ The helper discovers the newest `.grill/<date>-<slug>.md` by slug — grill's ow
 | 0      | complete (path printed)                                          | consume its `## Draft` §G/§C in step 2 — do NOT re-ask; after the step-3 Write lands, stamp via `ds assert-grill --consume .scratchpad "<slug>" "<date>-<slug>"` (atomic tmp+mv per Vm.8; refuses a double-consume) |
 | 1      | no artifact                                                      | proceed normally — grill is never required; step 2's clarify lever recommends it                                                                                                                                    |
 | 2, 3   | artifact incomplete / unconfirmed                                | REFUSE scaffold; point at `ds:grill --resume <slug>` (or delete the artifact to abandon)                                                                                                                            |
-| 4      | artifact already consumed                                        | proceed normally; recommend a fresh `ds:grill "<goal sentence>"` — a consumed grill never feeds twice                                                                                                                          |
+| 4      | artifact already consumed                                        | proceed normally; recommend a fresh `ds:grill "<goal sentence>"` — a consumed grill never feeds twice                                                                                                               |
 | 69, 70 | `cli/ds` did not run (69: no Node.js 22.18+; 70: internal error) | REFUSE scaffold; report the stderr line                                                                                                                                                                             |
 
 ### 2. Gather inputs (operator-interactive)
@@ -52,7 +52,7 @@ Ask one block at a time, tersely, no preamble:
 1. **§G goal** — one-line outcome, then up to 5 scope bullets (IN / NOT IN).
 1. **§C constraints** — locked decisions, stack notes. Bullets, ≤10.
 1. **§X repos** — each repo this dossier touches, as `<org>/<name>` or an absolute path. Operator-provided; no git-remote magic.
-1. **Initial §T tasks** (optional) — T1..Tn now, or later via `ds:build`.
+1. **Initial §T tasks** (optional) — T1..Tn now, or later via `ds:build`. Give a row `who=H` only after the agent tried to prove it in a scratch fixture (a throwaway directory, an isolated tmux socket, a disposable session) and could not.
 
 **A wide refactor is sequenced expand–contract.** One mechanical change whose blast radius breaks many call sites at once (rename a column, retype a shared symbol) cannot land green as one task. Expand first: add the new form beside the old. Then migrate the call sites in batches, one task each, each `needs` the expand. Contract last: delete the old form in a task that `needs` every batch.
 
@@ -85,6 +85,8 @@ Either way the content is FORMAT.md §2.5's — `consumer`, `reached-via`, `budg
 `consumer` is the field that asks whether the work reaches anyone, and the one nobody writes unprompted. Ask for it plainly: who runs this, and by what path does it get to them? A wave once hardened a checker through three review rounds while no consumer could execute it, and no step in this skill had ever asked. `ds:converge` refuses a contract whose `consumer` row is missing or empty (`CONVERGE: PARSE`, exit 2), so a contract written without the answer fails its first run.
 
 A criterion that cannot be written as a command is a criterion nobody can check. Turn it into one, or drop it and say what was dropped.
+
+A done-when command reads source and repo state only. It does not read a deployed target, a pushed remote, or anything that waits on an operator step. A runtime rewrite or an operator delay then fails the check. Put pushes, deploys and reloads in `who=H` rows. `ds close --carry` carries them as `after:` rows.
 
 In the tracked home, commit before the first task — the `UserPromptSubmit` hook counts budget from the commit that added the contract.
 

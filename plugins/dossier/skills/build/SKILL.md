@@ -271,6 +271,8 @@ ds:build --auto printed DONE or PAUSE for <slug>, and §S records the matching a
 
 `/goal clear` (or Esc) ends the run cleanly. `/goal` is the driver because it runs in the foreground, takes mid-run steer, and respects dependency order — Workflows and `/loop` give up all three, so the `--auto` loop stays on `/goal`.
 
+An operator-written goal such as "finish the dossier" cannot pass an open `who=H` row, and the model cannot clear a goal (anthropics/claude-code#92242). When such a goal is active and the frontier holds only `who=H` rows, say once that the goal waits on the operator and that `/goal clear` ends it. Then end each later turn in one line with no tool call. Prefer the `--auto` condition above, which ends on PAUSE.
+
 **Decision boundary — MUST PAUSE, the operator resolves these:**
 
 | class               | trigger                                                                                                                                                                                                                                                         |

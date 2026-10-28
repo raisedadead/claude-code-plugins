@@ -62,7 +62,7 @@ Skip this step when the session has no `TaskList` tool. Claude Code provides the
 1. `TaskList` first. Parse the leading `T<id>` token of each existing task's subject (the join key).
 1. Each §T row in `{., ~}` whose `T<id>` is absent: `TaskCreate` subject=`"<T-id> <task>"`, description = task + `verify` cell, activeForm derived from the task.
 1. `TaskUpdate` each to its glyph: `.`→pending, `~`→in_progress. Already-`x` rows stay out — no steering value, pure clutter.
-1. **`!` and `?` rows stay out too** — TaskList has no "blocked-on-human" status. They surface as BLOCKERS in the report, where the autonomous loop leaves them alone. A `who=H` row is projected but reported under NEEDS YOU: it is takeable, just not by the agent.
+1. **`!` and `?` rows stay out too** — TaskList has no "blocked-on-human" status. They surface as BLOCKERS in the report, where the autonomous loop leaves them alone. A `who=H` row is projected but reported under NEEDS YOU: it is takeable, just not by the agent. When a goal is active and only `who=H` rows remain, the report says the goal cannot pass them and names `/goal clear`.
 1. Dependencies: `blockedBy` is the row's own `needs` cell, mapped id to task. Read, never inferred — the rule this replaces derived it from phase order, so every task in a phase waited on the whole phase before it whether or not it depended on any of it.
 
 **The reverse direction is advisory:** a TaskList task marked `completed` whose §T row is not `x` gets a WARN (`run ds:build <T-id> --resume to finalize cite+flip`). The flip itself belongs to `ds:build`, which produces the commit cite Vm.3 requires.
