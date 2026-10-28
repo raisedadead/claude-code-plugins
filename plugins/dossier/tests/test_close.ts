@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -16,9 +16,9 @@ type Row = [id: string, state: string, who: string, needs?: string]
 
 type Run = { status: number; stdout: string; stderr: string }
 
-async function run(file: string, args: string[], cwd?: string): Promise<Run> {
+async function run(file: string, args: string[], cwd?: string, env?: Record<string, string>): Promise<Run> {
   try {
-    const { stdout, stderr } = await execFileAsync(file, args, { cwd, encoding: 'utf8' })
+    const { stdout, stderr } = await execFileAsync(file, args, { cwd, encoding: 'utf8', env: env && { ...process.env, ...env } })
     return { status: 0, stdout, stderr }
   } catch (error) {
     const failed = error as { code?: unknown; stdout?: string; stderr?: string }
@@ -33,7 +33,7 @@ async function must(file: string, args: string[], cwd?: string): Promise<string>
   return done.stdout
 }
 
-function ledger(rows: Row[], bugs = ''): string {
+function ledger(rows: Row[], bugs = '', repos: string[] = []): string {
   const tasks = rows.map(([id, state, who, needs = '—']) => `| ${id} | ${state} | ${who} | task ${id} | ${needs} | ${state === 'x' ? 'abc1234' : '—'} | v |`)
   return [
     '# wave',
@@ -60,6 +60,7 @@ function ledger(rows: Row[], bugs = ''): string {
     '',
     '| repo | branch | ahead | tag | pushed | notes |',
     '|------|--------|-------|-----|--------|-------|',
+    ...repos.map((path) => `| ${path} | main | 0 | — | yes | — |`),
     '',
     '## Status',
     '',
@@ -76,7 +77,9 @@ function contract(criterion = '`true`'): string {
   return `# wave\n\n| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | ${criterion} | exit 0 |\n`
 }
 
-async function repo(rows: Row[], options: { criterion?: string; bugs?: string } = {}): Promise<string> {
+type Setup = { criterion?: string; bugs?: string; changelog?: boolean }
+
+async function repo(rows: Row[], options: Setup = {}): Promise<string> {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'ds-close-')))
   const git = (...args: string[]) => must('git', ['-C', root, ...args])
   await git('init', '-q', '-b', 'main')
@@ -85,6 +88,7 @@ async function repo(rows: Row[], options: { criterion?: string; bugs?: string } 
   writeFileSync(join(root, '.gitignore'), '.scratchpad/\n')
   mkdirSync(join(root, '.dossier'))
   writeFileSync(join(root, '.dossier', `${SLUG}.md`), contract(options.criterion))
+  if (options.changelog) writeFileSync(join(root, 'CHANGELOG.md'), '# Changelog\n')
   await git('add', '.')
   await git('commit', '-q', '-m', 'init')
   mkdirSync(join(root, '.scratchpad', 'dossier', SLUG), { recursive: true })
@@ -108,7 +112,7 @@ async function lastSubject(root: string): Promise<string> {
   return (await must('git', ['-C', root, 'log', '-1', '--format=%s'])).trim()
 }
 
-async function within(body: (root: string) => Promise<void>, rows: Row[], options: { criterion?: string; bugs?: string } = {}): Promise<void> {
+async function within(body: (root: string) => Promise<void>, rows: Row[], options: Setup = {}): Promise<void> {
   const root = await repo(rows, options)
   try {
     await body(root)
@@ -145,6 +149,7 @@ test('--plan on a finished wave reports ready with exit 0 and writes nothing', a
       assert.equal(live(root), before)
     },
     [['T1', 'x', 'A']],
+    { changelog: true },
   )
 })
 
@@ -158,6 +163,88 @@ test('--plan says the changelog check did not run when the contract is untracked
       assert.match(done.stdout, /⚠ no tracked contract — the CHANGELOG\.md check did not run/)
     },
     [['T1', 'x', 'A']],
+    { changelog: true },
+  )
+})
+
+test('--plan stays silent on the changelog advisory when no repo tracks a CHANGELOG.md', async () => {
+  await within(
+    async (root) => {
+      rmSync(join(root, '.dossier'), { recursive: true, force: true })
+      writeFileSync(join(root, '.scratchpad', 'dossier', SLUG, 'CONTRACT.md'), contract())
+      const done = await close(root, '--complete', '--plan')
+      assert.equal(done.status, 0, done.stdout + done.stderr)
+      assert.doesNotMatch(done.stdout, /CHANGELOG/)
+    },
+    [['T1', 'x', 'A']],
+  )
+})
+
+async function changelogRepo(...dates: string[]): Promise<string> {
+  const path = realpathSync(mkdtempSync(join(tmpdir(), 'ds-close-x-')))
+  await must('git', ['-C', path, 'init', '-q', '-b', 'main'])
+  for (const [at, date] of dates.entries()) {
+    writeFileSync(join(path, 'CHANGELOG.md'), `# Changelog\n${at}\n`)
+    await must('git', ['-C', path, 'add', '.'])
+    const commit = `git -C '${path}' -c user.email=t@t -c user.name=t commit -q -m c --date=${date}`
+    await must('sh', ['-c', `GIT_COMMITTER_DATE=${date} ${commit}`])
+  }
+  return path
+}
+
+async function withRepo(dates: string[], body: (stdout: string) => void, prepare = (_root: string): void => {}): Promise<void> {
+  await within(
+    async (root) => {
+      const path = await changelogRepo(...dates)
+      try {
+        prepare(root)
+        writeFileSync(join(root, '.scratchpad', 'dossier', SLUG, 'DOSSIER.md'), ledger([['T1', 'x', 'A']], '', [path]))
+        const done = await close(root, '--complete', '--plan')
+        assert.equal(done.status, 0, done.stdout + done.stderr)
+        body(done.stdout)
+      } finally {
+        rmSync(path, { recursive: true, force: true })
+      }
+    },
+    [['T1', 'x', 'A']],
+  )
+}
+
+test('--plan warns when an absolute-path repo keeps a CHANGELOG.md unchanged since the contract commit', async () => {
+  await withRepo(['2000-01-01T00:00:00Z'], (stdout) => assert.match(stdout, /⚠ no CHANGELOG\.md changed since the contract commit/))
+})
+
+test('--plan stays silent once an absolute-path repo changes its CHANGELOG.md after the contract commit', async () => {
+  await withRepo(['2000-01-01T00:00:00Z', '2090-01-01T00:00:00Z'], (stdout) => assert.doesNotMatch(stdout, /CHANGELOG/))
+})
+
+test('--plan stays silent when an absolute-path repo has no commit before the contract commit', async () => {
+  await withRepo(['2090-01-01T00:00:00Z'], (stdout) => assert.doesNotMatch(stdout, /CHANGELOG/))
+})
+
+test('--plan stays silent when the contract repo adds its first CHANGELOG.md beside a repo that keeps one', async () => {
+  await withRepo(
+    ['2000-01-01T00:00:00Z'],
+    (stdout) => assert.doesNotMatch(stdout, /CHANGELOG/),
+    (root) => writeFileSync(join(root, 'CHANGELOG.md'), '# Changelog\n'),
+  )
+})
+
+test('--plan runs the changelog check when the ledger root is a symlink', async () => {
+  await within(
+    async (root) => {
+      const link = join(tmpdir(), `ds-close-link-${root.split('/').pop()}`)
+      symlinkSync(root, link)
+      try {
+        const done = await run('sh', [DS, 'close', SLUG, '--complete', '--plan'], tmpdir(), { DOSSIER_LEDGER_ROOT: link })
+        assert.equal(done.status, 0, done.stdout + done.stderr)
+        assert.match(done.stdout, /⚠ no CHANGELOG\.md changed since the contract commit/)
+      } finally {
+        rmSync(link, { force: true })
+      }
+    },
+    [['T1', 'x', 'A']],
+    { changelog: true },
   )
 })
 

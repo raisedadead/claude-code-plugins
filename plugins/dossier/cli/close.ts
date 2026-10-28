@@ -232,14 +232,27 @@ function takeLock(dir: string): void {
   writeFileSync(join(dir, '.ds-lock'), JSON.stringify({ pid: process.pid, started: new Date().toISOString(), skill: 'ds close', target: '—' }))
 }
 
-function changelogAdvisory(contract: string | undefined): string | undefined {
-  if (!contract || contract.endsWith('/CONTRACT.md')) return 'no tracked contract — the CHANGELOG.md check did not run'
-  const top = dirname(dirname(contract))
+const isChangelog = (path: string): boolean => basename(path) === 'CHANGELOG.md'
+
+function changelogAdvisory(contract: string | undefined, root: string, text: string): string | undefined {
+  const top = contract && !contract.endsWith('/CONTRACT.md') ? dirname(dirname(contract)) : undefined
+  const tracked = top && topLevel(top)
+  const listed = namedRows(text, SEC.repos)
+    .map((row) => row('repo'))
+    .filter((path) => path.startsWith('/') && existsSync(path))
+  const repos = [...new Set([root, ...(top ? [top] : []), ...listed].map(topLevel))]
+  const kept = repos.filter((repo) => git(repo, 'ls-files', '--cached', '--others', '--exclude-standard').out.split('\n').some(isChangelog))
+  if (!kept.length) return undefined
+  if (!contract || !top) return 'no tracked contract — the CHANGELOG.md check did not run'
   const added = git(top, 'log', '--diff-filter=A', '--format=%H', '--', relative(top, contract)).out.split('\n').pop()
   if (!added) return 'the contract is not committed — the CHANGELOG.md check did not run'
-  const tracked = git(top, 'diff', '--name-only', added).out.split('\n')
-  const changed = [...tracked, ...git(top, 'ls-files', '--others', '--exclude-standard').out.split('\n')]
-  if (changed.some((path) => basename(path) === 'CHANGELOG.md')) return undefined
+  const since = git(top, 'show', '-s', '--format=%cI', added).out
+  for (const repo of kept) {
+    const base = repo === tracked ? added : git(repo, 'rev-list', '-1', `--before=${since}`, 'HEAD').out
+    const changed = base ? git(repo, 'diff', '--name-only', base).out : git(repo, 'ls-files').out
+    const untracked = git(repo, 'ls-files', '--others', '--exclude-standard').out
+    if ([...changed.split('\n'), ...untracked.split('\n')].some(isChangelog)) return undefined
+  }
   return 'no CHANGELOG.md changed since the contract commit — write the entry first, or close without one'
 }
 
@@ -279,7 +292,7 @@ function check(options: Options, tools: CloseTools, at: Wave, text: string, rows
     result.record = verdict.record
   }
   for (const repo of unpushedRepos(text)) result.findings.push(`⚠ ${repo} not pushed — the push stays yours`)
-  const changelog = mode.kind === 'abandoned' ? undefined : changelogAdvisory(waveContract(at.dir, at.root))
+  const changelog = mode.kind === 'abandoned' ? undefined : changelogAdvisory(waveContract(at.dir, at.root), at.root, text)
   if (changelog) result.findings.push(`⚠ ${changelog}`)
   return result
 }

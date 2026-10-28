@@ -48,7 +48,7 @@ Put the plan in front of the operator, with a one-line `--summary` proposal. Res
 - An unmet or unparsed contract: fix it, or add `--accept-unmet` on the operator's explicit say-so. The flag records the unmet ids in §S.
 - Work that will not finish: `--abandon "<reason>"` on the operator's say-so.
 
-Then print each `paused` row in `.scratchpad/INDEX.md` with its route: resume it through `ds:status`, or close it with `--abandon`. A `⚠` CHANGELOG line means no `CHANGELOG.md` in the contract's repo changed since the contract commit (write the entry, or close without one), or that the check did not run because the contract is untracked.
+Then print each `paused` row in `.scratchpad/INDEX.md` with its route: resume it through `ds:status`, or close it with `--abandon`. The CHANGELOG check covers the ledger repo, the repo of a tracked contract, and each §X repo written as an absolute path, and stays silent when none of them tracks a `CHANGELOG.md`. A `⚠` CHANGELOG line means no `CHANGELOG.md` in those repos changed since the contract commit (write the entry, or close without one), or that the check did not run because the contract is untracked.
 
 ### 3. Run
 
