@@ -166,8 +166,6 @@ Then `git commit` with subject pattern:
 <type>(<scope>): <imperative summary>
 
 <optional body — only if "why" isn't obvious>
-
-Refs §T <T-id>
 ```
 
 Capture SHA. Append §S:
@@ -244,10 +242,10 @@ Every answer here is already stated once in the steps above — collected so the
 | Auto-confirm the §X stale guard                        | §8a / Vm.X — stale §X hides push/ahead drift. Under `--auto` it is a PAUSE (`x-stale`) and the operator answers the prompt.                      |
 | Keep retrying a red test past 2 attempts               | `retries-exhausted` PAUSE (2 fixes + one auto-`ds:backprop`). Looping burns turns — escalate the decision.                                       |
 | Patch the symptom, skip the invariant                  | §6 — if the failure implies a missing invariant, run `ds:backprop` to register it, then green the test under it.                                 |
-| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. The marker guard passes a bare `Phase N`. Source comments answer _why_; §B/§S answer _which phase_.                 |
+| Tag source with `// Phase N` to track the work         | Phase tracking lives in §B/§S. The marker guard passes a bare `Phase N`. Source comments answer _why_; §B/§S answer _which phase_.               |
 | Retry the same fix after an identical failure          | Stall rule (§6) — twice-identical output is a stuck signal; change strategy or spawn a scout before the third attempt.                           |
 | Blow past the budget ceiling mid-task                  | `budget` PAUSE — land clean: WIP commit, `~` row, §S handoff. An unrecorded tree is the expensive part.                                          |
-| Keep correcting the same issue in a stale context      | Failure handling — two failed corrections = contaminated context; reset via a §S handoff + fresh session, lesson recorded.                        |
+| Keep correcting the same issue in a stale context      | Failure handling — two failed corrections = contaminated context; reset via a §S handoff + fresh session, lesson recorded.                       |
 | Skip the doubt gate on a design-class task             | §5.6 — design flaws are cheapest pre-RED. Auto-fires without a flag; absent whetstone logs `doubt=skipped-absent`, so the skip is on the record. |
 
 ## Autonomous mode (`--auto`)
@@ -275,16 +273,16 @@ An operator-written goal such as "finish the dossier" cannot pass an open `who=H
 
 **Decision boundary — MUST PAUSE, the operator resolves these:**
 
-| class               | trigger                                                                                                                                                                                                                                                         |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `blocked`           | row state `!` or `?`                                                                                                                                                                                                                                            |
-| `ambiguous`         | `verify=—` on a behaviour-bearing task, or >1 reasonable implementation                                                                                                                                                                                         |
-| `destructive`       | task implies delete/drop/migrate/force, schema change, files outside §X repos, or a rebase/cherry-pick conflict hit mid-WORK (§6 conflict route)                                                                                                                |
-| `push`              | any `git push` / network-mutating op — stop and hand back; never auto-push                                                                                                                                                                                      |
-| `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                                                                                                                                                                                                    |
-| `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                                                                                                                                              |
-| `tiger`             | `tiger-check` exit 1 (§7 tiger route) — an added line exceeds a limit the repo itself declared. Exit 2 is advisory and never pauses                                                                                                                          |
-| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — the operator answers it                                                                                                                                                                                            |
+| class               | trigger                                                                                                                                                                                                           |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `blocked`           | row state `!` or `?`                                                                                                                                                                                              |
+| `ambiguous`         | `verify=—` on a behaviour-bearing task, or >1 reasonable implementation                                                                                                                                           |
+| `destructive`       | task implies delete/drop/migrate/force, schema change, files outside §X repos, or a rebase/cherry-pick conflict hit mid-WORK (§6 conflict route)                                                                  |
+| `push`              | any `git push` / network-mutating op — stop and hand back; never auto-push                                                                                                                                        |
+| `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                                                                                                                                                      |
+| `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                                                                                                |
+| `tiger`             | `tiger-check` exit 1 (§7 tiger route) — an added line exceeds a limit the repo itself declared. Exit 2 is advisory and never pauses                                                                               |
+| `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — the operator answers it                                                                                                                                              |
 | `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`. Clean landing: commit WIP work to the task's files, row stays `~`, §S handoff note — the tree is recorded before the loop stops |
 
 **Excuse table — the rationalization each class invites, and the answer that holds.** Prose rails, model-enforced; the PAUSE itself stays the contract:

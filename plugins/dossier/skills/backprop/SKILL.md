@@ -85,14 +85,14 @@ Append §S: `ds:backprop <B> flake=<rate> runs=<n>` (the resume table keys on it
 
 Write the test that reproduces the bug and run it — it must FAIL (RED). A passing test means the bug is characterised wrongly; revisit step 4.
 
-**Test comments stay phase-agnostic.** The link lives in the test name and the commit's `Refs §B B<N>`; the forms `// Phase N`, `// PH<n>-B<k>` and `// V<n> (Phase <m> / A<k>)` belong in neither the test body nor anywhere else in source. That is a convention you keep, and the dossier mod's marker guard covers only part of it:
+**Test comments stay phase-agnostic.** The link lives in the test name and the §S `test=<sha>` line; the forms `// Phase N`, `// PH<n>-B<k>` and `// V<n> (Phase <m> / A<k>)` belong in neither the test body nor anywhere else in source. That is a convention you keep, and the dossier mod's marker guard covers only part of it:
 
-| comment line           | marker guard                                                |
-| ---------------------- | ----------------------------------------------------------- |
-| `// PH3-B7`            | denies the Edit/Write with the reason                       |
-| `// §V26`, `# §B3`     | denies — same                                               |
-| `// Phase 2`           | silent, the write lands                                     |
-| `// V3 (Phase 2 / A1)` | silent, the write lands                                     |
+| comment line           | marker guard                          |
+| ---------------------- | ------------------------------------- |
+| `// PH3-B7`            | denies the Edit/Write with the reason |
+| `// §V26`, `# §B3`     | denies — same                         |
+| `// Phase 2`           | silent, the write lands               |
+| `// V3 (Phase 2 / A1)` | silent, the write lands               |
 
 Its `MARKER_PATTERNS` are exactly two: a comment line containing `PH\d+-[A-Z]\d+`, or one carrying a `§[VBTSXGZ]\d+` sigil. A bare `Phase|Stage|Step N` is deliberately unmatched — it collides with legitimate `# Step 1: dump` comments — and the V-form carries no `§`, so neither of those two is reported by anything. It is also scoped: in a session whose cwd has no `.scratchpad/dossier` directory it scans nothing, so the guard is silent on all four forms outside a dossier repo. It denies the first two forms; the convention covers the other two.
 
@@ -100,8 +100,6 @@ Commit:
 
 ```
 test(<scope>): repro <bug-label>
-
-Refs §B B<N>
 ```
 
 Append §S:
@@ -170,8 +168,6 @@ Commit:
 fix(<scope>): <imperative summary>
 
 <body if non-obvious>
-
-Refs §B B<N>
 ```
 
 Append §S:
@@ -204,12 +200,12 @@ test=<sha>, fix=<sha>
 
 Each rebuttal appears once in the steps above; they are collected here so the temptation and its answer sit together.
 
-| Tempting shortcut                              | Why not                                                                                                           |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Write the fix before a failing test            | §5 — a test that passes pre-fix doesn't characterize the bug. RED first; if it's green, revisit step 4.           |
-| Skip the §V invariant ("it's a one-off")       | §7 — only `low`/one-off skips. `high`/systemic MUST add a §V row, or the whole class recurs.                      |
-| Green the regression test, skip the full suite | §8 — a scoped GREEN can mask a fresh regression. Run the full (or scoped) suite before committing the fix.        |
-| Tag the test with `// PH<n>-B<k>`              | §5 — test name + `Refs §B B<N>` carry the link. The marker guard denies it (opt-out: `DOSSIER_MARKER_GUARD=off`). |
+| Tempting shortcut                              | Why not                                                                                                            |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Write the fix before a failing test            | §5 — a test that passes pre-fix doesn't characterize the bug. RED first; if it's green, revisit step 4.            |
+| Skip the §V invariant ("it's a one-off")       | §7 — only `low`/one-off skips. `high`/systemic MUST add a §V row, or the whole class recurs.                       |
+| Green the regression test, skip the full suite | §8 — a scoped GREEN can mask a fresh regression. Run the full (or scoped) suite before committing the fix.         |
+| Tag the test with `// PH<n>-B<k>`              | §5 — test name + §S `test=<sha>` carry the link. The marker guard denies it (opt-out: `DOSSIER_MARKER_GUARD=off`). |
 
 ## Auto-trigger from ds:build
 
