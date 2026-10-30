@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Marked } from 'marked'
 import { test } from 'vitest'
+import { workingLabels } from '../skills/html-report/scripts/labels.ts'
 import { buildReport, type Diagram } from '../skills/html-report/scripts/layout.ts'
 import { depsHome, ensureDeps, findChrome } from '../skills/html-report/scripts/runtime.ts'
 
@@ -71,6 +72,20 @@ test('fails the build on a diagram that does not render, and names it', async ()
     assert.equal(error.message, 'diagram 2 ("graph TD; A-->"): Parse error on line 1')
     return true
   })
+})
+
+test('finds the working labels in the prose', () => {
+  const markdown = '# T\n\nMerge the T13 PRs.\n\n- Run it in fCC:1:2, then close §T.\n'
+  assert.deepEqual(workingLabels(markdown), [
+    { line: 3, text: 'T13' },
+    { line: 5, text: 'fCC:1:2' },
+    { line: 5, text: '§T' },
+  ])
+})
+
+test('ignores a label in code, in a link and inside a longer word', () => {
+  const markdown = '# T\n\nRun `T13-run.sh` at `src/a.ts:12:3`.\n\n```sh\nT13 fCC:1:2\n```\n\nIPv4, E2E and [the run](https://x.dev/T13).\n'
+  assert.deepEqual(workingLabels(markdown), [])
 })
 
 test('escapes the page title', async () => {

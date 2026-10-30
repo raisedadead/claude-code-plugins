@@ -22,17 +22,17 @@ Composition depth, not fusion. Merging them has been proposed and rejected twice
 
 One wave of work is one file: `.scratchpad/dossier/<date>-<slug>/DOSSIER.md`. Directory names sort chronologically; `.scratchpad/INDEX.md` is the generated dashboard across all of them.
 
-| concept      | what it is                                                                         |
-| ------------ | ---------------------------------------------------------------------------------- |
-| Dossier      | A wave of work. One file, one goal, one lifetime.                                  |
-| Task         | An atomic unit of work. `id` = `T<N>` flat, monotonic, never reused.               |
-| `who`        | A task's owner: `A` the agent can finish it alone · `H` it needs the operator.     |
-| `needs`      | A task's own dependency cell — the ids that must reach `x` first, or `—` for none. |
-| Frontier     | Every `.` row whose `needs` are all `x`. Derived on read, never stored.            |
-| Bug          | A caught defect. May be promoted to an invariant.                                  |
-| Invariant    | A testable rule that must hold.                                                    |
-| Repo         | A touched repository, with ahead-count, tag and push state.                        |
-| Status entry | An append-only, timestamped timeline line.                                         |
+| concept      | what it is                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| Dossier      | A wave of work. One file, one goal, one lifetime.                                           |
+| Task         | An atomic unit of work. `id` = `T<N>` flat, monotonic, never reused.                        |
+| `who`        | A task's owner: `A` the agent can finish it alone · `H` it needs the operator.              |
+| `needs`      | A task's own dependency cell — the ids that must reach `x` first, or `—` for none.          |
+| Frontier     | Every `.` row whose `needs` are all `x`. Derived on read, never stored.                     |
+| Bug          | A caught defect. May be promoted to an invariant.                                           |
+| Invariant    | A testable rule that must hold.                                                             |
+| Repo         | A touched repository, with ahead-count, tag and push state.                                 |
+| Status entry | An append-only, timestamped timeline line.                                                  |
 | Closeout     | The final postscript. Requires a successor or an explicit completion. `ds close` writes it. |
 
 Ordering is per-row, not per-phase: `ds:build --auto` selects the first frontier row with `who=A`, which is what those two columns buy. Tasks carries no phase column, so a wave that runs in stages says so in `needs`.
@@ -61,17 +61,18 @@ This ordering is descriptive, not aspirational. Seven of the eight recorded conf
 
 Orthogonal to the ordering above — no priority ranking explains why one hook hard-denies and another never blocks. Signal quality does.
 
-| gate                            | signal                                                 | action       |
-| ------------------------------- | ------------------------------------------------------ | ------------ |
-| dossier header guard            | non-canonical state token in a file named `DOSSIER.md` | PreToolUse `deny` |
-| dossier marker guard            | regex over comment prefixes, in a project with `.scratchpad/dossier/` | PreToolUse `deny`, opt-out `DOSSIER_MARKER_GUARD=off` (D33: an operator decision against F20's measured false positives) |
-| dossier verify advisory         | network-dependent freshness claim, read from the cache | never blocks |
-| dossier bug-invariant nag       | a §B row whose `invariant added` and `fix cite` cells are both empty or `—`, after an Edit or Write of `DOSSIER.md` | PostToolUse context, never blocks |
-| dossier grilling reminder       | an outside grilling skill invoked in a repo with `.scratchpad/dossier/` | PreToolUse context, never blocks |
-| `ds close` changelog advisory   | no `CHANGELOG.md` changed since the contract commit    | `⚠` line, never blocks |
-| whetstone html-report           | a Mermaid diagram its parser rejects, or no local browser | `bin/html-report` exit 1 or 69; no new page is written |
-| whetstone verify-claims         | a claim whose grounder returned no verdict with a quote | `UNRULED` in the tally, never blocks |
-| whetstone claim gate            | unbacked enforcement verb in the final reply           | Stop `additionalContext`, once per turn, never blocks; the model continues with the flagged lines in context and is asked to send the whole reply again, since focus mode shows only the last message; the fix is model-judgment |
+| gate                          | signal                                                                                                              | action                                                                                                                                                                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| dossier header guard          | non-canonical state token in a file named `DOSSIER.md`                                                              | PreToolUse `deny`                                                                                                                                                                                                                |
+| dossier marker guard          | regex over comment prefixes, in a project with `.scratchpad/dossier/`                                               | PreToolUse `deny`, opt-out `DOSSIER_MARKER_GUARD=off` (D33: an operator decision against F20's measured false positives)                                                                                                         |
+| dossier verify advisory       | network-dependent freshness claim, read from the cache                                                              | never blocks                                                                                                                                                                                                                     |
+| dossier bug-invariant nag     | a §B row whose `invariant added` and `fix cite` cells are both empty or `—`, after an Edit or Write of `DOSSIER.md` | PostToolUse context, never blocks                                                                                                                                                                                                |
+| dossier grilling reminder     | an outside grilling skill invoked in a repo with `.scratchpad/dossier/`                                             | PreToolUse context, never blocks                                                                                                                                                                                                 |
+| `ds close` changelog advisory | no `CHANGELOG.md` changed since the contract commit                                                                 | `⚠` line, never blocks                                                                                                                                                                                                           |
+| whetstone html-report         | a Mermaid diagram its parser rejects, or no local browser                                                           | `bin/html-report` exit 1 or 69; no new page is written                                                                                                                                                                           |
+| whetstone html-report labels  | a working label, such as `T13`, `§T` or `fCC:1:2`, in the report's prose                                            | stderr line per label after the page is written, exit 0, never blocks                                                                                                                                                            |
+| whetstone verify-claims       | a claim whose grounder returned no verdict with a quote                                                             | `UNRULED` in the tally, never blocks                                                                                                                                                                                             |
+| whetstone claim gate          | unbacked enforcement verb in the final reply                                                                        | Stop `additionalContext`, once per turn, never blocks; the model continues with the flagged lines in context and is asked to send the whole reply again, since focus mode shows only the last message; the fix is model-judgment |
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.
 
@@ -91,20 +92,20 @@ A plugin's `bin/` is documented as reaching the Bash tool's `PATH`. Whether it a
 
 Every gate ends in one of these signals. The enforcement column is the honesty tenet made concrete — it separates what is computed from what is merely parsed. This table lives here and nowhere else; it was previously duplicated across two files with a test to keep the copies identical.
 
-| surface             | signal                                                                          | enforced by              |
-| ------------------- | ------------------------------------------------------------------------------- | ------------------------ |
-| `whetstone-doubter` | `DOUBT: FAILURES` or `NO FAILURE FOUND`                                         | model-judgment, parsed   |
-| `dossier-reviewer`  | `REVIEW: PASS` or `CHANGES`                                                     | model-judgment, parsed   |
-| `skill-smith` lint  | `FAIL` / `WARN` lines; exit 1 if any `FAIL`                                     | code — `lint-skill`      |
-| `tdd-cycle` slice   | red, green and full-suite exit codes                                            | code — `run_slice.sh`    |
-| `merge-resolve`     | exit 0 on marker count and pass count                                           | code — `verify_clean.sh` |
-| `flaky-test-audit`  | per-test rate; anything between 0 and 1 is flaky                                | code — computed rate     |
-| `tiger-style` check | `TIGER: CLEAN <n> file(s)[, <m> skipped]`, `BLOCK <n>` or `NAG <n>`; exit 0/1/2 | code — `tiger-check`     |
-| `ds:converge`       | `CONVERGE: MET <n>/<n>`, `UNMET <n> of <m>` or `PARSE — <why>`; exit 0/1/2      | code — `cli/ds converge` |
-| `ds close`          | `✗` lines refuse with exit 1; `⚠` lines are advisory; `ready` on `--plan`      | code — `cli/ds close`    |
-| `ds assert-grill`   | exit 0 complete, 1 no artifact, 2 open decision or open fork child, 3 unconfirmed, 4 consumed | code — `cli/ds assert-grill` |
-| `html-report`       | exit 0 written, 1 a diagram did not parse, 64 usage, 69 no browser or install failed | code — `bin/html-report` |
-| `verify-claims`     | per claim `CONFIRMED`, `UNSUPPORTED`, `CONTRADICTED`, `SOURCE-DEAD` or `UNRULED` | model-judgment for the verdict; code for `UNRULED` (no verdict with a quote) |
+| surface             | signal                                                                                        | enforced by                                                                  |
+| ------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `whetstone-doubter` | `DOUBT: FAILURES` or `NO FAILURE FOUND`                                                       | model-judgment, parsed                                                       |
+| `dossier-reviewer`  | `REVIEW: PASS` or `CHANGES`                                                                   | model-judgment, parsed                                                       |
+| `skill-smith` lint  | `FAIL` / `WARN` lines; exit 1 if any `FAIL`                                                   | code — `lint-skill`                                                          |
+| `tdd-cycle` slice   | red, green and full-suite exit codes                                                          | code — `run_slice.sh`                                                        |
+| `merge-resolve`     | exit 0 on marker count and pass count                                                         | code — `verify_clean.sh`                                                     |
+| `flaky-test-audit`  | per-test rate; anything between 0 and 1 is flaky                                              | code — computed rate                                                         |
+| `tiger-style` check | `TIGER: CLEAN <n> file(s)[, <m> skipped]`, `BLOCK <n>` or `NAG <n>`; exit 0/1/2               | code — `tiger-check`                                                         |
+| `ds:converge`       | `CONVERGE: MET <n>/<n>`, `UNMET <n> of <m>` or `PARSE — <why>`; exit 0/1/2                    | code — `cli/ds converge`                                                     |
+| `ds close`          | `✗` lines refuse with exit 1; `⚠` lines are advisory; `ready` on `--plan`                     | code — `cli/ds close`                                                        |
+| `ds assert-grill`   | exit 0 complete, 1 no artifact, 2 open decision or open fork child, 3 unconfirmed, 4 consumed | code — `cli/ds assert-grill`                                                 |
+| `html-report`       | exit 0 written, 1 a diagram did not parse, 64 usage, 69 no browser or install failed          | code — `bin/html-report`                                                     |
+| `verify-claims`     | per claim `CONFIRMED`, `UNSUPPORTED`, `CONTRADICTED`, `SOURCE-DEAD` or `UNRULED`              | model-judgment for the verdict; code for `UNRULED` (no verdict with a quote) |
 
 ## Tenets
 

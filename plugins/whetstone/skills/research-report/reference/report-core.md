@@ -46,10 +46,6 @@ Optional sections go between Evidence and Recommendation: baseline, goals and ta
 
 ## Reader rules
 
-- Write plain English. Short sentences, active voice, one idea per paragraph.
-- Define each term at its first use. Expand each abbreviation once.
-- Start each section with one sentence that states its result.
-- Give every number its unit and its source.
-- Put a decision in `Decisions for you` only when the reader must choose. Give each one a recommendation.
-- Use a diagram when it replaces a paragraph of explanation. Give it `accTitle:` and `accDescr:`.
+Follow [Write for the reader](../../html-report/SKILL.md#write-for-the-reader) and [Write for the layout](../../html-report/SKILL.md#write-for-the-layout). One more rule for research:
+
 - Keep conflicting sources as separate rows; say which one the report trusts and why.

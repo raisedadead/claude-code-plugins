@@ -4,6 +4,7 @@ import { createRequire } from 'node:module'
 import { basename, dirname, extname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import type { Marked } from 'marked'
+import { workingLabels } from './labels.ts'
 import { buildReport } from './layout.ts'
 import { depsHome, ensureDeps, findChrome } from './runtime.ts'
 
@@ -98,6 +99,11 @@ try {
   for (const [i, figure] of figures.entries()) await figure.screenshot({ path: join(shots, `figure-${i + 1}.png`) })
   process.stdout.write(`wrote ${target} (${Math.round(statSync(target).size / 1024)} KB)\n`)
   if (figures.length) process.stdout.write(`figures: ${shots} (${figures.length}); read each one\n`)
+  const labels = new Map<string, Set<number>>()
+  for (const { line, text } of workingLabels(markdown)) labels.set(text, (labels.get(text) ?? new Set()).add(line))
+  for (const [text, lines] of labels) {
+    process.stderr.write(`html-report: "${text}" (${source} lines ${[...lines].join(', ')}) looks like a working label; name the thing by what it does, or define it\n`)
+  }
 } catch (error) {
   failure = error instanceof Error ? error.message : String(error)
 } finally {
