@@ -39,9 +39,9 @@ A heading such as `Decision log` stays in the body. The table of contents lists 
 
 ## Write for the reader
 
-The reader did not see the work. Write plain English with fewer words. Go technical only when the reader asks for it.
+The reader did not see the work. Write plain English with fewer words: short sentences, the active voice, one idea in each paragraph. Go technical only when the reader asks for it.
 
-- Name a thing by what it does, not by a working label such as a task ID, a ledger row, a step number or a pane name. "Step 1, which is now" is clear; "T13" is not.
+- Name a thing by what it does, not by a working label such as a task ID, a ledger row or a pane name. "The opt-in line, added now" is clear; "T13" is not.
 - Define each technical term at its first use. Expand each abbreviation once. With 3 or more terms, add a short word list.
 - Give every number its unit and its source. Put the source in a short reference, such as a `path:line`, a URL or a command. Do not narrate the probe.
 - Put the risks in a table of what can go wrong and the fix for each.
@@ -64,13 +64,13 @@ The reader did not see the work. Write plain English with fewer words. Go techni
 
 ## Honesty labels
 
-| claim                                          | enforced by                                                                     |
-| ---------------------------------------------- | ------------------------------------------------------------------------------- |
-| a diagram that does not parse stops the render | code — exit 1; an earlier page at the target is removed                         |
-| no local browser stops the render              | code — exit 69 before any install                                               |
-| the answer box holds 3 to 5 bullets            | model-judgment — the renderer moves the section and counts nothing              |
-| each diagram is legible                        | model-judgment — the screenshots exist; reading them is the check               |
-| a working label in the prose is reported       | advisory — one stderr line per label, exit 0; code and diagrams are not scanned |
-| the page reads as plain English                | model-judgment — the scan finds labels, not jargon                              |
+| claim                                          | enforced by                                                                                                          |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| a diagram that does not parse stops the render | code — exit 1; an earlier page at the target is removed                                                              |
+| no local browser stops the render              | code — exit 69 before any install                                                                                    |
+| the answer box holds 3 to 5 bullets            | model-judgment — the renderer moves the section and counts nothing                                                   |
+| each diagram is legible                        | model-judgment — the screenshots exist; reading them is the check                                                    |
+| a working label in the prose is reported       | advisory — one stderr line per label, exit 0; fenced code, inline code, comments and open-item lines are not scanned |
+| the page reads as plain English                | model-judgment — the scan finds labels, not jargon                                                                   |
 
 PDF output and hosting are out of scope.

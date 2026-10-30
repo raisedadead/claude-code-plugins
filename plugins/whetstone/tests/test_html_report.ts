@@ -75,16 +75,18 @@ test('fails the build on a diagram that does not render, and names it', async ()
 })
 
 test('finds the working labels in the prose', () => {
-  const markdown = '# T\n\nMerge the T13 PRs.\n\n- Run it in fCC:1:2, then close §T.\n'
+  const markdown = '# T\n\nMerge the T13 PRs.\n\n- Run it in fCC:1:2 or fCC:1.2, then close §T13.\n'
   assert.deepEqual(workingLabels(markdown), [
     { line: 3, text: 'T13' },
     { line: 5, text: 'fCC:1:2' },
-    { line: 5, text: '§T' },
+    { line: 5, text: 'fCC:1.2' },
+    { line: 5, text: '§T13' },
   ])
 })
 
-test('ignores a label in code, in a link and inside a longer word', () => {
-  const markdown = '# T\n\nRun `T13-run.sh` at `src/a.ts:12:3`.\n\n```sh\nT13 fCC:1:2\n```\n\nIPv4, E2E and [the run](https://x.dev/T13).\n'
+test('ignores a label in code, in a link, in a comment, in an open item and inside a longer word', () => {
+  const markdown =
+    '# T\n\nRun `T13-run.sh` at `src/a.ts:12:3`.\n\n```sh\nT13 fCC:1:2\n```\n\nIPv4, E2E, S3, Q3 and [the run](https://x.dev/T13). <!-- T13 -->\n\n§ The next point.\n\n- B4 [H] Approve the PR\n'
   assert.deepEqual(workingLabels(markdown), [])
 })
 

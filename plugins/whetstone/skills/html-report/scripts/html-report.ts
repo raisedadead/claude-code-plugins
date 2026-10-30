@@ -102,7 +102,9 @@ try {
   const labels = new Map<string, Set<number>>()
   for (const { line, text } of workingLabels(markdown)) labels.set(text, (labels.get(text) ?? new Set()).add(line))
   for (const [text, lines] of labels) {
-    process.stderr.write(`html-report: "${text}" (${source} lines ${[...lines].join(', ')}) looks like a working label; name the thing by what it does, or define it\n`)
+    process.stderr.write(
+      `html-report: "${text}" (${source} lines ${[...lines].join(', ')}) looks like a working label; name the thing by what it does, or define it\n`,
+    )
   }
 } catch (error) {
   failure = error instanceof Error ? error.message : String(error)
