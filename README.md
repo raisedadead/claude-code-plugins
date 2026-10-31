@@ -38,7 +38,7 @@ dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globa
 | `/dossier:check`                           | Read-only drift audit across every repo the wave touches.                                    |
 | `/dossier:close`                           | `--complete` · `--successor <slug>` · `--abandon "<why>"`. Shows the plan, then closes.      |
 
-`/dossier-tasks` opens the task pane: the needs tree under the progress line. The status line shows that line too.
+`/dossier-tasks` opens the task pane: the needs tree under the progress line. The status line shows that line too, and ends with `/dossier-tasks`. In the pane, `enter` on an open agent row puts `/dossier:build T<n>` in an empty prompt box; on any other row it shows the full task.
 
 **When to start a wave:** the work spans more than one session, touches more than 5 files, or needs a step only you can do. Smaller work runs without a dossier.
 

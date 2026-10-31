@@ -36,6 +36,7 @@ const verified = new Set<string>()
 const bugsSeen = new Set<string>()
 const PANE = 'dossier-tasks'
 const wave = atom({ plugin: 'dossier', key: 'wave' } as const, null)
+const opened = atom({ plugin: 'dossier', key: 'opened' } as const, '')
 const GLYPH: Record<string, string> = { x: '✓', '~': '▸', '.': '·', '!': '‼', '?': '?' }
 
 async function readOr($: EngineInterface, path: string): Promise<string | undefined> {
@@ -69,7 +70,13 @@ async function liveWave($: EngineInterface, cwd: string): Promise<DossierWave | 
 async function refresh($: EngineInterface, cwd: string): Promise<void> {
   const next = await liveWave($, cwd)
   await update($, wave, (previous) => (previous?.text === next?.text ? previous : next))
-  $.ui.status(next ? progressLine(next.slug, progress(next.text, next.milestone)) : undefined)
+  $.ui.status(next ? `${progressLine(next.slug, progress(next.text, next.milestone))} · /${PANE}` : undefined)
+}
+
+async function fillBuild($: EngineInterface, id: string): Promise<void> {
+  const draft = await $.prompt.read().catch(() => ({ text: '' }))
+  if (draft.text.trim()) return $.ui.toast(`Clear the prompt box, then press enter again to fill /dossier:build ${id}.`)
+  await $.prompt.fill({ text: `/dossier:build ${id}` })
 }
 
 export const register: Register = (on) => {
@@ -91,11 +98,12 @@ export const register: Register = (on) => {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Text } = $.ui.resolve(e)
+    const { Box, Button, Text } = $.ui.resolve(e)
     const live = await read($, wave)
     if (!live) return <Text dimColor>No live dossier wave.</Text>
     const view = progress(live.text, live.milestone)
     const width = Math.max(20, e.props.bodyColumns)
+    const shown = await read($, opened)
     return (
       <Box flexDirection="column">
         <Text bold>{progressLine(live.slug, view)}</Text>
@@ -105,12 +113,20 @@ export const register: Register = (on) => {
           const tail = also.length ? ` +${also.join(' +')}` : ''
           const room = Math.max(4, width - head.length - tail.length)
           const task = row.task.length > room ? `${row.task.slice(0, room - 1)}…` : row.task
+          const build = row.who === 'A' && row.state !== 'x'
+          const press = build ? () => fillBuild($, row.id) : () => update($, opened, (id) => (id === row.id ? '' : row.id))
           return (
-            <Text key={row.id} dimColor={row.state === 'x'} bold={row.state === '~'}>
-              {`${head}${task}${tail}`}
-            </Text>
+            <Box key={`dossier-row-${row.id}`} flexDirection="column">
+              <Button key={`dossier-task-${row.id}`} plain onPress={press}>
+                <Text dimColor={row.state === 'x'} bold={row.state === '~'}>
+                  {`${head}${task}${tail}`}
+                </Text>
+              </Button>
+              {shown === row.id ? <Text dimColor>{`${'  '.repeat(depth + 1)}${row.task}${row.cite && row.cite !== '—' ? ` · ${row.cite}` : ''}`}</Text> : null}
+            </Box>
           )
         })}
+        <Text dimColor>⏎ on an open agent row fills its build command; ⏎ on another row shows it in full.</Text>
       </Box>
     )
   })
