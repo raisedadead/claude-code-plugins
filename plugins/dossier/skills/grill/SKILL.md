@@ -47,8 +47,8 @@ Write every entry through the CLI:
 
 Read the goal sentence, what the operator has said so far, and the repo state (existing dossiers, git log, configs). Tag every open node:
 
-- `FACT` — answerable by lookup. Look it up and record `cite=`. Never ask the operator for a fact the repo answers.
-- `DECISION` — genuinely the operator's call. Ask it. Its `probe=` names the file:line, command or URL you read this session that backs the recommendation, in backticks when it has spaces; `probe=—` declares a pure taste call with nothing to read. A recommendation that moves, renames or removes a thing probes every reference to that thing first.
+- `FACT` — answerable by lookup. Look it up and record `cite=`. The statement says what the cite shows, not only where to look. Never ask the operator for a fact the repo answers.
+- `DECISION` — genuinely the operator's call. Ask it. An agent recommendation that the operator accepted only in passing stays a `DECISION` until a decision block asks it. The tree has a node for what the end user sees. Its `probe=` names the file:line, command or URL you read this session that backs the recommendation, in backticks when it has spaces; `probe=—` declares a pure taste call with nothing to read. A recommendation that moves, renames or removes a thing probes every reference to that thing first.
 
 A fact that needs a sweep (many files, an external doc, a census) goes to a background `dossier-scout` with a self-contained mission. Ask the decisions that do not depend on it meanwhile, record the `FACT` when the scout reports, and hold back only the decisions that need it.
 

@@ -1,7 +1,6 @@
 ---
 name: status
 description: The dossier driver + read-only sit-rep. Default session-open action. Invoke when the user says "ds:status", "ds", "dossier status", "where are we", "sit-rep", "what's next", "check dossier", or session-start before any other ds:* verb.
-disallowed-tools: Edit, Write, NotebookEdit
 ---
 
 # ds:status — the dossier driver (sit-rep)

@@ -1,7 +1,6 @@
 ---
 name: check
 description: Drift detector. Mutates no DOSSIER.md and no repo; it writes only derived caches. Invoke when the user says "ds:check", "check drift", "audit dossier", "does code still match spec", "verify invariants", or before opening a PR.
-disallowed-tools: Edit, Write, NotebookEdit
 ---
 
 # ds:check — drift detector
@@ -77,7 +76,7 @@ Independent of the scouts; run concurrently with dispatch.
 | Vm.7  | INDEX regenerable (run ds regen-index, diff against current)             | optional                                           |
 | Vm.8  | no write-temp orphans                                                    | `ds vm-checks` (Vm.8, deterministic)               |
 | Vm.9  | locks not stale                                                          | `ds vm-checks` (Vm.9, deterministic)               |
-| Vm.12 | ≤1 live dossier (excl. paused)                                           | count INDEX rows state=live; >1 → 🟡 warn           |
+| Vm.12 | ≤1 live dossier (excl. paused)                                           | count INDEX rows state=live; >1 → 🟡 warn          |
 | Vm.13 | no stale-live (no §S in >N days)                                         | newest §S ts per live vs `DS_STALE_LIVE_DAYS` (14) |
 | Vm.14 | every `--auto` PAUSE carries a reason class                              | grep §S `PAUSE reason=`; flag any bare PAUSE       |
 

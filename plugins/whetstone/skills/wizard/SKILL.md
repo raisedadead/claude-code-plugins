@@ -26,7 +26,7 @@ Then show the user the ordered list of stages and the values each produces, and 
 
 ### 2. Map each stage's journey
 
-For each stage, write the precise path a human follows: which URL to open, what to do there, where a value is shown, which variable it fills: e.g. "Dashboard → Developers → API keys → Reveal test key → copy". Where you don't actually know the current UI or the exact command, say so and ask the user or check the docs: never invent steps that may not exist.
+For each stage, write the precise path a human follows: which URL to open, what to do there, where a value is shown, which variable it fills: e.g. "Dashboard → Developers → API keys → Reveal test key → copy". Where you don't actually know the current UI or the exact command, say so and ask the user or check the docs: never invent steps that may not exist. Pin the product, the plan and the UI variant before you write a path, because one product can show different menus by plan or version.
 
 **Done when:** every stage traces to concrete instructions a stranger could follow.
 

@@ -265,7 +265,7 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 ds:build --auto printed DONE or PAUSE for <slug>, and §S records the matching auto-stop or PAUSE line.
 ```
 
-`ask_user` stays at its default (`true`): the operator approves the goal once, then the loop needs no further turn from them. `ProposeGoal` absent → print the same line as `/goal <condition>` for the operator to paste, and continue the loop in this turn. Proposing the goal is model-judgment; the evaluator that holds it is the harness.
+`ask_user` stays at its default (`true`): the operator approves the goal once, then the loop needs no further turn from them. `ProposeGoal` absent → print the two lines that the operator types, in this order: `/goal <condition>` first, then `/dossier:build --auto`. Continue the loop in this turn. Proposing the goal is model-judgment; the evaluator that holds it is the harness.
 
 `/goal clear` (or Esc) ends the run cleanly. `/goal` is the driver because it runs in the foreground, takes mid-run steer, and respects dependency order — Workflows and `/loop` give up all three, so the `--auto` loop stays on `/goal`.
 

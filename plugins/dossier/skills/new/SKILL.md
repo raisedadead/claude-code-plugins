@@ -45,6 +45,8 @@ The helper discovers the newest `.grill/<date>-<slug>.md` by slug — grill's ow
 | 4      | artifact already consumed                                        | proceed normally; recommend a fresh `ds:grill "<goal sentence>"` — a consumed grill never feeds twice                                                                                                               |
 | 69, 70 | `cli/ds` did not run (69: no Node.js 22.18+; 70: internal error) | REFUSE scaffold; report the stderr line                                                                                                                                                                             |
 
+A new slug does not bypass an open grill. When this session left a grill under another slug incomplete or unconfirmed, refuse the scaffold and point at `ds:grill --resume <that slug>`, unless the operator abandons it.
+
 ### 2. Gather inputs (operator-interactive)
 
 Ask one block at a time, tersely, no preamble:
