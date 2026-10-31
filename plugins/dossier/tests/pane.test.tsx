@@ -45,11 +45,10 @@ describe('dossier tasks pane', () => {
       expect(lines).toEqual([
         'wave 33% · 1/3 · in progress T2',
         'Agent 1/2 · You 0/1 · in progress T2',
-        '✓ T1 build the verb',
-        '  ▸ T2 wire the hook',
-        '    · T3 [you] approve the rollout',
         '⏎ on an open agent row fills its build command; ⏎ on another row shows it in full.',
       ])
+      const rows = (await ui.findAll({ type: 'Button' })).map((element) => element.text)
+      expect(rows).toEqual(['✓ T1 build the verb', '  ▸ T2 wire the hook', '    · T3 [you] approve the rollout'])
       await ui.unmount()
     }
   })

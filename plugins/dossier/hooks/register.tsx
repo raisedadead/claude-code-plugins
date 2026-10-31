@@ -117,11 +117,7 @@ export const register: Register = (on) => {
           const press = build ? () => fillBuild($, row.id) : () => update($, opened, (id) => (id === row.id ? '' : row.id))
           return (
             <Box key={`dossier-row-${row.id}`} flexDirection="column">
-              <Button key={`dossier-task-${row.id}`} plain onPress={press}>
-                <Text dimColor={row.state === 'x'} bold={row.state === '~'}>
-                  {`${head}${task}${tail}`}
-                </Text>
-              </Button>
+              <Button key={`dossier-task-${row.id}`} plain label={`${head}${task}${tail}`} onPress={press} />
               {shown === row.id ? <Text dimColor>{`${'  '.repeat(depth + 1)}${row.task}${row.cite && row.cite !== '—' ? ` · ${row.cite}` : ''}`}</Text> : null}
             </Box>
           )
