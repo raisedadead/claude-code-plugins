@@ -54,7 +54,8 @@ Read §S grep `ds:build <T-id>`. Identify last event:
 | (no entries)               | full run from step 5                                                 |
 | `START`                    | step 5 (re-run safe)                                                 |
 | `delegate=`                | step 6.2 item 3 on the builder's test; a clean tree goes to item 2   |
-| `red=` or `rebuild=1`      | step 6.2 item 4 on the tree as it stands                             |
+| `red=`                     | step 6.2 item 3, the GREEN half, with a fresh builder                |
+| `rebuild=1`                | step 6.2 item 4 on the tree as it stands                             |
 | `commit=<sha>`             | step 8 (work already committed)                                      |
 | `§X=partial`               | step 8 (retry §X refresh)                                            |
 | `§X=refreshed`             | step 9 (flip only)                                                   |
@@ -132,8 +133,10 @@ A test that fails and then passes on a rerun with no change is a flake signal. W
 
 The operator marks a row for a builder by writing `route=delegate` in its task cell, as a bare word outside backticks; a marker in backticks reads as prose. The build reads the marker and never writes one, and `ds delegation-check <dossier-dir>` exits 1 when a marked or delegated `x` row has no review line, a row has two rebuilds, or a started `route=pi` row has no approval. Such a row is built by one `general-purpose` subagent; the baseline, the routes and the failure rules of step 6 still bind the main thread. A `route=pi` row needs the operator's approval in §S, `ds:build <T-id> route=pi approved="<operator verbatim>"`, and the Pi route is not built yet: under `--auto` PAUSE (`ambiguous`); interactively, hand it to the operator.
 
-1. **Clean tree.** `git status --porcelain -- . ':(exclude).scratchpad'` must print nothing, so every later change is the builder's. Otherwise PAUSE (`ambiguous`).
-1. **Spawn for RED.** Rewrite `.ds-lock` with a fresh `started`, then spawn one `Agent` with `subagent_type: general-purpose` and no `model`, so the builder runs on the user's subagent default or the session model. Append §S `ds:build <T-id> delegate=general-purpose`. The mission is artifact-only, as in step 6.5:
+Run every git command in this step from the repo root; the `.` pathspec covers only the current directory.
+
+1. **Clean tree.** `git status --porcelain -uall -- . ':(exclude).scratchpad'` must print nothing, so every later change is the builder's. Otherwise PAUSE (`ambiguous`).
+1. **Spawn for RED.** Rewrite `.ds-lock` with a fresh `started`, then spawn one `Agent` with `subagent_type: general-purpose` and no `model`, so the builder runs on the user's subagent default or the session model. Append §S `ds:build <T-id> delegate=general-purpose`. The mission is artifact-only, as in step 6.5. A verify cell of `—` has no RED: its mission opens with `Build one task in <repo path>.`, ends with `Now: make the change.`, `OUTPUT: the changed files, or one QUESTION: line.` and `DONE: the change is in the files`, and goes to item 4. Every other row gets:
 
    ```
    Build one task in <repo path>. Write the test first, then stop.
@@ -148,12 +151,12 @@ The operator marks a row for a builder by writing `route=delegate` in its task c
    DONE: <the test command> fails for the missing behaviour
    ```
 
-1. **RED, then GREEN.** A `QUESTION:` line is a PAUSE (`ambiguous`) with the question in §S; interactively, put it to the operator. Otherwise run the verify command yourself, or, when it does not run the new test, the builder's test command after you read it and see that it only runs the test file the builder wrote. It must fail for the missing behaviour (`run-slice red` when on `PATH`); a pass, or a failure for another cause, is a PAUSE (`ambiguous`). Append §S `ds:build <T-id> red=<n>-failed`. Then `SendMessage` the same builder: `Implement now. OUTPUT: the GREEN output verbatim with its command, then the changed files. DONE: <verify command> exits 0`. Without `SendMessage`, spawn a fresh builder with the mission and the line `The failing test is in place: <command>`. A verify cell of `—` has no RED: end the item-2 mission with `Now: make the change.`, `OUTPUT: the changed files, or one QUESTION: line.` and `DONE: the change is in the files`, then go to item 4.
-1. **Return.** Rewrite `.ds-lock`. A `QUESTION:` line is a PAUSE (`ambiguous`), as in item 3. Otherwise the builder's report is advisory: re-run the verify command and the touched package's full suite yourself, and use that as the GREEN proof. Stage the tracked changes with `git add -u -- . ':(exclude).scratchpad'`, and only the untracked paths the builder's changed-files list names. An untracked path it did not name is a PAUSE (`ambiguous`). Give step 6.5 the whole `git diff --staged`.
-1. **Review, one rebuild.** Step 6.5 runs on every delegated row, and this item replaces its `CHANGES` path. `REVIEW: CHANGES` → `SendMessage` the builder the Critical findings with `Fix these. Keep the test unless a finding names it. Return GREEN.`, append §S `ds:build <T-id> rebuild=1`, then run items 4 and 5 again. A second `CHANGES` is a PAUSE (`review`).
+1. **RED, then GREEN.** A `QUESTION:` line is a PAUSE (`ambiguous`) with the question in §S; interactively, put it to the operator. Otherwise run the verify command yourself, or, when it does not run the new test, the builder's test command after you read it and see that it only runs the test file the builder wrote. It must fail for the missing behaviour (`run-slice red` when on `PATH`); a pass, or a failure for another cause, is a PAUSE (`ambiguous`). Append §S `ds:build <T-id> red=<n>-failed`, with `<n>` the failing-test count the RED output prints. Then `SendMessage` the same builder: `Implement now. OUTPUT: the GREEN output verbatim with its command, then the changed files. DONE: <verify command> exits 0`. Without `SendMessage`, or on a resume where the builder is gone, spawn a fresh builder with the mission and the line `The failing test is in place: <command>. Implement now.`
+1. **Return.** Rewrite `.ds-lock`. A `QUESTION:` line is a PAUSE (`ambiguous`), as in item 3. Otherwise the builder's report is advisory: re-run the verify command (none for `—`) and the touched package's full suite yourself, and use that as the GREEN proof. A red result goes back to the builder once, as a rebuild under item 5; the main thread does not write the code. Stage the tracked changes with `git add -u -- . ':(exclude).scratchpad'`, and only the untracked files the builder's changed-files list names. Compare one file at a time against `git status --porcelain -uall -- . ':(exclude).scratchpad'`; an untracked file it did not name is a PAUSE (`ambiguous`). Give step 6.5 the whole `git diff --staged`.
+1. **Review, one rebuild.** Step 6.5 runs on every delegated row, and this item replaces its `CHANGES` path. `REVIEW: CHANGES` → `SendMessage` the builder the Critical findings with `Fix these. Keep the test unless a finding names it. Return GREEN.`, or spawn a fresh builder with the mission and those findings when the builder is gone. Append §S `ds:build <T-id> rebuild=1`, then run items 4 and 5 again. A second `CHANGES`, or a second red result, is a PAUSE (`review`).
 1. **Commit** (step 7) from the main thread.
 
-A builder that runs past 30 minutes leaves a lock that FORMAT.md §14 calls stale, so start no other `ds:build` on this dossier while it runs. No step runs `ds delegation-check`: put it in the wave contract's done-when table, so `ds:converge` runs it.
+A builder that runs past 30 minutes leaves a lock that FORMAT.md §14 calls stale, so start no other `ds:build` on this dossier while it runs. No step runs `ds delegation-check`. The operator who writes the first `route=delegate` marker in a wave also adds the done-when row `| <n> | \`<plugin>/cli/ds delegation-check <dossier-dir>\` | exit 0 |` to the wave contract, so `ds:converge` runs it.
 
 ### 6.5. REVIEW (fresh-context, optional)
 
@@ -162,7 +165,7 @@ Runs when `--review` is set, auto for a **destructive-class** task (delete / dro
 Spawn one `dossier-reviewer` subagent (`Agent` tool, `subagent_type: dossier:dossier-reviewer`) with an **artifact-only** mission — no parent transcript:
 
 - the §T row (task text) + its §V `check` / `verify` predicate,
-- the staged diff (`git diff --staged` restricted to the files this task touched),
+- the staged diff (`git diff --staged` restricted to the files this task touched; for a delegated row, the whole staged diff),
 - the captured test output (the GREEN proof from step 6),
 - the repo path.
 
