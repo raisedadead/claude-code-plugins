@@ -149,3 +149,21 @@ test("delegation-check does not count T1's lines for T12", () => {
   assert.equal(apart.status, 0, apart.done.stdout + apart.done.stderr)
   assert.equal(apart.out.at(-1), 'DELEGATION: CLEAN 1 delegated rows')
 })
+
+test('delegation-check reads two entries a formatter joined into one line', () => {
+  const run = check(
+    [['T2', 'x', 'build the verb']],
+    [
+      '2026-11-01 10:01 ds:build T2 delegate=general-purpose 2026-11-01 10:05 ds:build T2 rebuild=1 critical=2',
+      '2026-11-01 10:07 ds:build T2 rebuild=2 critical=1 2026-11-01 10:09 ds:build T2 review=PASS:0-warn',
+    ],
+  )
+  assert.equal(run.status, 1, run.done.stdout)
+  assert.equal(run.out.at(-1), 'DELEGATION: FAIL 1')
+})
+
+test('delegation-check with no directory prints the usage line alone', () => {
+  const done = spawnSync('sh', [DS, 'delegation-check'], { encoding: 'utf8' })
+  assert.equal(done.status, 64)
+  assert.match(done.stderr, /usage: ds delegation-check <dossier-dir>\s*$/)
+})

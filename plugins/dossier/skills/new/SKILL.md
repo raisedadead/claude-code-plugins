@@ -95,6 +95,8 @@ A criterion that cannot be written as a command is a criterion nobody can check.
 
 A done-when command reads source and repo state only. It does not read a deployed target, a pushed remote, or anything that waits on an operator step. A runtime rewrite or an operator delay then fails the check. Put pushes, deploys and reloads in `who=H` rows. `ds close --carry` carries them as `after:` rows.
 
+A §T row marked `route=delegate` adds the done-when row `` `<plugin>/cli/ds delegation-check <dossier-dir>` `` with `exit 0`, so `ds:converge` checks each delegated row's review and rebuild lines.
+
 In the tracked home, commit before the first task — the `UserPromptSubmit` hook counts budget from the commit that added the contract.
 
 ### 3. Scaffold DOSSIER.md

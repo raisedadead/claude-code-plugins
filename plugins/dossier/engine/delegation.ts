@@ -12,7 +12,8 @@ function escaped(id: string): string {
 
 function rowLines(status: string[], id: string): string[] {
   const entry = new RegExp(`^(?:${STAMP} )?ds:build ${escaped(id)} (.*)$`)
-  return status.flatMap((line) => entry.exec(trim(line))?.[1] ?? [])
+  const entries = status.flatMap((line) => trim(line).split(new RegExp(`(?=${STAMP} ds:build )`)))
+  return entries.flatMap((line) => entry.exec(trim(line))?.[1] ?? [])
 }
 
 export function delegationReport(text: string): DelegationReport {

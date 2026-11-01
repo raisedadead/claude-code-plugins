@@ -699,7 +699,8 @@ function verdictLogVerb(args: string[]): number {
 function delegationCheckVerb(args: string[]): number {
   const [dir] = args
   const file = dir === undefined ? '' : dossierFile(dir)
-  const usage = `usage: ds delegation-check <dossier-dir> (not found: ${file || 'dir'})`
+  const missing = file ? ` (not found: ${file})` : ''
+  const usage = `usage: ds delegation-check <dossier-dir>${missing}`
   if (!isFile(file)) refuse('delegation-check', usage, EXIT_USAGE)
   const { failures, delegated } = delegationReport(readFileSync(file, 'utf8'))
   for (const line of failures) console.log(line)
