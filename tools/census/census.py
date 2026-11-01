@@ -650,8 +650,8 @@ def row_windows(
         if ROW_START.search(rest):
             ledger.started = stamp.astimezone(UTC)
             ledger.open = True
-        elif ROW_END.search(rest):
-            ledger.ended = True
+        elif found_end := ROW_END.search(rest):
+            ledger.ended = ledger.ended or found_end.group(1) == "DONE"
             if ledger.started:
                 end = stamp if seconds else stamp + datetime.timedelta(seconds=59)
                 ledger.windows.append((ledger.started, end.astimezone(UTC)))

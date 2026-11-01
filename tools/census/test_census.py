@@ -458,11 +458,13 @@ def test_a_row_with_a_done_line_and_no_start_is_closed_not_open() -> None:
         [
             "2026-11-01 10:00 ds:build T1 DONE → x cite=abc operator row",
             "2026-11-01 10:10 ds:build T2 START",
+            "2026-11-01 10:20 ds:build T3 BLOCKED needs=T1",
         ],
         IST,
     )
     assert census.unmeasured(rows["T1"]) == "closed with no START line, not measured"
     assert census.unmeasured(rows["T2"]) == "open"
+    assert census.unmeasured(rows["T3"]) == "open"
 
 
 def _call(message_id: str, name: str, cache_read: int = 0) -> dict:
