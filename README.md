@@ -98,7 +98,7 @@ The invariant guard is where the ratchet lands: for a recurring bug class with a
 [{ "id": "no-raw-sql", "pattern": "execute\\(f?\"SELECT", "message": "parameterize", "paths": ["**/*.py"] }]
 ```
 
-In a dossier repo, each doubter and reviewer verdict line is appended to `.scratchpad/dossier/.verdicts.jsonl` when that subagent stops. It is a log, not a gate: it never blocks.
+In a dossier repo, when a doubter or reviewer subagent stops, its first verdict line is appended to `.scratchpad/dossier/.verdicts.jsonl`. It is a log, not a gate: it never blocks.
 
 Freshness authorities live in `plugins/dossier/engine/verify-authorities.ts` — adding a product is one data row, no code change.
 
