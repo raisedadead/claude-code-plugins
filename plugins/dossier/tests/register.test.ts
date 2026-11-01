@@ -31,6 +31,75 @@ describe('dossier mod wiring', () => {
     expect((result as { result?: string }).result).toBe('ran')
   })
 
+  test('a non-canonical ledger header comes back as a denied Write, and a canonical one runs', async ($, on) => {
+    on('session.cwd', async () => ({ value: '/w' }))
+    on('fs.stat', async () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }))
+    on('env.get', async () => ({ value: undefined }))
+    on('classic.PreToolUse', async () => ({}))
+    on('tool.call', async () => ({ result: 'ran' }))
+    const write = (state: string) =>
+      $.tool.call({
+        tool: 'Write',
+        file_path: '/w/.scratchpad/dossier/2026-01-01-foo/DOSSIER.md',
+        content: `# foo\n\n\`2026-01-01\` · \`${state}\`\n`,
+      } as never)
+    expect((await write('bogus')) as { text?: string }).toMatchObject({ text: expect.stringContaining("non-canonical header state 'bogus'") })
+    expect(((await write('live')) as { result?: string }).result).toBe('ran')
+  })
+
+  test('an edit that matches a registered invariant comes back denied, and a passing check lets it run', async ($, on) => {
+    let verdict = { exitCode: 1, stdout: 'dossier invariant guard: no-raw-sql' }
+    on('session.cwd', async () => ({ value: '/w' }))
+    on('fs.stat', async () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }))
+    on('fs.exists', async (_, e) => ({ value: e.path.endsWith('.invariant-guards.json') }))
+    on('env.get', async () => ({ value: undefined }))
+    on('process.run', async (_, e) => ({
+      value: {
+        ...(e.argv.includes('invariant-check') ? verdict : { exitCode: 0, stdout: '' }),
+        stderr: '',
+        isStdoutTruncated: false,
+        isStderrTruncated: false,
+      },
+    }))
+    on('classic.PreToolUse', async () => ({}))
+    on('tool.call', async () => ({ result: 'ran' }))
+    const edit = () => $.tool.call({ tool: 'Edit', file_path: 'src/a.py', old_string: 'x', new_string: 'execute("SELECT 1")' } as never)
+    expect(((await edit()) as { text?: string }).text).toContain('dossier invariant guard: no-raw-sql')
+    verdict = { exitCode: 0, stdout: '' }
+    expect(((await edit()) as { result?: string }).result).toBe('ran')
+  })
+
+  test('a gated Skill call reads the live index for its reminder, and an ungated one does not', async ($, on) => {
+    const reads: string[] = []
+    on('session.cwd', async () => ({ value: '/w' }))
+    on('fs.stat', async () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }))
+    on('fs.read', async (_, e) => {
+      reads.push(e.path)
+      return {
+        value: '| date | slug | state | T | B | mtime | §Z |\n|------|------|-------|---|---|-------|-----|\n| 2026-01-01 | foo | live | 1/2 | 0 | x | — |\n',
+      }
+    })
+    on('classic.PreToolUse', async () => ({}))
+    on('tool.call', async () => ({ result: 'ran' }))
+    await $.tool.call({ tool: 'Skill', skill: 'dossier:status' } as never)
+    expect(reads).toEqual([])
+    await $.tool.call({ tool: 'Skill', skill: 'whetstone:doubt-pass' } as never)
+    expect(reads).toEqual(['/w/.scratchpad/INDEX.md'])
+  })
+
+  test('a prompt in a dossier project gets the wave contract as context, and one outside does not', async ($, on) => {
+    let inside = true
+    on('fs.stat', async () => ({ value: { kind: inside ? 'dir' : 'file', size: 0, mtimeMs: 0, isLink: false } }))
+    on('process.run', async () => ({
+      value: { exitCode: 0, stdout: 'wave foo contract · 3 criteria\n', stderr: '', isStdoutTruncated: false, isStderrTruncated: false },
+    }))
+    on('classic.UserPromptSubmit', async () => ({}))
+    const submit = () => $.classic.UserPromptSubmit({ cwd: '/w', session_id: 's4', transcript_path: '', prompt: 'next' } as never)
+    expect((await submit()).additionalContext).toEqual(['wave foo contract · 3 criteria'])
+    inside = false
+    expect((await submit()).additionalContext).toBeUndefined()
+  })
+
   test('a Write in a dossier project asks the cli to verify it', async ($, on) => {
     const runs: string[][] = []
     on('session.cwd', async () => ({ value: '/w' }))
