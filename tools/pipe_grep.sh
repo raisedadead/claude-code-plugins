@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PIPE_INTO_QUIET_GREP='(^|[^|])\|&?[[:space:]]*(command[[:space:]]+|[A-Za-z_]+=[^[:space:]]+[[:space:]]+)*grep([[:space:]]+-[^[:space:]]+)*[[:space:]]+(-[a-zA-Z]*q[a-zA-Z]*|--quiet|--silent)([[:space:]]|$)'
+PIPE_INTO_QUIET_GREP='(^|[^|])\|&?[[:space:]]*(command[[:space:]]+|env[[:space:]]+|[A-Za-z_][A-Za-z0-9_]*=[^[:space:]]+[[:space:]]+)*\\?([^[:space:]|]*/)?e?grep([[:space:]]+-[^[:space:]]+)*[[:space:]]+(-[a-zA-Z]*q[a-zA-Z]*|--quiet|--silent)([[:space:]]|$)'
 found=0
 while IFS= read -r -d '' path; do
 	[[ -f $path && ! -L $path ]] || continue

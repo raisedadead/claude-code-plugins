@@ -35,6 +35,9 @@ bad=(
 	'printf a %s& grep -q a'
 	'printf a %s LC_ALL=C grep -q a'
 	'printf a %s command grep -qv a'
+	'printf a %s grep --silent a'
+	'printf a %s env A1=x \\grep -q a'
+	'printf a %s /usr/bin/egrep -q a'
 )
 for i in "${!bad[@]}"; do
 	# shellcheck disable=SC2059
@@ -42,8 +45,15 @@ for i in "${!bad[@]}"; do
 done
 # shellcheck disable=SC2059
 printf "#!/bin/sh\n${bad[0]}\n" "$pipe" >"$TMP/bin/tool"
+# shellcheck disable=SC2059
+printf "${bad[0]}\n" "$pipe" >"$TMP/lib.bash"
+ln -s bad0.sh "$TMP/link.sh"
 git -C "$TMP" add -A
 for i in "${!bad[@]}"; do refused "bad$i.sh:3"; done
 refused 'bin/tool:2'
+refused 'lib.bash:1'
+if grep -q '^PIPE-GREP: link.sh:' "$TMP/out.log"; then
+	fail "the check scanned a symlink, so a file is reported twice"
+fi
 
 printf 'ok pipe-grep\n'
