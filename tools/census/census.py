@@ -122,7 +122,7 @@ def is_operator_prompt(record: dict) -> bool:
 
 
 def census_skills() -> None:
-    """Skill and subagent invocation counts. Refreshes F15, feeds O31.
+    """Skill and subagent invocation counts. Refreshes F15.
 
     A skill reaches a transcript two ways and both are counted: the `Skill`
     tool call, and an operator-typed slash command, which lands as a
