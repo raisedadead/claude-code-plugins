@@ -1,4 +1,5 @@
 import { indexNames, namedRows, openOps, SEC, sectionRows, statusSection, unpushedRepos } from './ledger.ts'
+import { isDue, laterRows, laterSummary } from './later.ts'
 import { ownerLine, progress, progressLine, taskRows } from './progress.ts'
 
 export type SessionInput = {
@@ -9,6 +10,8 @@ export type SessionInput = {
   titleFlag: string
   nudgeFlag: string
   notes?: string[]
+  later?: string
+  today?: string
 }
 
 export type SessionOutput = { context: string; title: string; system: string }
@@ -75,9 +78,16 @@ export function sessionReport(input: SessionInput): SessionOutput {
     )
     context.push('(ds:status for the dashboard)')
   }
+  const today = input.today ?? ''
+  context.push(...laterSummary(input.later, today))
   if (liveCount > 1) {
     system = `⚠ dossier: ${liveCount} live (${liveAll}) — run /dossier:status to consolidate (pause or close the stale ones).`
     context.push('', `⚠ ${liveCount} live dossiers: ${liveAll}— pick one, pause/close the rest (ds:status)`)
+  }
+  const due = laterRows(input.later).filter((row) => isDue(row, today))
+  if (due.length && input.source !== 'compact') {
+    const message = `dossier: carried work due — ${due.map((row) => row.key).join(' ')}. ds later lists it.`
+    system = system ? `${system} ${message}` : message
   }
   if (driftCount > 0) {
     const message = `⚠ dossier: ${driftCount} in conflicting state (drift) — ${driftSlugs}. Run /dossier:status to reconcile.`

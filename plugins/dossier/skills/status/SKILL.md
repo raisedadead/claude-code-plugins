@@ -91,7 +91,7 @@ JUST DID: <last 1–2 §S cite-bearing entries>
 NEXT: ds:build --auto                                   # or ds:build <T-id>; "ready to close" → ds close <slug> <mode> --plan
 [⚠ §X stale <Nm> → confirm before flip]                 # step 4
 [DRIFT: <advisory line>]                                # each ds ds-check advisory
-[LATER: <later: line>]                                  # each later: line of `ds progress` with no dir
+[LATER: <later: line>, <due: lines>]                    # carried-work lines of `ds progress` with no dir; `ds later` lists them
 [CONSOLIDATE: <N> live — pause/close the stale ones]    # >1 live (step 1a)
 PAUSED (<N>): <slug> · <T done/tot> · idle <Nd>         # every state=paused row (step 1); "(none)" when empty
 [⚠ resume: ds:build T<N> --resume]                      # incomplete op (step 3)

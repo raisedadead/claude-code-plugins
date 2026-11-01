@@ -65,3 +65,16 @@ test('the repos line skips an aligned rule row and counts every repo not pushed'
   ].join('\n')
   assert.match(report(LEDGER + repos).context, /^repos 3 · unpushed 2$/m)
 })
+
+test('session start shows the carried-work count and each due row, with no live wave', () => {
+  const later = '# Carried work\n\n- a/T1 · census re-check · T9+30d · due 2026-12-01\n- a/T2 · rig work · H\n'
+  const index = '# .scratchpad index\n\n| date | slug | state | T | B | mtime | §Z |\n|---|---|---|---|---|---|---|\n'
+  const base = { index, ledgers: [], source: 'startup', title: '', titleFlag: '0', nudgeFlag: '1', later }
+  const out = sessionReport({ ...base, today: '2026-12-01' })
+  assert.equal(out.context, 'later: 2 carried — ds later lists them\ndue: a/T1 census re-check')
+  assert.equal(out.system, 'dossier: carried work due — a/T1. ds later lists it.')
+  assert.equal(sessionReport({ ...base, today: '2026-11-30' }).system, '')
+  assert.equal(sessionReport({ ...base, today: '2026-12-01', source: 'compact' }).system, '')
+  const two = `${index}| 2026-10-08 | a | live | 0/1 | 0 | x | — |\n| 2026-10-09 | b | live | 0/1 | 0 | x | — |\n`
+  assert.match(sessionReport({ ...base, index: two, today: '2026-12-01' }).system, /2 live .* carried work due — a\/T1/)
+})

@@ -105,23 +105,16 @@ test('ds progress --line prints one line per wave', () => {
   assert.equal(done.stdout, 'progress 47% · 9/19 · next T3\n')
 })
 
-function closedWave(root: string, name: string, daysAgo: number): void {
-  const day = new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10)
-  const dir = join(root, '.scratchpad', 'dossier', '_archive', name)
-  mkdirSync(dir, { recursive: true })
-  const z = `## Closeout\n\n${day} 10:00 — closed\n\ncomplete: true\n\nsummary: s\n\nkey cites: c\n\nafter: T7 smoke test (T6+7d)\n`
-  writeFileSync(join(dir, 'DOSSIER.md'), `# ${name}\n\n\`${day}\` · \`done\`\n\n${z}`)
-}
-
-test('ds progress lists the carried rows of a wave closed in the last 30 days, and drops older ones', () => {
+test('ds progress reads carried work from the list, not from an archived after line', () => {
   const root = mkdtempSync(join(tmpdir(), 'ds-progress-'))
   try {
-    closedWave(root, '2026-01-01-fresh', 3)
-    closedWave(root, '2026-01-01-stale', 40)
+    const archive = join(root, '.scratchpad', 'dossier', '_archive', '2026-01-01-old')
+    mkdirSync(archive, { recursive: true })
+    writeFileSync(join(archive, 'DOSSIER.md'), '# old\n\n## Closeout\n\n2026-01-01 10:00 — closed\n\nafter: T7 smoke test (T6+7d)\n')
+    writeFileSync(join(root, '.scratchpad', 'dossier', 'LATER.md'), '# Carried work\n\n- 2026-01-01-old/T8 · approve rollout · H\n')
     const done = spawnSync('sh', [DS, 'progress', '--line'], { cwd: root, encoding: 'utf8', env: { ...process.env, DOSSIER_LEDGER_ROOT: root } })
     assert.equal(done.status, 0, done.stderr)
-    assert.match(done.stdout, /^later: fresh · T7 smoke test \(T6\+7d\) · closed \d{4}-\d{2}-\d{2}$/m)
-    assert.doesNotMatch(done.stdout, /stale/)
+    assert.equal(done.stdout, 'later: 1 carried — ds later lists them\n')
   } finally {
     rmSync(root, { recursive: true, force: true })
   }

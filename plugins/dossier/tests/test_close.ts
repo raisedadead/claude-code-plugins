@@ -361,6 +361,10 @@ test('--carry takes an operator row and a delayed row into an after line, and re
       const done = await close(root, '--complete', '--carry', 'T2,T3', '--summary', 's')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(archived(root), /^after: T2 task T2 \(H\); T3 task T3 \(T1\+7d\)$/m)
+      assert.match(archived(root), /ds:close — later=2026-10-09-wave\/T2,2026-10-09-wave\/T3$/m)
+      const list = readFileSync(join(root, '.scratchpad', 'dossier', 'LATER.md'), 'utf8')
+      assert.match(list, /^- 2026-10-09-wave\/T2 · task T2 · H$/m)
+      assert.match(list, /^- 2026-10-09-wave\/T3 · task T3 · T1\+7d$/m)
     },
     [
       ['T1', 'x', 'A'],
@@ -458,6 +462,7 @@ test('--successor copies carried rows into the successor once, even when a crash
       const text = readFileSync(join(next, 'DOSSIER.md'), 'utf8')
       assert.equal(text.match(/\(from wave T2\)/g)?.length, 1)
       assert.match(archived(root), /^successor: next$/m)
+      assert.ok(!existsSync(join(root, '.scratchpad', 'dossier', 'LATER.md')), 'a successor carry stays off the carried-work list')
     },
     [
       ['T1', 'x', 'A'],

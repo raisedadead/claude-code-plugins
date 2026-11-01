@@ -17,7 +17,7 @@ argument-hint: --complete | --successor <slug> | --abandon "<reason>" [--carry T
 | `--abandon "<reason>"` | the wave stops unfinished; open rows and bugs stay as they are  |
 | `--carry T<n>,...`     | a `who=H` row or a row with a `T<n>+<k>d` need runs after close |
 
-`--carry` writes the rows to the §Z `after:` line (FORMAT.md §12). With `--successor` it also copies them into the successor §T, each with a `(from <slug> T<n>)` note. `ds progress` lists the `after:` rows of a wave closed in the last 30 days.
+`--carry` writes the rows to the §Z `after:` line (FORMAT.md §12). With `--successor` it also copies them into the successor §T, each with a `(from <slug> T<n>)` note. Without `--successor` it adds them to the carried-work list, `.scratchpad/dossier/LATER.md`, once each, with a due date for a `+<k>d` need. Session start shows the list's count and each due row until `ds later done <key>` removes it.
 
 ## Steps
 
@@ -66,7 +66,7 @@ A rerun resumes from the last §S checkpoint (`START`, `§Z=written`, `archived`
 
 ### 4. Report
 
-Print the `ds close` report. Name the next action: `ds:new <successor>`, the `after:` rows, or nothing.
+Print the `ds close` report. Name the next action: `ds:new <successor>`, the carried rows and their due dates, or nothing.
 
 ## Honesty labels
 

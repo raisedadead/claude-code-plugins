@@ -26,6 +26,7 @@ import { DATE_PREFIX } from '../engine/converge.ts'
 import { delegationReport } from '../engine/delegation.ts'
 import { addEntry, entryError, FRONTIER_CLOSED, openDecisions } from '../engine/grill.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
+import { isDue, LATER_FILE, laterRows, removeLater } from '../engine/later.ts'
 import { migrate } from '../engine/migrate.ts'
 import { sessionReport } from '../engine/session.ts'
 import { splitLines, strip } from '../engine/text.ts'
@@ -628,6 +629,8 @@ function sessionStartVerb(): number {
     titleFlag: process.env.DOSSIER_SESSION_TITLE ?? '0',
     nudgeFlag: process.env.DOSSIER_LIVE_NUDGE ?? '1',
     notes,
+    later: isFile(laterFile()) ? readFileSync(laterFile(), 'utf8') : undefined,
+    today: stamp(new Date()).slice(0, 10),
   })
   const specific = { hookEventName: 'SessionStart', additionalContext: report.context, ...(report.title ? { sessionTitle: report.title } : {}) }
   console.log(JSON.stringify({ continue: true, hookSpecificOutput: specific, ...(report.system ? { systemMessage: report.system } : {}) }))
@@ -709,6 +712,29 @@ function delegationCheckVerb(args: string[]): number {
   return failures.length ? 1 : 0
 }
 
+function laterFile(): string {
+  return join(process.env.DOSSIER_LEDGER_ROOT || process.cwd(), '.scratchpad', 'dossier', LATER_FILE)
+}
+
+function laterVerb(args: string[]): number {
+  const [action, key, ...extra] = args
+  const file = laterFile()
+  const text = isFile(file) ? readFileSync(file, 'utf8') : undefined
+  const today = stamp(new Date()).slice(0, 10)
+  if (action === undefined) {
+    const rows = laterRows(text)
+    for (const row of rows) console.log(`${row.key} · ${row.task} · ${row.who}${row.due ? ` · due ${row.due}` : ''}${isDue(row, today) ? ' — due now' : ''}`)
+    if (!rows.length) console.log('later: none')
+    return 0
+  }
+  if (!['done', 'drop'].includes(action) || key === undefined || extra.length) refuse('later', 'usage: ds later [done|drop <wave>/T<n>]', EXIT_USAGE)
+  const left = removeLater(text, key)
+  if (left === undefined) refuse('later', `no carried row ${key} in ${file}`)
+  atomicWrite(file, left)
+  console.log(`later: ${key} removed (${action})`)
+  return 0
+}
+
 const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'archive-move': archiveMoveVerb,
   'assert-grill': assertGrillVerb,
@@ -724,6 +750,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'grill-add': grillAddVerb,
   'header-state': headerStateVerb,
   'invariant-check': invariantCheckVerb,
+  later: laterVerb,
   progress: progressVerb,
   reconcile: reconcileVerb,
   'resolve-pins': resolvePinsVerb,

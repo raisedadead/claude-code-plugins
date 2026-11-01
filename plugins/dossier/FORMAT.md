@@ -370,7 +370,21 @@ key cites: [a96987b]
 after: T17 smoke test the cutover (T16+7d); T18 approve the rollout (H)
 ```
 
-`ds progress` lists the `after:` line of each wave closed in the last 30 days as `later: <slug> · <rows> · closed <date>`.
+The `after:` line is the closed wave's own record; nothing reads it after the close report. A close without `--successor` also adds each carried row to the carried-work list, `.scratchpad/dossier/LATER.md`, one line per row:
+
+```markdown
+# Carried work
+
+- 2026-11-01-managed-team/T12 · rig experiment · H
+- suite-review-apply/T14 · census re-check · T9+30d · due 2026-12-01
+```
+
+- The key is the row's first `(from <slug> T<n>)` note when the task has one, else `<wave dir>/<id>`. A key already on the list is not added again, and a rerun of a close skips the list once §S holds `ds:close — later=`.
+- A `T<n>+<k>d` need becomes `due <date>`: the day of the wave's `ds:build T<n> … DONE →` line plus `k`. With no such line, the row keeps the need and no date.
+- A `--successor` close does not write the list: its rows are already in the successor's §T.
+- A row leaves the list only through `ds later done <key>` or `ds later drop <key>`. `ds later` prints the list. A line that is not a row, such as a note, stays as written.
+- Session start, and `ds progress` with no directory, print `later: <n> carried` and one `due: <key> <task>` line for each row due today or earlier. Both print with or without a live wave. A due row also goes in the session-start system message, except on a start after compaction.
+- Two writers run without a shared lock: a `ds close` and a `ds later done` at the same moment can lose one change.
 
 Vm.4: closed dossier MUST live under `.scratchpad/dossier/_archive/`.
 

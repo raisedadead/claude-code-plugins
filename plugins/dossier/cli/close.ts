@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
 import { DATE_PREFIX } from '../engine/converge.ts'
+import { addCarried, carriedRow, LATER_FILE } from '../engine/later.ts'
 import { headerToken, lines, namedRows, openOps, SEC, statusSection, unlines, unpushedRepos, zClosed, zColumn, zWrite } from '../engine/ledger.ts'
 import { migrate } from '../engine/migrate.ts'
 import { DELAYED, type Row, taskRows } from '../engine/progress.ts'
@@ -306,7 +307,8 @@ function check(options: Options, tools: CloseTools, at: Wave, text: string, rows
     if (!next) fail(`successor ${mode.value} not found — ds:new ${mode.value} first`)
     else if (busy) fail(`successor ${mode.value} locked by ${busy} — wait for it, then rerun`)
   }
-  if (carried.length) result.findings.push(`↷ carry ${carried.map((row) => carryNote(row).replace(` ${row.task} `, ' ')).join(', ')}`)
+  const into = mode.kind === 'successor' ? mode.value : `the carried-work list (.scratchpad/dossier/${LATER_FILE})`
+  if (carried.length) result.findings.push(`↷ carry ${carried.map((row) => carryNote(row).replace(` ${row.task} `, ' ')).join(', ')} → ${into}`)
   if (!holder && mode.kind !== 'abandoned') {
     const verdict = converge(tools, waveContract(at.dir, at.root), options.acceptUnmet)
     result.findings.push(verdict.line)
@@ -337,6 +339,16 @@ function run(options: Options, tools: CloseTools, at: Wave, rows: Row[], record:
         const target = successorDir(at.dossiers, mode.value)
         const moved = target ? carryInto(tools, target, at.slug, carried) : []
         if (moved.length) tools.append(dir, `ds:close — carried=${moved.join(',')} into ${mode.value}`)
+      }
+      if (mode.kind !== 'successor' && carried.length && !status.some((line) => line.includes('ds:close — later='))) {
+        const list = join(at.dossiers, LATER_FILE)
+        const current = existsSync(list) ? readFileSync(list, 'utf8') : undefined
+        const { text, added } = addCarried(
+          current,
+          carried.map((row) => carriedRow(basename(at.dir), row, status)),
+        )
+        if (added.length) tools.write(list, text)
+        tools.append(dir, `ds:close — later=${added.join(',') || '—'}`)
       }
       const cites =
         options.cites ||

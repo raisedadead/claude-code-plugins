@@ -1,7 +1,8 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { DATE_PREFIX, field } from '../engine/converge.ts'
-import { laterLine, progress, progressLine, progressTable } from '../engine/progress.ts'
+import { LATER_FILE, laterSummary } from '../engine/later.ts'
+import { progress, progressLine, progressTable } from '../engine/progress.ts'
 import { liveSlugs, waveContract } from './converge.ts'
 
 const USAGE = 'usage: ds progress [<dossier-dir>] [--line | --json]'
@@ -21,18 +22,10 @@ function report(dir: string, root: string, mode: string): string {
 }
 
 function later(root: string): string[] {
-  const archive = join(root, '.scratchpad', 'dossier', '_archive')
-  let names: string[] = []
-  try {
-    names = readdirSync(archive).sort()
-  } catch {
-    return []
-  }
-  return names.flatMap((name) => {
-    const file = join(archive, name, 'DOSSIER.md')
-    if (!existsSync(file)) return []
-    return laterLine(name.replace(DATE_PREFIX, ''), readFileSync(file, 'utf8'), new Date()) ?? []
-  })
+  const file = join(root, '.scratchpad', 'dossier', LATER_FILE)
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+  return laterSummary(existsSync(file) ? readFileSync(file, 'utf8') : undefined, today)
 }
 
 export function progressVerb(args: string[]): number {
