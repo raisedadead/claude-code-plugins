@@ -110,7 +110,7 @@ If `verify` is shell predicate: run after work, must exit 0. If `verify` is `—
 
 **run_slice route (whetstone compose, optional):** when `run-slice` is on `PATH` — whetstone ships it in `bin/` (ADAPTERS §whetstone) — prove the cycle through it: `run-slice red <test-cmd>` (exits non-zero if the test PASSED), `green <test-cmd>`, `full <suite-cmd>`. Three exit codes replace prose judgment of test output. Not on `PATH` → raw test commands exactly as above.
 
-**Skill-lint route (whetstone compose, touched SKILL.md only):** lint before COMMIT when `lint-skill` is on `PATH` (whetstone `bin/`, ADAPTERS §whetstone): `lint-skill <path>`. Commit only on exit 0 — model-judgment, since no hook runs `lint-skill` at commit. Not on `PATH` → skip silently, §S `skill-lint=skipped-absent`.
+**Skill-lint route (whetstone compose, touched SKILL.md only):** lint before COMMIT when `lint-skill` is on `PATH` (whetstone `bin/`, ADAPTERS §whetstone): `lint-skill <path>`; `whetstone:skill-smith` holds the rubric behind each `FAIL` line. Commit only on exit 0 — model-judgment, since no hook runs `lint-skill` at commit. Not on `PATH` → skip silently, §S `skill-lint=skipped-absent`.
 
 **Source comments stay phase-agnostic.** A comment in source or test answers _why_: a workaround ref, a non-obvious invariant, an upstream-bug link. Phase and audit tracking live in DOSSIER.md §B and §S, which hold the whole record — so `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)` and `// PH<n>-B<k>` stay out of every source and test file, and a comment that would carry one is rewritten as a _why_ or dropped. The dossier mod's marker guard denies the audit-id and `§`-cite forms on Edit/Write; the bare `Phase N` / `Step N` forms pass it, and this paragraph is what keeps them out.
 
@@ -120,7 +120,9 @@ If `verify` is shell predicate: run after work, must exit 0. If `verify` is `—
 
 Tests failing with an unclear root cause: **spawn a `dossier-scout` subagent** with the mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>", and let its report guide the fix.
 
-A failure that implies a missing invariant: run `ds:backprop`, which registers the invariant first and greens the symptom under it.
+A failure that implies a missing invariant: run `ds:backprop`, which registers the invariant first and greens the symptom under it. Any test failure that is a bug, not this task's new RED, gets the same hand-off: name `ds:backprop <bug>` before the fix, so the bug can leave an invariant behind.
+
+A test that fails and then passes on a rerun with no change is a flake signal. With whetstone installed, hand it to `whetstone:flaky-test-audit` for a computed rate before any fix.
 
 ### 6.5. REVIEW (fresh-context, optional)
 
@@ -142,7 +144,7 @@ One review cycle max — the reviewer does a single pass and the build retries a
 
 Append §S either way, as the doubt gate at §5.6 does — `ds:build <T-id> review=<PASS:<n>-warn | CHANGES:<n>-critical>`. The breadcrumb is what keeps this gate's verdict on the record; without it, the one artifact-only reviewer leaves no trace.
 
-Skip entirely if neither `--review` nor destructive-class — keeps the fast path fast.
+Skip entirely if neither `--review` nor destructive-class — keeps the fast path fast. A skipped review on a behaviour-bearing task still leaves one line in the step-12 report: `review: skipped — /dossier:build <T-id> --review runs the fresh-context reviewer`, so the gate stays visible.
 
 Built-in `/code-review` (alias `/review`), `/security-review` and `/simplify` sit alongside this artifact-only gate and cover whole-branch looks it cannot — invoke them rather than reimplementing their checks; the dossier mod's skill gate breadcrumbs their invocation mid-build so the verdict lands in §S instead of evaporating (reminder is non-blocking; honoring it is model-judgment).
 
@@ -154,7 +156,7 @@ Built-in `/code-review` (alias `/review`), `/security-review` and `/simplify` si
 
 **Read the verdict line before the exit code.** A broken install makes the interpreter behind the wrapper exit 2 — the number the checker uses for NAG — so a code-only reading reports a result for a check that never ran. Require a `TIGER:` line in stdout. No such line means unresolvable, whatever the number was.
 
-With that line present, route on the exact exit code rather than on "non-zero": `0` clean, commit — the line carries how many files were examined and how many were staged but skipped, and a bare `CLEAN 0 files` with no skipped count means no path with added lines was staged — an empty index, or a deletion-only commit; `CLEAN 0 files, 3 skipped` is an ordinary docs-only commit · `2` the built-in 100-column fallback was exceeded — print the offences and commit · `1` a limit the repo itself declared was exceeded, which is a `tiger` PAUSE under `--auto` and an operator decision interactively · `64` the path is not a work tree, treat as unresolvable. Unresolvable → skip silently.
+With that line present, route on the exact exit code rather than on "non-zero": `0` clean, commit — the line carries how many files were examined and how many were staged but skipped, and a bare `CLEAN 0 files` with no skipped count means no path with added lines was staged — an empty index, or a deletion-only commit; `CLEAN 0 files, 3 skipped` is an ordinary docs-only commit · `2` the built-in 100-column fallback was exceeded — print the offences and commit; `whetstone:tiger-style` reads them against the shape rules · `1` a limit the repo itself declared was exceeded, which is a `tiger` PAUSE under `--auto` and an operator decision interactively · `64` the path is not a work tree, treat as unresolvable. Unresolvable → skip silently.
 
 **Where this actually resolves.** A consumer gets `tiger-check` on `PATH` whenever whetstone is enabled, so the route reaches them without configuration — `bin/` is the supported way across plugins, since `${CLAUDE_PLUGIN_ROOT}` names only the running plugin's own root. With whetstone absent the command is simply not on `PATH`: record `tiger=skipped-absent` and continue, the same absent-skip every composed route uses.
 

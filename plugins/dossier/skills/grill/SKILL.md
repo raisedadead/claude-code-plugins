@@ -56,6 +56,8 @@ A fact that needs a sweep (many files, an external doc, a census) goes to a back
 
 While an answer adds or removes whole groups of questions: ask ONE decision at a time, as a decision block with one group, and wait for confirm or override. Chained questions asked as a batch bewilder.
 
+With whetstone installed, three kinds of decision hand off for their probe: a module seam or an interface → `whetstone:codebase-design`; a term two people use differently → `whetstone:domain-modeling`; a design question a throwaway build answers faster than a debate → `whetstone:prototype`. The skill's finding becomes the decision's `probe=`.
+
 ### 3. Batch phase
 
 Once no answer adds or removes a group: ask the whole frontier as one decision block, recompute the frontier from the answers, repeat until empty. A lighter dependency rides in the batch as a note on the dependent decision ("Skip if 1(b).").

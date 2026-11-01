@@ -54,7 +54,7 @@ Ask one block at a time, tersely, no preamble:
 1. **§G goal** — one-line outcome, then up to 5 scope bullets (IN / NOT IN).
 1. **§C constraints** — locked decisions, stack notes. Bullets, ≤10.
 1. **§X repos** — each repo this dossier touches, as `<org>/<name>` or an absolute path. Operator-provided; no git-remote magic.
-1. **Initial §T tasks** (optional) — T1..Tn now, or later via `ds:build`. Give a row `who=H` only after the agent tried to prove it in a scratch fixture (a throwaway directory, an isolated tmux socket, a disposable session) and could not.
+1. **Initial §T tasks** (optional) — T1..Tn now, or later via `ds:build`. Give a row `who=H` only after the agent tried to prove it in a scratch fixture (a throwaway directory, an isolated tmux socket, a disposable session) and could not. When the operator must walk a dashboard or set credentials for that row, name `whetstone:wizard` in its task text; with whetstone installed, it writes the walk-through script.
 
 **A wide refactor is sequenced expand–contract.** One mechanical change whose blast radius breaks many call sites at once (rename a column, retype a shared symbol) cannot land green as one task. Expand first: add the new form beside the old. Then migrate the call sites in batches, one task each, each `needs` the expand. Contract last: delete the old form in a task that `needs` every batch.
 
@@ -71,6 +71,7 @@ From the stack named in §C plus the repos in §X, derive a pin-spec list and re
 ```
 
 - `eol:` results → §C bullets (current stable / EOL note).
+- A version, SHA or deprecation claim in §C that no spec covers → `dossier:verify` checks it against a primary source.
 - package results → the §I "Pinned deps" table (FORMAT.md §6).
 - Map the libs actually named to specs (e.g. "Go backend + React UI" → `eol:go npm:react npm:react-dom go:<module>`). The model does the stack→spec mapping; do not blind-parse §C prose into specs.
 - `{"offline": true}` / `latest: null`, or exit 69 (no Node.js 22.18+) / 70 (internal error) → record the pin as `offline` and proceed; the scaffold continues either way.
