@@ -236,9 +236,9 @@ def test_row_windows_read_each_stamp_in_its_own_local_offset() -> None:
         "2026-07-15 10:00 ds:build T1 DONE → x",
     ]
     saved = os.environ.get("TZ")
-    os.environ["TZ"] = "America/New_York"
-    time.tzset()
     try:
+        os.environ["TZ"] = "America/New_York"
+        time.tzset()
         start, end = census.row_windows(lines)["T1"].windows[0]
     finally:
         if saved is None:
