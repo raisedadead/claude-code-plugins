@@ -24,6 +24,15 @@ Five steps, detailed in `reference/doubt-protocol.md`:
 1. **RECONCILE** — tag every returned finding `actionable` or `not-actionable`, each on its own merits.
 1. **STOP** — at the 3-cycle cap, or at the first cycle that returns nothing new. Fold actionable findings into the plan between cycles.
 
+## Subtraction pass
+
+A second mission for the same agent asks what can go, where the doubt asks where the plan breaks. One cycle, no loop. Fill `reference/subtraction-prompt-template.md` and spawn `whetstone-doubter` with it. Run it beside the doubt cycle, in the same message, when both apply.
+
+- **Ladder** — delete > simplify > optimise > automate. New code runs the finer ladder: skip it, reuse an existing pattern, stdlib, the native platform, an installed dependency, a one-liner, then minimal new code with one test when it has logic. "It may be done" is an allowed answer.
+- **Verdict** — `SUBTRACT: NOTHING TO CUT` or `SUBTRACT: <n> CUTS` (n ≥ 1) as the first line, then one line per cut: the piece, the rung, and what still holds without it.
+- **Model** — opt-in through the operator's `advisorModel` setting. Read it from `.claude/settings.local.json`, `.claude/settings.json`, then `~/.claude/settings.json`; the first one set wins. When its value names `fable`, `opus`, `sonnet` or `haiku`, pass that family as the Agent `model`. Otherwise pass the session model's family. The plugin names no model for this mission; the `--advisor` flag and managed settings are not read.
+- **Reconcile** — tag each cut `actionable` or `not-actionable`, as in step 4. The operator decides a cut that removes something they asked for.
+
 ## Doubt theater
 
 Zero cumulative actionable findings across every cycle is its own result. Report it as one:

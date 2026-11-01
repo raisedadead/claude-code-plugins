@@ -16,6 +16,7 @@ test('a verdict line is read through markdown emphasis, once per line', () => {
 })
 
 test('a sentence that quotes a verdict is not read as one', () => {
-  const text = '`REVIEW: CHANGES` iff any Critical finding.\nThe doubter said NO FAILURE FOUND last time.\nSUBTRACT: NOTHING TO CUT, probably\n'
+  const text =
+    '`REVIEW: CHANGES` iff any Critical finding.\nThe doubter said NO FAILURE FOUND last time.\nSUBTRACT: NOTHING TO CUT, probably\nSUBTRACT: 0 CUTS\n'
   assert.deepEqual(verdictLines(text), [])
 })

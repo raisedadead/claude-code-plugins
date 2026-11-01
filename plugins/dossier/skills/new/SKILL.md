@@ -78,6 +78,10 @@ From the stack named in §C plus the repos in §X, derive a pin-spec list and re
 
 These fold into the single atomic step-3 Write — no extra commit, no TDD cycle.
 
+### 2.6. Subtraction pass (ungrilled wave only)
+
+Runs when step 1.5 exited 1 or 4 — no grill fed this wave, so no set audit or subtraction pass has seen it — and whetstone is installed. Spawn the subtraction pass (whetstone `doubt-pass`, "Subtraction pass": its template, its model rule) on the draft §G, §C and §T as the artifact, with §G as the contract. One cycle. Show each cut to the operator and ask which to take; a cut never edits a §C bullet the operator gave without that answer. Hold the `SUBTRACT:` line and append it to §S after step 3 as `ds:new — subtract=<verdict>`. Without whetstone, skip it and say so in the step-7 report.
+
 ### 2.7. Write the contract
 
 The repo decides the home. `.dossier/` exists → the repo opted into tracked contracts: write `.dossier/<date>-<slug>.md` and commit it before the first task — citable as evidence, outliving the wave. Otherwise write `<wave-dir>/CONTRACT.md` beside the ledger and price that home out loud: untracked wherever `.scratchpad/` is gitignored (the assumed setup), archived with the wave, citable by nobody, and its criteria run as shell from a file no diff ever showed a reviewer — where a tracked contract's criteria appear in the commit that added them. Name the opt-in (`mkdir .dossier`, track it) so the choice stays the operator's. **Never create `.dossier/` yourself** — a tracked directory appearing in a repo that did not ask for one is the artifact rule this split exists to respect.

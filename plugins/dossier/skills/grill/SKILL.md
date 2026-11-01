@@ -116,7 +116,7 @@ The operator states a fact that voids a reason. Find every `DECISION` whose reco
 Two parts always, a third when whetstone is installed:
 
 1. Frontier empty (or empty-except-external with every pending node §C-surfaced).
-1. Set audit, when whetstone is installed. Send the `DECISION` lines and the constraints the operator stated to `whetstone-doubter` (`subagent_type: whetstone:whetstone-doubter`) as one artifact, with the constraints as its contract. Fold actionable findings back through step 4.5, then ask the operator — one audit cycle per grill; a second round is the operator's call. Without whetstone, skip it and say so in the hand-off.
+1. Set audit, when whetstone is installed. Send the `DECISION` lines and the constraints the operator stated to `whetstone-doubter` (`subagent_type: whetstone:whetstone-doubter`) as one artifact, with the constraints as its contract. In the same message, spawn the subtraction pass on the same artifact (whetstone `doubt-pass`, "Subtraction pass": its template, its model rule). Record each verdict as a `FACT:` line through `ds grill-add`, with `cite=` the agent type. Fold actionable findings and cuts back through step 4.5, then ask the operator in one block; a decision that both touch is the operator's call. One audit cycle and one subtraction cycle per grill; a second round is the operator's call. Without whetstone, skip both and say so in the hand-off.
 1. Explicit operator confirmation — verbatim, recorded in the `CONFIRMED:` footer. Acceptance is something the operator typed; silence and an unanswered recommendation are neither.
 
 ### 6. Synthesize
@@ -139,6 +139,7 @@ Report the artifact path and the confirmed slug. `ds:new <slug>` consumes the dr
 | every DECISION names its probe                | code-checkable shape (`probe=`); whether the probe ran = model            |
 | decisions re-derived after a premise change   | model — no script links a FACT to the decisions that used it              |
 | the decision set survives the set audit       | model-judgment, parsed — `DOUBT:` line from `whetstone-doubter`           |
+| the subtraction pass found what can go        | model-judgment, parsed — `SUBTRACT:` line; model opt-in via `advisorModel` |
 | every DECISION carries a real operator answer | model — no script distinguishes a typed answer from an assumed one        |
 | "frontier is empty"                           | model — no fixed decision-tree schema exists to verify against            |
 | serial-vs-batch phase choice                  | model — governed by the group add/remove rule, not mechanically checkable |
