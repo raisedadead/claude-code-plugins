@@ -693,7 +693,7 @@ function verdictLogVerb(args: string[]): number {
     ts: new Date().toISOString(),
     agent_type: stop.agent_type,
     agent_id: typeof stop.agent_id === 'string' ? stop.agent_id : null,
-    verdicts: typeof message === 'string' ? verdictLines(message) : null,
+    verdicts: typeof message === 'string' ? verdictLines(message, stop.agent_type) : null,
   }
   appendFileSync(join(dossiers, '.verdicts.jsonl'), `${JSON.stringify(record)}\n`)
   return 0
