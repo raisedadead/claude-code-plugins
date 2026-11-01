@@ -2,17 +2,18 @@ import assert from 'node:assert/strict'
 import { test } from 'vitest'
 import { isVerdictAgent, verdictLines } from '../engine/verdicts.ts'
 
-test('the doubter and the reviewer are verdict agents, with or without a plugin prefix', () => {
+test('only the plugin doubter and reviewer are verdict agents', () => {
   assert.equal(isVerdictAgent('whetstone:whetstone-doubter'), true)
-  assert.equal(isVerdictAgent('dossier-reviewer'), true)
+  assert.equal(isVerdictAgent('dossier:dossier-reviewer'), true)
+  assert.equal(isVerdictAgent('dossier-reviewer'), false)
+  assert.equal(isVerdictAgent('other:whetstone-doubter'), false)
   assert.equal(isVerdictAgent('general-purpose'), false)
-  assert.equal(isVerdictAgent('reviewer'), false)
   assert.equal(isVerdictAgent(undefined), false)
 })
 
-test('a verdict line is read through markdown emphasis, once per line', () => {
-  const text = '**DOUBT:** FAILURES\n\n- a finding\n\n## SUBTRACT: 2 CUTS\n`REVIEW: PASS`\nDOUBT: FAILURES\n'
-  assert.deepEqual(verdictLines(text), ['DOUBT: FAILURES', 'SUBTRACT: 2 CUTS', 'REVIEW: PASS'])
+test('the first verdict line is read through markdown emphasis', () => {
+  const text = '**DOUBT:** FAILURES\n\n- a finding\n\n## SUBTRACT: 2 CUTS\n`REVIEW: PASS`\n'
+  assert.deepEqual(verdictLines(text), ['DOUBT: FAILURES'])
 })
 
 test('a sentence that quotes a verdict is not read as one', () => {

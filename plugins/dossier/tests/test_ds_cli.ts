@@ -91,7 +91,8 @@ test('verdict-log writes nothing for another agent, outside a dossier project, o
   })
   const bare = mkdtempSync(join(tmpdir(), 'ds-cli-'))
   try {
-    assert.equal(logVerdict(bare, { agent_type: 'dossier-reviewer', last_assistant_message: 'REVIEW: PASS' }).status, 0)
+    const stop = { agent_type: 'dossier:dossier-reviewer', last_assistant_message: 'REVIEW: PASS' }
+    assert.equal(logVerdict(bare, stop).status, 0)
     assert.equal(existsSync(join(bare, '.scratchpad')), false)
   } finally {
     rmSync(bare, { recursive: true, force: true })

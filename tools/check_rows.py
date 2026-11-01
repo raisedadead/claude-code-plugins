@@ -29,7 +29,7 @@ CLEAN, MALFORMED, USAGE = 0, 1, 64
 
 ROW = re.compile(r"^\| ([DFO])\d+ ")
 FACT_ROW = re.compile(r"^\| F\d+ ")
-SOURCE_ROW = re.compile(r"^\| \[")
+SOURCE_ROW = re.compile(r"^\| (?!-)")
 UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
 DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 CELLS = {"D": 6, "F": 5, "O": 5}
@@ -65,10 +65,17 @@ def stale_rows(
         stamp = DATE.search(cells[1]) if len(cells) > 1 else None
         if not stamp:
             continue
-        age = (today - datetime.date.fromisoformat(stamp.group(0))).days
+        label = cells[0].strip()[:60]
+        try:
+            age = (today - datetime.date.fromisoformat(stamp.group(0))).days
+        except ValueError:
+            found.append(
+                f"WARN {name}:{number}: {label} has an invalid date {stamp.group(0)}"
+            )
+            continue
         if age > MAX_AGE_DAYS:
             found.append(
-                f"WARN {name}:{number}: {cells[0].strip()[:60]} dated "
+                f"WARN {name}:{number}: {label} dated "
                 f"{stamp.group(0)}, {age} days ago (over {MAX_AGE_DAYS})"
             )
     return found
@@ -129,9 +136,15 @@ def main(argv: list[str]) -> int:
         print(f"check_rows: no such file: {path}", file=sys.stderr)
         return USAGE
     text = path.read_text(encoding="utf-8")
-    today = (
-        datetime.date.fromisoformat(args.today) if args.today else datetime.date.today()
-    )
+    try:
+        today = (
+            datetime.date.fromisoformat(args.today)
+            if args.today
+            else datetime.date.today()
+        )
+    except ValueError:
+        print(f"check_rows: --today is not a date: {args.today}", file=sys.stderr)
+        return USAGE
     found = malformed_rows(text)
     advisory = warnings(path, text, args.base, today)
     for entry in found + advisory:

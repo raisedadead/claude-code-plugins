@@ -138,6 +138,29 @@ def test_an_inspirations_row_over_60_days_old_warns() -> None:
     assert "[new](u)" not in result.stdout, result.stdout
 
 
+def test_an_inspirations_row_without_a_link_is_dated_too() -> None:
+    path = _repo("", "")
+    (path.parent / "INSPIRATIONS.md").write_text(
+        "| source | surveyed | took |\n| --- | --- | --- |\n"
+        "| `a:skill` (synced) | 2026-07-31 | x |\n",
+        encoding="utf-8",
+    )
+    result = _check(path, "--today", "2026-11-01")
+    assert "WARN INSPIRATIONS.md:3: `a:skill` (synced) dated" in result.stdout
+
+
+def test_an_invalid_date_warns_and_still_exits_clean() -> None:
+    rows = "| F1 | 2026-02-30 | bad | s | t |\n"
+    result = _check(_repo(rows, rows), "--today", "2026-11-01")
+    assert result.returncode == CLEAN, result.stdout + result.stderr
+    assert "WARN RESEARCH.md:1: F1 has an invalid date 2026-02-30" in result.stdout
+
+
+def test_an_invalid_today_is_a_usage_error() -> None:
+    result = _check(_repo("", ""), "--today", "2026-02-30")
+    assert result.returncode == USAGE, result.stdout + result.stderr
+
+
 def test_the_repos_own_research_file_is_clean() -> None:
     result = subprocess.run(
         [sys.executable, str(CHECK), str(RESEARCH)], capture_output=True, text=True
