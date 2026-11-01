@@ -159,6 +159,31 @@ def test_the_reviewer_grammar_and_its_findings_count() -> None:
     assert census.failure_runs({"s1": values}) == {1: 1, 2: 1, 0: 2, "1+unresolved": 1}
 
 
+def test_a_findings_count_reports_under_one_label() -> None:
+    labels = [
+        census.verdict_label(v)
+        for v in ("3 findings", "1 finding", "0 findings", "PASS")
+    ]
+    assert labels == ["findings>0", "findings>0", "0 findings", "PASS"], labels
+
+
+def test_transcripts_come_oldest_first() -> None:
+    import tempfile
+
+    saved = census.TRANSCRIPTS
+    with tempfile.TemporaryDirectory() as root:
+        newer, older = Path(root, "a.jsonl"), Path(root, "b.jsonl")
+        newer.write_text("{}\n")
+        older.write_text("{}\n")
+        os.utime(newer, (2000, 2000))
+        os.utime(older, (1000, 1000))
+        try:
+            census.TRANSCRIPTS = str(Path(root, "**", "*.jsonl"))
+            assert census.transcripts() == [str(older), str(newer)]
+        finally:
+            census.TRANSCRIPTS = saved
+
+
 def _skill(name: str, args: str = "") -> dict:
     block = {
         "type": "tool_use",

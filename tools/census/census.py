@@ -69,7 +69,8 @@ FINDINGS = re.compile(r"(\d+) findings?")
 def transcripts() -> list[str]:
     import glob
 
-    return glob.glob(os.path.expanduser(TRANSCRIPTS), recursive=True)
+    found = glob.glob(os.path.expanduser(TRANSCRIPTS), recursive=True)
+    return sorted(found, key=os.path.getmtime)
 
 
 def records(path: str):
@@ -194,7 +195,7 @@ def census_verdicts() -> None:
             continue
         found = grammar.search(result)
         if found:
-            compliance[kind][f"on grammar: {found.group(1)}"] += 1
+            compliance[kind][f"on grammar: {verdict_label(found.group(1))}"] += 1
             sequences[kind][path].append(found.group(1))
         else:
             compliance[kind]["NO VERDICT LINE"] += 1
@@ -222,6 +223,12 @@ def first_notifications(
             if match and match.group(1) not in found:
                 found[match.group(1)] = (match.group(1), match.group(2), path)
     return list(found.values())
+
+
+def verdict_label(value: str) -> str:
+    if FINDINGS.fullmatch(value):
+        return "findings>0" if is_failing(value) else "0 findings"
+    return value
 
 
 def is_failing(value: str) -> bool:
@@ -834,7 +841,7 @@ def collapse(names: list[str]) -> str:
 
 
 def census_runs() -> None:
-    files = sorted(transcripts(), key=os.path.getmtime)
+    files = transcripts()
     counted: set[str] = set()
     calls: collections.Counter = collections.Counter()
     inside: collections.Counter = collections.Counter()
