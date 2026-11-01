@@ -552,6 +552,14 @@ test('stdout nothing with a failed command is unmet', async () => {
   assert.equal(result.status, UNMET, result.stdout)
 })
 
+test('an unmet line names the exit code the command returned', async () => {
+  const result = await runText(
+    'actual-exit.md',
+    singleCriterion('| id  | command          | expect |', '| --- | ---------------- | ------ |', "| 1   | `sh -c 'exit 3'` | exit 0 |"),
+  )
+  assert.match(result.stdout, /^ {2}UNMET 1\. sh -c 'exit 3' {2}\[exit 0; got exit 3\]$/m, result.stdout)
+})
+
 test('every command is named before the first one runs', async () => {
   const result = await run(join(FIXTURES, 'met.md'))
   const lines = result.stdout.split('\n')

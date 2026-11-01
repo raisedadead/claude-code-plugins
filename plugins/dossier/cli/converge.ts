@@ -167,7 +167,8 @@ export function convergeVerb(args: string[]): number {
     const result = run(bare, root, level)
     const ok = met(expect, result.code, result.out)
     if (!ok) unmet++
-    let line = `  ${ok ? 'MET  ' : 'UNMET'} ${ident}. ${bare}  [${expect}]`
+    const got = ok ? '' : `; got exit ${result.code}`
+    let line = `  ${ok ? 'MET  ' : 'UNMET'} ${ident}. ${bare}  [${expect}${got}]`
     const why = ok ? '' : detail(result.err)
     if (why) line += `  — ${why}`
     say(line)
