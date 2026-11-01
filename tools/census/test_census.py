@@ -21,6 +21,7 @@ SPEC = importlib.util.spec_from_file_location(
     "census", Path(__file__).resolve().parent / "census.py"
 )
 census = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = census
 SPEC.loader.exec_module(census)
 
 
