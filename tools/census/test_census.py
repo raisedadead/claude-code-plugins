@@ -286,6 +286,25 @@ def test_a_class_with_fewer_than_three_rows_is_unverified() -> None:
     assert census.class_median([10, 20, 40]) == "median 20 (n=3)"
 
 
+def test_an_open_shared_or_unmatched_row_stays_out_of_the_medians() -> None:
+    rows = census.row_windows(
+        [
+            "2026-11-01 10:00 ds:build T1 START",
+            "2026-11-01 10:10 ds:build T1 PAUSE reason=x",
+            "2026-11-01 10:20 ds:build T1 START resume",
+            "2026-11-01 10:30 ds:build T2 START",
+            "2026-11-01 10:40 ds:build T2 DONE → x",
+        ],
+        IST,
+    )
+    counted = {"main": {"input": 5}, "sessions": {"s1"}}
+    shared = {"main": {"input": 5}, "sessions": {"s1", "s2"}}
+    assert census.row_exclusion(rows["T1"], counted).startswith("OPEN")
+    assert census.row_exclusion(rows["T2"], shared).startswith("SHARED")
+    assert census.row_exclusion(rows["T2"], {}).startswith("NO TRANSCRIPT")
+    assert census.row_exclusion(rows["T2"], counted) is None
+
+
 def _call(message_id: str, name: str, cache_read: int = 0) -> dict:
     usage = {"cache_read_input_tokens": cache_read}
     block = {"type": "tool_use", "name": name, "input": {}}
@@ -342,8 +361,9 @@ def test_an_operator_prompt_or_an_unscriptable_tool_breaks_a_run() -> None:
 def test_an_advisor_call_or_a_turn_copied_from_another_file_breaks_a_run() -> None:
     advisor = _call("b", "Bash")
     advisor["message"]["content"].append({"type": "server_tool_use", "name": "advisor"})
-    records = [_call(key, "Read") for key in "acdefg"]
+    records = [_call(key, "Read") for key in "acdefghi"]
     records.insert(1, advisor)
+    records.insert(7, _prompt("<task-notification>done</task-notification>"))
     assert census.call_runs(census.turn_sequence(records, {"e"})) == []
 
 

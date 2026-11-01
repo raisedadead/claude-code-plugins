@@ -572,16 +572,19 @@ class RowLedger:
     started: datetime.datetime | None = None
 
 
-def row_windows(lines: list[str], zone: datetime.tzinfo) -> dict[str, RowLedger]:
+def row_windows(
+    lines: list[str], zone: datetime.tzinfo | None = None
+) -> dict[str, RowLedger]:
     rows: dict[str, RowLedger] = {}
     for line in lines:
         found = STATUS_LINE.match(line.strip())
         if not found:
             continue
         minute, seconds, row, rest = found.groups()
-        stamp = datetime.datetime.strptime(
+        naive = datetime.datetime.strptime(
             minute + (seconds or ":00"), "%Y-%m-%d %H:%M:%S"
-        ).replace(tzinfo=zone)
+        )
+        stamp = naive.replace(tzinfo=zone) if zone else naive.astimezone()
         ledger = rows.setdefault(row, RowLedger())
         if "delegate=" in rest:
             ledger.delegated = True
@@ -633,9 +636,20 @@ def row_tokens(rows: dict[str, RowLedger], feed, root: str) -> dict[str, dict]:
         counts = bucket.setdefault(side, collections.Counter())
         for label, field in USAGE_FIELDS.items():
             counts[label] += int(usage.get(field) or 0)
-        bucket["sessions"].add(record.get("sessionId"))
+        if record.get("sessionId"):
+            bucket["sessions"].add(record["sessionId"])
         bucket["models"].add(f"{side}={message.get('model')}")
     return tally
+
+
+def row_exclusion(ledger: RowLedger, bucket: dict) -> str | None:
+    if ledger.open:
+        return "OPEN: started again and not closed, not in the medians"
+    if len(bucket.get("sessions", ())) > 1:
+        return "SHARED: more than one session in the window, not in the medians"
+    if not sum(sum(c.values()) for k, c in bucket.items() if k == "main"):
+        return "NO TRANSCRIPT: no main-thread message matched, not in the medians"
+    return None
 
 
 def class_median(values: list[int]) -> str:
@@ -667,8 +681,7 @@ def census_rows() -> None:
             file=sys.stderr,
         )
         raise SystemExit(64)
-    zone = datetime.datetime.now().astimezone().tzinfo
-    rows = row_windows(ledger.read_text(encoding="utf-8").splitlines(), zone)
+    rows = row_windows(ledger.read_text(encoding="utf-8").splitlines())
     prefix = str(root).replace("/", "-").replace(".", "-")
     feed = (
         (record, agent_type_of(path))
@@ -681,8 +694,8 @@ def census_rows() -> None:
     )
     tally = row_tokens(rows, feed, str(root))
     print(
-        f"source: {ledger} status lines, read in zone {zone}, joined to "
-        f"message usage in {TRANSCRIPTS} with cwd under {root}"
+        f"source: {ledger} status lines, read in the local zone at each stamp, "
+        f"joined to message usage in {TRANSCRIPTS} with cwd under {root}"
     )
     by_class: dict[str, list[int]] = collections.defaultdict(list)
     for row in sorted(rows, key=lambda name: int(name[1:])):
@@ -695,21 +708,19 @@ def census_rows() -> None:
         main_counts = bucket.get("main") or collections.Counter()
         main = sum(main_counts.values())
         split = " ".join(f"{label}={main_counts[label]}" for label in USAGE_FIELDS)
-        shared = len(bucket.get("sessions", ())) > 1
         detail = ", ".join(
             f"{side} {sum(c.values())}" for side, c in sorted(sides.items())
         )
-        flag = (
-            " SHARED: more than one session in the window, not in the medians"
-            if shared
-            else ""
-        )
+        excluded = row_exclusion(rows[row], bucket)
+        flag = f" {excluded}" if excluded else ""
         models = sorted(bucket.get("models", ()))
         print(f"{row} {kind} main={main} ({split}) [{detail}] models={models}{flag}")
-        if not shared:
+        if not excluded:
             by_class[kind].append(main)
+    fields = " + ".join(USAGE_FIELDS)
     for kind in ("delegated", "inline"):
-        print(f"{kind}: main-thread tokens per row, {class_median(by_class[kind])}")
+        median = class_median(by_class[kind])
+        print(f"{kind}: main-thread tokens per row ({fields}), {median}")
 
 
 SCRIPTABLE = {"Bash", "Read", "Grep", "Glob", "Edit", "Write", "WebFetch"}
@@ -786,7 +797,7 @@ def collapse(names: list[str]) -> str:
 
 
 def census_runs() -> None:
-    files = transcripts()
+    files = sorted(transcripts(), key=os.path.getmtime)
     counted: set[str] = set()
     calls: collections.Counter = collections.Counter()
     inside: collections.Counter = collections.Counter()
@@ -808,9 +819,11 @@ def census_runs() -> None:
                 shapes[name][collapse([t.tools[0] for t in run])] += 1
     print(
         f"source: assistant tool_use and server_tool_use blocks per message id "
-        f"in {len(files)} transcripts under {TRANSCRIPTS}, an id copied into "
-        f"a later file counted once; a run is 3+ consecutive single-call turns "
-        f"of {sorted(SCRIPTABLE)} with no operator prompt between"
+        f"in {len(files)} transcripts under {TRANSCRIPTS}, read oldest file "
+        f"first; a run is 3+ consecutive single-call turns of "
+        f"{sorted(SCRIPTABLE)}, broken by an operator prompt, a task "
+        f"notification, a multi-call or other-tool turn, or a turn an older "
+        f"file already holds"
     )
     print(
         "UPPER BOUND, computed: whether the model had to read a result before "
