@@ -118,11 +118,11 @@ run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":"
 [ "$rc" -eq 0 ] || fail "drift present must still exit 0"
 assert_valid_json "drift"
 [ "$(title_of)" = "2026-06-05-foo" ] || fail "drift dir must not displace true-live slug as title"
-sys_of | grep -qi 'drift' || fail "drift dossier must raise a drift systemMessage"
-sys_of | grep -q 'zombie' || fail "drift systemMessage must name the drift slug"
-sys_of | grep -qE '[0-9]+ live' && fail "drift dir must not be counted as live"
-ctx_of | grep -qi 'resume' || fail "interrupted ds:close on a non-current dir must surface a resume hint"
-ctx_of | grep -q 'ds:close' || fail "resume hint must identify the interrupted close op"
+grep -qi 'drift' <<<"$(sys_of)" || fail "drift dossier must raise a drift systemMessage"
+grep -q 'zombie' <<<"$(sys_of)" || fail "drift systemMessage must name the drift slug"
+grep -qE '[0-9]+ live' <<<"$(sys_of)" && fail "drift dir must not be counted as live"
+grep -qi 'resume' <<<"$(ctx_of)" || fail "interrupted ds:close on a non-current dir must surface a resume hint"
+grep -q 'ds:close' <<<"$(ctx_of)" || fail "resume hint must identify the interrupted close op"
 
 rm -rf "$WS/.scratchpad"
 scaffold "2026-06-05-foo"
@@ -136,8 +136,8 @@ cat >>"$WS/.scratchpad/dossier/2026-06-05-foo/DOSSIER.md" <<'EOF'
 EOF
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
 assert_valid_json "resume-pairing"
-ctx_of | grep -q 'T2' || fail "unpaired build START (T2) must surface as resume"
-ctx_of | grep -qE 'resume[^A-Za-z]*needed.*T3' && fail "paired build (T3 START+DONE) must not surface as resume"
+grep -q 'T2' <<<"$(ctx_of)" || fail "unpaired build START (T2) must surface as resume"
+grep -qE 'resume[^A-Za-z]*needed.*T3' <<<"$(ctx_of)" && fail "paired build (T3 START+DONE) must not surface as resume"
 
 rm -rf "$WS/.scratchpad"
 scaffold "2026-06-05-foo"
@@ -149,7 +149,7 @@ cat >>"$WS/.scratchpad/dossier/2026-06-05-foo/DOSSIER.md" <<'EOF'
 EOF
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
 assert_valid_json "backprop-pairing"
-ctx_of | grep -qiE 'resume needed.*ds:backprop' && fail "a completed new-bug backprop (pending START → B1 DONE) must not phantom-resume"
+grep -qiE 'resume needed.*ds:backprop' <<<"$(ctx_of)" && fail "a completed new-bug backprop (pending START → B1 DONE) must not phantom-resume"
 
 rm -rf "$WS/.scratchpad"
 scaffold "2026-06-05-foo"
@@ -163,7 +163,7 @@ cat >>"$WS/.scratchpad/dossier/2026-06-05-foo/DOSSIER.md" <<'EOF'
 EOF
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
 assert_valid_json "backprop-interleave"
-ctx_of | grep -qE 'resume needed.*B9' || fail "an in-flight concrete backprop (B9 START) must survive a completed sibling's DONE"
+grep -qE 'resume needed.*B9' <<<"$(ctx_of)" || fail "an in-flight concrete backprop (B9 START) must survive a completed sibling's DONE"
 
 rm -rf "$WS/.scratchpad"
 scaffold "2026-06-08-zprose"
@@ -175,7 +175,7 @@ discuss the T2 phase START
 EOF
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
 assert_valid_json "z-prose"
-ctx_of | grep -q 'phase START' && fail "§Z prose with a field-5 START must not trigger a resume hint (scan is §S-scoped)"
+grep -q 'phase START' <<<"$(ctx_of)" && fail "§Z prose with a field-5 START must not trigger a resume hint (scan is §S-scoped)"
 
 rm -rf "$WS/.scratchpad"
 scaffold "2026-06-07-current"
@@ -199,7 +199,7 @@ run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":"
 assert_valid_json "self-heal"
 [ -f "$WS/.scratchpad/dossier/_archive/2026-06-06-closed/DOSSIER.md" ] || fail "§Z-closed zombie must self-heal into _archive at session-start"
 [ ! -e "$WS/.scratchpad/dossier/2026-06-06-closed" ] || fail "healed zombie must leave the live tree"
-sys_of | grep -qi 'drift' && fail "a fully self-healed tree must not warn drift"
+grep -qi 'drift' <<<"$(sys_of)" && fail "a fully self-healed tree must not warn drift"
 grep -q 'ds:reconcile' "$WS/.scratchpad/dossier/_archive/2026-06-06-closed/DOSSIER.md" || fail "self-heal must leave a §S breadcrumb"
 
 rm -rf "$WS/.scratchpad"
@@ -233,7 +233,7 @@ for spelling in "## §T — Task ledger|## §S — Rolling status log" "## Tasks
 	ledger_with "2026-08-05-sitrep" "$tasks_h" "$status_h"
 	run_hook '{"hook_event_name":"SessionStart","source":"startup"}'
 	assert_valid_json "sitrep $tasks_h"
-	ctx_of | grep -q ' 50% · 1/2' ||
+	grep -q ' 50% · 1/2' <<<"$(ctx_of)" ||
 		fail "$tasks_h: task summary must count by header name, got: $(ctx_of)"
 	[[ "$(ctx_of | grep -c 'just did:')" == "2" ]] ||
 		fail "$status_h: the two most recent Status entries must reach the sit-rep, got: $(ctx_of)"
@@ -243,20 +243,20 @@ rm -rf "$WS/.scratchpad"
 scaffold "2026-06-05-foo"
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
 assert_valid_json "live-nudge"
-sys_of | grep -q '2026-06-05-foo' || fail "one live dossier must raise a systemMessage naming the slug, got: $(sys_of)"
-sys_of | grep -q 'ds:status\|/dossier:status' || fail "the live nudge must route to the sit-rep"
-sys_of | grep -q '2026-06-05-foo 0% · ' || fail "the live nudge must carry the progress line, got: $(sys_of)"
+grep -q '2026-06-05-foo' <<<"$(sys_of)" || fail "one live dossier must raise a systemMessage naming the slug, got: $(sys_of)"
+grep -q 'ds:status\|/dossier:status' <<<"$(sys_of)" || fail "the live nudge must route to the sit-rep"
+grep -q '2026-06-05-foo 0% · ' <<<"$(sys_of)" || fail "the live nudge must carry the progress line, got: $(sys_of)"
 
 for src in resume fork clear; do
 	run_hook "{\"hook_event_name\":\"SessionStart\",\"source\":\"$src\",\"session_title\":\"\"}"
 	assert_valid_json "live-nudge-$src"
-	sys_of | grep -q '2026-06-05-foo' || fail "$src must raise the live nudge — it is a session the operator started"
+	grep -q '2026-06-05-foo' <<<"$(sys_of)" || fail "$src must raise the live nudge — it is a session the operator started"
 done
 
 run_hook '{"hook_event_name":"SessionStart","source":"compact","session_title":""}'
 assert_valid_json "live-nudge-compact"
 [ -z "$(sys_of)" ] || fail "compact must not re-raise the live nudge mid-session, got: $(sys_of)"
-ctx_of | grep -q '2026-06-05-foo' || fail "compact must still hand the live dossier to the model via additionalContext"
+grep -q '2026-06-05-foo' <<<"$(ctx_of)" || fail "compact must still hand the live dossier to the model via additionalContext"
 
 DOSSIER_LIVE_NUDGE=0 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
 assert_valid_json "live-nudge-optout"
@@ -268,7 +268,7 @@ scaffold "2026-06-05-foo"
 scaffold "2026-06-06-bar"
 run_hook '{"hook_event_name":"SessionStart","source":"startup","session_title":""}'
 assert_valid_json "two-live"
-sys_of | grep -q '2 live' || fail "two live dossiers must still raise the consolidate warning, got: $(sys_of)"
+grep -q '2 live' <<<"$(sys_of)" || fail "two live dossiers must still raise the consolidate warning, got: $(sys_of)"
 
 rm -rf "$WS/.scratchpad"
 mkdir -p "$WS/.scratchpad/dossier/_archive"

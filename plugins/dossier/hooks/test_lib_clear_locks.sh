@@ -57,12 +57,12 @@ mklock dryfresh "{\"pid\": $$, \"started\": \"$(iso_ago 60)\", \"skill\": \"ds:b
 dry_out="$("$DS" clear-locks "$DD" --dry-run 2>/dev/null)"
 [[ -e "$DD/drystale/.ds-lock" ]] || fail "--dry-run must NOT clear a stale lock"
 [[ -e "$DD/dryfresh/.ds-lock" ]] || fail "--dry-run must leave fresh locks untouched"
-printf '%s' "$dry_out" | grep -q 'would clear' || fail "--dry-run must report would-clear on stdout"
-printf '%s' "$dry_out" | grep -q 'drystale' || fail "--dry-run report must name the stale lock"
+grep -q 'would clear' <<<"$dry_out" || fail "--dry-run must report would-clear on stdout"
+grep -q 'drystale' <<<"$dry_out" || fail "--dry-run report must name the stale lock"
 
 flagfirst_out="$("$DS" clear-locks --dry-run "$DD" 2>/dev/null)"
 [[ -e "$DD/drystale/.ds-lock" ]] || fail "--dry-run before dir must also be non-mutating"
-printf '%s' "$flagfirst_out" | grep -q 'drystale' || fail "--dry-run before dir must still report"
+grep -q 'drystale' <<<"$flagfirst_out" || fail "--dry-run before dir must still report"
 
 "$DS" clear-locks "$DD" 2>/dev/null
 [[ ! -e "$DD/drystale/.ds-lock" ]] || fail "non-dry run after dry-run must actually clear the stale lock"

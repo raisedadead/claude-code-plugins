@@ -169,7 +169,7 @@ mkdir -p "$WS6/.scratchpad/dossier/2026-08-05-nostate"
 	printf '## Tasks\n\n| id | status | owner | task |\n|----|--------|-------|------|\n| T1 | x      | A     | a    |\n'
 } >"$WS6/.scratchpad/dossier/2026-08-05-nostate/DOSSIER.md"
 nostate_err=$( (cd "$WS6" && "$DS" regen-index .scratchpad 2>&1 >/dev/null) || true)
-printf '%s' "$nostate_err" | grep -q 'names no state column' ||
+grep -q 'names no state column' <<<"$nostate_err" ||
 	fail "a Tasks header naming no state column must be reported, not silently counted as zero; got: $nostate_err"
 
 WS7="$TMP/ws7"

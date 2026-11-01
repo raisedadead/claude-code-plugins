@@ -209,21 +209,21 @@ git -C "$REPO" -c user.email=t@t -c user.name=t commit -q --allow-empty -m c2
 "$DS" x-refresh "$DX" "myorg/demo" "$REPO"
 demo_row=$(grep -E '^\| +myorg/demo ' "$DFX" | head -1)
 [[ -n "$demo_row" ]] || fail "x-refresh demo row vanished"
-echo "$demo_row" | grep -q 'main' || fail "x-refresh did not set branch=main"
-echo "$demo_row" | grep -q 'stale' && fail "x-refresh kept stale branch"
-echo "$demo_row" | grep -qE '\| 1 \|' || fail "x-refresh ahead != 1"
-echo "$demo_row" | grep -q 'v0.1' || fail "x-refresh tag missing"
-echo "$demo_row" | grep -qE '\| no \|' || fail "x-refresh pushed != no"
-echo "$demo_row" | grep -q 'keep-this-note' || fail "x-refresh clobbered notes"
+grep -q 'main' <<<"$demo_row" || fail "x-refresh did not set branch=main"
+grep -q 'stale' <<<"$demo_row" && fail "x-refresh kept stale branch"
+grep -qE '\| 1 \|' <<<"$demo_row" || fail "x-refresh ahead != 1"
+grep -q 'v0.1' <<<"$demo_row" || fail "x-refresh tag missing"
+grep -qE '\| no \|' <<<"$demo_row" || fail "x-refresh pushed != no"
+grep -q 'keep-this-note' <<<"$demo_row" || fail "x-refresh clobbered notes"
 
-grep -E '^\| +myorg/two ' "$DFX" | grep -q 'second note' || fail "x-refresh mutated other row"
-grep -E '^\| +myorg/two ' "$DFX" | grep -q 'stale' || fail "x-refresh touched non-target row"
+grep -q 'second note' <<<"$(grep -E '^\| +myorg/two ' "$DFX")" || fail "x-refresh mutated other row"
+grep -q 'stale' <<<"$(grep -E '^\| +myorg/two ' "$DFX")" || fail "x-refresh touched non-target row"
 
 REPO2="$TMP/repo2"
 git init -q -b main "$REPO2"
 git -C "$REPO2" -c user.email=t@t -c user.name=t commit -q --allow-empty -m c1
 "$DS" x-refresh "$DX" "myorg/two" "$REPO2"
-grep -E '^\| +myorg/two ' "$DFX" | grep -q 'no-upstream' || fail "x-refresh no-upstream not set"
+grep -q 'no-upstream' <<<"$(grep -E '^\| +myorg/two ' "$DFX")" || fail "x-refresh no-upstream not set"
 
 if "$DS" x-refresh "$DX" "myorg/absent" "$REPO" 2>/dev/null; then fail "x-refresh missing label should error"; fi
 
@@ -248,7 +248,7 @@ printf '%s' "$row" | awk -F'|' '{exit ($3 ~ /x/) ? 0 : 1}' ||
 	fail "state is written to the cell the header names, got: $row"
 printf '%s' "$row" | awk -F'|' '{exit ($7 ~ /abc123/) ? 0 : 1}' ||
 	fail "cite is written to the cell the header names, got: $row"
-printf '%s' "$row" | grep -q ' A ' || fail "flip clobbered the who cell, got: $row"
+grep -q ' A ' <<<"$row" || fail "flip clobbered the who cell, got: $row"
 
 DWORD="$TMP/worded"
 shaped_dir "$DWORD" \

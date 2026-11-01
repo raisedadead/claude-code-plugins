@@ -130,7 +130,7 @@ assert_section_required() {
 	if err="$("$DS" assert-scaffold "$dir" 2>&1)"; then
 		fail "dropping '$heading' must exit non-zero"
 	fi
-	printf '%s' "$err" | grep -qF "$tag" || fail "error for dropped '$heading' must name $tag"
+	grep -qF "$tag" <<<"$err" || fail "error for dropped '$heading' must name $tag"
 }
 
 SIGIL_SECTIONS=(
