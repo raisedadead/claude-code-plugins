@@ -196,6 +196,8 @@ if [[ $job == tools || $job == all ]]; then
 	step rows "${py[@]}" tools/check_rows.py --base "${ROWS_BASE:-origin/main}"
 	step census "${py[@]}" tools/census/test_census.py
 	step ruff "${ruff[@]}" check tools
+	step pipe-grep-test bash tools/test_pipe_grep.sh
+	step pipe-grep bash tools/pipe_grep.sh
 fi
 
 if [[ $job == whetstone || $job == all ]]; then
