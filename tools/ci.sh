@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if ((BASH_VERSINFO[0] < 5)); then
+	printf 'BASH: tools/ci.sh needs bash 5 or later; this is %s\n' "$BASH_VERSION" >&2
+	exit 1
+fi
 cd "$(git rev-parse --show-toplevel)"
 job="${1:-all}"
 case "$job" in dossier | tools | whetstone | all) ;; *)
@@ -47,39 +51,65 @@ else
 	ruff=(uvx "ruff@$RUFF_PIN")
 fi
 
+if [[ -n ${CI_JOBS:-} ]]; then
+	JOBS=$CI_JOBS
+elif [[ ${CI:-} == true ]]; then
+	JOBS=1
+else
+	JOBS="$(getconf _NPROCESSORS_ONLN)"
+fi
+if [[ ! $JOBS =~ ^[1-9][0-9]*$ ]]; then
+	printf 'CI_JOBS must be a positive number, not %s\n' "$JOBS" >&2
+	exit 64
+fi
+
+set -m
 LOGS="$(mktemp -d "${TMPDIR:-/tmp}/ci.XXXXXX")"
-trap 'rm -rf "$LOGS"' EXIT
-passed=0
-failed=()
+pids=()
+stop() {
+	local pid
+	for pid in "${pids[@]}"; do kill -TERM -- "-$pid" 2>/dev/null || true; done
+	rm -rf "$LOGS"
+}
+trap stop EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+started=$EPOCHREALTIME
 known=" "
+names=()
 
 step() {
 	local name="$1"
 	shift
+	if [[ $known == *" $name "* ]]; then
+		printf 'STEP: two steps are named %s\n' "$name" >&2
+		exit 1
+	fi
 	known+="$name "
 	[[ -z ${CI_STEPS:-} || " $CI_STEPS " == *" $name "* ]] || return 0
-	if "$@" >"$LOGS/$name" 2>&1; then
-		passed=$((passed + 1))
-		printf 'ok %s\n' "$name"
-	else
-		failed+=("$name")
-		printf 'FAIL %s\n' "$name"
-		cat "$LOGS/$name"
-		printf '\n'
-	fi
+	names+=("$name")
+	while (($(jobs -rp | wc -l) >= JOBS)); do wait -n || true; done
+	(
+		local begin=$EPOCHREALTIME code=0
+		"$@" >"$LOGS/$name.log" 2>&1 || code=$?
+		printf '%s %s %s\n' "$code" "$begin" "$EPOCHREALTIME" >"$LOGS/$name.done"
+	) &
+	pids+=("$!")
+}
+
+seconds() {
+	awk -v a="$1" -v b="$2" 'BEGIN { printf "%.1fs", b - a }'
 }
 
 each() {
-	local rc=0 test
+	local test
 	for test in "$@"; do
-		printf '== %s\n' "$test"
-		bash "$test" || rc=1
+		step "${test##*/}" bash "$test"
 	done
-	return "$rc"
 }
 
 shellcheck_at_pin() {
-	if ! shellcheck --version | grep -q "version: ${SHELLCHECK_PIN#v}$"; then
+	if ! grep -q "version: ${SHELLCHECK_PIN#v}$" <<<"$(shellcheck --version)"; then
 		printf 'shellcheck is %s; CI runs %s\n' "$(shellcheck --version | sed -n 2p)" "$SHELLCHECK_PIN"
 		return 1
 	fi
@@ -113,6 +143,7 @@ validate() {
 
 if [[ $job == dossier || $job == whetstone || $job == all ]]; then
 	step install pnpm install --frozen-lockfile
+	wait
 fi
 
 if [[ $job == dossier || $job == all ]]; then
@@ -120,7 +151,7 @@ if [[ $job == dossier || $job == all ]]; then
 	step format node_modules/.bin/oxfmt --check
 	step lint node_modules/.bin/oxlint --deny-warnings
 	step types node_modules/.bin/tsc -p .
-	step dossier-shell each \
+	each \
 		plugins/dossier/hooks/test_lib_dossier_edit.sh \
 		plugins/dossier/hooks/test_lib_regen.sh \
 		plugins/dossier/hooks/test_session_start.sh \
@@ -153,7 +184,7 @@ fi
 
 if [[ $job == whetstone || $job == all ]]; then
 	step whetstone-tests node_modules/.bin/vitest run --reporter=dot plugins/whetstone/tests/test_*.ts
-	step whetstone-shell each \
+	each \
 		plugins/whetstone/tests/test_flake_runner.sh \
 		plugins/whetstone/tests/test_verify_clean.sh \
 		plugins/whetstone/tests/test_run_slice.sh \
@@ -165,12 +196,30 @@ if [[ $job == whetstone || $job == all ]]; then
 	step whetstone-shellcheck shellcheck_at_pin plugins/whetstone/skills/*/scripts/*.sh plugins/whetstone/tests/*.sh plugins/whetstone/bin/*
 fi
 
-for name in ${CI_STEPS:-}; do
-	[[ $known == *" $name "* ]] || failed+=("unknown-step:$name")
+wait
+failed=()
+for name in "${names[@]}"; do
+	code=1 begin=$started end=$EPOCHREALTIME
+	[[ -f $LOGS/$name.done ]] && read -r code begin end <"$LOGS/$name.done"
+	if [[ $code == 0 ]]; then
+		printf 'ok %s %s\n' "$name" "$(seconds "$begin" "$end")"
+	else
+		failed+=("$name")
+		printf 'FAIL %s %s\n' "$name" "$(seconds "$begin" "$end")"
+		cat "$LOGS/$name.log" 2>/dev/null || true
+		[[ -f $LOGS/$name.done ]] || printf 'the step stopped before it wrote a result\n'
+		printf '\n'
+	fi
 done
-total=$((passed + ${#failed[@]}))
+total=${#names[@]}
+for name in ${CI_STEPS:-}; do
+	[[ $known == *" $name "* ]] && continue
+	failed+=("unknown-step:$name")
+	total=$((total + 1))
+done
+took="$(seconds "$started" "$EPOCHREALTIME")"
 if [[ ${#failed[@]} -gt 0 ]]; then
-	printf 'CI: FAIL %d of %d — %s\n' "${#failed[@]}" "$total" "${failed[*]}"
+	printf 'CI: FAIL %d of %d in %s — %s\n' "${#failed[@]}" "$total" "$took" "${failed[*]}"
 	exit 1
 fi
-printf 'CI: ok %d steps\n' "$total"
+printf 'CI: ok %d steps in %s\n' "$total" "$took"

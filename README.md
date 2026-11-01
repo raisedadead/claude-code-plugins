@@ -118,7 +118,7 @@ Skill routing has a live-model eval suite: `claude plugin eval plugins/dossier -
 
 ## Contributing
 
-Run `pnpm install` and `git config core.hooksPath .githooks` once per clone or worktree. `tools/ci.sh` holds every check. Each CI job runs its part (`bash tools/ci.sh dossier`, `tools`, `whetstone`), and the pre-push hook runs `bash tools/ci.sh all`. A local run uses the versions that `.github/workflows/ci.yml` and `requirements-dev.txt` pin: Node through `fnm`, Python and ruff through `uv`, Claude Code through `npx`, and it exits 1 when one of them is missing. It runs every step, prints `ok` or `FAIL` for each step with the output of a failed one, and ends with `CI: ok <n> steps` or `CI: FAIL <k> of <n> — <steps>`. The hook reads the working tree, so it exits 1 on a dirty tree or a branch that is not checked out. A tag push skips the checks.
+Run `pnpm install` and `git config core.hooksPath .githooks` once per clone or worktree. `tools/ci.sh` holds every check. Each CI job runs its part (`bash tools/ci.sh dossier`, `tools`, `whetstone`), and the pre-push hook runs `bash tools/ci.sh all`. A local run uses the versions that `.github/workflows/ci.yml` and `requirements-dev.txt` pin: Node through `fnm`, Python and ruff through `uv`, Claude Code through `npx`, and it exits 1 when one of them is missing. After `pnpm install` it runs up to one step per core at once (`CI_JOBS=<n>` sets the number), prints `ok` or `FAIL` and the time for each step with the output of a failed one, and ends with `CI: ok <n> steps in <t>s` or `CI: FAIL <k> of <n> in <t>s — <steps>`. The hook reads the working tree, so it exits 1 on a dirty tree or a branch that is not checked out. A tag push skips the checks.
 
 ## License
 
