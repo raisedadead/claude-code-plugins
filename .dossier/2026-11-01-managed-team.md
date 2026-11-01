@@ -23,3 +23,5 @@
 | 11  | `claude plugin test plugins/dossier` | exit 0 |
 | 12  | `grep -q 'general-purpose' plugins/dossier/skills/build/SKILL.md` | exit 0 |
 | 13  | `plugins/dossier/cli/ds delegation-check .scratchpad/dossier/2026-11-01-managed-team` | exit 0 |
+| 14  | `bash tools/rails_ceiling.sh` | exit 0 |
+| 15  | `claude plugin test plugins/whetstone` | exit 0 |
