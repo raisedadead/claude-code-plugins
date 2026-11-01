@@ -20,66 +20,12 @@ jobs:
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
-      - name: install
-        run: pnpm install --frozen-lockfile
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.10'
 
-      - name: command tests
-        run: pnpm vitest run plugins/dossier/tests/test_*.ts
-
-      - name: format, lint and types
-        run: |
-          pnpm oxfmt --check
-          pnpm oxlint --deny-warnings
-          pnpm tsc -p .
-
-      - name: shell helper tests
-        run: |
-          bash plugins/dossier/hooks/test_lib_dossier_edit.sh
-          bash plugins/dossier/hooks/test_lib_regen.sh
-          bash plugins/dossier/hooks/test_session_start.sh
-          bash plugins/dossier/hooks/test_lib_archive_move.sh
-          bash plugins/dossier/hooks/test_lib_reconcile.sh
-          bash plugins/dossier/hooks/test_lib_clear_locks.sh
-          bash plugins/dossier/hooks/test_lib_ds_check.sh
-          bash plugins/dossier/hooks/test_lib_z_write.sh
-          bash plugins/dossier/hooks/test_lib_assert_scaffold.sh
-          bash plugins/dossier/hooks/test_lib_vm_checks.sh
-          bash plugins/dossier/hooks/test_closure_parity.sh
-          bash plugins/dossier/hooks/test_vm6_parity.sh
-          bash plugins/dossier/hooks/test_lib_assert_grill.sh
-          bash plugins/dossier/hooks/test_fakeimpl_stop.sh
-
-      - name: skill lint (all dossier skills)
-        run: plugins/whetstone/bin/lint-skill plugins/dossier/skills
-
-      - name: positive-rails ceiling
-        run: bash tools/rails_ceiling.sh
-
-      - name: every test file is named in this workflow
-        run: |
-          # Three suites once existed, passed locally, and ran nowhere.
-          missing=0
-          while IFS= read -r t; do
-            dir="${t%/*}"
-            case "$dir" in
-            plugins/*/tests) [[ "$dir" != plugins/*/*/tests && "${t##*/}" == test_*.ts ]] && t="$dir/test_*.ts" ;;
-            esac
-            grep -qF "$t" .github/workflows/ci.yml || { echo "not named in CI: $t" >&2; missing=1; }
-          done < <(git ls-files 'plugins/*/tests/test_*' 'plugins/*/hooks/test_*' 'tools/test_*' 'tools/*/test_*')
-          test "$missing" -eq 0
-
-      - name: first-party manifest + skill validation
-        run: |
-          npm install -g @anthropic-ai/claude-code@2.1.311
-          claude plugin validate plugins/dossier
-          claude plugin validate plugins/whetstone
-          claude plugin validate .
-
-      - name: mod tests
-        run: claude plugin test plugins/dossier
-
-      - name: pre-push hook
-        run: bash tools/test_pre_push.sh
+      - name: claude code
+        run: npm install -g @anthropic-ai/claude-code@2.1.311
 
       - name: shellcheck
         env:
@@ -88,8 +34,9 @@ jobs:
         run: |
           curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ
           sudo mv "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
-          shellcheck --version | grep "version: ${SHELLCHECK_VERSION#v}"
-          shellcheck plugins/dossier/hooks/*.sh tools/*.sh .githooks/pre-push
+
+      - name: checks, shared with the pre-push hook
+        run: bash tools/ci.sh dossier
 
   tools:
     runs-on: ubuntu-latest
@@ -102,20 +49,13 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: research ledger row shape
-        env:
-          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          python3 tools/test_check_rows.py
-          python3 tools/check_rows.py --base "$BASE"
-
-      - name: census notification join
-        run: python3 tools/census/test_census.py
-
       - name: ruff
-        run: |
-          pip install -r requirements-dev.txt
-          ruff check tools
+        run: pip install -r requirements-dev.txt
+
+      - name: checks, shared with the pre-push hook
+        env:
+          ROWS_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: bash tools/ci.sh tools
 
   whetstone:
     runs-on: ubuntu-latest
@@ -128,32 +68,8 @@ jobs:
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
-      - name: install
-        run: pnpm install --frozen-lockfile
-
-      - name: command tests
-        run: pnpm vitest run plugins/whetstone/tests/test_*.ts
-
-      - name: shell script tests
-        run: |
-          bash plugins/whetstone/tests/test_flake_runner.sh
-          bash plugins/whetstone/tests/test_verify_clean.sh
-          bash plugins/whetstone/tests/test_run_slice.sh
-          bash plugins/whetstone/tests/test_claim_check_cli.sh
-          bash plugins/whetstone/tests/test_bin_wrappers.sh
-
-      - name: skill lint (self-hosted)
-        run: plugins/whetstone/bin/lint-skill plugins/whetstone/skills
-
-      - name: mod tests
-        run: |
-          npm install -g @anthropic-ai/claude-code@2.1.311
-          claude plugin test plugins/whetstone
-
-      - name: claim-check
-        run: |
-          git ls-files '*.md' | grep -v tests/fixtures/ \
-            | xargs plugins/whetstone/bin/claim-check
+      - name: claude code
+        run: npm install -g @anthropic-ai/claude-code@2.1.311
 
       - name: shellcheck
         env:
@@ -162,5 +78,6 @@ jobs:
         run: |
           curl -fsSL "https://github.com/koalaman/shellcheck/releases/download/${SHELLCHECK_VERSION}/shellcheck-${SHELLCHECK_VERSION}.linux.x86_64.tar.xz" | tar -xJ
           sudo mv "shellcheck-${SHELLCHECK_VERSION}/shellcheck" /usr/local/bin/shellcheck
-          shellcheck --version | grep "version: ${SHELLCHECK_VERSION#v}"
-          shellcheck plugins/whetstone/skills/*/scripts/*.sh plugins/whetstone/tests/*.sh plugins/whetstone/bin/*
+
+      - name: checks, shared with the pre-push hook
+        run: bash tools/ci.sh whetstone

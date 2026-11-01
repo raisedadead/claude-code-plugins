@@ -118,7 +118,7 @@ Skill routing has a live-model eval suite: `claude plugin eval plugins/dossier -
 
 ## Contributing
 
-Run `pnpm install` and `git config core.hooksPath .githooks` once per clone or worktree. The pre-push hook runs the RESEARCH.md row check, the positive-rails ceiling, `claim-check`, `oxfmt --check`, `oxlint`, `tsc` (outside the mod files), the `test_*.ts` Vitest suites and `claude plugin test` for both plugins, and stops the push on a failure. It reads the working tree, so it also stops a push from a dirty tree or of a branch that is not checked out. A tag push skips the checks. CI runs the full set.
+Run `pnpm install` and `git config core.hooksPath .githooks` once per clone or worktree. `tools/ci.sh` holds every check. Each CI job runs its part (`bash tools/ci.sh dossier`, `tools`, `whetstone`), and the pre-push hook runs `bash tools/ci.sh all`. A local run uses the versions that `.github/workflows/ci.yml` and `requirements-dev.txt` pin: Node through `fnm`, Python and ruff through `uv`, Claude Code through `npx`, and it exits 1 when one of them is missing. It runs every step, prints `ok` or `FAIL` for each step with the output of a failed one, and ends with `CI: ok <n> steps` or `CI: FAIL <k> of <n> — <steps>`. The hook reads the working tree, so it exits 1 on a dirty tree or a branch that is not checked out. A tag push skips the checks.
 
 ## License
 

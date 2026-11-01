@@ -5,6 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/pre-push.XXXXXX")"
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
 export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=maintenance.auto GIT_CONFIG_VALUE_0=false
+export CI_STEPS='rows rails format lint types dossier-tests'
 
 cleanup() { rm -rf "$TMP"; }
 trap cleanup EXIT
@@ -84,6 +85,12 @@ printf 'export const x = {a:1}\n' >plugins/dossier/engine/zz.ts
 git add plugins/dossier/engine/zz.ts
 git commit -q -m "chore: add an unformatted file"
 refused format 'Format issues' main
+grep -qE '^CI: FAIL 1 of [0-9]+ — format$' "$TMP/format.log" || fail "the summary does not name the failed step: $(tail -1 "$TMP/format.log")"
+git reset -q --hard origin/main
+
+printf "          node-version: '0.0.1'\n" >>.github/workflows/ci.yml
+git commit -q -am "ci: pin two node versions"
+refused pin 'PIN: no single node pin' main
 git reset -q --hard origin/main
 
 printf 'export const r = new Array(3)\n' >plugins/dossier/engine/zz.ts
@@ -101,7 +108,7 @@ git reset -q --hard origin/main
 printf "import { expect, test } from 'vitest'\n\ntest('fails', () => {\n  expect(1).toBe(2)\n})\n" >plugins/dossier/tests/test_zz.ts
 git add plugins/dossier/tests/test_zz.ts
 git commit -q -m "test: add a failing test"
-refused tests 'FAIL' main
+refused tests 'FAIL dossier-tests' main
 git reset -q --hard origin/main
 
 printf 'note\n' >notes.txt
