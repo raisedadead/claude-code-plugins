@@ -53,7 +53,8 @@ Read §S grep `ds:build <T-id>`. Identify last event:
 | -------------------------- | -------------------------------------------------------------------- |
 | (no entries)               | full run from step 5                                                 |
 | `START`                    | step 5 (re-run safe)                                                 |
-| `delegate=` or `rebuild=1` | step 6.2 item 4 on the tree as it stands; a clean tree goes to item 2 |
+| `delegate=`                | step 6.2 item 3 on the builder's test; a clean tree goes to item 2   |
+| `red=` or `rebuild=1`      | step 6.2 item 4 on the tree as it stands                             |
 | `commit=<sha>`             | step 8 (work already committed)                                      |
 | `§X=partial`               | step 8 (retry §X refresh)                                            |
 | `§X=refreshed`             | step 9 (flip only)                                                   |
@@ -131,7 +132,7 @@ A test that fails and then passes on a rerun with no change is a flake signal. W
 
 The operator marks a row for a builder by writing `route=delegate` in its task cell, as a bare word outside backticks; a marker in backticks reads as prose. The build reads the marker and never writes one, and `ds delegation-check <dossier-dir>` exits 1 when a marked or delegated `x` row has no review line, a row has two rebuilds, or a started `route=pi` row has no approval. Such a row is built by one `general-purpose` subagent; the baseline, the routes and the failure rules of step 6 still bind the main thread. A `route=pi` row needs the operator's approval in §S, `ds:build <T-id> route=pi approved="<operator verbatim>"`, and the Pi route is not built yet: under `--auto` PAUSE (`ambiguous`); interactively, hand it to the operator.
 
-1. **Clean tree.** `git status --porcelain` must print nothing, so every later change is the builder's. Otherwise PAUSE (`ambiguous`).
+1. **Clean tree.** `git status --porcelain -- . ':(exclude).scratchpad'` must print nothing, so every later change is the builder's. Otherwise PAUSE (`ambiguous`).
 1. **Spawn for RED.** Rewrite `.ds-lock` with a fresh `started`, then spawn one `Agent` with `subagent_type: general-purpose` and no `model`, so the builder runs on the user's subagent default or the session model. Append §S `ds:build <T-id> delegate=general-purpose`. The mission is artifact-only, as in step 6.5:
 
    ```
@@ -147,12 +148,12 @@ The operator marks a row for a builder by writing `route=delegate` in its task c
    DONE: <the test command> fails for the missing behaviour
    ```
 
-1. **RED, then GREEN.** Run the returned test command yourself; it must fail for the missing behaviour (`run-slice red` when on `PATH`). A pass, or a failure for another cause, is a PAUSE (`ambiguous`). Then `SendMessage` the same builder: `Implement now. OUTPUT: the GREEN output verbatim with its command, then the changed files. DONE: <verify command> exits 0`. Without `SendMessage`, spawn a fresh builder with the mission and the line `The failing test is in place: <command>`. A verify cell of `—` has no RED: the first mission asks for the change and the changed files.
-1. **Return.** Rewrite `.ds-lock`. A `QUESTION:` line is a PAUSE (`ambiguous`) with the question in §S; interactively, put it to the operator. Otherwise the builder's report is advisory: re-run the verify command and the touched package's full suite yourself, and use that as the GREEN proof. `git add` every path `git status --porcelain` lists, so step 6.5 reviews the builder's whole diff.
-1. **Review, one rebuild.** Step 6.5 runs on every delegated row. `REVIEW: CHANGES` → `SendMessage` the builder the Critical findings with `Fix these. Keep the test unless a finding names it. Return GREEN.`, append §S `ds:build <T-id> rebuild=1`, then run items 4 and 5 again. A second `CHANGES` is a PAUSE (`review`).
+1. **RED, then GREEN.** A `QUESTION:` line is a PAUSE (`ambiguous`) with the question in §S; interactively, put it to the operator. Otherwise run the verify command yourself, or, when it does not run the new test, the builder's test command after you read it and see that it only runs the test file the builder wrote. It must fail for the missing behaviour (`run-slice red` when on `PATH`); a pass, or a failure for another cause, is a PAUSE (`ambiguous`). Append §S `ds:build <T-id> red=<n>-failed`. Then `SendMessage` the same builder: `Implement now. OUTPUT: the GREEN output verbatim with its command, then the changed files. DONE: <verify command> exits 0`. Without `SendMessage`, spawn a fresh builder with the mission and the line `The failing test is in place: <command>`. A verify cell of `—` has no RED: end the item-2 mission with `Now: make the change.`, `OUTPUT: the changed files, or one QUESTION: line.` and `DONE: the change is in the files`, then go to item 4.
+1. **Return.** Rewrite `.ds-lock`. A `QUESTION:` line is a PAUSE (`ambiguous`), as in item 3. Otherwise the builder's report is advisory: re-run the verify command and the touched package's full suite yourself, and use that as the GREEN proof. Stage the tracked changes with `git add -u -- . ':(exclude).scratchpad'`, and only the untracked paths the builder's changed-files list names. An untracked path it did not name is a PAUSE (`ambiguous`). Give step 6.5 the whole `git diff --staged`.
+1. **Review, one rebuild.** Step 6.5 runs on every delegated row, and this item replaces its `CHANGES` path. `REVIEW: CHANGES` → `SendMessage` the builder the Critical findings with `Fix these. Keep the test unless a finding names it. Return GREEN.`, append §S `ds:build <T-id> rebuild=1`, then run items 4 and 5 again. A second `CHANGES` is a PAUSE (`review`).
 1. **Commit** (step 7) from the main thread.
 
-A builder that runs past 30 minutes leaves a lock that FORMAT.md §14 calls stale, so start no other `ds:build` on this dossier while it runs.
+A builder that runs past 30 minutes leaves a lock that FORMAT.md §14 calls stale, so start no other `ds:build` on this dossier while it runs. No step runs `ds delegation-check`: put it in the wave contract's done-when table, so `ds:converge` runs it.
 
 ### 6.5. REVIEW (fresh-context, optional)
 
@@ -168,13 +169,13 @@ Spawn one `dossier-reviewer` subagent (`Agent` tool, `subagent_type: dossier:dos
 Read its verdict line:
 
 - `REVIEW: PASS` → proceed to step 7.
-- `REVIEW: CHANGES` (≥1 `Critical:`) → address the Critical findings (back to step 6 WORK: fix, re-run to GREEN), then re-review **once**. Still `CHANGES` after that one cycle → under `--auto` PAUSE (`review`); interactive, present the findings and let the operator decide. `Warn:` / `Nit:` never block the commit.
+- `REVIEW: CHANGES` (≥1 `Critical:`) → address the Critical findings (back to step 6 WORK: fix, re-run to GREEN; a delegated row follows step 6.2 item 5 instead), then re-review **once**. Still `CHANGES` after that one cycle → under `--auto` PAUSE (`review`); interactive, present the findings and let the operator decide. `Warn:` / `Nit:` never block the commit.
 
 One review cycle max — the reviewer does a single pass and the build retries at most once, so a genuine disagreement escalates instead of looping (addyosmani "doubt theater" cap).
 
 Append §S either way, as the doubt gate at §5.6 does — `ds:build <T-id> review=<PASS:<n>-warn | CHANGES:<n>-critical>`. The breadcrumb is what keeps this gate's verdict on the record; without it, the one artifact-only reviewer leaves no trace.
 
-Skip entirely if neither `--review` nor destructive-class — keeps the fast path fast. A skipped review on a behaviour-bearing task still leaves one line in the step-12 report: `review: skipped — /dossier:build <T-id> --review runs the fresh-context reviewer`, so the gate stays visible.
+Skip entirely if neither `--review`, nor destructive-class, nor a delegated row (step 6.2) — keeps the fast path fast. A skipped review on a behaviour-bearing task still leaves one line in the step-12 report: `review: skipped — /dossier:build <T-id> --review runs the fresh-context reviewer`, so the gate stays visible.
 
 Built-in `/code-review` (alias `/review`), `/security-review` and `/simplify` sit alongside this artifact-only gate and cover whole-branch looks it cannot — invoke them rather than reimplementing their checks; the dossier mod's skill gate breadcrumbs their invocation mid-build so the verdict lands in §S instead of evaporating (reminder is non-blocking; honoring it is model-judgment).
 
