@@ -23,6 +23,7 @@ import { claimRoots } from './env.ts'
 import { milestoneOf, progressVerb } from './progress.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
 import { DATE_PREFIX } from '../engine/converge.ts'
+import { delegationReport } from '../engine/delegation.ts'
 import { addEntry, entryError, FRONTIER_CLOSED, openDecisions } from '../engine/grill.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
 import { migrate } from '../engine/migrate.ts'
@@ -695,6 +696,18 @@ function verdictLogVerb(args: string[]): number {
   return 0
 }
 
+function delegationCheckVerb(args: string[]): number {
+  const [dir] = args
+  const file = dir === undefined ? '' : dossierFile(dir)
+  const usage = `usage: ds delegation-check <dossier-dir> (not found: ${file || 'dir'})`
+  if (!isFile(file)) refuse('delegation-check', usage, EXIT_USAGE)
+  const { failures, delegated } = delegationReport(readFileSync(file, 'utf8'))
+  for (const line of failures) console.log(line)
+  const verdict = failures.length ? `FAIL ${failures.length}` : `CLEAN ${delegated} delegated rows`
+  console.log(`DELEGATION: ${verdict}`)
+  return failures.length ? 1 : 0
+}
+
 const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'archive-move': archiveMoveVerb,
   'assert-grill': assertGrillVerb,
@@ -704,6 +717,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   close: dsCloseVerb,
   converge: convergeVerb,
   'convergence-state': convergenceStateVerb,
+  'delegation-check': delegationCheckVerb,
   'ds-check': dsCheckVerb,
   fakeimpl: fakeimplVerb,
   'grill-add': grillAddVerb,
