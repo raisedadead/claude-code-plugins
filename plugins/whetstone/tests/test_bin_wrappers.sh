@@ -35,6 +35,7 @@ printf '#!/usr/bin/env bash\nexec bash "$(cd "$(dirname "$0")/.." && pwd)/skills
 git init -q "$TMP/repo"
 printf 'x\n' >"$TMP/repo/a.py"
 git -C "$TMP/repo" add a.py
-grep -q '^TIGER: CLEAN ' <<<"$(cd "$TMP/repo" && "$BIN/tiger-check")" || fail "bin/tiger-check must print TIGER: CLEAN on a clean stage"
+out="$(cd "$TMP/repo" && "$BIN/tiger-check")" || fail "bin/tiger-check must exit 0 on a clean stage"
+grep -q '^TIGER: CLEAN ' <<<"$out" || fail "bin/tiger-check must print TIGER: CLEAN on a clean stage"
 
 printf 'ok test_bin_wrappers\n'

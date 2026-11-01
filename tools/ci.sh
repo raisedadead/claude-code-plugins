@@ -65,15 +65,14 @@ fi
 
 set -m
 LOGS="$(mktemp -d "${TMPDIR:-/tmp}/ci.XXXXXX")"
-pids=()
 stop() {
 	local pid
-	for pid in "${pids[@]}"; do kill -TERM -- "-$pid" 2>/dev/null || true; done
+	for pid in $(jobs -p); do kill -TERM -- "-$pid" 2>/dev/null || true; done
 	rm -rf "$LOGS"
 }
 trap stop EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
+trap 'report; exit 130' INT
+trap 'report; exit 143' TERM
 started=$EPOCHREALTIME
 known=" "
 names=()
@@ -91,14 +90,31 @@ step() {
 	while (($(jobs -rp | wc -l) >= JOBS)); do wait -n || true; done
 	(
 		local begin=$EPOCHREALTIME code=0
-		"$@" >"$LOGS/$name.log" 2>&1 || code=$?
+		"$@" </dev/null >"$LOGS/$name.log" 2>&1 || code=$?
 		printf '%s %s %s\n' "$code" "$begin" "$EPOCHREALTIME" >"$LOGS/$name.done"
 	) &
-	pids+=("$!")
 }
 
 seconds() {
 	awk -v a="$1" -v b="$2" 'BEGIN { printf "%.1fs", b - a }'
+}
+
+report() {
+	local name code begin end
+	failed=()
+	for name in "${names[@]}"; do
+		code=1 begin=$started end=$EPOCHREALTIME
+		[[ -f $LOGS/$name.done ]] && read -r code begin end <"$LOGS/$name.done"
+		if [[ $code == 0 ]]; then
+			printf 'ok %s %s\n' "$name" "$(seconds "$begin" "$end")"
+		else
+			failed+=("$name")
+			printf 'FAIL %s %s\n' "$name" "$(seconds "$begin" "$end")"
+			cat "$LOGS/$name.log" 2>/dev/null || true
+			[[ -f $LOGS/$name.done ]] || printf 'the step stopped before it wrote a result\n'
+			printf '\n'
+		fi
+	done
 }
 
 each() {
@@ -197,20 +213,7 @@ if [[ $job == whetstone || $job == all ]]; then
 fi
 
 wait
-failed=()
-for name in "${names[@]}"; do
-	code=1 begin=$started end=$EPOCHREALTIME
-	[[ -f $LOGS/$name.done ]] && read -r code begin end <"$LOGS/$name.done"
-	if [[ $code == 0 ]]; then
-		printf 'ok %s %s\n' "$name" "$(seconds "$begin" "$end")"
-	else
-		failed+=("$name")
-		printf 'FAIL %s %s\n' "$name" "$(seconds "$begin" "$end")"
-		cat "$LOGS/$name.log" 2>/dev/null || true
-		[[ -f $LOGS/$name.done ]] || printf 'the step stopped before it wrote a result\n'
-		printf '\n'
-	fi
-done
+report
 total=${#names[@]}
 for name in ${CI_STEPS:-}; do
 	[[ $known == *" $name "* ]] && continue
