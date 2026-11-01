@@ -109,6 +109,11 @@ def test_a_message_from_another_session_is_not_an_operator_prompt() -> None:
             is False
         )
     assert census.is_operator_prompt(_prompt(f"why did this arrive? {relayed}")) is True
+    peer = {
+        **_prompt('<relay from="coordinator">go</relay>'),
+        "origin": {"kind": "peer"},
+    }
+    assert census.is_operator_prompt(peer) is False
 
 
 def test_a_repeated_notification_is_collected_once() -> None:

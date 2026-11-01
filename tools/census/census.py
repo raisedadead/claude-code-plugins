@@ -124,6 +124,10 @@ def is_operator_prompt(record: dict) -> bool:
         return False
     if record.get("isCompactSummary"):
         return False
+    if (record.get("origin") or {}).get("kind") == "peer" or record.get(
+        "turnOrigin"
+    ) == "peer":
+        return False
     content = (record.get("message") or {}).get("content")
     if isinstance(content, str):
         return is_typed(content)

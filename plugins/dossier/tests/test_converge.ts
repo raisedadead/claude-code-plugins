@@ -560,6 +560,14 @@ test('an unmet line names the exit code the command returned', async () => {
   assert.match(result.stdout, /^ {2}UNMET 1\. sh -c 'exit 3' {2}\[exit 0; got exit 3\]$/m, result.stdout)
 })
 
+test('an unmet stdout line with exit 0 names no exit code', async () => {
+  const result = await runText(
+    'wrong-text.md',
+    singleCriterion('| id  | command          | expect        |', '| --- | ---------------- | ------------- |', "| 1   | `sh -c 'echo bye'` | stdout: hello |"),
+  )
+  assert.match(result.stdout, /^ {2}UNMET 1\. sh -c 'echo bye' {2}\[stdout: hello\]/m, result.stdout)
+})
+
 test('every command is named before the first one runs', async () => {
   const result = await run(join(FIXTURES, 'met.md'))
   const lines = result.stdout.split('\n')
