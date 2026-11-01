@@ -92,7 +92,7 @@ def records(path: str):
                 record = json.loads(line)
             except (ValueError, TypeError):
                 continue
-            if isinstance(record, dict):
+            if isinstance(record, dict) and record.get("type") != "api-request-blob":
                 yield record
 
 
@@ -416,8 +416,6 @@ def tool_result_texts(record: dict) -> list[str]:
 def review_flag(records) -> dict[str, int]:
     counts = {"builds": 0, "with --review": 0}
     for record in records:
-        if record.get("type") == "api-request-blob":
-            continue
         for block in tool_uses(record):
             payload = block.get("input") or {}
             if block.get("name") == "Skill" and payload.get("skill") == "dossier:build":

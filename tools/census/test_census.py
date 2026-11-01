@@ -129,15 +129,23 @@ def test_a_repeated_notification_is_collected_once() -> None:
     assert "REVIEW: CHANGES" in found[0][1], found[0][1]
 
 
-def test_review_skips_replayed_request_blobs() -> None:
+def test_records_skip_replayed_request_blobs() -> None:
+    import json
+    import tempfile
+
     blob = "api-request-blob"
-    typed = "<command-name>/dossier:build</command-name>\n<command-args>T4 --review</command-args>"
-    records = [
+    advisor = {"type": "server_tool_use", "name": "advisor"}
+    lines = [
         {**_skill("dossier:build", "T3 --review"), "type": blob},
-        {**_prompt(typed), "type": blob},
+        {"type": blob, "message": {"content": [advisor]}},
         _skill("dossier:build", "T5"),
     ]
-    assert census.review_flag(records) == {"builds": 1, "with --review": 0}
+    with tempfile.TemporaryDirectory() as root:
+        path = Path(root, "s.jsonl")
+        path.write_text("".join(json.dumps(line) + "\n" for line in lines))
+        found = list(census.records(str(path)))
+    assert census.review_flag(found) == {"builds": 1, "with --review": 0}
+    assert census.advisor_calls(found) == {"main thread": 0, "subagent": 0}
 
 
 def test_the_run_mean_names_only_resolved_runs() -> None:
