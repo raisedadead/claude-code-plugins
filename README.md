@@ -7,7 +7,7 @@ An agent will happily report success it cannot demonstrate. These two plugins ma
 | Plugin        | What it does                                                                                                                                              |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **dossier**   | Wave-scoped workflow. One resumable `DOSSIER.md` drives a wave — tasks, bugs, invariants, cross-repo state — with in-session quality gates.               |
-| **whetstone** | Per-task craft — red-green TDD, flaky-test audit, diagnosis, doubt review, grilling, merge-resolve, research and HTML reports, skill lint, column budget. Every gate among them carries a deterministic self-verify. |
+| **whetstone** | Per-task craft — red-green TDD, flaky-test audit, diagnosis, doubt review, grilling, merge-resolve, research and HTML reports, skill lint, column budget. TDD, flaky-test audit, merge-resolve, skill lint, column budget and HTML report end in a script's exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment. |
 
 dossier drives the wave; whetstone is the craft at each gate. Designed to be used together, independent by invariant — either works alone, and every composition route skips silently when its sibling is absent.
 
@@ -54,10 +54,10 @@ The home is the repo's choice. `mkdir .dossier` opts into tracked contracts at `
 
 **whetstone — invoke directly, or let dossier compose them:**
 
-| Command                       | Self-verify                                   |
+| Command                       | Done when                                     |
 | ----------------------------- | --------------------------------------------- |
 | `/whetstone:tdd-cycle`        | red must fail, green and full suite must pass |
-| `/whetstone:doubt-pass`       | 3-cycle cap; every finding classified         |
+| `/whetstone:doubt-pass`       | 3-cycle cap; every finding classified (model-judgment) |
 | `/whetstone:flaky-test-audit` | computed per-test rate                        |
 | `/whetstone:merge-resolve`    | zero markers, pass-count at or above baseline |
 | `/whetstone:skill-smith`      | frontmatter, line budget, reference depth     |
@@ -87,7 +87,7 @@ In-session hooks. The four write-time gates — the header and marker guards (on
 | Gate                   | Default | Toggle                               | What it catches                                                                                                                                                     |
 | ---------------------- | ------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **marker guard**       | on      | `DOSSIER_MARKER_GUARD=off`           | Phase and audit-id markers leaking into source; bad state tokens in a ledger.                                                                                       |
-| **invariant guard**    | on      | `DOSSIER_INVARIANT_GUARD=off`        | Edits matching a project-registered pattern. Fail-open until you register one.                                                                                      |
+| **invariant guard**    | on      | `DOSSIER_INVARIANT_GUARD=off`        | Edits matching a project-registered pattern. Fail-open with no registry, an unreadable payload, a spawn error, or any `ds invariant-check` result but exit 1 with output.                                                                                      |
 | **freshness verify**   | on      | `# verify-skip: <rule>` on the line  | Stale version, EOL, SHA and deprecated-model claims. Advisory; never blocks.                                                                                        |
 | **fake-impl backstop** | off     | `DOSSIER_FAKEIMPL_CMD='<fast test>'` | On stop with a dirty tree — untracked files included — runs your test command; a non-zero exit or a `DOSSIER_FAKEIMPL_TIMEOUT` timeout blocks, and a run past the hook's 180-second limit, a `git status` error or a spawn error lets the stop through. Its first block in each turn asks for the whole reply again, because focus mode shows only the last message. |
 | **claim gate**         | on      | disable whetstone                    | whetstone. A final reply that claims enforcement with no exit code, citation or honesty label. Sends the flagged lines back as context once per turn and asks for the whole reply again with the fix, because focus mode shows only the last message; never blocks. |
