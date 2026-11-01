@@ -108,6 +108,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | `ds:converge`       | `CONVERGE: MET <n>/<n>`, `UNMET <n> of <m>` or `PARSE — <why>`; exit 0/1/2                    | code — `cli/ds converge`                                                     |
 | `ds close`          | `✗` lines refuse with exit 1; `⚠` lines are advisory; `ready` on `--plan`                     | code — `cli/ds close`                                                        |
 | `ds assert-grill`   | exit 0 complete, 1 no artifact, 2 open decision or open fork child, 3 unconfirmed, 4 consumed | code — `cli/ds assert-grill`                                                 |
+| `ds delegation-check` | `DELEGATION: CLEAN <n> delegated rows` or `FAIL <k>`; exit 0/1, 64 usage                 | code — `cli/ds delegation-check`; runs only where a done-when row names it    |
 | `html-report`       | exit 0 written, 1 a diagram did not parse, 64 usage, 69 no browser or install failed          | code — `bin/html-report`                                                     |
 | `verify-claims`     | per claim `CONFIRMED`, `UNSUPPORTED`, `CONTRADICTED`, `SOURCE-DEAD` or `UNRULED`              | model-judgment for the verdict; code for `UNRULED` (no verdict with a quote) |
 
