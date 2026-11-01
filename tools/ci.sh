@@ -51,13 +51,7 @@ else
 	ruff=(uvx "ruff@$RUFF_PIN")
 fi
 
-if [[ -n ${CI_JOBS:-} ]]; then
-	JOBS=$CI_JOBS
-elif [[ ${CI:-} == true ]]; then
-	JOBS=1
-else
-	JOBS="$(getconf _NPROCESSORS_ONLN)"
-fi
+JOBS="${CI_JOBS:-$(getconf _NPROCESSORS_ONLN)}"
 if [[ ! $JOBS =~ ^[1-9][0-9]*$ ]]; then
 	printf 'CI_JOBS must be a positive number, not %s\n' "$JOBS" >&2
 	exit 64
