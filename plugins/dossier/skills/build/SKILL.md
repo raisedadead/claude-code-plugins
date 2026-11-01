@@ -129,7 +129,7 @@ A test that fails and then passes on a rerun with no change is a flake signal. W
 
 ### 6.2. DELEGATE (a `route=delegate` row)
 
-The operator marks a row for a builder by writing `route=delegate` in its task cell. The build reads the marker and never writes one. Such a row is built by one `general-purpose` subagent; the baseline, the routes and the failure rules of step 6 still bind the main thread. A `route=pi` row needs the operator's approval in §S, `ds:build <T-id> route=pi approved="<operator verbatim>"`, and the Pi route is not built yet: under `--auto` PAUSE (`ambiguous`); interactively, hand it to the operator.
+The operator marks a row for a builder by writing `route=delegate` in its task cell, as a bare word outside backticks; a marker in backticks reads as prose. The build reads the marker and never writes one, and `ds delegation-check <dossier-dir>` exits 1 when a marked or delegated `x` row has no review line, a row has two rebuilds, or a started `route=pi` row has no approval. Such a row is built by one `general-purpose` subagent; the baseline, the routes and the failure rules of step 6 still bind the main thread. A `route=pi` row needs the operator's approval in §S, `ds:build <T-id> route=pi approved="<operator verbatim>"`, and the Pi route is not built yet: under `--auto` PAUSE (`ambiguous`); interactively, hand it to the operator.
 
 1. **Clean tree.** `git status --porcelain` must print nothing, so every later change is the builder's. Otherwise PAUSE (`ambiguous`).
 1. **Spawn for RED.** Rewrite `.ds-lock` with a fresh `started`, then spawn one `Agent` with `subagent_type: general-purpose` and no `model`, so the builder runs on the user's subagent default or the session model. Append §S `ds:build <T-id> delegate=general-purpose`. The mission is artifact-only, as in step 6.5:
@@ -141,12 +141,13 @@ The operator marks a row for a builder by writing `route=delegate` in its task c
    Invariants: <each touched §V row with its check>
    Rules: change only the files this task needs. Do not commit. Do not touch
    .scratchpad/ or DOSSIER.md. Add no comment that tracks a phase, a step or a task id.
-   Now: write the failing test and run it. Return its command and its output verbatim,
-   or one line `QUESTION: <question>` when the task cannot be built as written.
+   Now: write the failing test and run it.
+   OUTPUT: the test command and its output verbatim, then the changed files;
+   or exactly one line `QUESTION: <question>` when the task cannot be built as written.
    DONE: <the test command> fails for the missing behaviour
    ```
 
-1. **RED, then GREEN.** Run the returned test command yourself; it must fail for the missing behaviour (`run-slice red` when on `PATH`). A pass, or a failure for another cause, is a PAUSE (`ambiguous`). Then `SendMessage` the same builder: `Implement now. Return the GREEN output verbatim with its command, and the changed files. DONE: <verify command> exits 0`. Without `SendMessage`, spawn a fresh builder with the mission and the line `The failing test is in place: <command>`. A verify cell of `—` has no RED: the first mission asks for the change and the changed files.
+1. **RED, then GREEN.** Run the returned test command yourself; it must fail for the missing behaviour (`run-slice red` when on `PATH`). A pass, or a failure for another cause, is a PAUSE (`ambiguous`). Then `SendMessage` the same builder: `Implement now. OUTPUT: the GREEN output verbatim with its command, then the changed files. DONE: <verify command> exits 0`. Without `SendMessage`, spawn a fresh builder with the mission and the line `The failing test is in place: <command>`. A verify cell of `—` has no RED: the first mission asks for the change and the changed files.
 1. **Return.** Rewrite `.ds-lock`. A `QUESTION:` line is a PAUSE (`ambiguous`) with the question in §S; interactively, put it to the operator. Otherwise the builder's report is advisory: re-run the verify command and the touched package's full suite yourself, and use that as the GREEN proof. `git add` every path `git status --porcelain` lists, so step 6.5 reviews the builder's whole diff.
 1. **Review, one rebuild.** Step 6.5 runs on every delegated row. `REVIEW: CHANGES` → `SendMessage` the builder the Critical findings with `Fix these. Keep the test unless a finding names it. Return GREEN.`, append §S `ds:build <T-id> rebuild=1`, then run items 4 and 5 again. A second `CHANGES` is a PAUSE (`review`).
 1. **Commit** (step 7) from the main thread.
