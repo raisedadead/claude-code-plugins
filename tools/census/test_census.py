@@ -286,6 +286,67 @@ def test_a_class_with_fewer_than_three_rows_is_unverified() -> None:
     assert census.class_median([10, 20, 40]) == "median 20 (n=3)"
 
 
+def _call(message_id: str, name: str, cache_read: int = 0) -> dict:
+    usage = {"cache_read_input_tokens": cache_read}
+    block = {"type": "tool_use", "name": name, "input": {}}
+    message = {"id": message_id, "usage": usage, "content": [block]}
+    return {"type": "assistant", "message": message}
+
+
+def _result() -> dict:
+    block = {"type": "tool_result", "content": "ok"}
+    return {"type": "user", "message": {"content": [block]}}
+
+
+def test_records_sharing_a_message_id_are_one_parallel_turn() -> None:
+    records = [
+        _call("a", "Bash"),
+        _result(),
+        _call("b", "Read"),
+        _result(),
+        _call("b", "Read"),
+        _result(),
+        _call("c", "Bash"),
+        _result(),
+        _call("d", "Grep"),
+    ]
+    turns = census.turn_sequence(records)
+    assert [t.tools for t in turns] == [["Bash"], ["Read", "Read"], ["Bash"], ["Grep"]]
+    assert census.call_runs(turns) == []
+
+
+def test_an_operator_prompt_or_an_unscriptable_tool_breaks_a_run() -> None:
+    records = [
+        _call("a", "Bash"),
+        _result(),
+        _call("b", "Read", 10),
+        _result(),
+        _prompt("go on"),
+        _call("c", "Bash"),
+        _result(),
+        {"type": "attachment", "attachment": {"type": "hook_success"}},
+        _call("d", "Grep", 20),
+        {**_call("x", "Bash"), "type": "api-request-blob"},
+        _result(),
+        _call("e", "Glob", 30),
+        _result(),
+        _call("f", "Agent"),
+        _result(),
+        _call("g", "Bash"),
+    ]
+    runs = census.call_runs(census.turn_sequence(records))
+    assert [[t.tools[0] for t in run] for run in runs] == [["Bash", "Grep", "Glob"]]
+    assert sum(t.cache_read for t in runs[0][1:]) == 50
+
+
+def test_an_advisor_call_or_a_turn_copied_from_another_file_breaks_a_run() -> None:
+    advisor = _call("b", "Bash")
+    advisor["message"]["content"].append({"type": "server_tool_use", "name": "advisor"})
+    records = [_call(key, "Read") for key in "acdefg"]
+    records.insert(1, advisor)
+    assert census.call_runs(census.turn_sequence(records, {"e"})) == []
+
+
 def _main() -> int:
     failures = 0
     for name, fn in sorted(globals().items()):

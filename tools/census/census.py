@@ -23,6 +23,7 @@ Usage:
     python3 tools/census/census.py review | advisor | guards | missed
     python3 tools/census/census.py verdict-log [<path to .verdicts.jsonl>...]
     python3 tools/census/census.py rows <dossier dir>
+    python3 tools/census/census.py runs
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ from __future__ import annotations
 import collections
 import dataclasses
 import datetime
+import itertools
 import json
 import os
 import re
@@ -710,6 +712,121 @@ def census_rows() -> None:
         print(f"{kind}: main-thread tokens per row, {class_median(by_class[kind])}")
 
 
+SCRIPTABLE = {"Bash", "Read", "Grep", "Glob", "Edit", "Write", "WebFetch"}
+
+
+@dataclasses.dataclass
+class Turn:
+    tools: list
+    sidechain: bool
+    cache_read: int
+
+
+def is_notification(record: dict) -> bool:
+    return record.get("type") == "user" and any(
+        "<task-notification>" in chunk for chunk in text_blocks(record)
+    )
+
+
+def calls_in(record: dict) -> list[str]:
+    content = (record.get("message") or {}).get("content")
+    if not isinstance(content, list):
+        return []
+    return [
+        block.get("name") or "?"
+        for block in content
+        if isinstance(block, dict)
+        and block.get("type") in ("tool_use", "server_tool_use")
+    ]
+
+
+def turn_sequence(stream, elsewhere: set[str] | None = None) -> list:
+    elsewhere = set() if elsewhere is None else elsewhere
+    sequence: list = []
+    turns: dict[str, Turn | None] = {}
+    for record in stream:
+        if is_operator_prompt(record) or is_notification(record):
+            sequence.append(None)
+            continue
+        message = record.get("message") or {}
+        key = message.get("id")
+        if record.get("type") != "assistant" or not key:
+            continue
+        if key not in turns:
+            usage = message.get("usage") or {}
+            cache_read = int(usage.get("cache_read_input_tokens") or 0)
+            fresh = key not in elsewhere
+            turns[key] = (
+                Turn([], bool(record.get("isSidechain")), cache_read) if fresh else None
+            )
+            sequence.append(turns[key])
+        if turns[key] is not None:
+            turns[key].tools.extend(calls_in(record))
+    elsewhere.update(turns)
+    return sequence
+
+
+def call_runs(sequence: list, minimum: int = 3) -> list[list[Turn]]:
+    runs: list[list[Turn]] = []
+    current: list[Turn] = []
+    for turn in [*sequence, None]:
+        single = turn is not None and len(turn.tools) == 1
+        if single and turn.tools[0] in SCRIPTABLE:
+            current.append(turn)
+            continue
+        if len(current) >= minimum:
+            runs.append(current)
+        current = []
+    return runs
+
+
+def collapse(names: list[str]) -> str:
+    groups = [(name, len(list(run))) for name, run in itertools.groupby(names)]
+    return ", ".join(name if n == 1 else f"{name} x{n}" for name, n in groups)
+
+
+def census_runs() -> None:
+    files = transcripts()
+    counted: set[str] = set()
+    calls: collections.Counter = collections.Counter()
+    inside: collections.Counter = collections.Counter()
+    reread: collections.Counter = collections.Counter()
+    buckets = collections.defaultdict(collections.Counter)
+    shapes = collections.defaultdict(collections.Counter)
+    for path in files:
+        sequence = turn_sequence(records(path), counted)
+        for side in (False, True):
+            turns = [t for t in sequence if t is None or t.sidechain is side]
+            name = "subagent" if side else "main thread"
+            calls[name] += sum(len(t.tools) for t in turns if t)
+            for run in call_runs(turns):
+                size = len(run)
+                inside[name] += size
+                reread[name] += sum(t.cache_read for t in run[1:])
+                bucket = "3-4" if size < 5 else "5-9" if size < 10 else "10+"
+                buckets[name][bucket] += 1
+                shapes[name][collapse([t.tools[0] for t in run])] += 1
+    print(
+        f"source: assistant tool_use and server_tool_use blocks per message id "
+        f"in {len(files)} transcripts under {TRANSCRIPTS}, an id copied into "
+        f"a later file counted once; a run is 3+ consecutive single-call turns "
+        f"of {sorted(SCRIPTABLE)} with no operator prompt between"
+    )
+    print(
+        "UPPER BOUND, computed: whether the model had to read a result before "
+        "the next call is model-judgment and not counted. The cache-read figure "
+        "is what the 2nd..nth turns were billed, not a computed saving."
+    )
+    for name in ("main thread", "subagent"):
+        print(
+            f"\n## {name}: {inside[name]} of {calls[name]} tool calls sit in runs; "
+            f"runs {dict(buckets[name])}; cache read by the 2nd..nth turns "
+            f"{reread[name]}"
+        )
+        for shape, count in shapes[name].most_common(5):
+            print(f"  {count:6d}  {shape}")
+
+
 MODES = {
     "skills": census_skills,
     "verdicts": census_verdicts,
@@ -720,6 +837,7 @@ MODES = {
     "missed": census_missed,
     "verdict-log": census_verdict_log,
     "rows": census_rows,
+    "runs": census_runs,
 }
 
 
