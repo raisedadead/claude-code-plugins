@@ -10,6 +10,7 @@ documentation tests, and this repo does not write those.
 
 from __future__ import annotations
 
+import datetime
 import importlib.util
 import sys
 from pathlib import Path
@@ -196,6 +197,93 @@ def test_the_verdict_log_counts_verdicts_misses_and_empty_messages() -> None:
         "whetstone:whetstone-doubter": {"DOUBT: FAILURES": 1, "SUBTRACT: 2 CUTS": 1},
         "dossier:dossier-reviewer": {"no verdict line": 1, "no message": 1},
     }
+
+
+IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+
+
+def _utc(text: str) -> datetime.datetime:
+    return datetime.datetime.fromisoformat(text)
+
+
+def test_row_windows_read_starts_ends_and_resumes() -> None:
+    lines = [
+        "2026-11-01 10:00 ds:build T1 START class=design",
+        "2026-11-01 10:05:30 ds:build T1 PAUSE reason=review",
+        "2026-11-01 11:00 ds:build T1 START resume",
+        "2026-11-01 11:10 ds:build T1 §X=refreshed; DONE → x",
+        "2026-11-01 11:20 ds:build T2 START",
+        "2026-11-01 11:21 ds:build T2 delegate=general-purpose",
+        "2026-11-01 12:00 ds:build T3 START",
+        "not a status line",
+    ]
+    rows = census.row_windows(lines, IST)
+    assert rows["T1"].windows == [
+        (_utc("2026-11-01T04:30:00+00:00"), _utc("2026-11-01T04:35:30+00:00")),
+        (_utc("2026-11-01T05:30:00+00:00"), _utc("2026-11-01T05:40:59+00:00")),
+    ]
+    assert rows["T1"].delegated is False
+    assert rows["T2"].delegated is True
+    assert rows["T2"].windows == [] and rows["T2"].open is True
+    assert rows["T3"].open is True
+
+
+def _assistant(
+    message_id: str,
+    stamp: str,
+    tokens: int,
+    cwd: str = "/r",
+    sidechain: bool = False,
+    session: str = "s1",
+) -> dict:
+    usage = {
+        "input_tokens": tokens,
+        "cache_creation_input_tokens": 0,
+        "cache_read_input_tokens": 0,
+        "output_tokens": 1,
+    }
+    return {
+        "type": "assistant",
+        "cwd": cwd,
+        "sessionId": session,
+        "isSidechain": sidechain,
+        "timestamp": stamp,
+        "message": {"id": message_id, "model": "claude-x", "usage": usage},
+    }
+
+
+def test_row_tokens_count_each_message_once_in_one_row() -> None:
+    rows = census.row_windows(
+        [
+            "2026-11-01 10:00 ds:build T1 START",
+            "2026-11-01 10:10 ds:build T1 DONE → x",
+            "2026-11-01 10:10 ds:build T2 START",
+            "2026-11-01 10:20 ds:build T2 DONE → x",
+        ],
+        IST,
+    )
+    feed = [
+        (_assistant("m1", "2026-11-01T04:31:00Z", 100), None),
+        (_assistant("m1", "2026-11-01T04:31:00Z", 100), None),
+        (_assistant("m2", "2026-11-01T04:40:30Z", 10), None),
+        (_assistant("m3", "2026-11-01T04:32:00Z", 7, sidechain=True), "worker"),
+        (
+            _assistant("m4", "2026-11-01T04:33:00Z", 5, cwd="/r/.claude/worktrees/w"),
+            None,
+        ),
+        (_assistant("m5", "2026-11-01T04:34:00Z", 999, cwd="/other"), None),
+        (_assistant("m6", "2026-11-01T06:00:00Z", 999), None),
+    ]
+    tally = census.row_tokens(rows, feed, "/r")
+    assert tally["T1"]["main"]["input"] == 105
+    assert tally["T1"]["worker"]["input"] == 7
+    assert tally["T2"]["main"]["input"] == 10
+    assert tally["T1"]["sessions"] == {"s1"}
+
+
+def test_a_class_with_fewer_than_three_rows_is_unverified() -> None:
+    assert census.class_median([10, 20]) == "UNVERIFIED: fewer than 3 rows (n=2)"
+    assert census.class_median([10, 20, 40]) == "median 20 (n=3)"
 
 
 def _main() -> int:

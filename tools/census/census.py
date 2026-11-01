@@ -22,11 +22,14 @@ Usage:
     python3 tools/census/census.py turns
     python3 tools/census/census.py review | advisor | guards | missed
     python3 tools/census/census.py verdict-log [<path to .verdicts.jsonl>...]
+    python3 tools/census/census.py rows <dossier dir>
 """
 
 from __future__ import annotations
 
 import collections
+import dataclasses
+import datetime
 import json
 import os
 import re
@@ -545,6 +548,168 @@ def census_verdict_log() -> None:
         report(kind, counter)
 
 
+STATUS_LINE = re.compile(
+    r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2})(:\d{2})? ds:build (T\d+)\b(.*)$"
+)
+ROW_START = re.compile(r"\bSTART\b")
+ROW_END = re.compile(r"\b(DONE|PAUSE|BLOCKED)\b")
+USAGE_FIELDS = {
+    "input": "input_tokens",
+    "cache write": "cache_creation_input_tokens",
+    "cache read": "cache_read_input_tokens",
+    "output": "output_tokens",
+}
+UTC = datetime.timezone.utc
+
+
+@dataclasses.dataclass
+class RowLedger:
+    windows: list = dataclasses.field(default_factory=list)
+    delegated: bool = False
+    open: bool = False
+    started: datetime.datetime | None = None
+
+
+def row_windows(lines: list[str], zone: datetime.tzinfo) -> dict[str, RowLedger]:
+    rows: dict[str, RowLedger] = {}
+    for line in lines:
+        found = STATUS_LINE.match(line.strip())
+        if not found:
+            continue
+        minute, seconds, row, rest = found.groups()
+        stamp = datetime.datetime.strptime(
+            minute + (seconds or ":00"), "%Y-%m-%d %H:%M:%S"
+        ).replace(tzinfo=zone)
+        ledger = rows.setdefault(row, RowLedger())
+        if "delegate=" in rest:
+            ledger.delegated = True
+        if ROW_START.search(rest):
+            ledger.started = stamp.astimezone(UTC)
+            ledger.open = True
+        elif ROW_END.search(rest) and ledger.started:
+            end = stamp if seconds else stamp + datetime.timedelta(seconds=59)
+            ledger.windows.append((ledger.started, end.astimezone(UTC)))
+            ledger.started = None
+            ledger.open = False
+    return rows
+
+
+def utc_stamp(text: object) -> datetime.datetime | None:
+    if not isinstance(text, str):
+        return None
+    try:
+        return datetime.datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def row_tokens(rows: dict[str, RowLedger], feed, root: str) -> dict[str, dict]:
+    spans = sorted(
+        (start, end, row)
+        for row, ledger in rows.items()
+        for start, end in ledger.windows
+    )
+    tally: dict[str, dict] = {}
+    seen: set[str] = set()
+    for record, agent in feed:
+        message = record.get("message") or {}
+        usage = message.get("usage")
+        key = message.get("id")
+        cwd = record.get("cwd") or ""
+        if record.get("type") != "assistant" or not isinstance(usage, dict):
+            continue
+        if (key and key in seen) or (cwd != root and not cwd.startswith(root + "/")):
+            continue
+        stamp = utc_stamp(record.get("timestamp"))
+        owners = [row for start, end, row in spans if stamp and start <= stamp <= end]
+        if not owners:
+            continue
+        if key:
+            seen.add(key)
+        side = agent or ("subagent" if record.get("isSidechain") else "main")
+        bucket = tally.setdefault(owners[-1], {"sessions": set(), "models": set()})
+        counts = bucket.setdefault(side, collections.Counter())
+        for label, field in USAGE_FIELDS.items():
+            counts[label] += int(usage.get(field) or 0)
+        bucket["sessions"].add(record.get("sessionId"))
+        bucket["models"].add(f"{side}={message.get('model')}")
+    return tally
+
+
+def class_median(values: list[int]) -> str:
+    if len(values) < 3:
+        return f"UNVERIFIED: fewer than 3 rows (n={len(values)})"
+    return f"median {round(statistics.median(values))} (n={len(values)})"
+
+
+def agent_type_of(path: str) -> str | None:
+    meta = Path(path).with_suffix(".meta.json")
+    if not meta.is_file():
+        return None
+    try:
+        return json.loads(meta.read_text(encoding="utf-8")).get("agentType")
+    except (OSError, ValueError):
+        return None
+
+
+def census_rows() -> None:
+    if len(sys.argv) < 3:
+        print("usage: census.py rows <dossier dir>", file=sys.stderr)
+        raise SystemExit(64)
+    wave = Path(sys.argv[2]).resolve()
+    root = next((p.parent for p in wave.parents if p.name == ".scratchpad"), None)
+    ledger = wave / "DOSSIER.md"
+    if root is None or not ledger.is_file():
+        print(
+            f"census.py rows: no DOSSIER.md under a .scratchpad: {wave}",
+            file=sys.stderr,
+        )
+        raise SystemExit(64)
+    zone = datetime.datetime.now().astimezone().tzinfo
+    rows = row_windows(ledger.read_text(encoding="utf-8").splitlines(), zone)
+    prefix = str(root).replace("/", "-").replace(".", "-")
+    feed = (
+        (record, agent_type_of(path))
+        for path in transcripts()
+        if Path(path)
+        .relative_to(Path(os.path.expanduser("~/.claude/projects")))
+        .parts[0]
+        .startswith(prefix)
+        for record in records(path)
+    )
+    tally = row_tokens(rows, feed, str(root))
+    print(
+        f"source: {ledger} status lines, read in zone {zone}, joined to "
+        f"message usage in {TRANSCRIPTS} with cwd under {root}"
+    )
+    by_class: dict[str, list[int]] = collections.defaultdict(list)
+    for row in sorted(rows, key=lambda name: int(name[1:])):
+        kind = "delegated" if rows[row].delegated else "inline"
+        bucket = tally.get(row, {})
+        if not rows[row].windows:
+            print(f"{row} {kind} open")
+            continue
+        sides = {k: v for k, v in bucket.items() if k not in ("sessions", "models")}
+        main_counts = bucket.get("main") or collections.Counter()
+        main = sum(main_counts.values())
+        split = " ".join(f"{label}={main_counts[label]}" for label in USAGE_FIELDS)
+        shared = len(bucket.get("sessions", ())) > 1
+        detail = ", ".join(
+            f"{side} {sum(c.values())}" for side, c in sorted(sides.items())
+        )
+        flag = (
+            " SHARED: more than one session in the window, not in the medians"
+            if shared
+            else ""
+        )
+        models = sorted(bucket.get("models", ()))
+        print(f"{row} {kind} main={main} ({split}) [{detail}] models={models}{flag}")
+        if not shared:
+            by_class[kind].append(main)
+    for kind in ("delegated", "inline"):
+        print(f"{kind}: main-thread tokens per row, {class_median(by_class[kind])}")
+
+
 MODES = {
     "skills": census_skills,
     "verdicts": census_verdicts,
@@ -554,6 +719,7 @@ MODES = {
     "guards": census_guards,
     "missed": census_missed,
     "verdict-log": census_verdict_log,
+    "rows": census_rows,
 }
 
 
