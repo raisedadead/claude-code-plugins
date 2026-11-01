@@ -70,7 +70,14 @@ def transcripts() -> list[str]:
     import glob
 
     found = glob.glob(os.path.expanduser(TRANSCRIPTS), recursive=True)
-    return sorted(found, key=os.path.getmtime)
+    return sorted(found, key=modified_at)
+
+
+def modified_at(path: str) -> float:
+    try:
+        return os.path.getmtime(path)
+    except OSError:
+        return -1.0
 
 
 def records(path: str):

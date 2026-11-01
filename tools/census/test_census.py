@@ -167,6 +167,10 @@ def test_a_findings_count_reports_under_one_label() -> None:
     assert labels == ["findings>0", "findings>0", "0 findings", "PASS"], labels
 
 
+def test_a_vanished_transcript_sorts_first_instead_of_raising() -> None:
+    assert census.modified_at("/nonexistent/gone.jsonl") == -1.0
+
+
 def test_transcripts_come_oldest_first() -> None:
     import tempfile
 
