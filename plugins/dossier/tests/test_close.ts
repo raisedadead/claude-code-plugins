@@ -153,6 +153,42 @@ test('--plan on a finished wave reports ready with exit 0 and writes nothing', a
   )
 })
 
+function grill(root: string): void {
+  mkdirSync(join(root, '.scratchpad', 'dossier', '.grill'), { recursive: true })
+  const text = [
+    'DECISION: 1. Wave shape recommended=one wave probe=a.md:1 answer="a" → (a)',
+    'DECISION: 2. Model choice recommended=session probe=— answer="a" → (a)',
+    `CONSUMED: ${SLUG}`,
+    '',
+  ].join('\n')
+  writeFileSync(join(root, '.scratchpad', 'dossier', '.grill', '2026-10-08-wave.md'), text)
+}
+
+test('--plan lists the grill decisions as a lessons advisory where RESEARCH.md exists', async () => {
+  await within(
+    async (root) => {
+      grill(root)
+      writeFileSync(join(root, 'RESEARCH.md'), '# RESEARCH\n')
+      const done = await close(root, '--complete', '--plan')
+      assert.equal(done.status, 0, done.stdout + done.stderr)
+      assert.match(done.stdout, /^ {2}⚠ lessons: 2 grill decisions — ask which become a RESEARCH\.md §D row: 1\. Wave shape; 2\. Model choice$/m)
+    },
+    [['T1', 'x', 'A']],
+  )
+})
+
+test('--plan stays silent on lessons with no RESEARCH.md', async () => {
+  await within(
+    async (root) => {
+      grill(root)
+      const done = await close(root, '--complete', '--plan')
+      assert.equal(done.status, 0, done.stdout + done.stderr)
+      assert.doesNotMatch(done.stdout, /lessons/)
+    },
+    [['T1', 'x', 'A']],
+  )
+})
+
 test('--plan says the changelog check did not run when the contract is untracked', async () => {
   await within(
     async (root) => {

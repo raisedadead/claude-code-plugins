@@ -256,6 +256,28 @@ function changelogAdvisory(contract: string | undefined, root: string, text: str
   return 'no CHANGELOG.md changed since the contract commit — write the entry first, or close without one'
 }
 
+const DECISION = /^DECISION: (.+?) recommended=/
+
+function lessonsAdvisory(at: Wave): string | undefined {
+  if (!existsSync(join(at.root, 'RESEARCH.md'))) return undefined
+  const grills = join(at.dossiers, '.grill')
+  const consumed = `CONSUMED: ${basename(at.dir)}`
+  let names: string[] = []
+  try {
+    names = readdirSync(grills).filter((name) => name.endsWith('.md'))
+  } catch {
+    return undefined
+  }
+  for (const name of names.sort()) {
+    const text = lines(readFileSync(join(grills, name), 'utf8'))
+    if (!text.includes(consumed)) continue
+    const titles = text.flatMap((line) => DECISION.exec(line)?.[1] ?? [])
+    if (!titles.length) return undefined
+    return `lessons: ${titles.length} grill decisions — ask which become a RESEARCH.md §D row: ${titles.join('; ')}`
+  }
+  return undefined
+}
+
 function check(options: Options, tools: CloseTools, at: Wave, text: string, rows: Row[]): Check {
   const { mode } = options
   const result: Check = { findings: [], blocked: false, record: 'skipped' }
@@ -294,6 +316,8 @@ function check(options: Options, tools: CloseTools, at: Wave, text: string, rows
   for (const repo of unpushedRepos(text)) result.findings.push(`⚠ ${repo} not pushed — the push stays yours`)
   const changelog = mode.kind === 'abandoned' ? undefined : changelogAdvisory(waveContract(at.dir, at.root), at.root, text)
   if (changelog) result.findings.push(`⚠ ${changelog}`)
+  const lessons = mode.kind === 'abandoned' ? undefined : lessonsAdvisory(at)
+  if (lessons) result.findings.push(`⚠ ${lessons}`)
   return result
 }
 

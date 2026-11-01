@@ -33,7 +33,7 @@ argument-hint: --complete | --successor <slug> | --abandon "<reason>" [--carry T
 | ---- | --------------------------------------------------------------------- |
 | `✗`  | blocks the run — an open row, an uncited `x` row, an open bug, a lock |
 | `✓`  | the contract converged                                                |
-| `⚠`  | advisory — an unpushed repo, an accepted unmet criterion, CHANGELOG   |
+| `⚠`  | advisory — an unpushed repo, an accepted unmet criterion, CHANGELOG, lessons |
 | `·`  | no contract, so converge did not run                                  |
 | `↷`  | a row this close carries                                              |
 
@@ -49,6 +49,8 @@ Put the plan in front of the operator, with a one-line `--summary` proposal. Res
 - Work that will not finish: `--abandon "<reason>"` on the operator's say-so.
 
 Then print each `paused` row in `.scratchpad/INDEX.md` with its route: resume it through `ds:status`, or close it with `--abandon`. The CHANGELOG check covers the ledger repo, the repo of a tracked contract, and each §X repo written as an absolute path, and stays silent when none of them tracks a `CHANGELOG.md`. A `⚠` CHANGELOG line means no `CHANGELOG.md` in those repos changed since the contract commit (write the entry, or close without one), or that the check did not run because the contract is untracked.
+
+A `⚠ lessons` line lists the wave's grill decisions. It prints only where the repo root has a `RESEARCH.md` and a grill artifact names this wave on its `CONSUMED:` line. Ask the operator which decisions become a §D row, and write those rows before the run. Advisory: the close runs whatever the answer.
 
 ### 3. Run
 
