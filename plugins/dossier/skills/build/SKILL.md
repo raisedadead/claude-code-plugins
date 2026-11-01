@@ -131,7 +131,7 @@ A test that fails and then passes on a rerun with no change is a flake signal. W
 
 ### 6.2. DELEGATE (a `route=delegate` row)
 
-The operator marks a row for a builder by writing `route=delegate` in its task cell, as a bare word outside backticks; a marker in backticks reads as prose. The build reads the marker and never writes one, and `ds delegation-check <dossier-dir>` exits 1 when a marked or delegated `x` row has no review line, a row has two rebuilds, or a started `route=pi` row has no approval. Such a row is built by one `general-purpose` subagent; the baseline, the routes and the failure rules of step 6 still bind the main thread. A `route=pi` row needs the operator's approval in §S, `ds:build <T-id> route=pi approved="<operator verbatim>"`, and the Pi route is not built yet: under `--auto` PAUSE (`ambiguous`); interactively, hand it to the operator.
+The operator marks a row for a builder by writing `route=delegate` in its task cell, as a bare word outside backticks; a marker in backticks reads as prose. The build reads the marker and only the operator writes one, and `ds delegation-check <dossier-dir>` exits 1 when a marked or delegated `x` row has no review line, a row has two rebuilds, or a started `route=pi` row has no approval. Such a row is built by one `general-purpose` subagent; the baseline, the routes and the failure rules of step 6 still bind the main thread. A `route=pi` row needs the operator's approval in §S, `ds:build <T-id> route=pi approved="<operator verbatim>"`, and the Pi route is not built yet: under `--auto` PAUSE (`ambiguous`); interactively, hand it to the operator.
 
 Run every git command in this step from the repo root; the `.` pathspec covers only the current directory.
 
@@ -143,8 +143,8 @@ Run every git command in this step from the repo root; the `.` pathspec covers o
    Task: <§T task text>
    Verify: <the verify cell's command, or the check of the §V row it names>
    Invariants: <each touched §V row with its check>
-   Rules: change only the files this task needs. Do not commit. Do not touch
-   .scratchpad/ or DOSSIER.md. Add no comment that tracks a phase, a step or a task id.
+   Rules: change only the files this task needs. Leave the commit to me, and
+   leave .scratchpad/ and DOSSIER.md as they are. Add no comment that tracks a phase, a step or a task id.
    Now: write the failing test and run it.
    OUTPUT: the test command and its output verbatim, then the changed files;
    or exactly one line `QUESTION: <question>` when the task cannot be built as written.
