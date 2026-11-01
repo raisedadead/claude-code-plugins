@@ -20,6 +20,8 @@ Usage:
     python3 tools/census/census.py skills
     python3 tools/census/census.py verdicts
     python3 tools/census/census.py turns
+    python3 tools/census/census.py review | advisor | guards | missed
+    python3 tools/census/census.py verdict-log [<path to .verdicts.jsonl>...]
 """
 
 from __future__ import annotations
@@ -30,6 +32,7 @@ import os
 import re
 import statistics
 import sys
+from pathlib import Path
 
 TRANSCRIPTS = "~/.claude/projects/**/*.jsonl"
 
@@ -319,13 +322,239 @@ def print_turn_table(by_model: dict[str, list], floor: int = 25) -> None:
         )
 
 
+COMMAND_ARGS = re.compile(r"<command-args>([^<]*)</command-args>")
+TRIGGER_CLAUSE = re.compile(r"(?i)invoke when[^.]*")
+QUOTED = re.compile(r'"([^"]+)"')
+GUARDS = {
+    "marker guard": "dossier marker guard:",
+    "invariant guard": "dossier invariant guard:",
+    "header guard": "dossier: refusing to write non-canonical header state",
+}
+
+
+def tool_result_texts(record: dict) -> list[str]:
+    content = (record.get("message") or {}).get("content")
+    if not isinstance(content, list):
+        return []
+    texts: list[str] = []
+    for block in content:
+        if not isinstance(block, dict) or block.get("type") != "tool_result":
+            continue
+        inner = block.get("content")
+        if isinstance(inner, str):
+            texts.append(inner)
+        elif isinstance(inner, list):
+            texts += [
+                part.get("text") or "" for part in inner if isinstance(part, dict)
+            ]
+    return texts
+
+
+def review_flag(records) -> dict[str, int]:
+    counts = {"builds": 0, "with --review": 0}
+    for record in records:
+        for block in tool_uses(record):
+            payload = block.get("input") or {}
+            if block.get("name") == "Skill" and payload.get("skill") == "dossier:build":
+                counts["builds"] += 1
+                counts["with --review"] += "--review" in str(payload.get("args") or "")
+        for chunk in text_blocks(record):
+            names = [name.strip().lstrip("/") for name in COMMAND_NAME.findall(chunk)]
+            if "dossier:build" in names:
+                counts["builds"] += 1
+                counts["with --review"] += any(
+                    "--review" in a for a in COMMAND_ARGS.findall(chunk)
+                )
+    return counts
+
+
+def advisor_calls(records) -> dict[str, int]:
+    counts = {"main thread": 0, "subagent": 0}
+    for record in records:
+        content = (record.get("message") or {}).get("content")
+        for block in content if isinstance(content, list) else []:
+            if (
+                isinstance(block, dict)
+                and block.get("type") == "server_tool_use"
+                and block.get("name") == "advisor"
+            ):
+                counts["subagent" if record.get("isSidechain") else "main thread"] += 1
+    return counts
+
+
+def guard_fires(records) -> dict[str, int]:
+    counts: collections.Counter = collections.Counter()
+    for record in records:
+        for text in tool_result_texts(record):
+            for guard, marker in GUARDS.items():
+                counts[guard] += text.lstrip().startswith(marker)
+    return {guard: count for guard, count in counts.items() if count}
+
+
+def trigger_phrases(description: str) -> list[str]:
+    clause = TRIGGER_CLAUSE.search(description)
+    return QUOTED.findall(clause.group(0)) if clause else []
+
+
+TAGGED = re.compile(r"<([a-z-]+)>.*?</\1>", re.S)
+
+
+def said(phrase: str, prompt: str) -> bool:
+    return (
+        re.search(rf"(?<![\w:/-]){re.escape(phrase.lower())}(?![\w:-])", prompt)
+        is not None
+    )
+
+
+def missed_calls(records, triggers: dict[str, list[str]]) -> dict[str, dict[str, int]]:
+    counts: dict[str, dict[str, int]] = {}
+    pending: set[str] = set()
+
+    def settle() -> None:
+        for skill in pending:
+            counts[skill]["missed"] += 1
+        pending.clear()
+
+    for record in records:
+        if record.get("isMeta"):
+            continue
+        if is_operator_prompt(record):
+            settle()
+            joined = "\n".join(text_blocks(record))
+            typed = {name.strip().lstrip("/") for name in COMMAND_NAME.findall(joined)}
+            prompt = TAGGED.sub(" ", joined).lower()
+            for skill, phrases in triggers.items():
+                if skill in typed or not any(
+                    said(phrase, prompt) for phrase in phrases
+                ):
+                    continue
+                counts.setdefault(skill, {"asked": 0, "missed": 0})["asked"] += 1
+                pending.add(skill)
+            continue
+        for block in tool_uses(record):
+            if block.get("name") == "Skill":
+                pending.discard((block.get("input") or {}).get("skill"))
+    settle()
+    return counts
+
+
+def verdict_log(lines) -> dict[str, dict[str, int]]:
+    counts: dict[str, collections.Counter] = collections.defaultdict(
+        collections.Counter
+    )
+    for line in lines:
+        try:
+            record = json.loads(line)
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(record, dict):
+            continue
+        kind = str(record.get("agent_type"))
+        verdicts = record.get("verdicts")
+        if verdicts is None:
+            counts[kind]["no message"] += 1
+        elif not verdicts:
+            counts[kind]["no verdict line"] += 1
+        for verdict in verdicts or []:
+            counts[kind][verdict] += 1
+    return {kind: dict(counter) for kind, counter in counts.items()}
+
+
 def report(title: str, counter: collections.Counter, limit: int | None = None) -> None:
     print(f"\n## {title}  (total {sum(counter.values())})")
     for key, count in counter.most_common(limit):
         print(f"  {count:6d}  {key}")
 
 
-MODES = {"skills": census_skills, "verdicts": census_verdicts, "turns": census_turns}
+SKILLS = Path(__file__).resolve().parents[2] / "plugins"
+DESCRIPTION = re.compile(r"^description: (.*)$", re.M)
+
+
+def skill_triggers() -> dict[str, list[str]]:
+    triggers: dict[str, list[str]] = {}
+    for path in sorted(SKILLS.glob("*/skills/*/SKILL.md")):
+        found = DESCRIPTION.search(path.read_text(encoding="utf-8"))
+        phrases = trigger_phrases(found.group(1)) if found else []
+        if phrases:
+            triggers[f"{path.parts[-4]}:{path.parts[-2]}"] = phrases
+    return triggers
+
+
+def per_transcript(count, merge) -> None:
+    files = transcripts()
+    for path in files:
+        merge(count(list(records(path))))
+    print(f"transcripts: {len(files)}")
+
+
+def census_review() -> None:
+    total: collections.Counter = collections.Counter()
+    per_transcript(review_flag, total.update)
+    print(
+        "source: dossier:build Skill calls and typed /dossier:build commands "
+        f"in {TRANSCRIPTS}; a call counts once with --review in its args"
+    )
+    report("dossier:build calls", total)
+
+
+def census_advisor() -> None:
+    total: collections.Counter = collections.Counter()
+    per_transcript(advisor_calls, total.update)
+    print(f"source: server_tool_use blocks named advisor in {TRANSCRIPTS}")
+    report("advisor calls", total)
+
+
+def census_guards() -> None:
+    total: collections.Counter = collections.Counter()
+    per_transcript(guard_fires, total.update)
+    print(
+        f"source: tool results in {TRANSCRIPTS} that start with a write-time guard "
+        "denial; the fake-impl backstop fires at Stop and is not counted"
+    )
+    report("guard fires", total)
+
+
+def census_missed() -> None:
+    triggers = skill_triggers()
+    total: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+
+    def merge(counts: dict[str, dict[str, int]]) -> None:
+        for skill, pair in counts.items():
+            total[skill].update(pair)
+
+    per_transcript(lambda found: missed_calls(found, triggers), merge)
+    print(
+        f"source: operator prompts in {TRANSCRIPTS} that contain a quoted trigger "
+        f"phrase from a {SKILLS}/*/skills/*/SKILL.md description, and no Skill call "
+        "for that skill before the next prompt. A phrase match is a heuristic."
+    )
+    for skill, pair in sorted(total.items(), key=lambda item: -item[1]["missed"]):
+        print(f"  {pair['missed']:5d} missed of {pair['asked']:5d} asked  {skill}")
+
+
+def census_verdict_log() -> None:
+    paths = sys.argv[2:] or [".scratchpad/dossier/.verdicts.jsonl"]
+    total: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    for name in paths:
+        path = Path(name)
+        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
+        for kind, counts in verdict_log(lines).items():
+            total[kind].update(counts)
+    print(f"source: {', '.join(paths)}, written by the dossier SubagentStop hook")
+    for kind, counter in total.items():
+        report(kind, counter)
+
+
+MODES = {
+    "skills": census_skills,
+    "verdicts": census_verdicts,
+    "turns": census_turns,
+    "review": census_review,
+    "advisor": census_advisor,
+    "guards": census_guards,
+    "missed": census_missed,
+    "verdict-log": census_verdict_log,
+}
 
 
 def main(argv: list[str]) -> int:

@@ -86,6 +86,118 @@ def test_a_sidechain_prompt_is_not_counted() -> None:
     assert census.is_operator_prompt(record) is False
 
 
+def _skill(name: str, args: str = "") -> dict:
+    block = {
+        "type": "tool_use",
+        "name": "Skill",
+        "input": {"skill": name, "args": args},
+    }
+    return {"type": "assistant", "message": {"content": [block]}}
+
+
+def _prompt(text: str) -> dict:
+    return {"type": "user", "message": {"content": [{"type": "text", "text": text}]}}
+
+
+def test_review_counts_build_calls_and_the_flag() -> None:
+    records = [
+        _skill("dossier:build", "--auto"),
+        _skill("dossier:build", "T3 --review"),
+        _skill("dossier:status"),
+        _prompt(
+            "<command-name>/dossier:build</command-name>\n<command-args>T4 --review</command-args>"
+        ),
+    ]
+    assert census.review_flag(records) == {"builds": 3, "with --review": 2}
+
+
+def test_advisor_calls_split_main_thread_from_subagent() -> None:
+    call = {"type": "server_tool_use", "name": "advisor", "input": {}}
+    main = {"type": "assistant", "message": {"content": [call]}}
+    side = {"type": "assistant", "isSidechain": True, "message": {"content": [call]}}
+    other = {
+        "type": "assistant",
+        "message": {"content": [{"type": "server_tool_use", "name": "web_search"}]},
+    }
+    assert census.advisor_calls([main, main, side, other]) == {
+        "main thread": 2,
+        "subagent": 1,
+    }
+
+
+def test_guard_fires_count_tool_results_not_prose() -> None:
+    fired = {
+        "type": "user",
+        "message": {
+            "content": [
+                {
+                    "type": "tool_result",
+                    "content": "dossier marker guard: 'a.ts' carries a marker",
+                }
+            ]
+        },
+    }
+    quoted = _prompt("why did the dossier marker guard fire?")
+    source = {
+        "type": "user",
+        "message": {
+            "content": [
+                {
+                    "type": "tool_result",
+                    "content": "12\t    f\"dossier marker guard: '{path}'\",",
+                }
+            ]
+        },
+    }
+    assert census.guard_fires([fired, quoted, source]) == {"marker guard": 1}
+
+
+def test_a_trigger_phrase_with_no_skill_call_after_it_is_a_miss() -> None:
+    triggers = {"dossier:status": ["where are we"], "dossier:check": ["check drift"]}
+    records = [
+        _prompt("where are we on this?"),
+        _skill("dossier:status"),
+        _prompt("please check drift now"),
+        _prompt("where are we"),
+    ]
+    assert census.missed_calls(records, triggers) == {
+        "dossier:status": {"asked": 2, "missed": 1},
+        "dossier:check": {"asked": 1, "missed": 1},
+    }
+
+
+def test_a_typed_command_a_skill_body_or_a_word_inside_another_is_not_a_miss() -> None:
+    triggers = {"dossier:status": ["ds", "where are we"]}
+    body = {**_prompt("ds:status runs where are we"), "isMeta": True}
+    typed = _prompt("<command-name>/dossier:status</command-name> where are we")
+    records = [
+        body,
+        typed,
+        _prompt("the ds:build verb and builds"),
+        _prompt("<x>where are we</x>"),
+    ]
+    assert census.missed_calls(records, triggers) == {}
+
+
+def test_trigger_phrases_come_from_the_quoted_invoke_clause() -> None:
+    description = 'Drift detector. Invoke when the user says "ds:check", "check drift", or before a PR.'
+    assert census.trigger_phrases(description) == ["ds:check", "check drift"]
+
+
+def test_the_verdict_log_counts_verdicts_misses_and_empty_messages() -> None:
+    lines = [
+        '{"agent_type": "whetstone:whetstone-doubter", "verdicts": ["DOUBT: FAILURES"]}',
+        '{"agent_type": "whetstone:whetstone-doubter", "verdicts": ["SUBTRACT: 2 CUTS"]}',
+        '{"agent_type": "dossier:dossier-reviewer", "verdicts": []}',
+        '{"agent_type": "dossier:dossier-reviewer", "verdicts": null}',
+        "not json",
+    ]
+    assert census.verdict_log(lines) == {
+        "whetstone:whetstone-doubter": {"DOUBT: FAILURES": 1, "SUBTRACT: 2 CUTS": 1},
+        "dossier:dossier-reviewer": {"no verdict line": 1, "no message": 1},
+    }
+
+
 def _main() -> int:
     failures = 0
     for name, fn in sorted(globals().items()):
