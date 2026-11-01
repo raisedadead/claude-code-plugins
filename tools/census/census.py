@@ -37,6 +37,7 @@ import os
 import re
 import statistics
 import sys
+from collections.abc import Iterable
 from pathlib import Path
 
 TRANSCRIPTS = "~/.claude/projects/**/*.jsonl"
@@ -45,7 +46,7 @@ NOTIFICATION = re.compile(r"<tool-use-id>(.*?)</tool-use-id>.*?<result>(.*)", re
 COMMAND_NAME = re.compile(r"<command-name>([^<]+)</command-name>")
 VERDICT_GRAMMAR = {
     "dossier:dossier-reviewer": re.compile(r"REVIEW: (PASS|CHANGES)"),
-    "reviewer": re.compile(r"REVIEW: (PASS|CHANGES)"),
+    "reviewer": re.compile(r"REVIEW: (PASS|CHANGES|clean|\d+ findings?)"),
     "whetstone:whetstone-doubter": re.compile(r"(DOUBT: FAILURES|NO FAILURE FOUND)"),
 }
 OPERATOR_PUSHBACK = re.compile(
@@ -62,6 +63,7 @@ SELF_CORRECTION = re.compile(
     r"|on closer (?:look|inspection)|i (?:incorrectly|wrongly|mistakenly)"
     r"|that was (?:wrong|incorrect)|scratch that)\b"
 )
+FINDINGS = re.compile(r"(\d+) findings?")
 
 
 def transcripts() -> list[str]:
@@ -112,6 +114,8 @@ def is_operator_prompt(record: dict) -> bool:
     """A real prompt, not a tool result and not a task notification."""
     if record.get("type") != "user" or record.get("isSidechain"):
         return False
+    if record.get("isCompactSummary"):
+        return False
     content = (record.get("message") or {}).get("content")
     if isinstance(content, str):
         return bool(content.strip()) and "<task-notification>" not in content
@@ -160,19 +164,17 @@ def census_verdicts() -> None:
     This is the join F32 names. Reading a verdict anywhere else is the trap.
     """
     spawn: dict[str, str] = {}
-    notifications: list[tuple[str, str, str]] = []
-    for path in transcripts():
-        for record in records(path):
-            for block in tool_uses(record):
-                if block.get("name") in ("Agent", "Task"):
-                    kind = (block.get("input") or {}).get("subagent_type", "?")
-                    spawn[block.get("id")] = kind
-            for chunk in text_blocks(record):
-                if "<task-notification>" not in chunk:
-                    continue
-                found = NOTIFICATION.search(chunk)
-                if found:
-                    notifications.append((found.group(1), found.group(2), path))
+
+    def feed():
+        for path in transcripts():
+            for record in records(path):
+                for block in tool_uses(record):
+                    if block.get("name") in ("Agent", "Task"):
+                        kind = (block.get("input") or {}).get("subagent_type", "?")
+                        spawn[block.get("id")] = kind
+                yield record, path
+
+    notifications = first_notifications(feed())
 
     compliance: dict[str, collections.Counter] = collections.defaultdict(
         collections.Counter
@@ -205,21 +207,50 @@ def census_verdicts() -> None:
         report(kind, compliance[kind])
     print("\n## failing verdicts paid before each success, per session")
     for kind, per_session in sequences.items():
-        runs: collections.Counter = collections.Counter()
-        for values in per_session.values():
-            run = 0
-            for value in values:
-                if value in ("CHANGES", "DOUBT: FAILURES"):
-                    run += 1
-                else:
-                    runs[run] += 1
-                    run = 0
-            if run:
-                runs[f"{run}+unresolved"] += 1
-        total = sum(v for k, v in runs.items() if isinstance(k, int))
-        weighted = sum(k * v for k, v in runs.items() if isinstance(k, int))
-        mean = f"  mean={weighted / total:.2f}" if total else ""
-        print(f"  {kind}: {dict(runs)}{mean}")
+        print(runs_line(kind, failure_runs(per_session)))
+
+
+def first_notifications(
+    feed: Iterable[tuple[dict, str]],
+) -> list[tuple[str, str, str]]:
+    found: dict[str, tuple[str, str, str]] = {}
+    for record, path in feed:
+        for chunk in text_blocks(record):
+            if "<task-notification>" not in chunk:
+                continue
+            match = NOTIFICATION.search(chunk)
+            if match and match.group(1) not in found:
+                found[match.group(1)] = (match.group(1), match.group(2), path)
+    return list(found.values())
+
+
+def is_failing(value: str) -> bool:
+    findings = FINDINGS.fullmatch(value)
+    if findings:
+        return int(findings.group(1)) > 0
+    return value in ("CHANGES", "DOUBT: FAILURES")
+
+
+def failure_runs(per_session: dict[str, list[str]]) -> collections.Counter:
+    runs: collections.Counter = collections.Counter()
+    for values in per_session.values():
+        run = 0
+        for value in values:
+            if is_failing(value):
+                run += 1
+            else:
+                runs[run] += 1
+                run = 0
+        if run:
+            runs[f"{run}+unresolved"] += 1
+    return runs
+
+
+def runs_line(kind: str, runs: collections.Counter) -> str:
+    total = sum(v for k, v in runs.items() if isinstance(k, int))
+    weighted = sum(k * v for k, v in runs.items() if isinstance(k, int))
+    mean = f"  mean over resolved runs={weighted / total:.2f}" if total else ""
+    return f"  {kind}: {dict(runs)}{mean}"
 
 
 def census_turns() -> None:
@@ -358,6 +389,8 @@ def tool_result_texts(record: dict) -> list[str]:
 def review_flag(records) -> dict[str, int]:
     counts = {"builds": 0, "with --review": 0}
     for record in records:
+        if record.get("type") == "api-request-blob":
+            continue
         for block in tool_uses(record):
             payload = block.get("input") or {}
             if block.get("name") == "Skill" and payload.get("skill") == "dossier:build":
@@ -756,7 +789,11 @@ def turn_sequence(stream, elsewhere: set[str] | None = None) -> list:
     sequence: list = []
     turns: dict[str, Turn | None] = {}
     for record in stream:
-        if is_operator_prompt(record) or is_notification(record):
+        if (
+            is_operator_prompt(record)
+            or is_notification(record)
+            or record.get("isCompactSummary")
+        ):
             sequence.append(None)
             continue
         message = record.get("message") or {}

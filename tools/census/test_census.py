@@ -89,6 +89,76 @@ def test_a_sidechain_prompt_is_not_counted() -> None:
     assert census.is_operator_prompt(record) is False
 
 
+def test_a_compaction_summary_is_not_an_operator_prompt() -> None:
+    record = {
+        "type": "user",
+        "isCompactSummary": True,
+        "message": {
+            "content": "This session is being continued from a previous conversation"
+        },
+    }
+    assert census.is_operator_prompt(record) is False
+
+
+def test_a_repeated_notification_is_collected_once() -> None:
+    first = _prompt(_notification("toolu_1", "REVIEW: CHANGES"))
+    repeat = _prompt(_notification("toolu_1", "REVIEW: PASS"))
+    other = _prompt(_notification("toolu_2", "REVIEW: PASS"))
+    feed = [(first, "a"), (_prompt("hi"), "a"), (repeat, "b"), (other, "b")]
+    found = census.first_notifications(feed)
+    assert [(key, path) for key, _result, path in found] == [
+        ("toolu_1", "a"),
+        ("toolu_2", "b"),
+    ]
+    assert "REVIEW: CHANGES" in found[0][1], found[0][1]
+
+
+def test_review_skips_replayed_request_blobs() -> None:
+    blob = "api-request-blob"
+    typed = "<command-name>/dossier:build</command-name>\n<command-args>T4 --review</command-args>"
+    records = [
+        {**_skill("dossier:build", "T3 --review"), "type": blob},
+        {**_prompt(typed), "type": blob},
+        _skill("dossier:build", "T5"),
+    ]
+    assert census.review_flag(records) == {"builds": 1, "with --review": 0}
+
+
+def test_the_run_mean_names_only_resolved_runs() -> None:
+    runs = census.failure_runs(
+        {"s1": ["CHANGES", "CHANGES", "PASS", "PASS", "CHANGES"]}
+    )
+    line = census.runs_line("reviewer", runs)
+    assert (
+        line
+        == "  reviewer: {2: 1, 0: 1, '1+unresolved': 1}  mean over resolved runs=1.00"
+    ), line
+
+
+def test_the_reviewer_grammar_and_its_findings_count() -> None:
+    grammar = census.VERDICT_GRAMMAR["reviewer"]
+    for text, verdict in (
+        ("REVIEW: PASS", "PASS"),
+        ("REVIEW: CHANGES", "CHANGES"),
+        ("REVIEW: clean", "clean"),
+        ("REVIEW: 2 findings (1 major, 1 minor)", "2 findings"),
+        ("REVIEW: 1 finding (1 minor)", "1 finding"),
+    ):
+        found = grammar.search(text)
+        assert found is not None and found.group(1) == verdict, text
+    values = [
+        "3 findings",
+        "0 findings",
+        "CHANGES",
+        "DOUBT: FAILURES",
+        "clean",
+        "PASS",
+        "NO FAILURE FOUND",
+        "1 finding",
+    ]
+    assert census.failure_runs({"s1": values}) == {1: 1, 2: 1, 0: 2, "1+unresolved": 1}
+
+
 def _skill(name: str, args: str = "") -> dict:
     block = {
         "type": "tool_use",
@@ -387,6 +457,27 @@ def test_an_advisor_call_or_a_turn_copied_from_another_file_breaks_a_run() -> No
     records.insert(1, advisor)
     records.insert(7, _prompt("<task-notification>done</task-notification>"))
     assert census.call_runs(census.turn_sequence(records, {"e"})) == []
+
+
+def test_a_compaction_summary_breaks_a_run() -> None:
+    compaction = {
+        "type": "user",
+        "isCompactSummary": True,
+        "message": {
+            "content": "This session is being continued from a previous conversation"
+        },
+    }
+    records = [
+        _call("a", "Bash"),
+        _result(),
+        _call("b", "Read"),
+        _result(),
+        compaction,
+        _call("c", "Bash"),
+        _result(),
+        _call("d", "Grep"),
+    ]
+    assert census.call_runs(census.turn_sequence(records)) == []
 
 
 def _main() -> int:
