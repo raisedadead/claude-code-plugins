@@ -180,6 +180,8 @@ def test_transcripts_come_oldest_first() -> None:
         try:
             census.TRANSCRIPTS = str(Path(root, "**", "*.jsonl"))
             assert census.transcripts() == [str(older), str(newer)]
+            os.utime(newer, (500, 500))
+            assert census.transcripts() == [str(newer), str(older)]
         finally:
             census.TRANSCRIPTS = saved
 
