@@ -26,6 +26,8 @@ Rules:
 - Each finding: one line — the trigger, and the consequence. No fixes, no praise.
 - Budget: <=250 words total. If you genuinely find nothing, say
   "NO FAILURE FOUND" and stop — do not manufacture nits to look thorough.
+
+DONE: the first line is DOUBT: FAILURES or DOUBT: NO FAILURE FOUND.
 ```
 
 ## Why the constraints

@@ -26,6 +26,8 @@ Rules:
 - Then one line per cut: the piece → the rung → what still holds without it.
 - Largest cut first. Budget: <=250 words. No additions, no praise.
 - If nothing can go, say SUBTRACT: NOTHING TO CUT and stop.
+
+DONE: the first line is SUBTRACT: NOTHING TO CUT or SUBTRACT: <n> CUTS.
 ```
 
 ## Why the constraints
