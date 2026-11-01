@@ -110,7 +110,7 @@ If `verify` is shell predicate: run after work, must exit 0. If `verify` is `—
 
 **run_slice route (whetstone compose, optional):** when `run-slice` is on `PATH` — whetstone ships it in `bin/` (ADAPTERS §whetstone) — prove the cycle through it: `run-slice red <test-cmd>` (exits non-zero if the test PASSED), `green <test-cmd>`, `full <suite-cmd>`. Three exit codes replace prose judgment of test output. Not on `PATH` → raw test commands exactly as above.
 
-**Skill-lint route (whetstone compose, touched SKILL.md only):** lint before COMMIT when `lint-skill` is on `PATH` (whetstone `bin/`, ADAPTERS §whetstone): `lint-skill <path>`. Exit 0 gates the commit. Not on `PATH` → skip silently, §S `skill-lint=skipped-absent`.
+**Skill-lint route (whetstone compose, touched SKILL.md only):** lint before COMMIT when `lint-skill` is on `PATH` (whetstone `bin/`, ADAPTERS §whetstone): `lint-skill <path>`. Commit only on exit 0 — model-judgment, since no hook runs `lint-skill` at commit. Not on `PATH` → skip silently, §S `skill-lint=skipped-absent`.
 
 **Source comments stay phase-agnostic.** A comment in source or test answers _why_: a workaround ref, a non-obvious invariant, an upstream-bug link. Phase and audit tracking live in DOSSIER.md §B and §S, which hold the whole record — so `// Phase N`, `// Step N`, `// Stage N`, `// V<n> (Phase <m> / A<k>)` and `// PH<n>-B<k>` stay out of every source and test file, and a comment that would carry one is rewritten as a _why_ or dropped. The dossier mod's marker guard denies the audit-id and `§`-cite forms on Edit/Write; the bare `Phase N` / `Step N` forms pass it, and this paragraph is what keeps them out.
 
