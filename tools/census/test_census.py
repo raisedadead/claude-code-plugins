@@ -100,6 +100,17 @@ def test_a_compaction_summary_is_not_an_operator_prompt() -> None:
     assert census.is_operator_prompt(record) is False
 
 
+def test_a_message_from_another_session_is_not_an_operator_prompt() -> None:
+    relayed = '<teammate-message teammate_id="scout">done</teammate-message>'
+    for text in (relayed, f"Another Claude session sent a message:\n{relayed}"):
+        assert census.is_operator_prompt(_prompt(text)) is False, text
+        assert (
+            census.is_operator_prompt({"type": "user", "message": {"content": text}})
+            is False
+        )
+    assert census.is_operator_prompt(_prompt(f"why did this arrive? {relayed}")) is True
+
+
 def test_a_repeated_notification_is_collected_once() -> None:
     first = _prompt(_notification("toolu_1", "REVIEW: CHANGES"))
     repeat = _prompt(_notification("toolu_1", "REVIEW: PASS"))

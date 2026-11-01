@@ -126,7 +126,7 @@ def is_operator_prompt(record: dict) -> bool:
         return False
     content = (record.get("message") or {}).get("content")
     if isinstance(content, str):
-        return bool(content.strip()) and "<task-notification>" not in content
+        return is_typed(content)
     if not isinstance(content, list):
         return False
     if any(
@@ -134,8 +134,17 @@ def is_operator_prompt(record: dict) -> bool:
         for block in content
     ):
         return False
-    joined = "\n".join(text_blocks(record))
-    return bool(joined.strip()) and "<task-notification>" not in joined
+    return is_typed("\n".join(text_blocks(record)))
+
+
+RELAYED = ("<teammate-message", "Another Claude session sent a message:")
+
+
+def is_typed(text: str) -> bool:
+    stripped = text.strip()
+    if not stripped or "<task-notification>" in stripped:
+        return False
+    return not stripped.startswith(RELAYED)
 
 
 def census_skills() -> None:
