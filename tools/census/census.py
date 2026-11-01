@@ -627,6 +627,7 @@ class RowLedger:
     windows: list = dataclasses.field(default_factory=list)
     delegated: bool = False
     open: bool = False
+    ended: bool = False
     started: datetime.datetime | None = None
 
 
@@ -649,12 +650,20 @@ def row_windows(
         if ROW_START.search(rest):
             ledger.started = stamp.astimezone(UTC)
             ledger.open = True
-        elif ROW_END.search(rest) and ledger.started:
-            end = stamp if seconds else stamp + datetime.timedelta(seconds=59)
-            ledger.windows.append((ledger.started, end.astimezone(UTC)))
-            ledger.started = None
-            ledger.open = False
+        elif ROW_END.search(rest):
+            ledger.ended = True
+            if ledger.started:
+                end = stamp if seconds else stamp + datetime.timedelta(seconds=59)
+                ledger.windows.append((ledger.started, end.astimezone(UTC)))
+                ledger.started = None
+                ledger.open = False
     return rows
+
+
+def unmeasured(ledger: RowLedger) -> str:
+    if ledger.ended and not ledger.open:
+        return "closed with no START line, not measured"
+    return "open"
 
 
 def utc_stamp(text: object) -> datetime.datetime | None:
@@ -760,7 +769,7 @@ def census_rows() -> None:
         kind = "delegated" if rows[row].delegated else "inline"
         bucket = tally.get(row, {})
         if not rows[row].windows:
-            print(f"{row} {kind} open")
+            print(f"{row} {kind} {unmeasured(rows[row])}")
             continue
         sides = {k: v for k, v in bucket.items() if k not in ("sessions", "models")}
         main_counts = bucket.get("main") or collections.Counter()

@@ -453,6 +453,18 @@ def test_an_open_shared_or_unmatched_row_stays_out_of_the_medians() -> None:
     assert census.row_exclusion(rows["T2"], counted) is None
 
 
+def test_a_row_with_a_done_line_and_no_start_is_closed_not_open() -> None:
+    rows = census.row_windows(
+        [
+            "2026-11-01 10:00 ds:build T1 DONE → x cite=abc operator row",
+            "2026-11-01 10:10 ds:build T2 START",
+        ],
+        IST,
+    )
+    assert census.unmeasured(rows["T1"]) == "closed with no START line, not measured"
+    assert census.unmeasured(rows["T2"]) == "open"
+
+
 def _call(message_id: str, name: str, cache_read: int = 0) -> dict:
     usage = {"cache_read_input_tokens": cache_read}
     block = {"type": "tool_use", "name": name, "input": {}}
