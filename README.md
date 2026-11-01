@@ -92,11 +92,13 @@ In-session hooks. The four write-time gates — the header and marker guards (on
 | **fake-impl backstop** | off     | `DOSSIER_FAKEIMPL_CMD='<fast test>'` | On stop with a dirty tree — untracked files included — runs your test command; a non-zero exit or a timeout blocks, and a `git status` or spawn error lets the stop through. Its first block in each turn asks for the whole reply again, because focus mode shows only the last message. |
 | **claim gate**         | on      | disable whetstone                    | whetstone. A final reply that claims enforcement with no exit code, citation or honesty label. Sends the flagged lines back as context once per turn and asks for the whole reply again with the fix, because focus mode shows only the last message; never blocks. |
 
-The invariant guard is where the ratchet lands: `ds:backprop` promotes a recurring bug class into a write-time block. Registry is a JSON list at `.scratchpad/dossier/.invariant-guards.json` — gitignored by design, so the suite leaves no artifact in a project that did not ask for one:
+The invariant guard is where the ratchet lands: for a recurring bug class with a regex shape, `ds:backprop` offers to register the pattern, and the guard then denies a matching edit (PreToolUse `deny`; the offer is model-judgment). Registry is a JSON list at `.scratchpad/dossier/.invariant-guards.json` — gitignored by design, so the suite leaves no artifact in a project that did not ask for one:
 
 ```json
 [{ "id": "no-raw-sql", "pattern": "execute\\(f?\"SELECT", "message": "parameterize", "paths": ["**/*.py"] }]
 ```
+
+In a dossier repo, each doubter and reviewer verdict line is appended to `.scratchpad/dossier/.verdicts.jsonl` when that subagent stops. It is a log, not a gate: it never blocks.
 
 Freshness authorities live in `plugins/dossier/engine/verify-authorities.ts` — adding a product is one data row, no code change.
 

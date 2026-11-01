@@ -28,4 +28,4 @@
 | 16  | `grep -q 'SUBTRACT:' plugins/whetstone/skills/doubt-pass/SKILL.md` | exit 0 |
 | 17  | `grep -q 'SubagentStop' plugins/dossier/hooks/register.tsx` | exit 0 |
 | 18  | `ls plugins/*/evals/*/prompt.md \| wc -l \| tr -d ' '` | stdout: 17 |
-| 19  | `grep -c '2.1.287' .github/workflows/ci.yml` | stdout: 0 |
+| 19  | `grep -q '2.1.287' .github/workflows/ci.yml` | exit 1 |
