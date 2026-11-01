@@ -644,10 +644,10 @@ def row_tokens(rows: dict[str, RowLedger], feed, root: str) -> dict[str, dict]:
 
 def row_exclusion(ledger: RowLedger, bucket: dict) -> str | None:
     if ledger.open:
-        return "OPEN: started again and not closed, not in the medians"
+        return "OPEN: started and not closed, not in the medians"
     if len(bucket.get("sessions", ())) > 1:
         return "SHARED: more than one session in the window, not in the medians"
-    if not sum(sum(c.values()) for k, c in bucket.items() if k == "main"):
+    if not sum((bucket.get("main") or {}).values()):
         return "NO TRANSCRIPT: no main-thread message matched, not in the medians"
     return None
 
@@ -819,8 +819,8 @@ def census_runs() -> None:
                 shapes[name][collapse([t.tools[0] for t in run])] += 1
     print(
         f"source: assistant tool_use and server_tool_use blocks per message id "
-        f"in {len(files)} transcripts under {TRANSCRIPTS}, read oldest file "
-        f"first; a run is 3+ consecutive single-call turns of "
+        f"in {len(files)} transcripts under {TRANSCRIPTS}, least recently "
+        f"written file first; a run is 3+ consecutive single-call turns of "
         f"{sorted(SCRIPTABLE)}, broken by an operator prompt, a task "
         f"notification, a multi-call or other-tool turn, or a turn an older "
         f"file already holds"

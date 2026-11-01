@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import datetime
 import importlib.util
+import os
 import sys
+import time
 from pathlib import Path
 
 SPEC = importlib.util.spec_from_file_location(
@@ -226,6 +228,26 @@ def test_row_windows_read_starts_ends_and_resumes() -> None:
     assert rows["T2"].delegated is True
     assert rows["T2"].windows == [] and rows["T2"].open is True
     assert rows["T3"].open is True
+
+
+def test_row_windows_read_each_stamp_in_its_own_local_offset() -> None:
+    lines = [
+        "2026-01-15 10:00 ds:build T1 START",
+        "2026-07-15 10:00 ds:build T1 DONE → x",
+    ]
+    saved = os.environ.get("TZ")
+    os.environ["TZ"] = "America/New_York"
+    time.tzset()
+    try:
+        start, end = census.row_windows(lines)["T1"].windows[0]
+    finally:
+        if saved is None:
+            os.environ.pop("TZ")
+        else:
+            os.environ["TZ"] = saved
+        time.tzset()
+    assert start == _utc("2026-01-15T15:00:00+00:00"), start
+    assert end == _utc("2026-07-15T14:00:59+00:00"), end
 
 
 def _assistant(
