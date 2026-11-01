@@ -48,7 +48,7 @@ Criteria are shell, and `ds:close` resolves a contract with no argument, so the 
 | 2   | `mytool --version`  | stdout: 1.        |
 ```
 
-`expect` is `exit <n>`, `stdout: <substring>`, or `stdout: (nothing)`.
+`expect` is `exit <n>`, `stdout: <substring>`, or `stdout: (nothing)`. Both `stdout:` forms also need exit 0, and `stdout: (nothing)` means output that is empty or only whitespace. A `grep -c` that finds no match prints `0` but exits 1, so `stdout: 0` is never met: write a zero count as `grep -q <pattern> <file>` with `exit 1`.
 
 Four shapes are refused at parse time — each `CONVERGE: PARSE`, exit 2:
 
