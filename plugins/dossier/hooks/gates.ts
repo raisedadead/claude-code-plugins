@@ -2,6 +2,7 @@ import { cells } from '../engine/converge.ts'
 import { editOf, headerDenial, isDossierPath, markerDenial } from '../engine/guards.ts'
 import { indexNames, SEC } from '../engine/ledger.ts'
 import { byCodePoint } from '../engine/text.ts'
+import { isVerdictAgent } from '../engine/verdicts.ts'
 
 export type Io = {
   isDir: (path: string) => Promise<boolean>
@@ -21,6 +22,7 @@ const VERIFY_FOOTER = '\nsilence a rule for this write: `# verify-skip: <ruleNam
 const SESSION_TIMEOUT_MS = 60_000
 const PROMPT_TIMEOUT_MS = 10_000
 const STOP_TIMEOUT_MS = 180_000
+const VERDICT_TIMEOUT_MS = 5000
 const EXIT_NO_NODE = 69
 export const BUILTINS = new Set(['code-review', 'review', 'security-review', 'simplify'])
 const CLOSE = 'dossier:close'
@@ -275,6 +277,19 @@ export async function promptGate(io: Io, root: string, from: string = root): Pro
     return done.exitCode === 0 && text ? text : undefined
   } catch {
     return undefined
+  }
+}
+
+export async function verdictGate(io: Io, cwd: string, stop: Record<string, unknown>): Promise<void> {
+  if (!isVerdictAgent(stop.agent_type)) return
+  const root = await ledgerRoot(io, cwd)
+  if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return
+  const { agent_type, agent_id, last_assistant_message } = stop
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'verdict-log', root]
+    await io.run(argv, { stdin: JSON.stringify({ agent_type, agent_id, last_assistant_message }), timeoutMs: VERDICT_TIMEOUT_MS })
+  } catch {
+    return
   }
 }
 

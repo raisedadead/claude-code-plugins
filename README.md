@@ -21,7 +21,7 @@ dossier drives the wave; whetstone is the craft at each gate. Designed to be use
 /plugin install whetstone@raisedadead-plugins
 ```
 
-Needs Claude Code 2.1.287 or later (the first build with [mods](https://code.claude.com/docs/en/plugins/mods/overview)), `git`, `bash` and Node.js 22.18+ on `PATH`. Neither plugin needs Python. whetstone ships commands in `bin/`, which limits it to Claude Code — claude.ai and Cowork do not install a plugin with a `bin/` directory.
+Needs Claude Code 2.1.311 or later ([mods](https://code.claude.com/docs/en/plugins/mods/overview) arrived in 2.1.287; 2.1.311 fires `SubagentStop` once per subagent, which the verdict log needs), `git`, `bash` and Node.js 22.18+ on `PATH`. Neither plugin needs Python. whetstone ships commands in `bin/`, which limits it to Claude Code — claude.ai and Cowork do not install a plugin with a `bin/` directory.
 
 dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globally, or per clone with `echo .scratchpad/ >> .git/info/exclude`. `/dossier:new` says so when it finds the directory unignored, and leaves the choice to you.
 

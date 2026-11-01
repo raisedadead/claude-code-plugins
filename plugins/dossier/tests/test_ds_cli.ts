@@ -55,6 +55,49 @@ test('invariant-check exits 0 on a malformed registry or payload', () => {
   })
 })
 
+function logVerdict(root: string, payload: Record<string, unknown>) {
+  return spawnSync('sh', [DS, 'verdict-log', root], { input: JSON.stringify(payload), encoding: 'utf8' })
+}
+
+test('verdict-log appends one record per verdict-agent stop, keyed by agent id', () => {
+  withRoot((root) => {
+    const log = join(root, '.scratchpad', 'dossier', '.verdicts.jsonl')
+    const stop = { agent_type: 'whetstone:whetstone-doubter', agent_id: 'a1', last_assistant_message: 'DOUBT: FAILURES\n- x' }
+    assert.equal(logVerdict(root, stop).status, 0)
+    assert.equal(logVerdict(root, { agent_type: 'dossier:dossier-reviewer', agent_id: 'a2', last_assistant_message: 'no verdict here' }).status, 0)
+    assert.equal(logVerdict(root, { agent_type: 'dossier:dossier-reviewer', agent_id: 'a3' }).status, 0)
+    const records = readFileSync(log, 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+    assert.deepEqual(
+      records.map(({ agent_type, agent_id, verdicts }) => ({ agent_type, agent_id, verdicts })),
+      [
+        { agent_type: 'whetstone:whetstone-doubter', agent_id: 'a1', verdicts: ['DOUBT: FAILURES'] },
+        { agent_type: 'dossier:dossier-reviewer', agent_id: 'a2', verdicts: [] },
+        { agent_type: 'dossier:dossier-reviewer', agent_id: 'a3', verdicts: null },
+      ],
+    )
+    assert.match(String(records[0]?.ts), /^\d{4}-\d{2}-\d{2}T/)
+  })
+})
+
+test('verdict-log writes nothing for another agent, outside a dossier project, or on a bad payload', () => {
+  withRoot((root) => {
+    assert.equal(logVerdict(root, { agent_type: 'general-purpose', last_assistant_message: 'REVIEW: PASS' }).status, 0)
+    const bad = spawnSync('sh', [DS, 'verdict-log', root], { input: 'garbage', encoding: 'utf8' })
+    assert.equal(bad.status, 0, bad.stderr)
+    assert.equal(existsSync(join(root, '.scratchpad', 'dossier', '.verdicts.jsonl')), false)
+  })
+  const bare = mkdtempSync(join(tmpdir(), 'ds-cli-'))
+  try {
+    assert.equal(logVerdict(bare, { agent_type: 'dossier-reviewer', last_assistant_message: 'REVIEW: PASS' }).status, 0)
+    assert.equal(existsSync(join(bare, '.scratchpad')), false)
+  } finally {
+    rmSync(bare, { recursive: true, force: true })
+  }
+})
+
 test('ds exits 64 on an unknown verb', () => {
   assert.equal(spawnSync('sh', [DS, 'nope'], { encoding: 'utf8' }).status, 64)
 })

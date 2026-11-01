@@ -100,6 +100,27 @@ describe('dossier mod wiring', () => {
     expect((await submit()).additionalContext).toBeUndefined()
   })
 
+  test('a doubter stop goes to the verdict log, and another agent or a blocked stop does not', async ($, on) => {
+    const runs: string[][] = []
+    let block: string | undefined
+    on('fs.stat', async () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }))
+    on('process.run', async (_, e) => {
+      runs.push([...e.argv])
+      return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
+    })
+    on('classic.SubagentStop', async () => (block ? { block } : {}))
+    const stop = (agent_type: string) =>
+      $.classic.SubagentStop({ cwd: '/w', session_id: 's5', agent_id: 'a1', agent_type, last_assistant_message: 'DOUBT: FAILURES' } as never)
+    await stop('general-purpose')
+    expect(runs).toEqual([])
+    block = 'keep going'
+    await stop('whetstone:whetstone-doubter')
+    expect(runs).toEqual([])
+    block = undefined
+    await stop('whetstone:whetstone-doubter')
+    expect(runs.map((argv) => argv.slice(-2))).toEqual([['verdict-log', '/w']])
+  })
+
   test('a Write in a dossier project asks the cli to verify it', async ($, on) => {
     const runs: string[][] = []
     on('session.cwd', async () => ({ value: '/w' }))

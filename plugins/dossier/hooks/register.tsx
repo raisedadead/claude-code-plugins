@@ -4,7 +4,7 @@ import type { DossierWave } from '../types'
 import { contractPaths, DATE_PREFIX, field } from '../engine/converge.ts'
 import { headerToken } from '../engine/ledger.ts'
 import { needsTree, ownerLine, progress, progressLine, taskRows } from '../engine/progress.ts'
-import { BUILTINS, bugGate, editGate, type Io, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verifyGate } from './gates.ts'
+import { BUILTINS, bugGate, editGate, type Io, ledgerRoot, promptGate, sessionGate, skillGate, skillOf, stopGate, verdictGate, verifyGate } from './gates.ts'
 
 function ioOf($: EngineInterface): Io {
   return {
@@ -182,6 +182,12 @@ export const register: Register = (on) => {
     const context = await promptGate(ioOf($), await ledgerRoot(ioOf($), e.cwd), e.cwd)
     if (!context) return result
     return { ...result, additionalContext: [...(result.additionalContext ?? []), context] }
+  })
+
+  on('classic.SubagentStop', async ($, e, next) => {
+    const result = await next(e)
+    if (!result.block) await verdictGate(ioOf($), e.cwd, e as unknown as Record<string, unknown>)
+    return result
   })
 
   on('classic.Stop', async ($, e, next) => {

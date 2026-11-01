@@ -28,6 +28,7 @@ import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guar
 import { migrate } from '../engine/migrate.ts'
 import { sessionReport } from '../engine/session.ts'
 import { splitLines, strip } from '../engine/text.ts'
+import { isVerdictAgent, verdictLines } from '../engine/verdicts.ts'
 import {
   hasRepo,
   headerState,
@@ -677,6 +678,23 @@ function fakeimplVerb(): number {
   }
 }
 
+function verdictLogVerb(args: string[]): number {
+  const [root] = args
+  if (root === undefined) throw new Refusal('usage: ds verdict-log <project-root> < {"agent_type", "agent_id", "last_assistant_message"}', EXIT_USAGE)
+  const dossiers = join(root, '.scratchpad', 'dossier')
+  const stop = stdinPayload()
+  if (!isDir(dossiers) || !isVerdictAgent(stop.agent_type)) return 0
+  const message = stop.last_assistant_message
+  const record = {
+    ts: new Date().toISOString(),
+    agent_type: stop.agent_type,
+    agent_id: typeof stop.agent_id === 'string' ? stop.agent_id : null,
+    verdicts: typeof message === 'string' ? verdictLines(message) : null,
+  }
+  appendFileSync(join(dossiers, '.verdicts.jsonl'), `${JSON.stringify(record)}\n`)
+  return 0
+}
+
 const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'archive-move': archiveMoveVerb,
   'assert-grill': assertGrillVerb,
@@ -698,6 +716,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'row-flip': rowFlipVerb,
   'session-start': sessionStartVerb,
   's-append': sAppendVerb,
+  'verdict-log': verdictLogVerb,
   'verify-edit': verifyEditVerb,
   'verify-sweep': verifySweepVerb,
   'vm-checks': vmChecksVerb,
