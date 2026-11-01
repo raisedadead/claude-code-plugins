@@ -11,27 +11,39 @@ fail() {
 	exit 1
 }
 
+refused() {
+	if (cd "$TMP" && bash "$ROOT/tools/pipe_grep.sh") >"$TMP/out.log" 2>&1; then
+		fail "the check passed $1"
+	fi
+	grep -q "^PIPE-GREP: $1:" "$TMP/out.log" || fail "the refusal does not name $1: $(cat "$TMP/out.log")"
+}
+
+pipe='|'
 git init -q "$TMP"
 mkdir -p "$TMP/bin"
 # shellcheck disable=SC2016
-printf '#!/usr/bin/env bash\nset -euo pipefail\ngrep -q x <<<"$y"\n[[ $(printf a | grep -c a) == 1 ]]\n' >"$TMP/clean.sh"
-pipe='|'
-printf '#!/usr/bin/env bash\nset -eu\nprintf a %s grep -q a\n' "$pipe" >"$TMP/no_pipefail.sh"
-printf '#!/usr/bin/env python3\n# set -o pipefail\nx = "a %s grep -q a"\n' "$pipe" >"$TMP/bin/py"
+printf '#!/usr/bin/env bash\nset -euo pipefail\ngrep -q x <<<"$y"\n[[ $(printf a %s grep -c a) == 1 ]]\n[[ -f a ]] %s%s grep -q x a\n# a %s grep -q b\n' \
+	"$pipe" "$pipe" "$pipe" "$pipe" >"$TMP/clean.sh"
+printf '#!/usr/bin/env python3\nx = "a %s grep -q a"\n' "$pipe" >"$TMP/bin/py"
 git -C "$TMP" add -A
+(cd "$TMP" && bash "$ROOT/tools/pipe_grep.sh") || fail "the check refused a here-string, grep -c, ||, a comment or a python file"
 
-(cd "$TMP" && bash "$ROOT/tools/pipe_grep.sh") || fail "the check refused files with no pipe into grep -q under pipefail"
-
-printf '#!/usr/bin/env bash\nset -euo pipefail\nok=1\nsys_of %s grep -qi drift || exit 1\n' "$pipe" >"$TMP/bad.sh"
-printf '#!/usr/bin/env bash\nset -euo pipefail\nprintf a %s grep -qF a\n' "$pipe" >"$TMP/bin/tool"
+bad=(
+	'sys_of %s grep -qi drift'
+	'printf a %s grep -E -q a'
+	'printf a %s grep --quiet a'
+	'printf a %s& grep -q a'
+	'printf a %s LC_ALL=C grep -q a'
+	'printf a %s command grep -qv a'
+)
+for i in "${!bad[@]}"; do
+	# shellcheck disable=SC2059
+	printf "#!/usr/bin/env bash\nset -euo pipefail\n${bad[$i]}\n" "$pipe" >"$TMP/bad$i.sh"
+done
+# shellcheck disable=SC2059
+printf "#!/bin/sh\n${bad[0]}\n" "$pipe" >"$TMP/bin/tool"
 git -C "$TMP" add -A
-if (cd "$TMP" && bash "$ROOT/tools/pipe_grep.sh") >"$TMP/out.log" 2>&1; then
-	fail "the check passed a pipe into grep -q under pipefail"
-fi
-grep -q '^PIPE-GREP: bad.sh:4:' "$TMP/out.log" || fail "the refusal does not name bad.sh:4: $(cat "$TMP/out.log")"
-grep -q '^PIPE-GREP: bin/tool:3:' "$TMP/out.log" || fail "the refusal does not name a script without a .sh suffix: $(cat "$TMP/out.log")"
-if grep -q 'no_pipefail.sh' "$TMP/out.log"; then
-	fail "the check named a file that does not set pipefail"
-fi
+for i in "${!bad[@]}"; do refused "bad$i.sh:3"; done
+refused 'bin/tool:2'
 
 printf 'ok pipe-grep\n'
