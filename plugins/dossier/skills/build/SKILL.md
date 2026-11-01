@@ -49,14 +49,15 @@ If stale: clear + proceed.
 
 Read §S grep `ds:build <T-id>`. Identify last event:
 
-| Last event     | Resume point                       |
-| -------------- | ---------------------------------- |
-| (no entries)   | full run from step 5               |
-| `START`        | step 5 (re-run safe)               |
-| `commit=<sha>` | step 8 (work already committed)    |
-| `§X=partial`   | step 8 (retry §X refresh)          |
-| `§X=refreshed` | step 9 (flip only)                 |
-| `DONE`         | nothing to do; release lock + exit |
+| Last event                 | Resume point                                                         |
+| -------------------------- | -------------------------------------------------------------------- |
+| (no entries)               | full run from step 5                                                 |
+| `START`                    | step 5 (re-run safe)                                                 |
+| `delegate=` or `rebuild=1` | step 6.2 item 4 on the tree as it stands; a clean tree goes to item 2 |
+| `commit=<sha>`             | step 8 (work already committed)                                      |
+| `§X=partial`               | step 8 (retry §X refresh)                                            |
+| `§X=refreshed`             | step 9 (flip only)                                                   |
+| `DONE`                     | nothing to do; release lock + exit                                   |
 
 ### 5. CLAIM
 
@@ -98,6 +99,8 @@ When present:
 
 **Baseline check (before RED):** confirm the existing suite for the touched package is green (or note known-failing). A new RED must be attributable to THIS task, so start from a green baseline. Under `--auto`, an unexpected red baseline is a PAUSE (`ambiguous`).
 
+A row whose task cell carries `route=delegate` or `route=pi` goes to step 6.2 after this baseline, not to the steps below.
+
 If `verify` column references `V<N>`:
 
 - Locate test for `V<N>` (search §V row's `check` column).
@@ -124,9 +127,35 @@ A failure that implies a missing invariant: run `ds:backprop`, which registers t
 
 A test that fails and then passes on a rerun with no change is a flake signal. With whetstone installed, hand it to `whetstone:flaky-test-audit` for a computed rate before any fix.
 
+### 6.2. DELEGATE (a `route=delegate` row)
+
+The operator marks a row for a builder by writing `route=delegate` in its task cell. The build reads the marker and never writes one. Such a row is built by one `general-purpose` subagent; the baseline, the routes and the failure rules of step 6 still bind the main thread. A `route=pi` row needs the operator's approval in §S, `ds:build <T-id> route=pi approved="<operator verbatim>"`, and the Pi route is not built yet: under `--auto` PAUSE (`ambiguous`); interactively, hand it to the operator.
+
+1. **Clean tree.** `git status --porcelain` must print nothing, so every later change is the builder's. Otherwise PAUSE (`ambiguous`).
+1. **Spawn for RED.** Rewrite `.ds-lock` with a fresh `started`, then spawn one `Agent` with `subagent_type: general-purpose` and no `model`, so the builder runs on the user's subagent default or the session model. Append §S `ds:build <T-id> delegate=general-purpose`. The mission is artifact-only, as in step 6.5:
+
+   ```
+   Build one task in <repo path>. Write the test first, then stop.
+   Task: <§T task text>
+   Verify: <the verify cell's command, or the check of the §V row it names>
+   Invariants: <each touched §V row with its check>
+   Rules: change only the files this task needs. Do not commit. Do not touch
+   .scratchpad/ or DOSSIER.md. Add no comment that tracks a phase, a step or a task id.
+   Now: write the failing test and run it. Return its command and its output verbatim,
+   or one line `QUESTION: <question>` when the task cannot be built as written.
+   DONE: <the test command> fails for the missing behaviour
+   ```
+
+1. **RED, then GREEN.** Run the returned test command yourself; it must fail for the missing behaviour (`run-slice red` when on `PATH`). A pass, or a failure for another cause, is a PAUSE (`ambiguous`). Then `SendMessage` the same builder: `Implement now. Return the GREEN output verbatim with its command, and the changed files. DONE: <verify command> exits 0`. Without `SendMessage`, spawn a fresh builder with the mission and the line `The failing test is in place: <command>`. A verify cell of `—` has no RED: the first mission asks for the change and the changed files.
+1. **Return.** Rewrite `.ds-lock`. A `QUESTION:` line is a PAUSE (`ambiguous`) with the question in §S; interactively, put it to the operator. Otherwise the builder's report is advisory: re-run the verify command and the touched package's full suite yourself, and use that as the GREEN proof. `git add` every path `git status --porcelain` lists, so step 6.5 reviews the builder's whole diff.
+1. **Review, one rebuild.** Step 6.5 runs on every delegated row. `REVIEW: CHANGES` → `SendMessage` the builder the Critical findings with `Fix these. Keep the test unless a finding names it. Return GREEN.`, append §S `ds:build <T-id> rebuild=1`, then run items 4 and 5 again. A second `CHANGES` is a PAUSE (`review`).
+1. **Commit** (step 7) from the main thread.
+
+A builder that runs past 30 minutes leaves a lock that FORMAT.md §14 calls stale, so start no other `ds:build` on this dossier while it runs.
+
 ### 6.5. REVIEW (fresh-context, optional)
 
-Runs when `--review` is set, or auto for a **destructive-class** task (delete / drop / migrate / force / schema). A pre-commit gate: a second context judges whether GREEN is enough, which is the discipline this plugin's own hardening wave used.
+Runs when `--review` is set, auto for a **destructive-class** task (delete / drop / migrate / force / schema), and on every delegated row (step 6.2). A pre-commit gate: a second context judges whether GREEN is enough, which is the discipline this plugin's own hardening wave used.
 
 Spawn one `dossier-reviewer` subagent (`Agent` tool, `subagent_type: dossier:dossier-reviewer`) with an **artifact-only** mission — no parent transcript:
 
