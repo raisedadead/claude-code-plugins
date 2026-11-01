@@ -20,7 +20,11 @@ if [[ -n "$(git status --porcelain)" ]]; then
 	exit 1
 fi
 
-python3 tools/check_rows.py --base origin/main
+ci_python="$(sed -nE "s/^ *python-version: '([0-9.]+)'$/\1/p" .github/workflows/ci.yml)"
+py=(uv run -q --no-project --python "$ci_python" python)
+"${py[@]}" tools/test_check_rows.py
+"${py[@]}" tools/check_rows.py --base origin/main
+"${py[@]}" tools/census/test_census.py
 bash tools/rails_ceiling.sh
 git ls-files -z '*.md' | grep -zv tests/fixtures/ | xargs -0 plugins/whetstone/bin/claim-check
 node_modules/.bin/oxfmt --check
