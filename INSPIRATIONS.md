@@ -4,7 +4,7 @@ What we borrowed, what we refused, and when we last looked. One row per source.
 
 A refusal is worth as much as an adoption: without it the next survey re-proposes the thing we already turned down, at full cost. `RESEARCH.md` holds the same rule for our own decisions — this file holds it for other people's.
 
-**Stamp.** Every release surveys this file. When a plugin `CHANGELOG.md` gains a dated section, each source read for it gets its `surveyed` cell set to that date, whether or not anything changed. A survey that found nothing is data: it dates the claim "we are still current". A source nobody read keeps its old date. Convention, not enforcement — no hook checks it.
+**Stamp.** A row whose `surveyed` date is over 60 days old is due for a re-read. Each source read gets its `surveyed` cell set to that date, whether or not anything changed. A survey that found nothing is data: it dates the claim "we are still current". A source nobody read keeps its old date. `tools/check_rows.py` prints a warning for each row over 60 days old and still exits 0 — an advisory nag in this repo's CI, not a gate.
 
 `surveyed` is the date someone read the source and classified what was there. It is not the date we copied something.
 

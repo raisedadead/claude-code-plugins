@@ -32,6 +32,6 @@ Tests guard invariants that would silently break. They do not assert that docume
 
 ## Docs
 
-`ARCHITECTURE.md` is what we believe now. `RESEARCH.md` is why: decisions with their rejected alternatives, facts with a recheck trigger, open strides. A decision row without a rejected alternative is a description — find the alternative or drop the row. `INSPIRATIONS.md` is who we borrowed from, what we refused from each of them, and the date we last looked; every release re-stamps it.
+`ARCHITECTURE.md` is what we believe now. `RESEARCH.md` is why: decisions with their rejected alternatives, facts with a recheck trigger, open strides. A decision row without a rejected alternative is a description — find the alternative or drop the row. `INSPIRATIONS.md` is who we borrowed from, what we refused from each of them, and the date we last looked; a row over 60 days old is due for a re-read.
 
 Neither is a history. When a position changes, rewrite the row; when a row stops changing what someone would do, delete it. Both files are read by sessions with no memory of the one that wrote them, and every line that no longer earns its place makes the lines that do harder to find. Git holds the route.

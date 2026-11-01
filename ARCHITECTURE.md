@@ -137,7 +137,7 @@ Tests here guard hard-won invariants. They do not assert that prose says what pr
 The mechanism, not a wish list.
 
 - **The ratchet.** A bug becomes an enforced invariant. `ds:backprop` root-causes a defect, decides whether an invariant would have prevented it, and mints one with a regression test. This is meant to be the primary way the suite gets better, and today it is idle: no project holds an invariant registry (F16), and reviving it is open stride O43. The artemis regression is a worked example that predates this document.
-- **Survey cadence.** Every release re-reads the sources in [`INSPIRATIONS.md`](./INSPIRATIONS.md) and stamps each row with the date, changed or not. That file carries the adoption order, what each source gave us, and what we refused from it — the corrections pass matters more than the survey, and it has caught an overstated gap in one direction and a source mined without being credited in the other.
+- **Survey cadence.** A source in [`INSPIRATIONS.md`](./INSPIRATIONS.md) is re-read when its row passes 60 days, and a §F fact is re-checked on the same clock; each re-read stamps the row with the date, changed or not. `tools/check_rows.py` warns on both and exits 0. That file carries the adoption order, what each source gave us, and what we refused from it — the corrections pass matters more than the survey, and it has caught an overstated gap in one direction and a source mined without being credited in the other.
 - **Consolidation bias.** When research proposes more surface, the answer is usually less. Nine verbs to fourteen was proposed and became four.
 - **Say why, where the hooks allow it.** TIGER_STYLE says "always motivate, always say why." Full-line comments are blocked in this rig, so the why lives in commit subjects and in `RESEARCH.md`'s decision rows instead. Two commits four minutes apart — `chore(dossier): bump 0.1.0 to 0.1.1 (force cache refresh)` then `fix(dossier): drop version pin (commit SHA = version)` — carry an entire design decision in their subject lines.
 
@@ -151,7 +151,7 @@ The ledger format has the same gap: a wave's constraints and rejected options go
 
 ## Lineage
 
-[`INSPIRATIONS.md`](./INSPIRATIONS.md) — one row per source: what we took, what we refused and why, and the date we last looked. Every release stamps it, so "we are still current" carries a date instead of a feeling. It also holds the adoption order: native or built-in first, absorb second, third-party last and by default never.
+[`INSPIRATIONS.md`](./INSPIRATIONS.md) — one row per source: what we took, what we refused and why, and the date we last looked. Each re-read stamps it, so "we are still current" carries a date instead of a feeling. It also holds the adoption order: native or built-in first, absorb second, third-party last and by default never.
 
 ## Non-goals
 
