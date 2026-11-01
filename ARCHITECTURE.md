@@ -79,6 +79,8 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.
 
+A Stop hook that makes the model continue asks for the whole reply again. Focus mode shows only the last message of the turn, so a short correction alone hides the reply (D31). Both Stop hooks do this: `RESEND` in `plugins/dossier/hooks/register.tsx` and the rubric line in `plugins/whetstone/hooks/register.ts`. The operator's rig sets the same rule for its own review gate.
+
 ## Enforcement must travel with the plugin
 
 A consumer installs `hooks/`, `skills/` and `agents/`. They never receive `.github/`. Any rule enforced only in this repo's CI is a benefit no consuming project ever gets, and measuring its value from inside this repo will overstate it — the safety net here is not present there. When a check could live in either place, prefer the hook.
