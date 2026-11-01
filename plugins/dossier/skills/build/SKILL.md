@@ -54,8 +54,12 @@ Read §S grep `ds:build <T-id>`. Identify last event:
 | (no entries)               | full run from step 5                                                 |
 | `START`                    | step 5 (re-run safe)                                                 |
 | `delegate=`                | step 6.2 item 3 on the builder's test; a clean tree goes to item 2   |
+| `red=skipped-green`        | step 6.2 item 2, the `—` mission, with a fresh builder               |
 | `red=`                     | step 6.2 item 3, the GREEN half, with a fresh builder                |
 | `rebuild=1`                | step 6.2 item 4 on the tree as it stands                             |
+| `review=PASS`              | step 7 on the staged diff                                            |
+| `review=CHANGES`           | step 6.5's `CHANGES` path; a delegated row goes to step 6.2 item 5   |
+| `PAUSE`                    | the operator answers the §S reason first, then the event before it   |
 | `commit=<sha>`             | step 8 (work already committed)                                      |
 | `§X=partial`               | step 8 (retry §X refresh)                                            |
 | `§X=refreshed`             | step 9 (flip only)                                                   |
@@ -136,7 +140,7 @@ The operator marks a row for a builder by writing `route=delegate` in its task c
 Run every git command in this step from the repo root; the `.` pathspec covers only the current directory.
 
 1. **Clean tree.** `git status --porcelain -uall -- . ':(exclude).scratchpad'` must print nothing, so every later change is the builder's. Otherwise PAUSE (`ambiguous`).
-1. **Spawn for RED.** Rewrite `.ds-lock` with a fresh `started`, then spawn one `Agent` with `subagent_type: general-purpose` and no `model`, so the builder runs on the user's subagent default or the session model. Append §S `ds:build <T-id> delegate=general-purpose`. The mission is artifact-only, as in step 6.5. A verify cell of `—` has no RED: its mission opens with `Build one task in <repo path>.`, ends with `Now: make the change.`, `OUTPUT: the changed files, or one QUESTION: line.` and `DONE: the change is in the files`, and goes to item 4. Every other row gets:
+1. **Spawn for RED.** Rewrite `.ds-lock` with a fresh `started`, then spawn one `Agent` with `subagent_type: general-purpose` and no `model`, so the builder runs on the user's subagent default or the session model. Append §S `ds:build <T-id> delegate=general-purpose`. The mission is artifact-only, as in step 6.5. A verify cell of `—` has no RED: its mission opens with `Build one task in <repo path>.`, ends with `Now: make the change.`, `OUTPUT: the changed files, or one QUESTION: line.` and `DONE: the change is in the files`, and goes to item 4. Run any other verify command before the spawn; when it already exits 0, the row has no RED either: append §S `ds:build <T-id> red=skipped-green` and use the `—` mission. Every other row gets:
 
    ```
    Build one task in <repo path>. Write the test first, then stop.
