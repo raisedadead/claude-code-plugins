@@ -53,12 +53,12 @@ Read §S grep `ds:build <T-id>`. Identify last event:
 | -------------------------- | -------------------------------------------------------------------- |
 | (no entries)               | full run from step 5                                                 |
 | `START`                    | step 5 (re-run safe)                                                 |
-| `delegate=`                | step 6.2 item 3 on the builder's test; a clean tree goes to item 2; after `red=skipped-green` or with a `—` verify cell, item 4 |
+| `delegate=`                | a clean tree (item 1's check) goes to step 6.2 item 2; otherwise, after `red=skipped-green` or with a `—` verify cell, item 4; otherwise item 3 on the builder's test |
 | `red=skipped-green`        | step 6.2 item 2, the `—` mission, with a fresh builder               |
 | `red=`                     | step 6.2 item 3, the GREEN half, with a fresh builder                |
 | `rebuild=1`                | step 6.2 item 4 on the tree as it stands                             |
 | `review=PASS`              | step 7 on the staged diff                                            |
-| `review=CHANGES`           | step 6.5's `CHANGES` path; a delegated row goes to step 6.2 item 5; a second `review=CHANGES`, or one after `rebuild=1`, is a PAUSE (`review`) |
+| `review=CHANGES`           | step 6.5's `CHANGES` path; with an earlier `review=CHANGES` in §S, its after-one-cycle branch; a delegated row goes to step 6.2 item 5, where one after `rebuild=1` is a PAUSE (`review`) |
 | `PAUSE`                    | the operator answers the §S reason first, then the event before it   |
 | `commit=<sha>`             | step 8 (work already committed)                                      |
 | `§X=partial`               | step 8 (retry §X refresh)                                            |
