@@ -162,6 +162,27 @@ test('with no ledger anywhere, the first ledger from a linked worktree lands in 
   }
 })
 
+test('with no ledger, a submodule keeps its own directory and a bare primary roots beside the bare repo', () => {
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'ds-sub-')))
+  const git = (cwd: string, ...args: string[]) =>
+    execFileSync('git', ['-C', cwd, '-c', 'user.email=t@t', '-c', 'user.name=t', '-c', 'protocol.file.allow=always', ...args], { stdio: 'ignore' })
+  const root = (cwd: string) => spawnSync('sh', [DS, 'root'], { cwd, encoding: 'utf8' })
+  try {
+    for (const name of ['lib', 'sup']) {
+      mkdirSync(join(base, name))
+      git(join(base, name), 'init', '-q')
+      git(join(base, name), 'commit', '-q', '--allow-empty', '-m', 'init')
+    }
+    git(join(base, 'sup'), 'submodule', 'add', '-q', join(base, 'lib'), 's')
+    assert.equal(root(join(base, 'sup', 's')).stdout, `${join(base, 'sup', 's')}\n`)
+    git(base, 'clone', '-q', '--bare', join(base, 'lib'), join(base, 'bare', 'repo.git'))
+    git(join(base, 'bare', 'repo.git'), 'worktree', 'add', '-q', join(base, 'bare', 'feat'))
+    assert.equal(root(join(base, 'bare', 'feat')).stdout, `${join(base, 'bare')}\n`)
+  } finally {
+    rmSync(base, { recursive: true, force: true })
+  }
+})
+
 test('outside git, with no ledger, the ledger root is the current directory', () => {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'ds-nogit-')))
   try {

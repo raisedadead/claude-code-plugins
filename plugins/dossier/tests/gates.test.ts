@@ -355,17 +355,39 @@ describe('verify advisory', () => {
 })
 
 describe('ledger root', () => {
-  const porcelain = 'worktree /main\nHEAD abc\nbranch refs/heads/main\n\nworktree /main.feature\nHEAD def\n'
-  const git = { run: async () => ({ exitCode: 0, stdout: porcelain, stderr: '' }) }
+  const gitDirs = '/main/.git/worktrees/main.feature\n/main/.git\n'
+  const git = {
+    run: async (argv: string[]) => ({ exitCode: 0, stdout: argv.includes('--git-common-dir') ? gitDirs : '/main.feature\n', stderr: '' }),
+  }
 
   test('a worktree session finds the ledger in the primary checkout', async () => {
     expect(await ledgerRoot(io({ '/main/.scratchpad/dossier/.keep': '' }, git), '/main.feature')).toBe('/main')
   })
 
   test('a subdirectory finds its own checkout ledger before the primary', async () => {
-    const run = async (argv: string[]) => ({ exitCode: 0, stdout: argv.includes('--show-toplevel') ? '/main.feature\n' : porcelain, stderr: '' })
     const files = { '/main.feature/.scratchpad/dossier/.keep': '', '/main/.scratchpad/dossier/.keep': '' }
-    expect(await ledgerRoot(io(files, { run }), '/main.feature/pkg')).toBe('/main.feature')
+    expect(await ledgerRoot(io(files, git), '/main.feature/pkg')).toBe('/main.feature')
+  })
+
+  test('a submodule, whose git dir is its common dir, has no primary to fall back to', async () => {
+    const run = async (argv: string[]) => ({
+      exitCode: 0,
+      stdout: argv.includes('--git-common-dir') ? '/sup/.git/modules/s\n/sup/.git/modules/s\n' : '/sup/s\n',
+      stderr: '',
+    })
+    expect(await ledgerRoot(io({ '/sup/.git/modules/.scratchpad/dossier/.keep': '' }, { run }), '/sup/s')).toBe('/sup/s')
+  })
+
+  test('repeat lookups from one directory start git only on the first', async () => {
+    let calls = 0
+    const run = async (argv: string[]) => {
+      calls += 1
+      return git.run(argv)
+    }
+    const session = io({}, { run })
+    await ledgerRoot(session, '/count.feature')
+    await ledgerRoot(session, '/count.feature')
+    expect(calls).toBe(2)
   })
 
   test('a ledger created after a lookup that found none is found on the next lookup', async () => {

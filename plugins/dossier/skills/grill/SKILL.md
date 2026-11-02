@@ -107,7 +107,7 @@ The other decisions in the same reply keep their answers.
 
 ### 4. Stakeholder fork
 
-A decision the operator cannot answer (it needs someone outside the room) keeps its own slot rather than a guess: write `.scratchpad/dossier/.grill/<date>-<slug>-questionnaire.md` (purpose / from-to / context / how-to-answer / question sections / answer stubs) and mark the node `answer=pending-external`. The frontier may close around it as `empty-except-external n=<k>` — every pending node MUST surface as a §C bullet in the draft, so the gap stays auditable.
+A decision the operator cannot answer (it needs someone outside the room) keeps its own slot rather than a guess: write `<root>/.scratchpad/dossier/.grill/<date>-<slug>-questionnaire.md`, where `<root>` is the path `ds root` prints (purpose / from-to / context / how-to-answer / question sections / answer stubs) and mark the node `answer=pending-external`. The frontier may close around it as `empty-except-external n=<k>` — every pending node MUST surface as a §C bullet in the draft, so the gap stays auditable.
 
 ### 4.5. Premise change
 

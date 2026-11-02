@@ -28,6 +28,7 @@ import { addEntry, entryError, FRONTIER_CLOSED, openDecisions } from '../engine/
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
 import { isDue, LATER_FILE, laterRows, removeLater } from '../engine/later.ts'
 import { migrate } from '../engine/migrate.ts'
+import { GIT_DIRS, linkedPrimary } from '../engine/root.ts'
 import { sessionReport } from '../engine/session.ts'
 import { splitLines, strip } from '../engine/text.ts'
 import { isVerdictAgent, verdictLines } from '../engine/verdicts.ts'
@@ -767,7 +768,6 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'z-write': zWriteVerb,
 }
 
-const PRIMARY = /^worktree (.+)$/m
 const GIT_TIMEOUT_MS = 5000
 const LEDGER_VERBS = new Set([
   'archive-move',
@@ -797,19 +797,12 @@ function gitLine(args: string[]): string | undefined {
   return done.status === 0 ? done.stdout : undefined
 }
 
-function primaryCheckout(): string | undefined {
-  const [first = ''] = (gitLine(['worktree', 'list', '--porcelain']) ?? '').split('\n\n')
-  return /^bare$/m.test(first) ? undefined : PRIMARY.exec(first)?.[1]
-}
-
 function ledgerRoot(): string {
   const here = process.cwd()
   if (hasLedger(here)) return here
   const top = gitLine(['rev-parse', '--show-toplevel'])?.trim()
   if (top && hasLedger(top)) return top
-  const primary = primaryCheckout()
-  if (primary && hasLedger(primary)) return primary
-  return primary ?? top ?? here
+  return linkedPrimary(gitLine(GIT_DIRS)) ?? here
 }
 
 function rootVerb(): number {

@@ -150,7 +150,7 @@ Append §S:
 
 NO → §B `invariant added` stays `—`, and §S notes `§V=skipped:one-off`.
 
-**Optional — graduate to a write-time guard (recurrence=high only):** when the invariant is a _forbidden code pattern_ (a regex the offending edit would contain), offer to register it so the dossier mod's invariant guard denies the bug class at Edit/Write time on every future edit, rather than surfacing it at the next `ds:check`. Append an entry to `.scratchpad/dossier/.invariant-guards.json` (a JSON list):
+**Optional — graduate to a write-time guard (recurrence=high only):** when the invariant is a _forbidden code pattern_ (a regex the offending edit would contain), offer to register it so the dossier mod's invariant guard denies the bug class at Edit/Write time on every future edit, rather than surfacing it at the next `ds:check`. Append an entry to `<root>/.scratchpad/dossier/.invariant-guards.json` (a JSON list), where `<root>` is the path `ds root` prints:
 
 ```json
 { "id": "V<N>", "pattern": "<forbidden-regex>", "message": "<why this is blocked>", "paths": ["<glob>"] }

@@ -1,6 +1,7 @@
 import { cells } from '../engine/converge.ts'
 import { editOf, headerDenial, isDossierPath, markerDenial } from '../engine/guards.ts'
 import { indexNames, SEC } from '../engine/ledger.ts'
+import { GIT_DIRS, linkedPrimary } from '../engine/root.ts'
 import { byCodePoint } from '../engine/text.ts'
 import { isVerdictAgent } from '../engine/verdicts.ts'
 
@@ -52,9 +53,7 @@ async function invariantGate(io: Io, root: string, filePath: string, chunks: str
   return {}
 }
 
-const PRIMARY = /^worktree (.+)$/m
-
-const roots = new Map<string, string>()
+const candidates = new Map<string, string[]>()
 
 async function gitOut(io: Io, args: string[]): Promise<string | undefined> {
   try {
@@ -67,15 +66,15 @@ async function gitOut(io: Io, args: string[]): Promise<string | undefined> {
 
 export async function ledgerRoot(io: Io, cwd: string): Promise<string> {
   if (await io.isDir(`${cwd}/.scratchpad/dossier`)) return cwd
-  const known = roots.get(cwd)
-  if (known) return known
-  const top = (await gitOut(io, ['-C', cwd, 'rev-parse', '--show-toplevel']))?.trim()
-  const primary = PRIMARY.exec((await gitOut(io, ['-C', cwd, 'worktree', 'list', '--porcelain'])) ?? '')?.[1]
-  for (const dir of [top, primary]) {
-    if (dir && (await io.isDir(`${dir}/.scratchpad/dossier`))) {
-      roots.set(cwd, dir)
-      return dir
-    }
+  let dirs = candidates.get(cwd)
+  if (!dirs) {
+    const top = (await gitOut(io, ['-C', cwd, 'rev-parse', '--show-toplevel']))?.trim()
+    const primary = linkedPrimary(await gitOut(io, ['-C', cwd, ...GIT_DIRS]))
+    dirs = [top, primary].filter((dir): dir is string => Boolean(dir))
+    candidates.set(cwd, dirs)
+  }
+  for (const dir of dirs) {
+    if (await io.isDir(`${dir}/.scratchpad/dossier`)) return dir
   }
   return cwd
 }
