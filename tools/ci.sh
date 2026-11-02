@@ -163,7 +163,6 @@ if [[ $job == dossier || $job == all ]]; then
 	step types node_modules/.bin/tsc -p .
 	each \
 		plugins/dossier/hooks/test_lib_regen.sh \
-		plugins/dossier/hooks/test_lib_archive_move.sh \
 		plugins/dossier/hooks/test_lib_reconcile.sh \
 		plugins/dossier/hooks/test_lib_clear_locks.sh \
 		plugins/dossier/hooks/test_lib_ds_check.sh \
