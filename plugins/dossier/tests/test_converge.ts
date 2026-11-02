@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile, spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline'
@@ -151,28 +151,28 @@ test('the plan block reaches a pipe while the run is still going', async () => {
   const root = mkdtempSync(join(tmpdir(), 'converge-'))
   try {
     const contract = join(root, 'slow.md')
-    writeFileSync(
-      contract,
-      singleCriterion('| id  | command           | expect |', '| --- | ----------------- | ------ |', "| 1   | `sh -c 'sleep 4'` | exit 0 |"),
-    )
-    const started = performance.now()
+    const go = join(root, 'go')
+    const done = join(root, 'done')
+    const wait = `sh -c 'i=0; while [ ! -f ${go} ] && [ $i -lt 200 ]; do sleep 0.05; i=$((i+1)); done; touch ${done}'`
+    writeFileSync(contract, singleCriterion('| id | command | expect |', '| --- | --- | --- |', `| 1 | \`${wait}\` | exit 0 |`))
     const child = spawn('sh', [DS, 'converge', contract], { cwd: REPO, env: cleanEnv(), stdio: ['ignore', 'pipe', 'pipe'] })
     let stderr = ''
     child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()))
     const exited = new Promise((resolve) => child.on('close', resolve))
-    let planned: number | undefined
+    let running: boolean | undefined
     const lines = createInterface({ input: child.stdout })
     for await (const line of lines) {
       if (line.startsWith('will run ')) {
-        planned = (performance.now() - started) / 1000
+        running = !existsSync(done)
         break
       }
     }
+    writeFileSync(go, '')
     lines.close()
     child.stdout.destroy()
     const code = await exited
-    assert.ok(planned !== undefined, 'no will-run line')
-    assert.ok(planned < 2.0, `plan block arrived after ${planned.toFixed(2)}s`)
+    assert.ok(running !== undefined, 'no will-run line')
+    assert.ok(running, 'the plan block arrived only after the criterion finished')
     assert.equal(stderr, '')
     assert.equal(code, 141)
   } finally {
