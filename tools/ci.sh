@@ -79,6 +79,10 @@ step() {
 		exit 1
 	fi
 	known+="$name "
+	if [[ -n ${CI_LIST:-} ]]; then
+		printf '%s\n' "$name"
+		return 0
+	fi
 	[[ -z ${CI_STEPS:-} || " $CI_STEPS " == *" $name "* ]] || return 0
 	names+=("$name")
 	while (($(jobs -rp | wc -l) >= JOBS)); do wait -n || true; done
@@ -193,6 +197,7 @@ if [[ $job == whetstone || $job == all ]]; then
 	step whetstone-shellcheck shellcheck_at_pin plugins/whetstone/skills/*/scripts/*.sh plugins/whetstone/tests/*.sh plugins/whetstone/bin/*
 fi
 
+[[ -z ${CI_LIST:-} ]] || exit 0
 wait
 report
 total=${#names[@]}

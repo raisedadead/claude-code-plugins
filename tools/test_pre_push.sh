@@ -77,6 +77,12 @@ if CI_STEPS=' ' bash tools/ci.sh tools >"$TMP/none.log" 2>&1; then
 fi
 grep -qE '^CI: FAIL no-step-selected in [0-9.]+s$' "$TMP/none.log" || fail "ci.sh did not name the empty selection: $(tail -1 "$TMP/none.log")"
 
+list="$(CI_LIST=1 bash tools/ci.sh all 2>&1)" || fail "CI_LIST=1 must exit 0: $list"
+for name in rows dossier-tests whetstone-tests pre-push; do
+	grep -qx "$name" <<<"$list" || fail "the full run the hook starts has no $name step"
+done
+grep -q '^CI:' <<<"$list" && fail "CI_LIST=1 must list the steps, not run them"
+
 printf '\nNever do this. Never that.\n' >>CLAUDE.md
 git commit -q -am "docs: add a negation to CLAUDE.md"
 refused rails 'RAILS:' main
@@ -116,9 +122,9 @@ git push -q origin v-old >"$TMP/tag.log" 2>&1 ||
 git checkout -q -- notes.txt
 git checkout -q main
 # shellcheck disable=SC2016
-printf '#!/usr/bin/env bash\nprintf "steps=%%s\\n" "${CI_STEPS-unset}"\n' >tools/ci.sh
+printf '#!/usr/bin/env bash\nprintf "steps=%%s list=%%s\\n" "${CI_STEPS-unset}" "${CI_LIST-unset}"\n' >tools/ci.sh
 git commit -q -am "test: stub the checks"
-env -u PRE_PUSH_STEPS git push -q origin main >"$TMP/stale.log" 2>&1 || fail "the stubbed push failed: $(tail -5 "$TMP/stale.log")"
-grep -q '^steps=unset$' "$TMP/stale.log" || fail "the hook passed a stale CI_STEPS to the checks: $(tail -1 "$TMP/stale.log")"
+CI_LIST=1 env -u PRE_PUSH_STEPS git push -q origin main >"$TMP/stale.log" 2>&1 || fail "the stubbed push failed: $(tail -5 "$TMP/stale.log")"
+grep -q '^steps=unset list=unset$' "$TMP/stale.log" || fail "the hook passed a stale CI_STEPS or CI_LIST to the checks: $(tail -1 "$TMP/stale.log")"
 
 printf 'ok pre-push hook\n'
