@@ -20,4 +20,9 @@ if [[ -n "$(git status --porcelain)" ]]; then
 	exit 1
 fi
 
+unset CI_STEPS
+if [[ -n ${PRE_PUSH_STEPS:-} ]]; then
+	printf 'pre-push: PRE_PUSH_STEPS runs only: %s\n' "$PRE_PUSH_STEPS" >&2
+	export CI_STEPS="$PRE_PUSH_STEPS"
+fi
 exec bash tools/ci.sh all

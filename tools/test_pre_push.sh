@@ -5,7 +5,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TMP="$(mktemp -d "${TMPDIR:-/tmp}/pre-push.XXXXXX")"
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
 export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=maintenance.auto GIT_CONFIG_VALUE_0=false
-export CI_STEPS=rails
+export PRE_PUSH_STEPS=rails CI_STEPS=not-a-step
 
 cleanup() { rm -rf "$TMP"; }
 trap cleanup EXIT
@@ -69,7 +69,13 @@ git commit -q -m "chore: snapshot"
 git remote add origin "$TMP/remote.git"
 
 git push -q origin main >"$TMP/clean.log" 2>&1 ||
-	fail "the hook refused a clean tree: $(tail -5 "$TMP/clean.log")"
+	fail "the hook refused a clean tree, or read a stale CI_STEPS: $(tail -5 "$TMP/clean.log")"
+grep -q '^pre-push: PRE_PUSH_STEPS runs only: rails$' "$TMP/clean.log" || fail "the hook did not say that PRE_PUSH_STEPS narrowed the checks"
+
+if CI_STEPS=' ' bash tools/ci.sh tools >"$TMP/none.log" 2>&1; then
+	fail "ci.sh passed with no step selected"
+fi
+grep -q 'no-step-selected' "$TMP/none.log" || fail "ci.sh did not name the empty selection: $(tail -1 "$TMP/none.log")"
 
 printf '\nNever do this. Never that.\n' >>CLAUDE.md
 git commit -q -am "docs: add a negation to CLAUDE.md"
@@ -80,7 +86,7 @@ git reset -q --hard origin/main
 printf "export const r = new Array(3)\nexport const n: number = 'x'\nexport const x = {a:1}\n" >plugins/dossier/engine/zz.ts
 git add plugins/dossier/engine/zz.ts
 git commit -q -m "chore: add a file that fails format, lint and types"
-CI_STEPS='rails format lint types' refused tools 'no-new-array' main
+PRE_PUSH_STEPS='rails format lint types' refused tools 'no-new-array' main
 grep -q 'TS2322' "$TMP/tools.log" || fail "the types step did not fail on a type error"
 grep -q 'Format issues' "$TMP/tools.log" || fail "the format step did not fail on an unformatted file"
 grep -qE '^CI: FAIL 3 of 4 in [0-9.]+s — format lint types$' "$TMP/tools.log" || fail "the summary does not name the failed steps: $(tail -1 "$TMP/tools.log")"
@@ -106,5 +112,13 @@ git tag v-old origin/main
 printf 'scratch\n' >>notes.txt
 git push -q origin v-old >"$TMP/tag.log" 2>&1 ||
 	fail "the hook refused a tag on an older commit from a dirty tree: $(tail -5 "$TMP/tag.log")"
+
+git checkout -q -- notes.txt
+git checkout -q main
+# shellcheck disable=SC2016
+printf '#!/usr/bin/env bash\nprintf "steps=%%s\\n" "${CI_STEPS-unset}"\n' >tools/ci.sh
+git commit -q -am "test: stub the checks"
+env -u PRE_PUSH_STEPS git push -q origin main >"$TMP/stale.log" 2>&1 || fail "the stubbed push failed: $(tail -5 "$TMP/stale.log")"
+grep -q '^steps=unset$' "$TMP/stale.log" || fail "the hook passed a stale CI_STEPS to the checks: $(tail -1 "$TMP/stale.log")"
 
 printf 'ok pre-push hook\n'
