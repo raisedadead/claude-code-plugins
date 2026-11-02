@@ -753,6 +753,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   later: laterVerb,
   progress: progressVerb,
   reconcile: reconcileVerb,
+  root: rootVerb,
   'resolve-pins': resolvePinsVerb,
   'regen-index': regenIndexVerb,
   'row-flip': rowFlipVerb,
@@ -796,13 +797,24 @@ function gitLine(args: string[]): string | undefined {
   return done.status === 0 ? done.stdout : undefined
 }
 
+function primaryCheckout(): string | undefined {
+  const [first = ''] = (gitLine(['worktree', 'list', '--porcelain']) ?? '').split('\n\n')
+  return /^bare$/m.test(first) ? undefined : PRIMARY.exec(first)?.[1]
+}
+
 function ledgerRoot(): string {
   const here = process.cwd()
   if (hasLedger(here)) return here
   const top = gitLine(['rev-parse', '--show-toplevel'])?.trim()
   if (top && hasLedger(top)) return top
-  const primary = PRIMARY.exec(gitLine(['worktree', 'list', '--porcelain']) ?? '')?.[1]
-  return primary && hasLedger(primary) ? primary : here
+  const primary = primaryCheckout()
+  if (primary && hasLedger(primary)) return primary
+  return primary ?? top ?? here
+}
+
+function rootVerb(): number {
+  console.log(ledgerRoot())
+  return 0
 }
 
 export async function main(args: string[]): Promise<number> {

@@ -140,6 +140,39 @@ test('a verb run from a linked worktree writes the primary checkout ledger', () 
   }
 })
 
+test('with no ledger anywhere, the first ledger from a linked worktree lands in the primary checkout', () => {
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'ds-wt-')))
+  const main = join(base, 'repo')
+  const feature = join(base, 'repo.feature')
+  try {
+    mkdirSync(main)
+    const git = (...args: string[]) => execFileSync('git', ['-C', main, ...args], { stdio: 'ignore' })
+    git('init', '-q')
+    git('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', 'init')
+    git('worktree', 'add', '-q', feature, '-b', 'feature')
+    const root = spawnSync('sh', [DS, 'root'], { cwd: join(feature), encoding: 'utf8' })
+    assert.equal(root.status, 0, root.stderr)
+    assert.equal(root.stdout, `${main}\n`)
+    const done = spawnSync('sh', [DS, 'grill-add', '.scratchpad', 'probe', 'FACT: x cite=y'], { cwd: feature, encoding: 'utf8' })
+    assert.equal(done.status, 0, done.stderr)
+    assert.ok(existsSync(join(main, '.scratchpad', 'dossier', '.grill')))
+    assert.ok(!existsSync(join(feature, '.scratchpad')))
+  } finally {
+    rmSync(base, { recursive: true, force: true })
+  }
+})
+
+test('outside git, with no ledger, the ledger root is the current directory', () => {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'ds-nogit-')))
+  try {
+    const root = spawnSync('sh', [DS, 'root'], { cwd: dir, encoding: 'utf8', env: { ...process.env, GIT_CEILING_DIRECTORIES: tmpdir() } })
+    assert.equal(root.status, 0, root.stderr)
+    assert.equal(root.stdout, `${dir}\n`)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('from a linked worktree, x-refresh reads the worktree repo and converge finds the wave contract', () => {
   const base = realpathSync(mkdtempSync(join(tmpdir(), 'ds-wt2-')))
   const main = join(base, 'repo')

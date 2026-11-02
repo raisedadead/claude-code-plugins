@@ -443,6 +443,8 @@ Vm.8: no skill writes a real file directly. Always tmp + rename.
 
 The verbs of `${CLAUDE_PLUGIN_ROOT}/cli/ds` in the table below own the common DOSSIER.md mutations. Each verb that rewrites a file is atomic by tmp + rename; `ds archive-move` mutates no file, so it is a bare directory rename with no temp. All ship with the plugin — always available, no adapter detection. Skills call them as `"${CLAUDE_PLUGIN_ROOT}"/cli/ds <verb>`. `cli/ds` needs Node.js 22.18+: it exits 69 without it and 70 on an internal error. When the reader of its output closes the pipe, `converge`, `convergence-state` and `resolve-pins` exit 141 and write no message.
 
+`ds root` prints the ledger root and mutates nothing. It is the first of these with a `.scratchpad/dossier/`: the current directory, its checkout, the primary checkout. With no ledger anywhere it prints the primary checkout, or the current directory outside git, so the first ledger made in a linked worktree does not live in that worktree. Every verb resolves its root the same way.
+
 | verb              | mutates                                                    | usage                                                   |
 | ----------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
 | `ds row-flip`     | §T row `state` cell (+ optional `cite`)                    | `ds row-flip <dossier-dir> <row-id> <new-state> [cite]` |

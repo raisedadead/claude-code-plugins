@@ -23,7 +23,7 @@ The §S DONE line (step 6) appends via `"${CLAUDE_PLUGIN_ROOT}"/cli/ds s-append 
 ### 1. Validate slug + path
 
 - Slug matches `^[a-z0-9][a-z0-9-]{0,29}$`. Anything else is refused with an explanation.
-- Compute `dir=.scratchpad/dossier/<date>-<slug>/`.
+- Run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds root` and compute `dir=<root>/.scratchpad/dossier/<date>-<slug>/` from the path it prints. Every `.scratchpad/` path below is under that root. In a linked worktree with no ledger yet, the root is the primary checkout, so removing the worktree cannot delete the ledger.
 - Collision check: `dir` exists **or `.scratchpad/dossier/_archive/<date>-<slug>/` exists** (a same-day close+reopen) → ask the operator to bump to `<slug>-2`, `<slug>-3`, etc. Checking `_archive/` too avoids two INDEX rows keyed to one slug (Vm.1).
 - Ignore check: in a git work tree, `git check-ignore -q .scratchpad/` exiting 1 means the ledger will show as untracked and a `git add -A` would commit it. Carry that into the step-7 report with the per-clone fix, `echo .scratchpad/ >> .git/info/exclude`, and leave the choice to the operator — some repos track `.scratchpad/` on purpose.
 

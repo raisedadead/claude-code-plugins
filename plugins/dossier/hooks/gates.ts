@@ -71,15 +71,13 @@ export async function ledgerRoot(io: Io, cwd: string): Promise<string> {
   if (known) return known
   const top = (await gitOut(io, ['-C', cwd, 'rev-parse', '--show-toplevel']))?.trim()
   const primary = PRIMARY.exec((await gitOut(io, ['-C', cwd, 'worktree', 'list', '--porcelain'])) ?? '')?.[1]
-  let root = cwd
   for (const dir of [top, primary]) {
     if (dir && (await io.isDir(`${dir}/.scratchpad/dossier`))) {
-      root = dir
-      break
+      roots.set(cwd, dir)
+      return dir
     }
   }
-  roots.set(cwd, root)
-  return root
+  return cwd
 }
 
 export async function editGate(io: Io, root: string, input: Record<string, unknown>): Promise<Verdict> {

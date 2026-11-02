@@ -11,7 +11,7 @@ Read-only on files; mutations route through Bash helpers. The sit-rep writes onl
 
 ### 1. Locate
 
-- `.scratchpad/INDEX.md` — missing → run `ds regen-index` to build it.
+- `<root>/.scratchpad/INDEX.md`, where `<root>` is the path `ds root` prints — missing → run `ds regen-index` to build it.
 - Enumerate ALL rows with `state=live`. Current dossier = the first (most-recent). `state=paused` rows are listed separately, outside the live set.
 - The paused set reaches the report as its own `PAUSED` line in step 5, printed on every full sit-rep — `(none)` when the set is empty. The LIGHT path exits at step 1 and never reaches it, which is correct: LIGHT runs where there is no `.scratchpad/dossier/` to hold a paused wave. A paused wave that no line names is a wave nobody decides about.
 

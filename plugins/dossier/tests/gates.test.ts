@@ -368,6 +368,14 @@ describe('ledger root', () => {
     expect(await ledgerRoot(io(files, { run }), '/main.feature/pkg')).toBe('/main.feature')
   })
 
+  test('a ledger created after a lookup that found none is found on the next lookup', async () => {
+    const files: Record<string, string> = {}
+    const session = io(files, git)
+    expect(await ledgerRoot(session, '/later.feature')).toBe('/later.feature')
+    files['/main/.scratchpad/dossier/.keep'] = ''
+    expect(await ledgerRoot(session, '/later.feature')).toBe('/main')
+  })
+
   test('a checkout with its own ledger keeps it', async () => {
     expect(await ledgerRoot(io({ '/main.feature/.scratchpad/dossier/.keep': '', '/main/.scratchpad/dossier/.keep': '' }, git), '/main.feature')).toBe(
       '/main.feature',
