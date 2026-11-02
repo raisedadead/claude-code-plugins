@@ -137,7 +137,7 @@ every_test_named() {
 			printf 'not named in tools/ci.sh: %s\n' "$test"
 			missing=1
 		fi
-	done < <(git ls-files 'plugins/*/tests/test_*' 'plugins/*/hooks/test_*' 'tools/test_*' 'tools/*/test_*')
+	done < <(git ls-files 'plugins/*/tests/test_*' 'tools/test_*' 'tools/*/test_*')
 	return "$missing"
 }
 
@@ -161,15 +161,13 @@ if [[ $job == dossier || $job == all ]]; then
 	step format node_modules/.bin/oxfmt --check
 	step lint node_modules/.bin/oxlint --deny-warnings
 	step types node_modules/.bin/tsc -p .
-	each \
-		plugins/dossier/hooks/test_lib_ds_check.sh
 	step dossier-skills plugins/whetstone/bin/lint-skill plugins/dossier/skills
 	step rails bash tools/rails_ceiling.sh
 	step tests-named every_test_named
 	step validate validate
 	step dossier-mod "${claude[@]}" plugin test plugins/dossier
 	step pre-push bash tools/test_pre_push.sh
-	step dossier-shellcheck shellcheck_at_pin plugins/dossier/hooks/*.sh tools/*.sh .githooks/pre-push
+	step dossier-shellcheck shellcheck_at_pin plugins/dossier/cli/ds tools/*.sh .githooks/pre-push
 fi
 
 if [[ $job == tools || $job == all ]]; then
