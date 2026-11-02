@@ -201,10 +201,11 @@ for name in ${CI_STEPS:-}; do
 	failed+=("unknown-step:$name")
 	total=$((total + 1))
 done
-if ((total == 0)); then
-	failed+=("no-step-selected")
-fi
 took="$(seconds "$started" "$EPOCHREALTIME")"
+if ((total == 0)); then
+	printf 'CI: FAIL no-step-selected in %s\n' "$took"
+	exit 1
+fi
 if [[ ${#failed[@]} -gt 0 ]]; then
 	printf 'CI: FAIL %d of %d in %s — %s\n' "${#failed[@]}" "$total" "$took" "${failed[*]}"
 	exit 1

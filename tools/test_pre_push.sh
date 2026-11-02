@@ -75,7 +75,7 @@ grep -q '^pre-push: PRE_PUSH_STEPS runs only: rails$' "$TMP/clean.log" || fail "
 if CI_STEPS=' ' bash tools/ci.sh tools >"$TMP/none.log" 2>&1; then
 	fail "ci.sh passed with no step selected"
 fi
-grep -q 'no-step-selected' "$TMP/none.log" || fail "ci.sh did not name the empty selection: $(tail -1 "$TMP/none.log")"
+grep -qE '^CI: FAIL no-step-selected in [0-9.]+s$' "$TMP/none.log" || fail "ci.sh did not name the empty selection: $(tail -1 "$TMP/none.log")"
 
 printf '\nNever do this. Never that.\n' >>CLAUDE.md
 git commit -q -am "docs: add a negation to CLAUDE.md"
