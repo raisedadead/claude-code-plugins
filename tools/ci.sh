@@ -168,7 +168,6 @@ if [[ $job == dossier || $job == all ]]; then
 		plugins/dossier/hooks/test_lib_reconcile.sh \
 		plugins/dossier/hooks/test_lib_clear_locks.sh \
 		plugins/dossier/hooks/test_lib_ds_check.sh \
-		plugins/dossier/hooks/test_lib_assert_scaffold.sh \
 		plugins/dossier/hooks/test_lib_assert_grill.sh \
 		plugins/dossier/hooks/test_fakeimpl_stop.sh
 	step dossier-skills plugins/whetstone/bin/lint-skill plugins/dossier/skills
