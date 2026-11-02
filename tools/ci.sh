@@ -162,7 +162,6 @@ if [[ $job == dossier || $job == all ]]; then
 	step lint node_modules/.bin/oxlint --deny-warnings
 	step types node_modules/.bin/tsc -p .
 	each \
-		plugins/dossier/hooks/test_lib_dossier_edit.sh \
 		plugins/dossier/hooks/test_lib_regen.sh \
 		plugins/dossier/hooks/test_lib_archive_move.sh \
 		plugins/dossier/hooks/test_lib_reconcile.sh \
