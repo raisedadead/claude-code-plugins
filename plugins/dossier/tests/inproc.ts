@@ -5,17 +5,16 @@ import { format } from 'node:util'
 import { vi } from 'vitest'
 import { main } from '../cli/dispatch.ts'
 
-const io = vi.hoisted(() => ({ stdin: '', sink: undefined as ((fd: number, text: string) => void) | undefined }))
+const io = vi.hoisted(() => ({ stdin: '', sink: undefined as ((text: string) => void) | undefined }))
 
 vi.mock('node:fs', async (original) => {
   const fs = await original<typeof import('node:fs')>()
   const readFileSync = ((path: unknown, ...rest: unknown[]) =>
     path === 0 ? io.stdin : (fs.readFileSync as (...args: unknown[]) => unknown)(path, ...rest)) as typeof fs.readFileSync
   const writeSync = ((fd: number, data: unknown, ...rest: unknown[]) => {
-    if (io.sink && (fd === 1 || fd === 2)) {
-      const text = typeof data === 'string' ? data : Buffer.from(data as Uint8Array).toString('utf8')
-      io.sink(fd, text)
-      return Buffer.byteLength(text)
+    if (io.sink && fd === 1 && typeof data === 'string' && rest.length === 0) {
+      io.sink(data)
+      return Buffer.byteLength(data)
     }
     return (fs.writeSync as (...args: unknown[]) => number)(fd, data, ...rest)
   }) as typeof fs.writeSync
@@ -46,9 +45,8 @@ export async function ds(cwd: string, args: string[], env: Readonly<Record<strin
   let stdout = ''
   let stderr = ''
   io.stdin = input
-  io.sink = (fd, chunk) => {
-    if (fd === 1) stdout += chunk
-    else stderr += chunk
+  io.sink = (chunk) => {
+    stdout += chunk
   }
   console.log = (...parts: unknown[]) => {
     stdout += `${format(...parts)}\n`
