@@ -2,7 +2,17 @@ import { mkdtempSync, realpathSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { format } from 'node:util'
+import { vi } from 'vitest'
 import { main } from '../cli/dispatch.ts'
+
+const stdin = vi.hoisted(() => ({ text: '' }))
+
+vi.mock('node:fs', async (original) => {
+  const fs = await original<typeof import('node:fs')>()
+  const readFileSync = ((path: unknown, ...rest: unknown[]) =>
+    path === 0 ? stdin.text : (fs.readFileSync as (...args: unknown[]) => unknown)(path, ...rest)) as typeof fs.readFileSync
+  return { ...fs, default: { ...fs, readFileSync }, readFileSync }
+})
 
 export interface Run {
   code: number
@@ -21,8 +31,9 @@ function text(chunk: unknown): string {
   return typeof chunk === 'string' ? chunk : Buffer.from(chunk as Uint8Array).toString('utf8')
 }
 
-export async function ds(cwd: string, args: string[], env: Readonly<Record<string, string>> = {}): Promise<Run> {
+export async function ds(cwd: string, args: string[], env: Readonly<Record<string, string>> = {}, input = ''): Promise<Run> {
   const home = process.cwd()
+  stdin.text = input
   const saved = new Map<string, string | undefined>([...SAVED, ...Object.keys(env)].map((name) => [name, process.env[name]]))
   const writers = { log: console.log, error: console.error, write: process.stdout.write }
   let stdout = ''

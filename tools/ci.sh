@@ -164,7 +164,6 @@ if [[ $job == dossier || $job == all ]]; then
 	each \
 		plugins/dossier/hooks/test_lib_dossier_edit.sh \
 		plugins/dossier/hooks/test_lib_regen.sh \
-		plugins/dossier/hooks/test_session_start.sh \
 		plugins/dossier/hooks/test_lib_archive_move.sh \
 		plugins/dossier/hooks/test_lib_reconcile.sh \
 		plugins/dossier/hooks/test_lib_clear_locks.sh \

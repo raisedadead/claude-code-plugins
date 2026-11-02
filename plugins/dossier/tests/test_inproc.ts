@@ -31,6 +31,13 @@ test('a second run in another ledger reads its own ledger, not the first one', a
   assert.match(second.stdout, /^second\/T1 · /)
 })
 
+test('a verb that reads stdin gets the text the run passes', async () => {
+  const dir = ledgerWith('w/T1')
+  const done = await ds(dir, ['session-start'], {}, '{"hook_event_name":"SessionStart","source":"startup","session_title":""}')
+  assert.equal(done.code, 0, done.stderr)
+  assert.equal(JSON.parse(done.stdout).continue, true)
+})
+
 test('stdout and stderr are captured apart, with the exit code', async () => {
   const done = await ds(ledgerWith('w/T1'), ['later', 'drop'])
   assert.equal(done.code, 64)

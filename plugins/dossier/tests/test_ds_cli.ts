@@ -203,6 +203,24 @@ test('a linked worktree of a primary with a separate git dir roots at itself and
   }
 })
 
+test('session-start reads its payload from a real stdin pipe and fails open on a bad one', () => {
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'ds-stdin-')))
+  try {
+    mkdirSync(join(dir, '.scratchpad', 'dossier', '2026-06-05-foo'), { recursive: true })
+    writeFileSync(join(dir, '.scratchpad', 'dossier', '2026-06-05-foo', 'DOSSIER.md'), '`2026-06-05` · `live` · `P1/1`\n\n## Tasks\n\n## Status\n')
+    const run = (input: string) =>
+      spawnSync('sh', [DS, 'session-start'], { cwd: dir, input, encoding: 'utf8', env: { ...process.env, DOSSIER_SESSION_TITLE: '1' } })
+    const good = run('{"hook_event_name":"SessionStart","source":"startup","session_title":""}')
+    assert.equal(good.status, 0, good.stderr)
+    assert.equal(JSON.parse(good.stdout).hookSpecificOutput.sessionTitle, '2026-06-05-foo')
+    const bad = run('not json at all')
+    assert.equal(bad.status, 0, bad.stderr)
+    assert.equal(JSON.parse(bad.stdout).hookSpecificOutput.sessionTitle, undefined)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+})
+
 test('outside git, with no ledger, the ledger root is the current directory', () => {
   const dir = realpathSync(mkdtempSync(join(tmpdir(), 'ds-nogit-')))
   try {
