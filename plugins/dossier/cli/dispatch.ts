@@ -28,7 +28,7 @@ import { addEntry, entryError, FRONTIER_CLOSED, openDecisions } from '../engine/
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
 import { isDue, LATER_FILE, laterRows, removeLater } from '../engine/later.ts'
 import { migrate } from '../engine/migrate.ts'
-import { GIT_DIRS, linkedPrimary } from '../engine/root.ts'
+import { firstWorktree, GIT_DIRS, linkedPrimary, WORKTREES } from '../engine/root.ts'
 import { sessionReport } from '../engine/session.ts'
 import { splitLines, strip } from '../engine/text.ts'
 import { isVerdictAgent, verdictLines } from '../engine/verdicts.ts'
@@ -802,7 +802,11 @@ function ledgerRoot(): string {
   if (hasLedger(here)) return here
   const top = gitLine(['rev-parse', '--show-toplevel'])?.trim()
   if (top && hasLedger(top)) return top
-  return linkedPrimary(gitLine(GIT_DIRS)) ?? here
+  const worktrees = gitLine(WORKTREES)
+  const gitDirs = gitLine(GIT_DIRS)
+  const first = firstWorktree(worktrees, gitDirs)
+  if (first && hasLedger(first)) return first
+  return linkedPrimary(gitDirs, worktrees) ?? top ?? here
 }
 
 function rootVerb(): number {

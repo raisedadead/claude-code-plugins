@@ -175,9 +175,29 @@ test('with no ledger, a submodule keeps its own directory and a bare primary roo
     }
     git(join(base, 'sup'), 'submodule', 'add', '-q', join(base, 'lib'), 's')
     assert.equal(root(join(base, 'sup', 's')).stdout, `${join(base, 'sup', 's')}\n`)
+    mkdirSync(join(base, 'lib', 'pkg'))
+    assert.equal(root(join(base, 'lib', 'pkg')).stdout, `${join(base, 'lib')}\n`)
     git(base, 'clone', '-q', '--bare', join(base, 'lib'), join(base, 'bare', 'repo.git'))
     git(join(base, 'bare', 'repo.git'), 'worktree', 'add', '-q', join(base, 'bare', 'feat'))
     assert.equal(root(join(base, 'bare', 'feat')).stdout, `${join(base, 'bare')}\n`)
+  } finally {
+    rmSync(base, { recursive: true, force: true })
+  }
+})
+
+test('a linked worktree of a primary with a separate git dir roots at itself and ignores a ledger in the git dir', () => {
+  const base = realpathSync(mkdtempSync(join(tmpdir(), 'ds-sep-')))
+  const git = (cwd: string, ...args: string[]) => execFileSync('git', ['-C', cwd, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args], { stdio: 'ignore' })
+  try {
+    mkdirSync(join(base, 'store'))
+    git(base, 'init', '-q', `--separate-git-dir=${join(base, 'store', 'sep.git')}`, 'sep')
+    git(join(base, 'sep'), 'commit', '-q', '--allow-empty', '-m', 'init')
+    git(join(base, 'sep'), 'worktree', 'add', '-q', join(base, 'sep.feat'))
+    mkdirSync(join(base, 'sep', '.scratchpad', 'dossier'), { recursive: true })
+    mkdirSync(join(base, 'store', 'sep.git', '.scratchpad', 'dossier'), { recursive: true })
+    const root = spawnSync('sh', [DS, 'root'], { cwd: join(base, 'sep.feat'), encoding: 'utf8' })
+    assert.equal(root.status, 0, root.stderr)
+    assert.equal(root.stdout, `${join(base, 'sep.feat')}\n`)
   } finally {
     rmSync(base, { recursive: true, force: true })
   }

@@ -1,7 +1,7 @@
 import { cells } from '../engine/converge.ts'
 import { editOf, headerDenial, isDossierPath, markerDenial } from '../engine/guards.ts'
 import { indexNames, SEC } from '../engine/ledger.ts'
-import { GIT_DIRS, linkedPrimary } from '../engine/root.ts'
+import { firstWorktree, GIT_DIRS, linkedPrimary, WORKTREES } from '../engine/root.ts'
 import { byCodePoint } from '../engine/text.ts'
 import { isVerdictAgent } from '../engine/verdicts.ts'
 
@@ -69,8 +69,9 @@ export async function ledgerRoot(io: Io, cwd: string): Promise<string> {
   let dirs = candidates.get(cwd)
   if (!dirs) {
     const top = (await gitOut(io, ['-C', cwd, 'rev-parse', '--show-toplevel']))?.trim()
-    const primary = linkedPrimary(await gitOut(io, ['-C', cwd, ...GIT_DIRS]))
-    dirs = [top, primary].filter((dir): dir is string => Boolean(dir))
+    const worktrees = await gitOut(io, ['-C', cwd, ...WORKTREES])
+    const gitDirs = await gitOut(io, ['-C', cwd, ...GIT_DIRS])
+    dirs = [top, firstWorktree(worktrees, gitDirs), linkedPrimary(gitDirs, worktrees)].filter((dir): dir is string => Boolean(dir))
     candidates.set(cwd, dirs)
   }
   for (const dir of dirs) {

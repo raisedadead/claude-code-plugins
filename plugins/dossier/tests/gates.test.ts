@@ -355,9 +355,13 @@ describe('verify advisory', () => {
 })
 
 describe('ledger root', () => {
-  const gitDirs = '/main/.git/worktrees/main.feature\n/main/.git\n'
+  const answers: Record<string, string> = {
+    '--git-common-dir': '/main/.git/worktrees/main.feature\n/main/.git\n',
+    '--porcelain': 'worktree /main\nHEAD abc\nbranch refs/heads/main\n\nworktree /main.feature\nHEAD def\n',
+    '--show-toplevel': '/main.feature\n',
+  }
   const git = {
-    run: async (argv: string[]) => ({ exitCode: 0, stdout: argv.includes('--git-common-dir') ? gitDirs : '/main.feature\n', stderr: '' }),
+    run: async (argv: string[]) => ({ exitCode: 0, stdout: answers[Object.keys(answers).find((flag) => argv.includes(flag)) ?? ''] ?? '', stderr: '' }),
   }
 
   test('a worktree session finds the ledger in the primary checkout', async () => {
@@ -370,12 +374,18 @@ describe('ledger root', () => {
   })
 
   test('a submodule, whose git dir is its common dir, has no primary to fall back to', async () => {
+    const submodule: Record<string, string> = {
+      '--git-common-dir': '/sup/.git/modules/s\n/sup/.git/modules/s\n',
+      '--porcelain': 'worktree /sup/.git/modules/s\nHEAD abc\n',
+      '--show-toplevel': '/sup/s\n',
+    }
     const run = async (argv: string[]) => ({
       exitCode: 0,
-      stdout: argv.includes('--git-common-dir') ? '/sup/.git/modules/s\n/sup/.git/modules/s\n' : '/sup/s\n',
+      stdout: submodule[Object.keys(submodule).find((flag) => argv.includes(flag)) ?? ''] ?? '',
       stderr: '',
     })
-    expect(await ledgerRoot(io({ '/sup/.git/modules/.scratchpad/dossier/.keep': '' }, { run }), '/sup/s')).toBe('/sup/s')
+    const files = { '/sup/.git/modules/.scratchpad/dossier/.keep': '', '/sup/.git/modules/s/.scratchpad/dossier/.keep': '' }
+    expect(await ledgerRoot(io(files, { run }), '/sup/s')).toBe('/sup/s')
   })
 
   test('repeat lookups from one directory start git only on the first', async () => {
@@ -387,7 +397,7 @@ describe('ledger root', () => {
     const session = io({}, { run })
     await ledgerRoot(session, '/count.feature')
     await ledgerRoot(session, '/count.feature')
-    expect(calls).toBe(2)
+    expect(calls).toBe(3)
   })
 
   test('a ledger created after a lookup that found none is found on the next lookup', async () => {
