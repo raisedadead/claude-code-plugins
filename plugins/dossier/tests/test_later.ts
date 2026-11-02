@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'vitest'
-import { addCarried, carriedRow, laterRows, laterSummary, removeLater } from '../engine/later.ts'
+import { addCarried, archivedCarried, carriedRow, laterRows, laterSummary, removeLater } from '../engine/later.ts'
 import type { Row } from '../engine/progress.ts'
 
 const DS = join(import.meta.dirname, '..', 'cli', 'ds')
@@ -14,6 +14,28 @@ function row(id: string, who: string, task: string, needs: string[] = []): Row {
 }
 
 const STATUS = ['2026-11-01 21:42 ds:build T9 §X=refreshed; DONE → x cite=844dbeb', '2026-11-02 09:00 ds:build T8 PAUSE reason=ds:build T8 DONE only after CI']
+
+function archived(closeout: string): string {
+  return ['# w', '', '## Status', '', ...STATUS.flatMap((entry) => [entry, '']), '## Closeout', '', closeout, ''].join('\n')
+}
+
+const AFTER =
+  'after: T10 Real use: both doubters; census on 2026-12-01 (from suite-review-apply T14) (T9+30d); T12 Follow-up, Jev: a classifier; suggester dropped (from suite-review-apply T16) (H); T13 smoke test (A)'
+
+test('an archived after: line closed within 30 days turns back into carried rows, with keys, owners and due dates', () => {
+  const rows = archivedCarried('2026-11-01-w', archived(`2026-11-01 22:00 — closed\n\ncomplete: true\n\n${AFTER}`), '2026-11-02')
+  assert.deepEqual(rows, [
+    { key: 'suite-review-apply/T14', task: 'Real use: both doubters; census on 2026-12-01 (from suite-review-apply T14)', who: 'T9+30d', due: '2026-12-01' },
+    { key: 'suite-review-apply/T16', task: 'Follow-up, Jev: a classifier; suggester dropped (from suite-review-apply T16)', who: 'H' },
+    { key: '2026-11-01-w/T13', task: 'smoke test', who: 'A' },
+  ])
+})
+
+test('an after: line older than 30 days, or one a successor took, gives no carried row', () => {
+  assert.deepEqual(archivedCarried('w', archived(`2026-09-01 22:00 — closed\n\ncomplete: true\n\n${AFTER}`), '2026-11-02'), [])
+  assert.deepEqual(archivedCarried('w', archived(`2026-11-01 22:00 — closed\n\nsuccessor: next\n\n${AFTER}`), '2026-11-02'), [])
+  assert.deepEqual(archivedCarried('w', archived('2026-11-01 22:00 — closed\n\ncomplete: true'), '2026-11-02'), [])
+})
 
 test('a carried row keys by its first origin and resolves a delayed need to a due date', () => {
   const task = 'census re-check (from a T3) (from suite-review-apply T14)'

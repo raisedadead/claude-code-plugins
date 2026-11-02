@@ -26,7 +26,7 @@ import { DATE_PREFIX } from '../engine/converge.ts'
 import { delegationReport } from '../engine/delegation.ts'
 import { addEntry, entryError, FRONTIER_CLOSED, openDecisions } from '../engine/grill.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
-import { isDue, LATER_FILE, laterRows, removeLater } from '../engine/later.ts'
+import { addCarried, archivedCarried, isDue, LATER_FILE, laterRows, removeLater } from '../engine/later.ts'
 import { migrate } from '../engine/migrate.ts'
 import { firstWorktree, GIT_DIRS, linkedPrimary, WORKTREES } from '../engine/root.ts'
 import { sessionReport } from '../engine/session.ts'
@@ -599,6 +599,17 @@ function text(value: unknown): string {
   return value ? String(value) : ''
 }
 
+function seedLater(dossiers: string): void {
+  const list = `${dossiers}/${LATER_FILE}`
+  if (isFile(list)) return
+  const today = stamp(new Date()).slice(0, 10)
+  const archive = `${dossiers}/_archive`
+  const rows = subdirs(archive)
+    .sort()
+    .flatMap((name) => (isFile(`${archive}/${name}/DOSSIER.md`) ? archivedCarried(name, readFileSync(`${archive}/${name}/DOSSIER.md`, 'utf8'), today) : []))
+  if (rows.length) atomicWrite(list, addCarried(undefined, rows).text)
+}
+
 function sessionStartVerb(): number {
   const scratchpad = '.scratchpad'
   const dossiers = `${scratchpad}/dossier`
@@ -610,6 +621,7 @@ function sessionStartVerb(): number {
   quietly(() => clearLocks(dossiers, false))
   quietly(() => reconcileVerb([scratchpad]))
   quietly(() => regenIndex(scratchpad))
+  quietly(() => seedLater(dossiers))
   const index = `${scratchpad}/INDEX.md`
   const ledgers = subdirs(dossiers)
     .filter((name) => name !== '_archive' && isFile(`${dossiers}/${name}/DOSSIER.md`))

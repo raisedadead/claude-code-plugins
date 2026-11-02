@@ -179,6 +179,22 @@ test('compact and the opt-out raise no nudge but keep the live wave in the conte
   assert.ok(off.hasContext)
 })
 
+test('with no carried-work list yet, rows a recent archived wave carried seed it once', async () => {
+  const today = new Date().toISOString().slice(0, 10)
+  const wave = join(ws, '.scratchpad', 'dossier', '_archive', '2026-06-01-old')
+  mkdirSync(wave, { recursive: true })
+  writeFileSync(
+    join(wave, 'DOSSIER.md'),
+    `# old\n\n## Status\n\n${today} 09:00 ds:new — created\n\n## Closeout\n\n${today} 10:00 — closed\n\ncomplete: true\n\nafter: T4 re-check the census (H)\n`,
+  )
+  const list = join(ws, '.scratchpad', 'dossier', 'LATER.md')
+  await hook('startup')
+  assert.match(readFileSync(list, 'utf8'), /^- 2026-06-01-old\/T4 · re-check the census · H$/m)
+  writeFileSync(list, '# Carried work\n')
+  await hook('startup')
+  assert.equal(readFileSync(list, 'utf8'), '# Carried work\n')
+})
+
 test('two live waves raise the consolidate warning; none raises no message', async () => {
   ledger('2026-06-05-foo')
   ledger('2026-06-06-bar')

@@ -1,4 +1,4 @@
-import { JOINED } from './ledger.ts'
+import { JOINED, statusSection } from './ledger.ts'
 import { DELAYED, type Row } from './progress.ts'
 import { splitLines } from './text.ts'
 
@@ -57,6 +57,24 @@ export function carriedRow(wave: string, row: Row, status: readonly string[]): L
   const due = day ? addDays(day, Number(days)) : undefined
   const who = delay ?? row.who
   return due ? { key, task: row.task, who, due } : { key, task: row.task, who }
+}
+
+const CLOSED = /^(\d{4}-\d{2}-\d{2}) \d{2}:\d{2}(?::\d{2})? — closed$/m
+const AFTER = /^after: (.+)$/m
+const ITEM = /^(T\d+) (.+) \(([^()]+)\)$/
+const LATER_DAYS = 30
+
+export function archivedCarried(wave: string, text: string, today: string): LaterRow[] {
+  const closed = CLOSED.exec(text)?.[1]
+  const after = AFTER.exec(text)?.[1]
+  if (!closed || !after || /^successor: /m.test(text) || addDays(closed, LATER_DAYS) < today) return []
+  const status = statusSection(text)
+  return after.split(/; (?=T\d+ )/).flatMap((item) => {
+    const [, id = '', task = '', who = ''] = ITEM.exec(item.trim()) ?? []
+    if (!id) return []
+    const needs = DELAYED.test(who) ? [who] : []
+    return [carriedRow(wave, { id, state: '.', who, task, needs, cite: '—', verify: '—' }, status)]
+  })
 }
 
 export function addCarried(text: string | undefined, incoming: readonly LaterRow[]): { text: string; added: string[] } {
