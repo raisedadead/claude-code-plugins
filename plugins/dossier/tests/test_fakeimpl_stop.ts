@@ -32,7 +32,8 @@ function dirty(dir: string): void {
 }
 
 async function blocks(cwd: string, command: string): Promise<boolean> {
-  const { stdout } = await ds(cwd, ['fakeimpl'], { DOSSIER_FAKEIMPL_CMD: command }, '{}')
+  const { code, stdout, stderr } = await ds(cwd, ['fakeimpl'], { DOSSIER_FAKEIMPL_CMD: command }, '{}')
+  assert.equal(code, 0, stderr)
   return stdout.includes('"decision":"block"')
 }
 

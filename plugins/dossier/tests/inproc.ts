@@ -5,13 +5,21 @@ import { format } from 'node:util'
 import { vi } from 'vitest'
 import { main } from '../cli/dispatch.ts'
 
-const stdin = vi.hoisted(() => ({ text: '' }))
+const io = vi.hoisted(() => ({ stdin: '', sink: undefined as ((fd: number, text: string) => void) | undefined }))
 
 vi.mock('node:fs', async (original) => {
   const fs = await original<typeof import('node:fs')>()
   const readFileSync = ((path: unknown, ...rest: unknown[]) =>
-    path === 0 ? stdin.text : (fs.readFileSync as (...args: unknown[]) => unknown)(path, ...rest)) as typeof fs.readFileSync
-  return { ...fs, default: { ...fs, readFileSync }, readFileSync }
+    path === 0 ? io.stdin : (fs.readFileSync as (...args: unknown[]) => unknown)(path, ...rest)) as typeof fs.readFileSync
+  const writeSync = ((fd: number, data: unknown, ...rest: unknown[]) => {
+    if (io.sink && (fd === 1 || fd === 2)) {
+      const text = typeof data === 'string' ? data : Buffer.from(data as Uint8Array).toString('utf8')
+      io.sink(fd, text)
+      return Buffer.byteLength(text)
+    }
+    return (fs.writeSync as (...args: unknown[]) => number)(fd, data, ...rest)
+  }) as typeof fs.writeSync
+  return { ...fs, default: { ...fs, readFileSync, writeSync }, readFileSync, writeSync }
 })
 
 export interface Run {
@@ -33,11 +41,15 @@ function text(chunk: unknown): string {
 
 export async function ds(cwd: string, args: string[], env: Readonly<Record<string, string>> = {}, input = ''): Promise<Run> {
   const home = process.cwd()
-  stdin.text = input
   const saved = new Map<string, string | undefined>([...SAVED, ...Object.keys(env)].map((name) => [name, process.env[name]]))
   const writers = { log: console.log, error: console.error, write: process.stdout.write }
   let stdout = ''
   let stderr = ''
+  io.stdin = input
+  io.sink = (fd, chunk) => {
+    if (fd === 1) stdout += chunk
+    else stderr += chunk
+  }
   console.log = (...parts: unknown[]) => {
     stdout += `${format(...parts)}\n`
   }
@@ -55,6 +67,8 @@ export async function ds(cwd: string, args: string[], env: Readonly<Record<strin
     const code = await main(args)
     return { code, stdout, stderr }
   } finally {
+    io.stdin = ''
+    io.sink = undefined
     console.log = writers.log
     console.error = writers.error
     process.stdout.write = writers.write

@@ -8,12 +8,17 @@ const LIVE = '`2026-06-05` · `live` · `P1/1`\n\n## §T\n\n| T1 | P1 | . | do t
 
 let ws = ''
 let clean = (): void => {}
+const outer = { title: process.env.DOSSIER_SESSION_TITLE, nudge: process.env.DOSSIER_LIVE_NUDGE }
 beforeEach(() => {
   ;({ dir: ws, clean } = tempRoot('ds-session-start-'))
   delete process.env.DOSSIER_SESSION_TITLE
   delete process.env.DOSSIER_LIVE_NUDGE
 })
-afterEach(() => clean())
+afterEach(() => {
+  clean()
+  if (outer.title !== undefined) process.env.DOSSIER_SESSION_TITLE = outer.title
+  if (outer.nudge !== undefined) process.env.DOSSIER_LIVE_NUDGE = outer.nudge
+})
 
 function ledger(slug: string, text = LIVE): string {
   const dir = join(ws, '.scratchpad', 'dossier', slug)

@@ -83,7 +83,7 @@ async function regen(ws: string): Promise<void> {
 
 test('regen renders concordant states, surfaces every drift, and leaves no orphan', async () => {
   const ws = root()
-  makeDossier(ws, '2026-06-10-wakeful', 'live')
+  makeDossier(ws, '2026-06-10-awake', 'live')
   makeDossier(ws, '2026-06-10-samedrift', 'done')
   makeDossier(ws, '2026-06-09-idle-ok', 'paused')
   makeDossier(ws, '2026-06-08-zombie', 'done')
@@ -96,7 +96,7 @@ test('regen renders concordant states, surfaces every drift, and leaves no orpha
 
   assert.ok(existsSync(indexOf(ws)), 'regen produced no INDEX')
 
-  assert.equal(stateOf(ws, 'wakeful'), 'live', 'concordant live must render live')
+  assert.equal(stateOf(ws, 'awake'), 'live', 'concordant live must render live')
   assert.equal(stateOf(ws, 'idle-ok'), 'paused', 'concordant paused must render paused')
   assert.equal(stateOf(ws, 'gone'), 'done', 'concordant archived must render done')
   assert.equal(stateOf(ws, 'legacy'), 'done', 'archived done-header w/ prose-only §Z (no machine key) must render done — location+header suffice')
@@ -121,7 +121,7 @@ test('regen renders concordant states, surfaces every drift, and leaves no orpha
 
   const lines = indexText(ws).split('\n')
   const drift = lines.findIndex((line) => line.includes('| samedrift '))
-  const alive = lines.findIndex((line) => line.includes('| wakeful '))
+  const alive = lines.findIndex((line) => line.includes('| awake '))
   assert.ok(drift >= 0 && alive >= 0 && drift < alive, `drift! must sort above live within the same date (drift@${drift} live@${alive})`)
 
   const orphans = readdirSync(join(ws, '.scratchpad'), { recursive: true })

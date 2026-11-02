@@ -38,6 +38,18 @@ test('a verb that reads stdin gets the text the run passes', async () => {
   assert.equal(JSON.parse(done.stdout).continue, true)
 })
 
+test('output a verb writes to fd 1 directly is captured as stdout', async () => {
+  const dir = ledgerWith('w/T1')
+  const contract = join(dir, 'CONTRACT.md')
+  writeFileSync(
+    contract,
+    '| field | value |\n|---|---|\n| consumer | t |\n\n## done-when\n\n| id | command | expect |\n|----|---------|--------|\n| 1 | `true` | exit 0 |\n',
+  )
+  const done = await ds(dir, ['converge', contract])
+  assert.equal(done.code, 0, done.stderr)
+  assert.match(done.stdout, /^CONVERGE: MET 1\/1$/m)
+})
+
 test('stdout and stderr are captured apart, with the exit code', async () => {
   const done = await ds(ledgerWith('w/T1'), ['later', 'drop'])
   assert.equal(done.code, 64)
