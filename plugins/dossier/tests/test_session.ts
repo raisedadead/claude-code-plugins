@@ -22,11 +22,12 @@ test('session start leads with the progress line and fits 6 lines', () => {
   assert.equal(out.system, `dossier live: ${NAME} 47% · 9/19 · next T3 — /dossier:status for the sit-rep.`)
 })
 
-test('the full task table reaches the context only while a resume is open', () => {
+test('an open resume adds a pointer, not the task table', () => {
   const open = report(`${LEDGER}\n2026-10-09 03:00 ds:build T11 START\n`)
   assert.match(open.context, /^dossier live: /)
-  assert.match(open.context, /### Tasks/)
   assert.match(open.context, /resume needed/)
+  assert.doesNotMatch(open.context, /### Tasks|### Repos/)
+  assert.ok(open.context.length <= 1000, `${open.context.length} chars`)
 })
 
 test('a wave whose only open rows wait on a delay reads as ready to close with the carry named', () => {

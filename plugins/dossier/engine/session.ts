@@ -1,4 +1,4 @@
-import { indexNames, namedRows, openOps, SEC, sectionRows, statusSection, unpushedRepos } from './ledger.ts'
+import { indexNames, namedRows, openOps, SEC, statusSection, unpushedRepos } from './ledger.ts'
 import { isDue, laterRows, laterSummary } from './later.ts'
 import { ownerLine, progress, progressLine, taskRows } from './progress.ts'
 
@@ -94,10 +94,7 @@ export function sessionReport(input: SessionInput): SessionOutput {
     system = system ? `${system} ${message}` : message
     context.push('', `⚠ drift (${driftCount}): ${driftSlugs} — header/Closeout/location disagreement, reconcile via ds:status`)
   }
-  if (hints.length) context.push('', '## resume needed', ...hints)
-  if (text !== undefined && hints.some((hint) => hint.includes(`[${liveSlug}]`))) {
-    context.push('', '### Tasks (resume context)', ...filled(sectionRows(text, SEC.tasks)), '### Repos', ...filled(sectionRows(text, SEC.repos)))
-  }
+  if (hints.length) context.push('', '## resume needed', ...hints, '(ds:status shows the task table)')
   if (input.notes?.length) context.push('', ...input.notes)
   return { context: context.join('\n').replace(/^\n+|\n+$/g, ''), title, system }
 }
