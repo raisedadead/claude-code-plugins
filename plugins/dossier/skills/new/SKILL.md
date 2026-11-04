@@ -1,7 +1,7 @@
 ---
 name: new
 description: Start a dossier wave from a goal sentence; the sole entrypoint. Invoke when the user says "ds:new" or "start a dossier", or when work meets the start rule — more than one session, more than 5 files, or an operator step.
-argument-hint: "<goal sentence>" | <slug>
+argument-hint: '"<goal sentence>" | <slug>'
 ---
 
 # ds:new — start a wave

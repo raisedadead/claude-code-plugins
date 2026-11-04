@@ -1,0 +1,226 @@
+---
+name: dossier-new
+description: Start a dossier wave from a goal sentence; the sole entrypoint. Invoke when the user says "ds:new" or "start a dossier", or when work meets the start rule — more than one session, more than 5 files, or an operator step.
+argument-hint: '"<goal sentence>" | <slug>'
+---
+## Pi runtime
+
+Resolve bundled paths against this file, not the project working directory. The plugin root is `../..` from this file's directory. Before each shell call that uses `$DOSSIER_PLUGIN_ROOT`, set that variable to the shell-quoted absolute plugin root in that same shell. Pi does not supply it. Keep the shell working directory in the consuming project.
+
+Load another installed skill with `read` on its advertised SKILL.md path; user commands use `/skill:<name>`. Check the available skills and tools before an optional sibling route. An absent sibling means skip, never install or scan caches. Pi does not add plugin bin directories to PATH: resolve bundled tools by absolute path. For dossier-to-whetstone script routes, check `../whetstone/bin/<tool>` relative to dossier's plugin root; if absent, use the documented absent-skip result.
+
+Use `read/edit/write/bash/grep/find` for the corresponding host operations. Fresh missions use `dossier_delegate` or `whetstone_delegate` for that plugin's named agents, with unqualified `agent` and artifact-only `task`. The tool uses the current model unless the operator supplies an exact `provider/model`. Builders use `agent: general-purpose, write: true`; named reviewers cannot use edit/write. Bash read-only is prompt-only, not a sandbox. A return is final: a follow-up mission is a fresh call, not a message to a retained agent. Parallel independent missions may use concurrent calls.
+
+Web tools and advisor tools are optional. Use installed web tools when present, or read-only `curl`/`gh api` through bash; identify any inaccessible source. The Pi extension supplies mutation guards and model-facing advisories. The task ledger is authoritative; `/dossier-tasks` is a read-only view, not a second task store.
+
+
+# ds:new — start a wave
+
+Creates `.scratchpad/dossier/<YYYY-MM-DD>-<slug>/DOSSIER.md` per `"$DOSSIER_PLUGIN_ROOT"/FORMAT.md`, then asks the operator for goal, scope and repos.
+
+## Inputs
+
+- `"<goal sentence>"` from `the request appended to this skill` — the normal start. Run `ds:grill "<goal sentence>"` first, then come back with the slug it confirms; step 1.5 consumes its draft. Skip the grill only when the goal is one line with no open decision, and derive the slug from it.
+- `<slug>` (kebab-case, ≤30 chars) — the start after a grill, or for a backfill. Empty → ask for the goal sentence.
+- Date defaults to today (`date +%Y-%m-%d`). Override by prompt when backfilling historical work.
+
+## Steps
+
+### 0. Helpers
+
+The §S DONE line (step 6) appends via `"$DOSSIER_PLUGIN_ROOT"/cli/ds s-append <dir> "<event>"` (FORMAT.md §15) — pass the text **after** the timestamp, which the script prepends. The initial scaffold is a full Write (new file).
+
+### 1. Validate slug + path
+
+- Slug matches `^[a-z0-9][a-z0-9-]{0,29}$`. Anything else is refused with an explanation.
+- Run `"$DOSSIER_PLUGIN_ROOT"/cli/ds root` and compute `dir=<root>/.scratchpad/dossier/<date>-<slug>/` from the path it prints. Every `.scratchpad/` path below is under that root. In a linked worktree with no ledger yet, the root is the primary checkout, so removing the worktree cannot delete the ledger.
+- Collision check: `dir` exists **or `.scratchpad/dossier/_archive/<date>-<slug>/` exists** (a same-day close+reopen) → ask the operator to bump to `<slug>-2`, `<slug>-3`, etc. Checking `_archive/` too avoids two INDEX rows keyed to one slug (Vm.1).
+- Ignore check: in a git work tree, `git -C <root> check-ignore -q .scratchpad/` exiting 1 means the ledger will show as untracked and a `git add -A` would commit it; any exit other than 0 or 1 means the check could not run, so say that. Carry the result into the step-7 report with the per-clone fix — append `.scratchpad/` to the file `git -C <root> rev-parse --git-path info/exclude` names — and leave the choice to the operator; some repos track `.scratchpad/` on purpose.
+
+### 1.5. Grill gate (conditional)
+
+Fires only when a grill artifact exists for this slug, so trivial `/skill:dossier-new` runs are untouched. `<slug>` is the RESOLVED slug from step 1 (post-collision-bump; a bumped `<slug>-2` starts without `<slug>`'s grill):
+
+```bash
+"$DOSSIER_PLUGIN_ROOT"/cli/ds assert-grill .scratchpad "<slug>"
+```
+
+The helper discovers the newest `.grill/<date>-<slug>.md` by slug — grill's own date may be days older than today (multi-day `--resume`, pending-external waits) and the gate still finds it. Route on the exact exit code:
+
+| exit   | meaning                                                          | action                                                                                                                                                                                                              |
+| ------ | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0      | complete (path printed)                                          | consume its `## Draft` §G/§C in step 2 — do NOT re-ask; after the step-3 Write lands, stamp via `ds assert-grill --consume .scratchpad "<slug>" "<date>-<slug>"` (atomic tmp+mv per Vm.8; refuses a double-consume) |
+| 1      | no artifact                                                      | proceed normally — grill is never required; step 2's clarify lever recommends it                                                                                                                                    |
+| 2, 3   | artifact incomplete / unconfirmed                                | REFUSE scaffold; point at `ds:grill --resume <slug>` (or delete the artifact to abandon)                                                                                                                            |
+| 4      | artifact already consumed                                        | proceed normally; recommend a fresh `ds:grill "<goal sentence>"` — a consumed grill never feeds twice                                                                                                               |
+| 69, 70 | `cli/ds` did not run (69: no Node.js 22.18+; 70: internal error) | REFUSE scaffold; report the stderr line                                                                                                                                                                             |
+
+A new slug does not bypass an open grill. When this session left a grill under another slug incomplete or unconfirmed, refuse the scaffold and point at `ds:grill --resume <that slug>`, unless the operator abandons it.
+
+### 2. Gather inputs (operator-interactive)
+
+Ask one block at a time, tersely, no preamble:
+
+1. **§G goal** — one-line outcome, then up to 5 scope bullets (IN / NOT IN).
+1. **§C constraints** — locked decisions, stack notes. Bullets, ≤10.
+1. **§X repos** — each repo this dossier touches, as `<org>/<name>` or an absolute path. Operator-provided; no git-remote magic.
+1. **Initial §T tasks** (optional) — T1..Tn now, or later via `/skill:dossier-build`. Give a row `who=H` only after the agent tried to prove it in a scratch fixture (a throwaway directory, an isolated tmux socket, a disposable session) and could not. When the operator must walk a dashboard or set credentials for that row, name `/skill:whetstone-wizard` in its task text; with whetstone installed, it writes the walk-through script. A re-check that waits on a date gets its own row with a `T<n>+<k>d` need, so `ds close --carry` carries it; a row that joins it to work done now holds the wave open until the date.
+
+**A wide refactor is sequenced expand–contract.** One mechanical change whose blast radius breaks many call sites at once (rename a column, retype a shared symbol) cannot land green as one task. Expand first: add the new form beside the old. Then migrate the call sites in batches, one task each, each `needs` the expand. Contract last: delete the old form in a task that `needs` every batch.
+
+**Clarify before freezing (the highest-value lever):** an underspecified §G or §C decision — ambiguous scope, an unstated choice, more than one plausible approach — gets its resolving question NOW, before §T is authored. A vague goal yields vague tasks, and one or two sharp questions here beat a wrong build. More than a couple of open questions → recommend `ds:grill <slug>` (full interrogation protocol, artifact-gated). "Just go" → record the assumption as a §C bullet so it stays auditable.
+
+§I, §V, §B, §S and §Z grow during the build; the scaffold leaves them empty.
+
+### 2.5. Resolve pins (proactive verify)
+
+From the stack named in §C plus the repos in §X, derive a pin-spec list and resolve current versions once (shared 24h cache, offline-safe):
+
+```bash
+"$DOSSIER_PLUGIN_ROOT"/cli/ds resolve-pins eol:<slug>... <ecosystem>:<pkg>...
+```
+
+- `eol:` results → §C bullets (current stable / EOL note).
+- A version, SHA or deprecation claim in §C that no spec covers → `/skill:dossier-verify` checks it against a primary source.
+- package results → the §I "Pinned deps" table (FORMAT.md §6).
+- Map the libs actually named to specs (e.g. "Go backend + React UI" → `eol:go npm:react npm:react-dom go:<module>`). The model does the stack→spec mapping; do not blind-parse §C prose into specs.
+- `{"offline": true}` / `latest: null`, or exit 69 (no Node.js 22.18+) / 70 (internal error) → record the pin as `offline` and proceed; the scaffold continues either way.
+- `go:<module>` without a `/vN` suffix names the v0/v1 path, so the resolver walks `/v2` through `/v12` and answers from the highest that resolves — pin the module path in `src`, not the one you asked for. A `warning` on the object means a probe went unanswered: the version is a floor, not the ceiling.
+
+These fold into the single atomic step-3 Write — no extra commit, no TDD cycle.
+
+### 2.6. Subtraction pass (ungrilled wave only)
+
+Runs when step 1.5 exited 1 or 4 — no grill fed this wave, so no set audit or subtraction pass has seen it — and whetstone is installed. Spawn the subtraction pass (whetstone `doubt-pass`, "Subtraction pass": its template, its model rule) on the draft §G, §C and §T as the artifact, with §G as the contract. One cycle. Show each cut to the operator and ask which to take; a cut never edits a §C bullet the operator gave without that answer. Hold the `SUBTRACT:` line and append it to §S after step 3 as `ds:new — subtract=<verdict>`. Without whetstone, skip it and say so in the step-7 report.
+
+### 2.7. Write the contract
+
+The repo decides the home. `.dossier/` exists → the repo opted into tracked contracts: write `.dossier/<date>-<slug>.md` and commit it before the first task — citable as evidence, outliving the wave. Otherwise write `<wave-dir>/CONTRACT.md` beside the ledger and price that home out loud: untracked wherever `.scratchpad/` is gitignored (the assumed setup), archived with the wave, citable by nobody, and its criteria run as shell from a file no diff ever showed a reviewer — where a tracked contract's criteria appear in the commit that added them. Name the opt-in (`mkdir .dossier`, track it) so the choice stays the operator's. **Never create `.dossier/` yourself** — a tracked directory appearing in a repo that did not ask for one is the artifact rule this split exists to respect.
+
+Either way the content is FORMAT.md §2.5's — `consumer`, `reached-via`, `budget`, an optional `milestone` (the cutover row, when rows run after it), and a `## done-when` table whose every row is a command with an expected result. `/skill:dossier-converge` and the `UserPromptSubmit` hook resolve both homes, tracked first.
+
+`consumer` is the field that asks whether the work reaches anyone, and the one nobody writes unprompted. Ask for it plainly: who runs this, and by what path does it get to them? A wave once hardened a checker through three review rounds while no consumer could execute it, and no step in this skill had ever asked. `/skill:dossier-converge` refuses a contract whose `consumer` row is missing or empty (`CONVERGE: PARSE`, exit 2), so a contract written without the answer fails its first run.
+
+A criterion that cannot be written as a command is a criterion nobody can check. Turn it into one, or drop it and say what was dropped.
+
+A done-when command reads source and repo state only. It does not read a deployed target, a pushed remote, or anything that waits on an operator step. A runtime rewrite or an operator delay then fails the check. Put pushes, deploys and reloads in `who=H` rows. `ds close --carry` carries them as `after:` rows.
+
+A §T row marked `route=delegate` adds the done-when row `` `<plugin>/cli/ds delegation-check <dossier-dir>` `` with `exit 0`, so `/skill:dossier-converge` checks each delegated row's review and rebuild lines.
+
+In the tracked home, commit before the first task — the `UserPromptSubmit` hook counts budget from the commit that added the contract.
+
+### 3. Scaffold DOSSIER.md
+
+Compute fields:
+
+```
+title = <slug>
+header_line = `<date>` · `live`
+```
+
+Write the file at `<dir>/DOSSIER.md` per FORMAT.md §2 section order:
+
+```markdown
+# <slug>
+
+`<date>` · `live`
+
+## Goal
+
+<goal-from-step-2>
+
+Scope:
+<scope-bullets>
+
+## Constraints
+
+<constraint-bullets>
+
+## Interfaces
+
+_(empty — populate when first contract lands)_
+
+## Invariants
+
+| id | invariant | check |
+|----|-----------|-------|
+
+## Tasks
+
+| id | state | who | task | needs | cite | verify |
+|----|-------|-----|------|-------|------|--------|
+<initial-tasks-if-provided>
+
+## Bugs
+
+| id | bug | root cause | invariant added | fix cite |
+|----|-----|------------|-----------------|----------|
+
+## Repos
+
+| repo | branch | ahead | tag | pushed | notes |
+|------|--------|-------|-----|--------|-------|
+<repo-rows-from-step-2-with-placeholders>
+
+## Status
+
+<!-- Each entry is its own paragraph (blank lines before AND after). Per FORMAT.md §11. -->
+
+<YYYY-MM-DD HH:MM> ds:new — created slug=<slug>
+
+## Closeout
+
+_(empty — written by ds:close)_
+```
+
+Write `<dir>/DOSSIER.md` directly: the file is new, and step 3.5 catches a partial write.
+
+### 3.5. Assert scaffold completeness
+
+Before touching INDEX or §S, confirm the write landed intact:
+
+```bash
+"$DOSSIER_PLUGIN_ROOT"/cli/ds assert-scaffold "<dir>"
+```
+
+It exits 1 naming any missing `§`-section (or the title line) — deterministic, so nobody eyeballs the Write output. On failure the INDEX regen and the §S DONE line (step 6) both wait: report the missing sections, re-run the step-3 Write to repair, then re-assert. Mirrors the post-move assertion `/skill:dossier-close` runs via `ds archive-move`. Exit 69 (no Node.js 22.18+) or 70 (internal error) means the assertion did not run: report its stderr line and stop before step 6.
+
+### 4. Initial §X refresh
+
+For each repo row added in step 2, run `git status -sb`, `git rev-list --count <upstream>..HEAD` and `git describe --tags --abbrev=0` in that repo, then populate the §X row.
+
+A path that is missing or is not a git tree keeps placeholders plus the note `_(repo not found — verify path)_`.
+
+### 5. Regen INDEX
+
+Run `"$DOSSIER_PLUGIN_ROOT"/cli/ds regen-index` to append the new dossier to `.scratchpad/INDEX.md`.
+
+### 6. Append §S DONE
+
+Append as its own paragraph (blank line before AND after — per FORMAT.md §11):
+
+```
+<YYYY-MM-DD HH:MM> ds:new — DONE slug=<slug> dir=<dir>
+```
+
+### 7. Report
+
+One-line summary:
+
+```
+ds:new <slug> → .scratchpad/dossier/<date>-<slug>/DOSSIER.md
+§X: <N> repos seeded
+next: ds:build T1 (when ready)
+```
+
+Add `.scratchpad/ is not gitignored here` plus the fix when step 1's ignore check fired.
+
+## Idempotency
+
+`<dir>/DOSSIER.md` already exists → refuse; the operator picks a new slug or opens the existing one via `/skill:dossier-status`.
+
+`<dir>` exists with DOSSIER.md missing (a rare crash mid-scaffold) → recreate it, preserving any §S entries from the partial run.
+
+## Cite
+
+- FORMAT.md §2 (section order), §2.5 (wave contract), §10 (§X format), §11 (§S format), §17 (Vm rules)

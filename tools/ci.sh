@@ -165,6 +165,12 @@ if [[ $job == dossier || $job == all ]]; then
 	step format node_modules/.bin/oxfmt --check
 	step lint node_modules/.bin/oxlint --deny-warnings
 	step types node_modules/.bin/tsc -p .
+	step host-build-tests node_modules/.bin/vitest run --reporter=dot \
+		tools/build/test_build.ts \
+		tools/build/test_content.ts \
+		tools/build/test_delegate.ts \
+		tools/build/test_sdk.ts
+	step host-build-check node tools/build/build.ts --check
 	step dossier-skills plugins/whetstone/bin/lint-skill plugins/dossier/skills
 	step rails bash tools/rails_ceiling.sh
 	step tests-named every_test_named

@@ -93,6 +93,27 @@ Skill and agent bodies reach bundled files through `${CLAUDE_PLUGIN_ROOT}`, brac
 
 A plugin's `bin/` is documented as reaching the Bash tool's `PATH`. Whether it also reaches a hook, an MCP server or an LSP server is not stated either way, so a hook that calls a plugin executable resolves the full path itself rather than relying on a bare name. The cost is asymmetric: a full path works whether or not the `PATH` would have carried it. F31 carries the scope, the inference and the wave that read it too far.
 
+## Two hosts, one source
+
+`plugins/` is the authoring source. Claude Code 2.1.311+ installs the existing plugin paths and TypeScript mods. Pi 1.5.0+ loads committed artifacts under `pi/` through the root package manifest. Pi needs Node.js 22.19+; the Claude CLI helpers retain their Node.js 22.18+ floor.
+
+`tools/build/build.ts` assembles assets and metadata deterministically. `hosts/pi/content.ts` converts host instructions without rewriting ledger event strings. Native adapters live under `plugins/*/pi/`; the common fresh-session delegate lives under `hosts/pi/`. No model rewrites content during a build. Generated output is committed so a Git installation needs no maintainer build step. `--check` compares bytes, file inventory and executable bits and exits 1 on drift, without writing. `tools/ci.sh` runs that check.
+
+The native adapters reuse dossier's `hooks/gates.ts` and whetstone's claim checker. Pi mutation callbacks return `block: true` for a denied native edit/write, including every replacement in a multi-edit call. Writable delegated builders load the same mutation adapter without recursive delegation. Bash mutations remain outside that guard in both hosts. Advisories reach model context through tool results or settlement entries, not UI notifications alone. Stop feedback preserves other extensions' entries and bounds its own continuation.
+
+| Surface          | Claude Code                              | Pi                                                                        |
+| ---------------- | ---------------------------------------- | ------------------------------------------------------------------------- |
+| Skills           | Plugin-qualified commands                | Namespaced `/skill:dossier-*` and `/skill:whetstone-*`                    |
+| Fresh missions   | Bundled agents through Agent             | Isolated in-memory sessions through plugin delegate tools                 |
+| Grounding        | `verify-claims` Workflow                 | `whetstone_verify_claims`, validated JSON and UNRULED fallback            |
+| Tasks            | Native pane and optional TaskList mirror | Read-only status widget and `/dossier-tasks` selector                     |
+| Autonomous build | Native `/goal` evaluator                 | Opt-in `dossier_auto`; actual ledger checks, pause/progress/budget bounds |
+| Verdict log      | SubagentStop                             | Successful plugin delegate results; not arbitrary third-party delegates   |
+
+Delegation supplies only the mission and agent body, restricted native tools and the selected model/public provider auth. It does not inherit parent history or ambient project/user instructions. Bash read-only remains prompt-only, not a sandbox. Only an explicitly writable general-purpose builder receives edit/write. Missing credentials or a model fail explicitly; no Claude alias or private transient credential fallback is attempted. Either plugin can be built alone, with no required sibling import.
+
+Vitest drives real Pi resource loading and provider loops with a deterministic local provider. It proves fresh delegation, public-auth inheritance, native mutation denial and bounded advisory continuation without a remote model. Claude keeps its native manifest and mod tests. Interactive rendering and remote-provider behavior need separate host checks; passing a loader test alone is not full-host parity.
+
 ## Verdict grammar
 
 Every gate ends in one of these signals. The enforcement column is the honesty tenet made concrete — it separates what is computed from what is merely parsed. This table lives here and nowhere else; it was previously duplicated across two files with a test to keep the copies identical.
@@ -166,6 +187,6 @@ The ledger format has the same gap: a wave's constraints and rejected options go
 - **No fusion.** The two plugins stay separable.
 - **No required adapters.** Every host-environment integration detects and skips. Nothing is a dependency.
 - **No new operator verbs by default.** A verb must earn its place against the four that exist. The budget counts what an operator must remember; lifecycle verbs (`ds:build`, `ds:converge`) ride a stage of the wave and sit outside it — D3 holds the taxonomy.
-- **No cross-agent portability.** Claude Code only. Deferred deliberately, recorded as an open stride.
+- **Two hosts only.** Claude Code and Pi. Other hosts require their own native adapter and behavior tests; format generation alone is insufficient.
 - **No third-party plugin dependencies.** See adoption order.
 - **No version pinning.** The commit SHA is the version. See `RESEARCH.md`.

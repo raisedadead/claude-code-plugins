@@ -1,0 +1,173 @@
+## Pi runtime
+
+Resolve bundled paths against this file, not the project working directory. The plugin root is `.` from this file's directory. Before each shell call that uses `$WHETSTONE_PLUGIN_ROOT`, set that variable to the shell-quoted absolute plugin root in that same shell. Pi does not supply it. Keep the shell working directory in the consuming project.
+
+Load another installed skill with `read` on its advertised SKILL.md path; user commands use `/skill:<name>`. Check the available skills and tools before an optional sibling route. An absent sibling means skip, never install or scan caches. Pi does not add plugin bin directories to PATH: resolve bundled tools by absolute path. For dossier-to-whetstone script routes, check `../whetstone/bin/<tool>` relative to dossier's plugin root; if absent, use the documented absent-skip result.
+
+Use `read/edit/write/bash/grep/find` for the corresponding host operations. Fresh missions use `dossier_delegate` or `whetstone_delegate` for that plugin's named agents, with unqualified `agent` and artifact-only `task`. The tool uses the current model unless the operator supplies an exact `provider/model`. Builders use `agent: general-purpose, write: true`; named reviewers cannot use edit/write. Bash read-only is prompt-only, not a sandbox. A return is final: a follow-up mission is a fresh call, not a message to a retained agent. Parallel independent missions may use concurrent calls.
+
+Web tools and advisor tools are optional. Use installed web tools when present, or read-only `curl`/`gh api` through bash; identify any inaccessible source. The Pi extension supplies mutation guards and model-facing advisories. The task ledger is authoritative; `/dossier-tasks` is a read-only view, not a second task store.
+
+# Changelog
+
+Notable changes to the **whetstone** plugin.
+
+This history stops at `whetstone-v1.0.1`. The plugin installs from each `main` commit, and no release tooling writes this file now. Sections before 1.0.0 are grouped by date.
+
+## [1.0.1](https://github.com/raisedadead/claude-code-plugins/compare/whetstone-v1.0.0...whetstone-v1.0.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **whetstone:** ask for the whole reply again ([e2f84ce](https://github.com/raisedadead/claude-code-plugins/commit/e2f84cece2057e09ecbae048c8044026b73d5db5))
+
+## 1.0.0 (2026-10-09)
+
+### Changed
+
+- **The claim gate sends context, not a block.** The Stop hook adds the flagged lines to `additionalContext` as `line N: "<sentence>"` with one rubric line. The model still continues in the same turn with the flagged lines in context, and the terminal shows `Stop hook feedback:` instead of `Stop hook error:`. `bin/claim-check` output and exit codes are unchanged.
+
+### Fixed
+
+- **`lint-skill` reads a block-scalar `description` (`>` or `|`) whole.** It read only the indicator.
+
+## 2026-10-07
+
+### Changed
+
+- **`claim-check` takes a `path:line` citation.** A claim that cites a source file and line, such as `src/guard.ts:134` or `.githooks/pre-commit:13`, counts as backed, beside an exit code, a URL or an issue number. The token must contain a `/` or end in a known source extension. A clock time, a ratio or a host and port does not count. The Stop claim gate and `bin/claim-check` share the change. D36 carries the rejected alternative.
+
+## 2026-10-03
+
+### Added
+
+- **Claim gate on Stop.** whetstone is now a mod (`hooks/register.ts`, Claude Code 2.1.287+). When the final reply says something blocks, enforces, gates, denies, prevents or refuses, and names no exit code, citation or honesty label, the gate returns a Stop `block` with the flagged lines. It never blocks a continued Stop, so it fires once per turn. D31 carries the rejected alternatives.
+
+### Changed
+
+- **whetstone ships no Python.** `tiger-check`, `lint-skill` and `compute-flakiness` are TypeScript run by Node.js 22.18+: `bin/tiger-check` and `bin/lint-skill` are shims over `tiger-check-cli.ts` and `lint-skill-cli.ts`, and the flaky-test-audit skill runs `compute-flakiness-cli.ts` with `node`. Stdout lines and exit codes match the Python scripts on the probed inputs; stderr messages now begin with the command name. Known differences: `lint-skill` now lists the files under a skill in code-point order (Python used directory order) and, as before, does not follow a symlinked directory; `compute-flakiness` refuses `NaN` and `Infinity` in its JSON input (exit 252) and writes non-ASCII names raw in `quarantine.json`; `tiger-check` reads a file that is not valid UTF-8 with replacement characters instead of crashing. The column widths come from a Unicode 16.0 table in `unicode-width.ts`, so they no longer change with the Python version. `tiger_check.py`, `lint_skill.py`, `compute_flakiness.py` and their Python tests are deleted.
+- **`claim-check` is TypeScript.** `hooks/claim-check.ts` holds the one algorithm for the gate and the command; `bin/claim-check` runs it with Node.js 22.18+. Flags, stdout lines and exit codes (0, 1, 64) are unchanged; the stderr prefix is now `claim-check:`. Read the `CLAIMS:` line before the exit code: a `node` older than 22.18 exits 1 with no `CLAIMS:` line. `skills/skill-smith/scripts/claim_check.py` is deleted.
+
+## 2026-09-28
+
+### Changed
+
+- **`whetstone-doubter` runs on `opus` at `effort: high`**, not `sonnet`. It judges a design before any code exists, and it runs only on design-class work. D29 carries the rejected alternatives.
+
+## 2026-09-26
+
+### Added
+
+- **`run-slice`, `lint-skill` and `flake-runner` in `bin/`**, beside `tiger-check` and `claim-check`. Claude Code puts an enabled plugin's `bin/` on the Bash tool's `PATH`, which is the one documented way for dossier to reach these scripts from any project; its old checkout-path routes resolved only inside a clone of this repo. `test_whetstone_py.py` exits non-zero when a wrapper points at a script that is not there.
+
+### Changed
+
+- `tiger-style` names its checker test by `"$WHETSTONE_PLUGIN_ROOT"` rather than a repo-relative path, and `tdd-cycle` drops the cavekit `ck:build` covenant it named beside `/skill:dossier-build`.
+
+## 2026-08-16 (claim-check reads stdin)
+
+The wave built two gates and only one of them belongs in a plugin. Contract: `.dossier/2026-08-16-turn-gates.md`. The other — a response-length ceiling — stayed in the operator's own harness, because a line budget is one operator's taste rather than a fact about correctness; `RESEARCH.md` D18 carries that split and its rejected alternative. **A plugin cache predating this entry exits 64 on `--stdin`**, which is the unknown-option path, verified against the build at `a079de3`. Until a refresh lands, a caller wiring the flag gets an inert call, so read exit 64 as "not available yet" rather than as a failure. `[a6d6f8a..e26f081]`
+
+### Added
+
+- `claim-check --stdin` lints text that is not a file yet: a turn's own reply, a commit message, a draft. It carries the same five verbs and the same backed-or-labelled logic as the path mode, routed through one shared predicate, so the two modes cannot agree on fixtures while diverging on the case nobody wrote. A clean read prints `CLAIMS: CLEAN stdin` and exits 0. Empty input is clean — a caller with nothing to say has claimed nothing.
+- `--stdin` given together with a path is a usage error, exit 64. One input surface per invocation: reading both would let a clean file vouch for dirty stdin, and the verdict line could not say which side it came from.
+
+### Changed
+
+- The usage line now reads `claim-check --stdin | <path>...`. The previous `[--stdin] <path>...` parsed as though the flag and a path combined, which is the one thing the code refuses three lines above where it printed that string.
+- `skill-smith`'s `SKILL.md` documents the new mode, its verdict line, and the third exit-64 case.
+
+## 2026-08-05 (a read of every tracked file)
+
+Every tracked file was read on its own, then five lenses hunted the assembled graph and each finding was handed to a separate agent told to refute it. Contract: `.dossier/2026-08-05-audit-debt.md`.
+
+### Fixed
+
+- `compute_flakiness.py` returned an empty mapping for a results file that was missing, unparseable or wrongly shaped, so a sweep that never parsed printed nothing and exited 0 — a clean sweep. Bad input exits 252 and a quarantine.json that cannot be written exits 253; neither is a count, and neither writes an artifact. A baseline path that does not exist stays the first-sweep case.
+- `flake_runner.sh` interpolated the test name straight into its JSON, so a name carrying a quote, a backslash or a control character wrote a file `compute_flakiness.py` then refused to parse. It escapes now.
+- `claim_check.py` exempted any sentence containing the noun `judgment` or `judgement`, whatever else that sentence asserted, so the exemption turned on a word rather than on the label naming what the thing is. The alternative is `model[\s-]judge?ment` now, which takes both spellings and both joiners and launders nothing else.
+- `tiger_check.py` named `yarn.lock`, `poetry.lock` and `Cargo.lock` in its skip list although `.lock` already reaches all three, and did not name `pnpm-lock.yaml` — so a pnpm bump could exit BLOCK on a file nobody typed. The name list holds only `go.sum` and `pnpm-lock.yaml`, the two the suffix list cannot reach.
+
+## 2026-08-05 (the checker finds the work tree)
+
+### Fixed
+
+- `tiger_check.py` used the path it was given as the git root, while git reports diff paths relative to the work-tree top. Given a subdirectory the two disagreed and every file measured zero added lines — reported as `TIGER: CLEAN <n> file`, not as a skip, so the examined count claimed a look that never happened. It now resolves `git rev-parse --show-toplevel` once and anchors the diff and the `.editorconfig` walk there.
+- `test_tiger_check.py`, `test_claim_check.py` and `test_whetstone_py.py` honour `-k`, refuse a bare `-k`, and exit 1 when the filter matches nothing — previously they accepted the flag and ran everything.
+
+## 2026-08-02 (claims name their backing)
+
+### Added
+
+- `claim-check` (`bin/claim-check`, `skills/skill-smith/scripts/claim_check.py`): flags a shipped sentence that claims runtime enforcement — `blocks`, `enforces`, `gates`, `denies`, `prevents`, `refuses` — while naming neither an exit code, a citation, nor an advisory/model-judgment label. Shape only, by design: whether the named exit code is the real one stays a reader's question. Exit `0` `CLAIMS: CLEAN`, `1` `CLAIMS: FLAGGED <n>`, `64` usage.
+
+## 2026-08-01 (one shape rule computed, the rest read by hand)
+
+### Added
+
+- `tiger-style`, a sixth skill: the one TIGER_STYLE rule cheap to compute from a diff — the column budget of the lines a change ADDS. `tiger_check.py` reads the staged index, resolves a limit per file (`WHETSTONE_TIGER_COLS`, then `.editorconfig` `max_line_length`, then a 100-column fallback) and exits `0` clean, `1` for a limit the repo declared, `2` for the advisory fallback, `64` for a non-work-tree.
+
+  The split is the point. A repo that has stated its limit gets it enforced; a repo that has not gets told, never stopped. The other four TIGER_STYLE rules — function length, assert adequacy, loop bounds, magic numbers — need a reader, so they ship as a labelled manual pass with no exit code, and the skill says plainly that nothing enforces them. A checklist that presents itself as a gate is worse than no gate.
+
+  Width is display columns, not code points: a tab advances to its stop, a wide character counts two, a combining mark counts zero. A verdict line carries how many files were examined and how many were staged but skipped, so a docs-only commit reads differently from a real pass rather than as the same "clean". A bare `CLEAN 0 files` covers an empty index and a deletion-only commit alike — a deletion adds no line to measure.
+
+  Ships on `PATH` as `bin/tiger-check`: Claude Code adds an enabled plugin's `bin/` to the Bash tool's `PATH`, so a consuming project reaches the checker without configuration. An earlier draft of this entry said the composed route could not address its sibling from the plugin cache — `bin/` is what closed that.
+
+## 2026-07-31 (lint what the host actually parses)
+
+### Added
+
+- `lint_skill.py` now fails a frontmatter value that will not survive a real YAML parse: an unquoted scalar containing a colon-space, or one opening with a flow/block indicator (`[ { * & ! % @ \` > |\`). The linter reads frontmatter with a regex, so until now a value that broke YAML linted perfectly clean and then loaded with every field dropped — the skill kept its file and lost its trigger surface. Three shipped dossier skills were in that state.
+
+  The gate is deliberately stricter than "does it parse". `migrate`'s `argument-hint: [<repo-path> | --all | --gc]` parsed *fine* — into a `list` rather than a `str`. A parse-only check reports success on exactly the defect that matters.
+
+  Four tests: colon-space fires, flow indicator fires, quoted values do not false-positive, and a plain `<T-id> | --next` value with pipes is not flagged.
+
+## 2026-07-31 (leaner descriptions)
+
+Every session injects each skill's full `description` frontmatter, so description length is a per-session context cost paid whether or not the skill is used.
+
+### Changed
+
+- Skill descriptions trimmed: **1,568 → 1,468 chars across 5 skills (6.4%)**. Deliberately small. These descriptions were already almost entirely trigger surface — `doubt-pass` and `skill-smith` were left byte-identical because every clause in them is a firing condition, and cutting one would trade context cost for discoverability. `tdd-cycle` gave up the most (−90) while keeping its `/skill:dossier-build` composition note, which is what makes the two plugins compose discoverably.
+
+## 2026-07-31 (docs consolidation)
+
+Docs moved to the repository root. No skill or script behaviour changed.
+
+### Changed
+
+- `README.md` is now a pointer. Install, the skill table and each skill's self-verify moved to the root README; the verdict-grammar table moved to root `ARCHITECTURE.md`, which is now its only home — it was previously duplicated here with a test enforcing byte-identity.
+- `homepage` in `plugin.json` and `marketplace.json` points at the repo root rather than this directory.
+
+## 2026-07-20 (cohesion)
+
+Cohesion wave (driven from dossier's skills-cohesion): composed at every dossier gate, zero hooks still. `[90cd0cd..1fa3c25]`
+
+### Changed
+
+- tdd-cycle description recomposed — routing clause replaces the self-exclusion that caused 47 days of 0-use; standalone behavior unchanged.
+- All five skills gain a `## Dossier breadcrumb` section: one §S verdict line into a live dossier, no-op without one (prose only, no hooks, no dossier dependency).
+- README: shared `## Verdict grammar` table (identical to dossier's) + updated tdd-cycle row.
+
+## 2026-07-20
+
+Composition wave (driven from dossier's skills-uplift): `whetstone-doubter` now auto-fires at dossier's design-class build gate. `[d50f755..469b76b]`
+
+### Changed
+
+- README documents dossier auto-composition: design-class `/skill:dossier-build` spawns `whetstone-doubter` with no trigger phrase (see dossier `ADAPTERS.md` §whetstone for detection + graceful-skip semantics).
+
+## 2026-07-07
+
+Initial release. Five engineering-craft skills, each with a deterministic self-verify, built from the "designing loops" quality levers (give the model a way to verify its own work; separate the moments; deterministic over discretionary).
+
+### Added
+
+- `tdd-cycle` — one-slice red-green-refactor for ad-hoc work. `scripts/run_slice.sh` inverts the RED check (a test that passes first is rejected) and gates GREEN + full-suite on exit code. Refactor is explicitly outside the loop.
+- `flaky-test-audit` — per-test flakiness by the number. `scripts/compute_flakiness.py` flags `0 < fails/runs < 1` and exits with the count of tests newly flaky since a baseline; `scripts/flake_runner.sh` accumulates N runs. Framework adapters in `reference/`.
+- `doubt-pass` — pre-decision adversarial gate (CLAIM → EXTRACT → DOUBT → RECONCILE → STOP). Drives the `whetstone-doubter` agent — a fresh-context, read-only reviewer handed the artifact + contract only (no rationale) that returns a `DOUBT: FAILURES | NO FAILURE FOUND` verdict. 3-cycle cap, explicit "doubt theater" call-out.
+- `merge-resolve` — hunk-by-hunk conflict resolution with `scripts/verify_clean.sh`: zero conflict markers AND pass-count ≥ pre-conflict baseline, both script-captured.
+- `skill-smith` — lints a `SKILL.md` (`scripts/lint_skill.py`: name/dir match, kebab charset, trigger clause, third-person, line budget, reference depth) plus manual anatomy + failure-mode checklists. Self-hosted in CI against whetstone's own skills.
+- CI job `whetstone` (python + shell tests + self-lint gate + ruff + advisory shellcheck).

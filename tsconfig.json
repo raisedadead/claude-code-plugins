@@ -12,6 +12,9 @@
     "types": ["node"]
   },
   "include": [
+    "hosts/pi/*.ts",
+    "tools/build/*.ts",
+    "plugins/*/pi/*.ts",
     "plugins/*/engine/*.ts",
     "plugins/*/cli/*.ts",
     "plugins/dossier/hooks/gates.ts",

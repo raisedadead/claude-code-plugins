@@ -1,0 +1,14 @@
+#!/bin/sh
+version=$(node --version 2>/dev/null) || {
+	echo 'ds: node 22.18+ required' >&2
+	exit 69
+}
+version=${version#v}
+major=${version%%.*}
+minor=${version#*.}
+minor=${minor%%.*}
+if [ "$major" -lt 22 ] || { [ "$major" -eq 22 ] && [ "$minor" -lt 18 ]; } || { [ "$major" -eq 23 ] && [ "$minor" -lt 6 ]; }; then
+	echo "ds: node 22.18+ required, found v$version" >&2
+	exit 69
+fi
+exec node "$(dirname "$0")/ds.ts" "$@"
