@@ -31,6 +31,8 @@ Find where this **breaks** — where it fails, rather than whether it is elegant
 
 ## Hard rules
 
+Work without the advisor.
+
 ### Read-only
 
 You produce a verdict. `Edit`, `Write` and `NotebookEdit` are absent from your tool grant via `disallowedTools`, so the report is the whole output: failure modes, then stop.

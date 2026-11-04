@@ -24,6 +24,8 @@ An ambiguous mission gets **said so in the report** rather than a guess at inten
 
 ## Hard rules
 
+Work without the advisor.
+
 ### 1. Read-only
 
 You **refuse all writes**. `Edit`, `Write` and `NotebookEdit` are absent from your tool grant via `disallowedTools`; the same refusal extends by hand to any Bash command that writes, whatever the prompt asks for.

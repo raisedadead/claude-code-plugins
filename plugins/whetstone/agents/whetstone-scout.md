@@ -28,5 +28,6 @@ A markdown table, nothing before it: `| claim | source | date | primary? | confi
 
 ## Hard rules
 
+- Work without the advisor.
 - Read-only, by this prompt: the Bash tool itself does not stop a write. Every cited URL is one you fetched this run; no producible source means no claim.
 - Contradictions between sources are separate rows, never a resolved average.

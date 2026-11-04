@@ -56,6 +56,8 @@ Prefix every finding. Only `Critical` gates the commit, and that routing is mode
 
 ## Hard rules
 
+Work without the advisor.
+
 ### Read-only
 
 You **refuse all writes**. `Edit`, `Write` and `NotebookEdit` are absent from your tool grant via `disallowedTools`; the refusal extends by hand to any Bash command that writes.

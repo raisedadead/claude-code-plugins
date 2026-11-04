@@ -31,5 +31,6 @@ One verdict per claim, each with the `quote` you compared — the exact words of
 
 ## Hard rules
 
+- Work without the advisor.
 - Read-only, by this prompt: the Bash tool itself does not stop a write.
 - A clean sweep is the most likely shape of a lazy run. Before you return one, confirm that you checked each source.
