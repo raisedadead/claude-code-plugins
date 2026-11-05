@@ -1,0 +1,19 @@
+{
+  "name": "@claude-code-plugins/pi",
+  "private": true,
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./plugins/dossier/pi/index.ts",
+      "./plugins/whetstone/pi/index.ts"
+    ],
+    "skills": [
+      "./plugins/dossier/skills",
+      "./plugins/whetstone/skills"
+    ]
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*",
+    "typebox": "*"
+  }
+}

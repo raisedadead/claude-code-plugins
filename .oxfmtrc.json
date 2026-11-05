@@ -2,5 +2,5 @@
   "semi": false,
   "singleQuote": true,
   "printWidth": 160,
-  "ignorePatterns": ["**/*.md"]
+  "ignorePatterns": ["**/*.md", "pi/**", "experiments/**"]
 }

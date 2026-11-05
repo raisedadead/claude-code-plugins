@@ -1,0 +1,304 @@
+import { cells } from '../engine/converge.ts'
+import { editOf, headerDenial, isDossierPath, markerDenial } from '../engine/guards.ts'
+import { indexNames, SEC } from '../engine/ledger.ts'
+import { firstWorktree, GIT_DIRS, linkedPrimary, WORKTREES } from '../engine/root.ts'
+import { byCodePoint } from '../engine/text.ts'
+import { isVerdictAgent } from '../engine/verdicts.ts'
+
+export type Io = {
+  isDir: (path: string) => Promise<boolean>
+  read: (path: string) => Promise<string>
+  exists: (path: string) => Promise<boolean>
+  list: (path: string) => Promise<string[]>
+  env: (name: 'DOSSIER_MARKER_GUARD' | 'DOSSIER_INVARIANT_GUARD' | 'DOSSIER_FAKEIMPL_CMD') => Promise<string | undefined>
+  run: (argv: string[], init: { stdin: string; timeoutMs: number; cwd?: string }) => Promise<{ exitCode: number; stdout: string; stderr: string }>
+  cli?: string
+}
+
+export type Verdict = { deny?: string; context?: string }
+
+const INVARIANT_TIMEOUT_MS = 5000
+const VERIFY_TIMEOUT_MS = 10_000
+const VERIFY_FOOTER = '\nsilence a rule for this write: `# verify-skip: <ruleName>` anywhere in the content.'
+const SESSION_TIMEOUT_MS = 60_000
+const PROMPT_TIMEOUT_MS = 10_000
+const STOP_TIMEOUT_MS = 180_000
+const VERDICT_TIMEOUT_MS = 5000
+const EXIT_NO_NODE = 69
+export const BUILTINS = new Set(['code-review', 'review', 'security-review', 'simplify'])
+const CLOSE = 'dossier:close'
+const GRILLING = new Set(['mattpocock-skills:grilling', 'grilling'])
+const EMPTY_CELL = new Set(['', '—', '-'])
+export const WHETSTONE = new Set([
+  'whetstone:doubt-pass',
+  'whetstone:flaky-test-audit',
+  'whetstone:merge-resolve',
+  'whetstone:skill-smith',
+  'whetstone:tdd-cycle',
+  'whetstone:tiger-style',
+])
+
+async function invariantGate(io: Io, root: string, filePath: string, chunks: string[]): Promise<Verdict> {
+  if ((await io.env('DOSSIER_INVARIANT_GUARD')) === 'off') return {}
+  if (!(await io.exists(`${root}/.scratchpad/dossier/.invariant-guards.json`))) return {}
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'invariant-check', root]
+    const done = await io.run(argv, { stdin: JSON.stringify({ file_path: filePath, chunks }), timeoutMs: INVARIANT_TIMEOUT_MS })
+    const text = done.stdout.trim()
+    if (done.exitCode === 1 && text) return { deny: text }
+    if (done.exitCode === 0 && text) return { context: text }
+  } catch {
+    return {}
+  }
+  return {}
+}
+
+const candidates = new Map<string, string[]>()
+
+async function gitOut(io: Io, args: string[]): Promise<string | undefined> {
+  try {
+    const done = await io.run(['git', ...args], { stdin: '', timeoutMs: 5000 })
+    return done.exitCode === 0 ? done.stdout : undefined
+  } catch {
+    return undefined
+  }
+}
+
+export async function ledgerRoot(io: Io, cwd: string): Promise<string> {
+  if (await io.isDir(`${cwd}/.scratchpad/dossier`)) return cwd
+  let dirs = candidates.get(cwd)
+  if (!dirs) {
+    const top = (await gitOut(io, ['-C', cwd, 'rev-parse', '--show-toplevel']))?.trim()
+    const worktrees = await gitOut(io, ['-C', cwd, ...WORKTREES])
+    const gitDirs = await gitOut(io, ['-C', cwd, ...GIT_DIRS])
+    dirs = [top, firstWorktree(worktrees, gitDirs), linkedPrimary(gitDirs, worktrees)].filter((dir): dir is string => Boolean(dir))
+    candidates.set(cwd, dirs)
+  }
+  for (const dir of dirs) {
+    if (await io.isDir(`${dir}/.scratchpad/dossier`)) return dir
+  }
+  return cwd
+}
+
+export async function editGate(io: Io, root: string, input: Record<string, unknown>): Promise<Verdict> {
+  const edit = editOf(input)
+  if (!edit) return {}
+  if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return {}
+  const guarded = (await io.env('DOSSIER_MARKER_GUARD')) !== 'off'
+  const header = guarded ? headerDenial(edit) : undefined
+  if (header) return { deny: header }
+  if (isDossierPath(edit.filePath)) return {}
+  const marker = guarded ? markerDenial(edit) : undefined
+  if (marker) return { deny: marker }
+  return invariantGate(io, root, edit.filePath, edit.chunks)
+}
+
+export async function verifyGate(io: Io, root: string, input: Record<string, unknown>, fired: Set<string>): Promise<string | undefined> {
+  const edit = editOf(input)
+  const content = edit?.chunks[0]
+  if (!edit || !content || isDossierPath(edit.filePath)) return undefined
+  if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return undefined
+  let done: { exitCode: number; stdout: string }
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'verify-edit', root]
+    done = await io.run(argv, { stdin: JSON.stringify({ file_path: edit.filePath, content }), timeoutMs: VERIFY_TIMEOUT_MS })
+  } catch {
+    return undefined
+  }
+  if (done.exitCode !== 0 || !done.stdout.trim()) return undefined
+  let hits: unknown
+  try {
+    hits = JSON.parse(done.stdout)
+  } catch {
+    return undefined
+  }
+  if (!Array.isArray(hits)) return undefined
+  const lines: string[] = []
+  for (const hit of hits as { key?: unknown; line?: unknown }[]) {
+    if (typeof hit?.key !== 'string' || typeof hit.line !== 'string' || fired.has(hit.key)) continue
+    fired.add(hit.key)
+    lines.push(hit.line)
+  }
+  return lines.length ? `${lines.join('\n')}${VERIFY_FOOTER}` : undefined
+}
+
+async function inFlight(io: Io, root: string, live: string[]): Promise<string | undefined> {
+  const dossiers = `${root}/.scratchpad/dossier`
+  let names: string[]
+  try {
+    names = (await io.list(dossiers)).sort(byCodePoint)
+  } catch {
+    return undefined
+  }
+  for (const name of names) {
+    if (!live.includes(name)) continue
+    const lockPath = `${dossiers}/${name}/.ds-lock`
+    if (!(await io.exists(lockPath))) continue
+    let text: string
+    try {
+      text = await io.read(lockPath)
+    } catch {
+      return name
+    }
+    try {
+      const data: unknown = JSON.parse(text)
+      if (typeof data !== 'object' || data === null || Array.isArray(data)) return name
+      const lock = data as Record<string, unknown>
+      return `${name}: ${String(lock.skill ?? '?')} ${String(lock.target ?? '?')}`
+    } catch {
+      return name
+    }
+  }
+  return undefined
+}
+
+export async function bugGate(io: Io, filePath: string, seen: Set<string>): Promise<string | undefined> {
+  if (!filePath.endsWith('/DOSSIER.md') || !isDossierPath(filePath)) return undefined
+  let text: string
+  try {
+    text = await io.read(filePath)
+  } catch {
+    return undefined
+  }
+  let inside = false
+  let names: string[] = []
+  const bare: string[] = []
+  for (const line of text.split('\n')) {
+    if (line.startsWith('## ')) {
+      inside = SEC.bugs.test(line)
+      names = []
+      continue
+    }
+    const values = inside ? cells(line) : []
+    if (!values.length || /^-+$/.test(values[0] ?? '')) continue
+    if (!names.length) names = values.map((name) => name.toLowerCase())
+    else if (/^B\d+$/.test(values[0] ?? '') && ['invariant added', 'fix cite'].every((name) => EMPTY_CELL.has(values[names.indexOf(name)] ?? ''))) {
+      bare.push(values[0] ?? '')
+    }
+  }
+  const fresh = bare.filter((id) => !seen.has(`${filePath}#${id}`))
+  for (const id of fresh) seen.add(`${filePath}#${id}`)
+  if (!fresh.length) return undefined
+  return `${fresh.join(', ')} ${fresh.length > 1 ? 'have' : 'has'} no invariant yet — ds:backprop ${fresh[0]} registers one before the fix. Reminder only, never blocking.`
+}
+
+function reminder(name: string, paused: string[], live: string | undefined, flight: string | undefined): string | undefined {
+  if (GRILLING.has(name)) {
+    return (
+      'this repo keeps dossier waves — dossier:grill records each decision through ds grill-add, forks a decision on ' +
+      '"discuss more", and ds:new consumes its draft. Prefer it here. Reminder only, never blocking.'
+    )
+  }
+  if (name === CLOSE && paused.length) {
+    return (
+      `${paused.length} paused dossier(s) alongside this close: ${paused.join(', ')}. Decide each one ` +
+      'before the tree loses its current reader — resume it, or close it with ds:close --abandon ' +
+      '"<reason>". Reminder only, never blocking.'
+    )
+  }
+  if (BUILTINS.has(name) && flight) {
+    return (
+      `live dossier build in flight (${flight}) — fold /${name} findings into the ds:build step 6.5 ` +
+      'artifact trail and record the verdict in §S. Reminder only, never blocking.'
+    )
+  }
+  if (WHETSTONE.has(name) && live) {
+    return (
+      `live dossier (${live}) — after this skill's verdict, record the §S line this skill's own rule ` +
+      "calls for via dossier's cli/ds s-append (first live row = current; main thread writes, never " +
+      'subagents). Reminder only, never blocking.'
+    )
+  }
+  return undefined
+}
+
+export async function skillGate(io: Io, root: string, name: string, seen: Set<string>): Promise<string | undefined> {
+  if (!BUILTINS.has(name) && !WHETSTONE.has(name) && !GRILLING.has(name) && name !== CLOSE) return undefined
+  if (seen.has(name)) return undefined
+  let index: string
+  try {
+    index = await io.read(`${root}/.scratchpad/INDEX.md`)
+  } catch {
+    return undefined
+  }
+  const live = indexNames(index, 'live')
+  const paused = name === CLOSE ? indexNames(index, 'paused') : []
+  const flight = BUILTINS.has(name) && live.length ? await inFlight(io, root, live) : undefined
+  const text = reminder(name, paused, live[0], flight)
+  if (text) seen.add(name)
+  return text
+}
+
+export function skillOf(input: Record<string, unknown>): string {
+  return String(input.skill || input.name || '')
+}
+
+export type SessionVerdict = { context?: string; title?: string; toast?: string }
+
+function parsed(text: string): Record<string, unknown> {
+  try {
+    const value: unknown = JSON.parse(text)
+    return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+  } catch {
+    return {}
+  }
+}
+
+function cliFailure(exitCode: number | undefined): string {
+  const why = exitCode === EXIT_NO_NODE ? 'needs Node.js 22.18+' : `failed${exitCode === undefined ? '' : ` (exit ${exitCode})`}`
+  return `dossier: cli/ds ${why}; stale locks, reconcile and INDEX.md were not refreshed.`
+}
+
+export async function sessionGate(io: Io, root: string, input: { source: string; session_title: string }): Promise<SessionVerdict> {
+  if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return {}
+  let done: { exitCode: number; stdout: string }
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'session-start']
+    done = await io.run(argv, { stdin: JSON.stringify(input), timeoutMs: SESSION_TIMEOUT_MS, cwd: root })
+  } catch {
+    return { context: cliFailure(undefined) }
+  }
+  if (done.exitCode !== 0) return { context: cliFailure(done.exitCode) }
+  const output = parsed(done.stdout)
+  const nested = output.hookSpecificOutput
+  const specific = typeof nested === 'object' && nested !== null ? (nested as Record<string, unknown>) : {}
+  const text = (value: unknown): string | undefined => (typeof value === 'string' && value ? value : undefined)
+  return { context: text(specific.additionalContext), title: text(specific.sessionTitle), toast: text(output.systemMessage) }
+}
+
+export async function promptGate(io: Io, root: string, from: string = root): Promise<string | undefined> {
+  if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return undefined
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'convergence-state']
+    const done = await io.run(argv, { stdin: JSON.stringify({ cwd: root, from }), timeoutMs: PROMPT_TIMEOUT_MS, cwd: root })
+    const text = done.stdout.trim()
+    return done.exitCode === 0 && text ? text : undefined
+  } catch {
+    return undefined
+  }
+}
+
+export async function verdictGate(io: Io, cwd: string, stop: Record<string, unknown>): Promise<void> {
+  if (!isVerdictAgent(stop.agent_type)) return
+  const root = await ledgerRoot(io, cwd)
+  if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return
+  const { agent_type, agent_id, last_assistant_message } = stop
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'verdict-log', root]
+    await io.run(argv, { stdin: JSON.stringify({ agent_type, agent_id, last_assistant_message }), timeoutMs: VERDICT_TIMEOUT_MS })
+  } catch {
+    return
+  }
+}
+
+export async function stopGate(io: Io, root: string): Promise<string | undefined> {
+  if (!(await io.env('DOSSIER_FAKEIMPL_CMD'))?.trim()) return undefined
+  try {
+    const argv = ['sh', io.cli ?? 'cli/ds', 'fakeimpl']
+    const done = await io.run(argv, { stdin: '{}', timeoutMs: STOP_TIMEOUT_MS, cwd: root })
+    const output = parsed(done.stdout)
+    return done.exitCode === 0 && output.decision === 'block' && typeof output.reason === 'string' ? output.reason : undefined
+  } catch {
+    return undefined
+  }
+}

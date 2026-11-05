@@ -1,0 +1,510 @@
+## Pi runtime
+
+Resolve bundled paths against this file, not the project working directory. The plugin root is `.` from this file's directory. Before each shell call that uses `$DOSSIER_PLUGIN_ROOT`, set that variable to the shell-quoted absolute plugin root in that same shell. Pi does not supply it. Keep the shell working directory in the consuming project.
+
+Load another installed skill with `read` on its advertised SKILL.md path; user commands use `/skill:<name>`. Check the available skills and tools before an optional sibling route. An absent sibling means skip, never install or scan caches. Pi does not add plugin bin directories to PATH: resolve bundled tools by absolute path. For dossier-to-whetstone script routes, check `../whetstone/bin/<tool>` relative to dossier's plugin root; if absent, use the documented absent-skip result.
+
+Use `read/edit/write/bash/grep/find` for the corresponding host operations. Fresh missions use `dossier_delegate` or `whetstone_delegate` for that plugin's named agents, with unqualified `agent` and artifact-only `task`. The tool uses the current model unless the operator supplies an exact `provider/model`. Builders use `agent: general-purpose, write: true`; named reviewers cannot use edit/write. Bash read-only is prompt-only, not a sandbox. A return is final: a follow-up mission is a fresh call, not a message to a retained agent. Parallel independent missions may use concurrent calls.
+
+Web tools and advisor tools are optional. Use installed web tools when present, or read-only `curl`/`gh api` through bash; identify any inaccessible source. The Pi extension supplies mutation guards and model-facing advisories. The task ledger is authoritative; `/dossier-tasks` is a read-only view, not a second task store.
+
+# FORMAT.md — Dossier encoding spec
+
+Canonical reference for `DOSSIER.md` shape. Every `ds:*` skill reads this. Every writer obeys it.
+
+Design goals: terse, pipe-tables for state, append-only logs, atomic writes, resumable.
+
+## Contents
+
+- `1` File location + naming
+- `2` DOSSIER.md section order
+- `2.5` Wave contract (its own file, outside the ledger)
+- `3` Caveman encoding
+- `4` §G — Goal
+- `5` §C — Constraints
+- `6` §I — Interfaces
+- `7` §V — Invariants
+- `8` §T — Task ledger
+- `9` §B — Bug ledger
+- `10` §X — Cross-repo state
+- `11` §S — Rolling status log
+- `12` §Z — Closeout
+- `13` INDEX.md
+- `14` Locks
+- `15` Atomic writes
+- `16` Resume protocol
+- `17` Meta-invariants (enforced by skills)
+
+______________________________________________________________________
+
+## 1. File location + naming
+
+```
+.scratchpad/
+├── INDEX.md                              # auto-maintained dashboard
+└── dossier/
+    ├── <YYYY-MM-DD>-<slug>/              # live dossier dir
+    │   └── DOSSIER.md
+    └── _archive/                         # post ds:close destination
+        └── <YYYY-MM-DD>-<slug>/
+            └── DOSSIER.md
+```
+
+- `<YYYY-MM-DD>` = creation date (operator-chosen at `/skill:dossier-new`, defaults to today).
+- `<slug>` = kebab-case, `<=30` chars, no spaces, no special chars.
+- Same-day collision: append `-2`, `-3`, etc. (e.g. `2026-05-14-auth-1-2`).
+- Lex sort = chrono sort. Always.
+
+## 2. DOSSIER.md section order
+
+Headings are fixed. Order is fixed.
+
+```markdown
+# <slug>
+
+`<YYYY-MM-DD>` · `<state>`
+
+## Goal
+## Constraints
+## Interfaces
+## Invariants
+## Tasks
+## Bugs
+## Repos
+## Status
+## Closeout
+```
+
+Readers match headings through `engine/ledger.ts` (`SEC`), which holds one pattern per section and accepts both this spelling and the `## §G — Goal` … `## §Z — Closeout` sigils every dossier written before 2026-08-05 carries. A descriptive tail is allowed after either form. `/skill:dossier-new` writes the worded spelling; nothing rewrites an existing ledger, so the sigil form stays readable indefinitely.
+
+Ledgers written before 2026-10-09 carry a third field, `` · `P1/1` ``. Its value is never read, and every reader accepts the header with or without it. One pattern holds that: `HEADER` in `engine/ledger.ts`. `ds header-state`, `ds regen-index`, `ds reconcile`, `/skill:dossier-converge`, the mod and the header guard all read it. Its first field starts with a digit, so `` `v1` · `sealed` `` is not a header. The readers look only above the first `## ` heading; the header guard sees an edit fragment, so it checks each line of the fragment. The first ledger write drops the third field (§15, migration).
+
+State values: `live` | `done` | `paused`. Default at `/skill:dossier-new` = `live`. The header state token is flipped atomically by `ds header-state` (§15): `/skill:dossier-close` sets `done`; the `/skill:dossier-status` pause/resume actions toggle `live` ↔ `paused`. A `paused` dossier stays a direct child of `dossier/` (not archived — pause is reversible) and is excluded from the live-count + the SessionStart "current live" pick.
+
+## 2.5 Wave contract (its own file, outside the ledger)
+
+A wave's definition of done is a separate file — DOSSIER.md carries no contract heading, and the nine headings above are the whole ledger. It lives at `.dossier/<date>-<slug>.md` where the repo has opted in by creating that directory: tracked, citable as evidence, outliving the wave, and archived to `.dossier/_archive/` by `/skill:dossier-close`. A repo that never opted in gets `<wave-dir>/CONTRACT.md` instead: untracked, archived with the ledger, citable by nobody — the degraded home is priced at write time rather than hidden. Resolution prefers the tracked home.
+
+Shape: a `field | value` table carrying `consumer`, `reached-via` and `budget`, then a `## done-when` table of `id | command | expect`. Every command is backticked and every `expect` is `exit <n>`, `stdout: <substring>` or `stdout: (nothing)`. Both `stdout:` forms also need exit 0, so a `grep -c` that finds no match (prints `0`, exits 1) never meets `stdout: 0`; write a zero count as `grep -q <pattern> <file>` with `exit 1`. `/skill:dossier-converge` runs them; prose criteria, a missing or empty `consumer`, a bare `stdout:`, and a numbered row that is not exactly `id | command | expect` are each refused at parse time (`CONVERGE: PARSE`, exit 2) rather than reaching a shell. Of the other two fields, `budget` is read by the prompt hook for its commits-spent line — in the tracked home only, since the count starts at the commit that added the contract; `reached-via` is read by no code — it is there for the reviewer. An optional `milestone` row (`T<N>`) names the cutover: `ds progress` adds an `Up to T<N>` count of every row that does not wait on `T<N>` through `needs`.
+
+A pipe inside a command is written `\|` so the row survives; the runner unescapes it. Tables are used rather than prose lists because prettier merges adjacent paragraphs and renumbers ordered lists, and a contract that the formatter rewrites is a contract the runner misreads.
+
+## 3. Caveman encoding
+
+Drop articles, hedging, pleasantries. Fragments OK. Pipe-tables for state.
+
+Symbols:
+
+| Symbol | Meaning                  |
+| ------ | ------------------------ |
+| `.`    | not started              |
+| `~`    | in progress              |
+| `x`    | done                     |
+| `!`    | blocked / needs decision |
+| `?`    | unknown / needs research |
+| `→`    | leads to / depends on    |
+| `…`    | elided / continued       |
+
+Inline cite: `[a96987b]` for commit, `<repo>#PR/29` for PR, `§V.3` for invariant, `T<N>@<slug>` for cross-dossier task.
+
+## 4. §G — Goal
+
+One-line outcome statement. Then ≤5 bullets of scope fences (what's IN, what's NOT).
+
+```markdown
+## §G — Goal
+
+Add Valkey-shared auth cache to artemis. Cuts redis-token RTT to <2ms p95.
+
+Scope:
+- artemis service: new auth/cache pkg, token lookup, TTL refresh
+- Valkey ns: existing instance, no new infra
+- NOT: universe-cli changes
+- NOT: rollout to gxy-management (sep dossier)
+```
+
+## 5. §C — Constraints
+
+Locked decisions. Replaces old "flavor / lens / runtime adapter" preamble. Folds in stack notes.
+
+Format: bullets, one decision per line. Cite RFC / discussion where relevant.
+
+```markdown
+## §C — Constraints
+
+- Go 1.23. No generics in public API (artemis convention).
+- Valkey AUTH via sops envelope `infra-secrets/artemis/valkey-creds.enc`.
+- TTL = 60s default, override via `AUTH_CACHE_TTL_S` env.
+- Backward-compat: if Valkey unreachable, fall through to redis. No hard dep.
+```
+
+**Pinned toolchain (proactive verify):** `/skill:dossier-new` / `/skill:dossier-build` resolve current EOL/LTS via `cli/ds resolve-pins eol:<slug>` and record the result here as a bullet, e.g. `Go 1.26 (latest stable — endoflife.date/go)`. Write the resolved version, not a remembered one — these bullets are the model's ground truth.
+
+## 6. §I — Interfaces
+
+API surface. Tables for endpoints, function signatures, config schemas. Drop prose.
+
+```markdown
+## §I — Interfaces
+
+| Verb | Path                 | Body                | Returns                  |
+| ---- | -------------------- | ------------------- | ------------------------ |
+| GET  | /api/auth/token/{id} | —                   | `{token, ttl}` 200 / 404 |
+| POST | /api/auth/token      | `{id, token, ttl?}` | 201 / 409                |
+
+Config:
+| Key              | Type   | Default                 | Notes              |
+| ---------------- | ------ | ----------------------- | ------------------ |
+| AUTH_CACHE_TTL_S | int    | 60                      | clamped [10, 3600] |
+| VALKEY_ENDPOINT  | string | valkey.artemis.svc:6379 | k8s svc DNS        |
+```
+
+**Pinned deps (proactive verify):** when a task introduces a library, record the resolved latest from `cli/ds resolve-pins <ecosystem>:<pkg>` here so the model and `/skill:dossier-check` share one source of truth:
+
+```markdown
+Pinned deps:
+| ecosystem | package                  | version | resolved   | src                             |
+| --------- | ------------------------ | ------- | ---------- | ------------------------------- |
+| go        | github.com/gin-gonic/gin | v1.12.0 | 2026-06-03 | proxy.golang.org/.../@latest    |
+| npm       | react                    | 19.2.7  | 2026-06-03 | registry.npmjs.org/react/latest |
+```
+
+`version` keeps ecosystem-native form (go.mod needs the leading `v`; npm/PyPI/crates drop it).
+
+## 7. §V — Invariants
+
+Testable rules. Each row gets ID `V<N>`. Append-only via `/skill:dossier-backprop`.
+
+```markdown
+## §V — Invariants
+
+| id  | invariant                                                    | check                                               |
+| --- | ------------------------------------------------------------ | --------------------------------------------------- |
+| V1  | token-cache miss falls through to redis, never 500           | `TestAuthCacheFallback`                             |
+| V2  | Valkey AUTH read from sops envelope, never plaintext literal | `grep -r 'VALKEY_PASS=' --include='*.go'` returns 0 |
+| V3  | TTL clamped [10, 3600] before write                          | `TestTTLClamp`                                      |
+```
+
+Format rules:
+
+- `id` = `V<N>` flat, monotonic, never reused.
+- `invariant` = one-line testable claim. No prose.
+- `check` = exact command, test name, or shell predicate.
+
+## 8. §T — Task ledger
+
+Every task in one pipe-table, ordered by id and related by `needs`.
+
+```markdown
+## §T — Task ledger
+
+| id  | state | who | task                      | needs  | cite      | verify                 |
+| --- | ----- | --- | ------------------------- | ------ | --------- | ---------------------- |
+| T1  | x     | A   | scaffold auth/cache pkg   | —      | [a96987b] | `go test ./auth/cache` |
+| T2  | x     | A   | wire Valkey client        | T1     | [b7c8d12] | V1                     |
+| T3  | ~     | A   | TTL clamp logic           | T2     | —         | V3                     |
+| T4  | .     | A   | rollout to gxy-management | T3     | —         | smoke test             |
+| T5  | .     | H   | rolling restart strategy  | T3     | —         | needs ops review       |
+```
+
+Format rules:
+
+- `id` = `T<N>` flat, monotonic, never reused across dossier lifetime.
+- `state` = single char from §3 symbols.
+- `who` = `A` the agent can finish it alone · `H` it needs the operator. Set when the row is written, not discovered when the run stalls, so `ds:build --auto` can select against it rather than starting a task it will have to abandon.
+- `task` = imperative one-liner.
+- `needs` = the ids that must reach `x` first, comma-separated, or `—`. Defaults to nothing, so a row states a dependency only where one exists. `T<N>+<k>d` means `k` days after `T<N>` reaches `x`: `ds progress` names the row as tail, and `ds close --carry` accepts it.
+- `cite` = commit SHA, PR ref, or `—` if no artifact yet.
+- `verify` = §V reference, test name, or shell predicate.
+
+The **frontier** is every `.` row whose `needs` are all `x`. It is derived on read, never stored, so no row goes stale by being forgotten.
+
+Phases are gone. A `P<N>` column made the operator name the shape of the work before the work was understood, which is the pressure the Fog section exists to remove; a wave that genuinely runs in stages expresses that as `needs` edges between its first rows.
+
+**Columns resolve by header name.** Four readers take the positions they need from the header row rather than counting cells, so both this layout and the legacy `id|P|state|task|cite|verify` one are read correctly: `ds vm-checks`, `ds row-flip`, `ds regen-index` and `ds session-start`. A header naming no `state` column is reported by the first three — `WARN Vm.3`, a refusal at exit 1, and a stderr line respectively. `ds session-start` feeds the session context and so degrades quietly, showing no task summary. The first three share one resolver, `columns` in `engine/ledger.ts`; `ds session-start` resolves its own in `engine/progress.ts` (`taskRows`).
+
+Vm.3: every row with `state=x` MUST have non-empty `cite`.
+
+### §T ↔ TaskList projection
+
+§T is source of truth; the Claude Code TaskList is a derived, in-session steering surface (hydrated by `/skill:dossier-status`). Contract:
+
+- **Join key** = task subject `"<T-id> <task>"`. Glyph map: `.`=pending, `~`=in_progress, `x`=completed.
+- Hydrate projects rows in `{., ~}`; `!`/`?` rows are excluded (TaskList has no "blocked-on-human" status) and surface as BLOCKERS in the sit-rep. A `who=H` row is projected but reported separately, since it is takeable — just not by the agent.
+- `blockedBy` is the row's own `needs` cell, mapped id to task. Derived, never inferred: the earlier rule read it off phase order, so every task in a phase blocked on the whole phase before it whether or not it depended on any of it.
+- **§T → TaskList is eager** (`/skill:dossier-build` mirrors at CLAIM→in_progress, FLIP→completed). **TaskList → §T is advisory only** — `/skill:dossier-status` warns if a TaskList task is `completed` but its §T row lacks `x`+cite; it never auto-flips (Vm.3 needs a commit cite).
+
+## 9. §B — Bug ledger
+
+Caught bugs. Each row triggers §V amendment if recurrence-worthy. Append-only.
+
+```markdown
+## §B — Bug ledger
+
+| id  | bug                            | root cause        | invariant added | fix cite  |
+| --- | ------------------------------ | ----------------- | --------------- | --------- |
+| B1  | TTL=0 panicked client          | no clamp on input | V3              | [a96987b] |
+| B2  | Valkey timeout cascaded to 500 | no fallback path  | V1              | [b7c8d12] |
+```
+
+Format rules:
+
+- `id` = `B<N>` flat, monotonic.
+- `invariant added` = new `V<N>` row if added, or `—` if patch-only.
+
+## 10. §X — Cross-repo state
+
+Live table of every repo this dossier touches. Refreshed by `/skill:dossier-build` + `/skill:dossier-check`. Captures ahead-count, tag, push state.
+
+```markdown
+## §X — Cross-repo state
+
+| repo               | branch          | ahead | tag        | pushed | notes                     |
+| ------------------ | --------------- | ----- | ---------- | ------ | ------------------------- |
+| fCC/artemis        | main            | 2     | v0.3.0-pre | no     | f87d138, dfdedb4 unpushed |
+| fCC/infra          | feat/auth-cache | 5     | —          | yes    | deployment helm pending   |
+| fCC-U/universe-cli | main            | 0     | v0.6.1     | yes    | clean                     |
+```
+
+Format rules:
+
+- `repo` = `<org>/<name>` or absolute path.
+- `ahead` = `git rev-list --count origin/<branch>..HEAD`.
+- `tag` = nearest tag from `git describe --tags --abbrev=0`, or `—`.
+- `pushed` = `yes` if `ahead=0` on the upstream tracking ref, else `no`.
+- `notes` = free-text, ≤80 chars.
+
+Vm.X: stale §X (last refresh >30min ago) **warns** before `/skill:dossier-build` task-flip. Operator confirms `y/N`. Default: refuse flip. §S records `§X=stale-confirmed` on yes.
+
+## 11. §S — Rolling status log
+
+Append-only timeline. Every skill op emits one or more lines. Format:
+
+```
+<YYYY-MM-DD HH:MM> <skill> <target> <event> [<detail>]
+```
+
+**Formatter-resistant rule (critical):** every §S entry MUST be its own paragraph (blank line before AND after). Without this, markdown formatters like prettier will merge consecutive lines into a single paragraph, breaking the per-line append/parse semantics and rendering §S unparseable by `ds regen-index` and `ds session-start`. The parser tolerates joined entries (substring matching) but skill writers MUST emit blank-line-separated entries.
+
+Examples (note the blank lines between entries):
+
+```markdown
+## §S — Rolling status log
+
+2026-05-14 14:32 ds:new — created slug=auth-1 phase=P1
+
+2026-05-14 14:35 ds:build T1 START
+
+2026-05-14 14:41 ds:build T1 commit=a96987b
+
+2026-05-14 14:41 ds:build T1 §X=refreshed artemis ahead=2
+
+2026-05-14 14:41 ds:build T1 DONE → x
+
+2026-05-14 14:42 ds:build T2 START
+
+2026-05-14 14:50 ds:build T2 commit=b7c8d12
+
+2026-05-14 14:50 ds:build T2 DONE → x
+
+2026-05-14 15:01 ds:check — drift report: 0 violations, §X clean
+```
+
+Format rules:
+
+- Timestamp = minute-granular `YYYY-MM-DD HH:MM`. Override to seconds via env `DS_TS_SECONDS=1` (concurrent-write disambiguation).
+- `<skill>` = `ds:<verb>`.
+- `<target>` = `T<N>`, `B<N>`, `V<N>`, or `—` for non-targeted ops.
+- `<event>` ∈ `{START, DONE, commit=<sha>, §<X>=<status>, §X=stale-confirmed, drift=<n>, lock=<acquired|released>, paused reason=<text>, resumed, abandoned reason=<text>, PAUSE reason=<class>:<detail>, auto-stop=<reason>}`, plus the gate-outcome forms a skill emits for its own composed routes (`tiger=`, `doubt=`, `review=`, `pin=`, `conflict=`, `skill-lint=`, `verify_clean=`, `converge=`). The brace set is closed; the gate-outcome forms are not — a new composed route may add one, and `<skill>`/`<target>`/timestamp still bind.
+- `paused` / `resumed` / `abandoned` are **atomic single-line** events — they emit NO `START`/`DONE` pair (pause/resume are non-resumable one-shot ops). A bare `START` for them would trip the incomplete-op detector.
+- `PAUSE` (from `ds:build --auto`) carries a reason class ∈ `{blocked, ambiguous, destructive, push, retries-exhausted, review, tiger, x-stale, budget}`; if it follows a task `START` with no `DONE`, that task correctly shows as incomplete (resume needed). `auto-stop=<reason>` is a run-terminal line with target `—` (clean exhaustion / budget), not a `START`/`DONE`.
+- `<detail>` free-text, ≤120 chars.
+
+Vm.6: every multi-step op MUST emit `START` line before mutation, `DONE` line after final mutation. Missing `DONE` = incomplete = resume needed.
+
+Vm.2: every §S line MUST begin with valid ISO timestamp.
+
+## 12. §Z — Closeout
+
+Written only at `/skill:dossier-close`. Exactly one of `complete: true`, `successor: <slug>` or `abandoned: true` (with `reason:`). An optional `after:` line names follow-up work. Refuse close otherwise.
+
+**Formatter-resistant rule:** same as §S — each line of §Z metadata (closed/complete/successor/summary/key cites) is its own paragraph (blank line between). Prevents prettier from joining the structured fields into a single prose paragraph and breaking the parser.
+
+```markdown
+## §Z — Closeout
+
+2026-05-14 17:30 — closed
+
+successor: auth-2-rollout
+
+summary: T1-T3 shipped; the rollout moves to the next dossier per ops review.
+
+key cites: [a96987b], [b7c8d12]
+```
+
+If `complete: true`:
+
+```markdown
+## §Z — Closeout
+
+2026-05-14 17:30 — closed
+
+complete: true
+
+summary: Every task shipped. No follow-on dossier needed.
+
+key cites: [a96987b], [b7c8d12], [c2d3e45]
+```
+
+If `abandoned: true` (via `ds:close --abandon "<reason>"`):
+
+```markdown
+## §Z — Closeout
+
+2026-05-14 17:30 — closed
+
+abandoned: true
+
+reason: superseded by valkey-native approach
+
+summary: T1-T2 shipped; the rest was dropped.
+
+key cites: [a96987b]
+```
+
+`reason:` is mandatory. An abandoned dossier archives like any closed one.
+
+`ds close --carry` adds one more paragraph, `after:`, with the rows that run after the close, `;`-separated:
+
+```markdown
+after: T17 smoke test the cutover (T16+7d); T18 approve the rollout (H)
+```
+
+The `after:` line is the closed wave's own record; nothing reads it after the close report. A close without `--successor` also adds each carried row to the carried-work list, `.scratchpad/dossier/LATER.md`, one line per row:
+
+```markdown
+# Carried work
+
+- 2026-11-01-managed-team/T12 · rig experiment · H
+- suite-review-apply/T14 · census re-check · T9+30d · due 2026-12-01
+```
+
+- The key is the row's first `(from <slug> T<n>)` note when the task has one, else `<wave dir>/<id>`. A key already on the list is not added again, and a rerun of a close skips the list once §S holds `ds:close — later=`.
+- A `T<n>+<k>d` need becomes `due <date>`: the day of the wave's `ds:build T<n> … DONE →` line plus `k`. With no such line, the row keeps the need and no date.
+- A `--successor` close does not write the list: its rows are already in the successor's §T.
+- A row leaves the list only through `ds later done <key>` or `ds later drop <key>`. `ds later` prints the list. A line that is not a row, such as a note, stays as written.
+- Session start, and `ds progress` with no directory, print `later: <n> carried` and one `due: <key> <task>` line for each row due today or earlier. Both print with or without a live wave. A due row also goes in the session-start system message, except on a start after compaction.
+- Two writers run without a shared lock: a `ds close` and a `ds later done` at the same moment can lose one change.
+
+Vm.4: closed dossier MUST live under `.scratchpad/dossier/_archive/`.
+
+Parser grammar: a closure key opens its own line. The three patterns live once, in `engine/ledger.ts` as `Z.complete` / `Z.abandoned` / `Z.successor`; `ds regen-index`, `ds reconcile` and `ds z-write` all read them from there. §Z carries operator prose in the same region the parser scans, which sets the rest of the grammar:
+
+- A key mid-sentence is prose, not a closure. An abandoned dossier whose summary read "carried into the successor: the age-identity exemption" rendered `→the` in the INDEX §Z column while `abandoned: true` sat two lines above it, and the same sentence in a **live** dossier moved the whole wave to `_archive/` on the next session start — `ds reconcile` reads one OR of the three keys and archives on a match.
+- The booleans are tested before `successor:`, whose value is free text where theirs is the literal `true`.
+- `successor:` takes only the `/skill:dossier-new` slug charset (`[a-z0-9][a-z0-9-]*`).
+- `ds z-write` exits 1 rather than write a `summary`, `reason` or `key cites` whose own line opens with any of the three.
+
+A key that a formatter joins onto the end of another line is therefore no longer read as a closure. That direction is safe: `ds reconcile` leaves the dossier where it is, so a `done` header sitting outside `_archive/` renders `drift!` in INDEX with a drift trailer, and the operator is told. The reverse — a prose sentence read as a closure — archived a live wave and reported nothing.
+
+Writers MUST emit blank-line separation to keep §Z human-readable.
+
+## 13. INDEX.md
+
+Auto-maintained by hook + every `ds:*` skill. Never source-of-truth; regenerable.
+
+```markdown
+# .scratchpad index
+
+| date       | slug              | state | T     | B   | mtime            | §Z       |
+| ---------- | ----------------- | ----- | ----- | --- | ---------------- | -------- |
+| 2026-05-14 | auth-1            | live  | 2/5   | 2   | 2026-05-14 14:50 | —        |
+| 2026-05-12 | artemis-staleness | done  | 12/12 | 4   | 2026-05-13 21:38 | →auth-1  |
+| 2026-04-28 | k3s-bootstrap     | done  | 8/8   | 1   | 2026-04-29 09:12 | complete |
+```
+
+Sort: date desc. Live dossiers first. An INDEX written before 2026-10-09 has a `P` column after `state`. It still reads until the next regen rewrites it: `engine/session.ts` finds its columns by header name, and the mod's skill gate reads only `date`, `slug` and `state`, which did not move.
+
+`state` ∈ `live | paused | done | drift!` — reconciled from THREE witnesses (directory location, header state token, §Z closure). Concordant renders: `_archive/` + header `done` + §Z-closed ⇒ `done`; direct child + header `live` ⇒ `live`; header `paused` ⇒ `paused` (sorts after live). ANY disagreement or a non-canonical header token ⇒ `drift!` — a live-located `done`/`sealed` header, an archived `live` header, or a §Z-closed non-archived dir — never silently coerced to `live`. `drift!` sorts to the top. A trailing `<!-- drift:N slugs:... -->` comment records the count.
+
+Vm.5: INDEX counts match DOSSIER.md §T/§B actual row counts.
+
+## 14. Locks
+
+Concurrent-session safety. JSON file at `.scratchpad/dossier/<slug>/.ds-lock`:
+
+```json
+{"pid": 12345, "started": "2026-05-14T14:32:07Z", "skill": "ds:build", "target": "T3"}
+```
+
+- Written before mutation, removed after.
+- Stale rule: pid dead OR `started` >30min ago = auto-clear.
+- Vm.9: skills check the lock before a mutation and refuse while it is active. `ds migrate` and `ds close` refuse in code; the other skills check it as a step.
+
+## 15. Atomic writes
+
+Every DOSSIER.md / INDEX.md mutation writes a unique temp beside the target (`<file>.<6 hex>`, created exclusively, so concurrent writers never share a temp) and renames it over the target (POSIX rename, atomic on the same file system).
+
+A failed rename removes its temp. A hard kill mid-write leaves a `<file>.<hex>` (or legacy `.tmp`) orphan beside an untouched target; `ds vm-checks` reports one beside a DOSSIER.md as `WARN Vm.8 orphan temp file`.
+
+Vm.8: no skill writes a real file directly. Always tmp + rename.
+
+### Bundled mutation helpers
+
+The verbs of `"$DOSSIER_PLUGIN_ROOT"/cli/ds` in the table below own the common DOSSIER.md mutations. Each verb that rewrites a file is atomic by tmp + rename; `ds archive-move` mutates no file, so it is a bare directory rename with no temp. All ship with the plugin — always available, no adapter detection. Skills call them as `"$DOSSIER_PLUGIN_ROOT"/cli/ds <verb>`. `cli/ds` needs Node.js 22.18+: it exits 69 without it and 70 on an internal error. When the reader of its output closes the pipe, `converge`, `convergence-state` and `resolve-pins` exit 141 and write no message.
+
+`ds root` prints the ledger root and mutates nothing. It is the first of the current directory, its checkout and the primary checkout that has a `.scratchpad/dossier/`. With no ledger yet, a linked worktree takes its primary checkout, or the folder that holds a bare repo; anything else takes its checkout, or the current directory outside git. So the first ledger made in a linked worktree does not live in that worktree. Every verb resolves its root this way, and the mod looks for an existing ledger in the same places. Telling a linked worktree apart needs git 2.31 or later; older git falls back to the checkout. Git does not record the primary checkout of a submodule or of a repo made with `--separate-git-dir`, so a linked worktree of either roots at its own checkout. The exception is a separate git dir named `.git`: git lists the folder that holds it as the primary, and the root is that folder.
+
+| verb              | mutates                                                    | usage                                                   |
+| ----------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
+| `ds row-flip`     | §T row `state` cell (+ optional `cite`)                    | `ds row-flip <dossier-dir> <row-id> <new-state> [cite]` |
+| `ds s-append`     | §S — appends one blank-wrapped paragraph before `## §Z`    | `ds s-append <dossier-dir> "<event text>"`              |
+| `ds x-refresh`    | §X row `branch`/`ahead`/`tag`/`pushed` (keeps `notes`)     | `ds x-refresh <dossier-dir> "<repo-label>" <repo-path>` |
+| `ds header-state` | header `<state>` token (`live`/`done`/`paused`)            | `ds header-state <dossier-dir> <live\|done\|paused>`    |
+| `ds archive-move` | dir location (→ `_archive/`) — the `/skill:dossier-close` commit-point | `ds archive-move <src-dossier-dir> <archive-parent>`    |
+| `ds z-write`      | §Z closeout block (`complete`/`successor`/`abandoned`)     | `ds z-write <dir> <kind> <value> "<summary>" "<cites>"` |
+| `ds migrate`      | legacy shapes, one §S line per migration step              | `ds migrate <dossier-dir>`                              |
+
+- `ds s-append` **prepends the timestamp itself** (honors `DS_TS_SECONDS`) and guarantees the §11 blank-line rule. Pass only the text *after* the timestamp — `ds:build T3 START`, never `2026-… ds:build T3 START`.
+- `ds row-flip` matches the row by trimmed `id` cell **within §T only**, rewrites only the `state` (and optional `cite`) cells, exits non-zero if the id is absent from §T, if it matches more than one §T row, if the state is not one of `. ~ x ! ?`, if the id is a `B<N>` (§B has no state column — use `/skill:dossier-backprop`), or if a `-> x` flip would leave the row without a `cite` (Vm.3).
+- `ds x-refresh` matches the §X row by trimmed `repo` cell, runs the git probes against `<repo-path>`, rewrites `branch`/`ahead`/`tag`/`pushed`, leaves the operator-owned `notes` cell untouched, exits non-zero if the repo label is absent or the path is not a git repo. `ahead=no-upstream` + `pushed=no` when the branch has no `origin/` tracking ref.
+- `ds header-state` rewrites only the `<state>` token on the header metadata line (the 2nd backtick-wrapped field), validates `<state>` ∈ `live|done|paused`, exits non-zero if the metadata line is absent. The sole writer of the header state — `/skill:dossier-close` and the `/skill:dossier-status` pause/resume actions both route through it.
+- `ds archive-move` is the `/skill:dossier-close` commit-point: refuses a pre-existing dest (no nested move), `mv`s `<src>` → `<archive-parent>/<basename>`, asserts the move landed (`DOSSIER.md` present at dest, source gone). Idempotent — a no-op if already archived (resume-safe). On any failure the source is left intact (exit non-zero) and callers leave `DONE` unwritten. Assumes `_archive/` is same-FS as `dossier/` (rename atomicity).
+- **Migration.** `engine/migrate.ts` holds the ordered migration steps. Each step finds its own legacy shape, and the header step reads only the lines above the first `## ` heading, so a migrated ledger matches no step and stays unchanged. The five writers that read a ledger (`row-flip`, `s-append`, `x-refresh`, `header-state`, `z-write`) and the `ds close` carry into a successor apply the steps before their own change and write both in one atomic write, with one §S line `ds:migrate — <step>` per step. A refused write leaves the file untouched. A free-text third header field stays in that line as `kept: <text>`. `ds migrate <dossier-dir>` applies the steps alone, prints `migrated <dir>: <steps>`, and exits 1 while another op holds the wave lock. A wave that comes back from `paused` or from `_archive/` migrates on its first write. Steps: `header-two-field`.
+
+Skills prefer these over the Edit tool for §S / §T / §B mutations. Edit-tool fallback only if a helper is somehow missing.
+
+## 16. Resume protocol
+
+For multi-step ops (`/skill:dossier-build`, `/skill:dossier-backprop`, `/skill:dossier-close`):
+
+1. Skill reads §S tail, greps for own target (e.g. `T3`).
+1. Identifies last completed step from `<event>` field.
+1. Picks up from next step. Idempotent — re-running completed steps is safe.
+
+Auto-detect default. `--resume` flag is explicit override. `ds close` does the scan itself: a rerun of the same command resumes.
+
+Pause/resume are NOT multi-step ops: they write a single atomic §S line (`paused reason=…` / `resumed`) and are exempt from this START/DONE protocol. Resuming a paused dossier (the `/skill:dossier-status` resume action) un-pauses the header, then re-runs the incomplete-op scan so any mid-build `T<N> START` surfaces and resumes via the task-level protocol above.
+
+## 17. Meta-invariants (enforced by skills)
+
+| id    | rule                                                                                                                                                                              | enforced by                                           |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Vm.1  | every live dossier has state=live in INDEX                                                                                                                                        | code — `ds ds-check` (via regen reconcile)            |
+| Vm.2  | every §S entry starts with valid ISO timestamp                                                                                                                                    | code — `ds vm-checks`                                 |
+| Vm.3  | every §T `x` row has non-empty `cite` (commit SHA / PR)                                                                                                                           | code — `ds row-flip` refuses cite-less `x`            |
+| Vm.4  | every closed dossier has a `done` header and lives under `_archive/`; a machine-readable §Z key is NOT required there, so migrated legacy dossiers stay concordant                | code — `ds ds-check`                                  |
+| Vm.5  | INDEX counts match DOSSIER §T/§B actual rows                                                                                                                                      | code — `ds regen-index` derives both                  |
+| Vm.6  | every multi-step op emits §S START + DONE; partial = incomplete                                                                                                                   | code — `ds session-start` resume scan; `ds vm-checks` |
+| Vm.7  | INDEX derived from DOSSIER walk; regenerable; never blocks                                                                                                                        | code — `ds regen-index`                               |
+| Vm.8  | all file mutations atomic (tmp + rename)                                                                                                                                          | code — `cli/ds` writers                               |
+| Vm.9  | an active lock refuses a mutation; a stale lock clears at session start                                                                                                           | code — `ds migrate`, `ds close`, `ds clear-locks`; model — other skills |
+| Vm.11 | multi-step ops auto-detect resume; `--resume` flag explicit                                                                                                                       | model — skill resume tables                           |
+| Vm.12 | recommended ≤1 live dossier (excl. paused); >1 → `/skill:dossier-status` warns (advisory, never blocks)                                                                                       | code — `ds session-start` live-count                  |
+| Vm.13 | live dossier with no §S entry in >N days (`DS_STALE_LIVE_DAYS`, default 14) = stale-live → consolidate prompt                                                                     | model — `/skill:dossier-status`                                   |
+| Vm.14 | every `ds:build --auto` PAUSE carries a reason class; the autonomous loop never auto-pushes and never auto-closes                                                                 | model — `ds:build --auto`                             |
+| Vm.15 | header token × location × §Z closure concordant (`done`⇔`_archive/`⇔§Z-closed; `live`\|`paused`⇔direct child⇔§Z-open) AND token ∈ {live,done,paused}; any disagreement ⇒ `drift!` | code — `ds regen-index` reconcile + `ds ds-check`     |
+| Vm.16 | at most one dossier per `<date>-<slug>` path, live or `_archive/`; the same slug under a different date is not detected                                                           | model — `/skill:dossier-new` collision check                      |
+| Vm.X  | stale §X (>30min) warns + requires operator confirm on flip                                                                                                                       | model — `/skill:dossier-build` step 8a guard                      |
+
+`/skill:dossier-check` runs the **code**-enforced rules deterministically (`ds ds-check` exits non-zero on any Vm.1/Vm.4/Vm.15 drift) and applies the **model**-enforced rules best-effort on read. The `enforced by` column is the honest map: a `model` row is guidance a skill follows, not a guarantee — do not read "ds:check ran" as "every Vm holds".

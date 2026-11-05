@@ -1,0 +1,425 @@
+## Pi runtime
+
+Resolve bundled paths against this file, not the project working directory. The plugin root is `.` from this file's directory. Before each shell call that uses `$DOSSIER_PLUGIN_ROOT`, set that variable to the shell-quoted absolute plugin root in that same shell. Pi does not supply it. Keep the shell working directory in the consuming project.
+
+Load another installed skill with `read` on its advertised SKILL.md path; user commands use `/skill:<name>`. Check the available skills and tools before an optional sibling route. An absent sibling means skip, never install or scan caches. Pi does not add plugin bin directories to PATH: resolve bundled tools by absolute path. For dossier-to-whetstone script routes, check `../whetstone/bin/<tool>` relative to dossier's plugin root; if absent, use the documented absent-skip result.
+
+Use `read/edit/write/bash/grep/find` for the corresponding host operations. Fresh missions use `dossier_delegate` or `whetstone_delegate` for that plugin's named agents, with unqualified `agent` and artifact-only `task`. The tool uses the current model unless the operator supplies an exact `provider/model`. Builders use `agent: general-purpose, write: true`; named reviewers cannot use edit/write. Bash read-only is prompt-only, not a sandbox. A return is final: a follow-up mission is a fresh call, not a message to a retained agent. Parallel independent missions may use concurrent calls.
+
+Web tools and advisor tools are optional. Use installed web tools when present, or read-only `curl`/`gh api` through bash; identify any inaccessible source. The Pi extension supplies mutation guards and model-facing advisories. The task ledger is authoritative; `/dossier-tasks` is a read-only view, not a second task store.
+
+# Changelog
+
+Notable changes to the **dossier** plugin.
+
+This history stops at `dossier-v1.0.3`. The plugin installs from each `main` commit, and no release tooling writes this file now. Sections before 1.0.0 are grouped by date.
+
+## [1.0.3](https://github.com/raisedadead/claude-code-plugins/compare/dossier-v1.0.2...dossier-v1.0.3) (2026-10-10)
+
+
+### Bug Fixes
+
+* **dossier:** key the resend on the prompt id ([c1f52d2](https://github.com/raisedadead/claude-code-plugins/commit/c1f52d289ca9a6cb5b329e88ff356c0edd4ceab8))
+
+## [1.0.2](https://github.com/raisedadead/claude-code-plugins/compare/dossier-v1.0.1...dossier-v1.0.2) (2026-10-10)
+
+
+### Bug Fixes
+
+* **dossier:** ask for the reply once per turn ([e6bfa8d](https://github.com/raisedadead/claude-code-plugins/commit/e6bfa8d7b63cefe93b298ca5827405eb5ccfe43b))
+* **dossier:** ask for the whole reply on a block ([ffc40d2](https://github.com/raisedadead/claude-code-plugins/commit/ffc40d22bd5a0bf2881ae2404c2d5faf8cbfd04e))
+* **dossier:** count the resend per turn, not flag ([fb27e04](https://github.com/raisedadead/claude-code-plugins/commit/fb27e0494bd9bc5af484c60ecf25fb39745d568e))
+* **whetstone:** ask for the whole reply again ([e2f84ce](https://github.com/raisedadead/claude-code-plugins/commit/e2f84cece2057e09ecbae048c8044026b73d5db5))
+
+## [1.0.1](https://github.com/raisedadead/claude-code-plugins/compare/dossier-v1.0.0...dossier-v1.0.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* close gaps from the hook review ([97d17f1](https://github.com/raisedadead/claude-code-plugins/commit/97d17f1ad6abc06100345dd0c435f67b69e1a40a))
+
+## 1.0.0 (2026-10-09)
+
+### Added
+
+- **`ds close <wave>` closes a wave in one resumable run.** It checks the rows, the bugs and the lock, runs converge, writes §Z, archives the wave, moves the tracked contract to `.dossier/_archive/` in its own commit and rebuilds INDEX. Each step writes a §S checkpoint, so a rerun after a crash continues from the last one. `--plan` prints the checks and writes nothing. `--carry T<n>,...` moves an open operator row or a delayed row into the §Z `after:` line, or into the successor with `--successor`.
+- **`ds progress` prints the wave progress.** It counts `x` rows only, splits agent and operator rows, counts up to the contract `milestone`, and names the later rows (`T<n>+<k>d` needs). `--line` prints one line.
+- **The session start and `/skill:dossier-status` lead with the progress line.** A wave whose open rows are all later rows reads `ready to close`.
+- **A tasks pane and a status line entry.** The `dossier-tasks` command opens a read-only pane with the §T needs tree under the progress line. The status line shows the progress line of the live wave.
+- **`/skill:dossier-grill` takes a goal sentence and the model can start it.** Each entry goes through `ds grill-add`. "Discuss more" forks a decision into `n.k` children, and `ds assert-grill` exits 2 while a child is open. `ds:new "<goal>"` runs the grill first.
+- **Ledgers migrate on their first write.** `ds row-flip`, `ds s-append`, `ds x-refresh`, `ds header-state`, `ds z-write` and the `ds close` carry into a successor apply the migration steps first and log one `ds:migrate — <step>` line per step. `ds migrate <dir>` applies them alone. A wave that comes back from `paused` or `_archive/` migrates on its first write.
+- **Advisory nags for autonomous work.** The mod adds context after an edit leaves a §B row with no invariant and no fix cite, and when an outside grilling skill runs in a dossier repo. `ds close --plan` prints a `⚠` line when no `CHANGELOG.md` changed since the contract commit. `ds:build --auto` proposes its own `/goal`. None of them blocks.
+- **`ds ds-check` names an archived wave with no §Z key, an unfinished close, and a tracked contract whose wave is closed.**
+
+### Changed
+
+- **The ledger header has two fields**, `` `<date>` · `<state>` ``. Every reader still accepts a third field.
+- **INDEX has no `P` column.**
+- **One parser pairs §S ops** for `ds vm-checks`, the session start, `ds close` and `ds ds-check`.
+
+### Removed
+
+- **`/skill:dossier-ship` and `ds changelog-write`.** Write the CHANGELOG entry by hand; `ds close --plan` says when none changed.
+
+### Fixed
+
+- **Converge criteria run without the ledger env vars**, and a tracked contract resolves from the worktree top level before the ledger root.
+- **Ledger rows split only on an unescaped pipe.** A `\|` in a cell stays in that cell, and `ds row-flip` escapes a pipe in a cite.
+
+## 2026-10-07
+
+### Changed
+
+- **`/skill:dossier-grill` asks in a decision block.** A fact that is dangerous now comes first. Decisions sit in lettered groups under their shared facts, numbered across groups, each with options `(a)`, `(b)`, the recommended one first; an out-of-scope decision gets its own last group and lands as a §G NOT-IN bullet. The block ends on the answer line, and the host's output style owns the closing format. The operator can reply "all recommended" plus the exceptions; each `DECISION:` line records that reply verbatim with the option it selects, or `skipped by <n>(<x>)`. A lighter dependency rides in the batch as a "Skip if" note; the serial phase is kept for an answer that adds or removes whole groups. D34 and D35 carry the rejected alternatives.
+
+## 2026-10-03
+
+### Changed
+
+- **dossier is now a mod (Claude Code 2.1.287+).** `hooks/register.ts` runs the Edit/Write guards, the skill gate, the session start, the prompt convergence state and the fake-impl Stop backstop. `marker_guard.py`, `invariant_guard.py`, `skill_gate.py`, `session-start.sh`, `convergence_state.py`, `fakeimpl_stop.py`, `converge.py`, the `verify_*.py` files, `resolve_pins.py`, `eval_skill_routing.py` and every `lib-*.sh` are deleted, and `hooks.json` holds no settings hook. D32 carries the rejected alternatives.
+- **`/skill:dossier-converge` runs `"$DOSSIER_PLUGIN_ROOT"/cli/ds converge`.** Output and exit codes are unchanged; exit 69 or 70 now means the runner did not start.
+- **The session-start notices are toasts.** A mod result has no `systemMessage`, so the one-line live-wave notice and the more-than-one-live and drift warnings are a `$.ui.toast`. `DOSSIER_LIVE_NUDGE=0` still turns off the live-wave notice.
+- **Resume hints list the open ops of one dossier in log order.** The awk scan listed them in hash order.
+- **A dossier directory whose name starts with `.` is not read** by `ds converge` and the prompt convergence state, as the other verbs already skipped it.
+- **A `done-when` row id must use decimal digits.** `converge.py` also took other Unicode digits, such as `²`.
+- **The marker guard denies.** In a project with `.scratchpad/dossier/`, an Edit or Write that puts a `PH3-B7`-style audit id or a `§V26`-style cite in a source comment is denied; before, it was advisory. A bare `Phase N`, `Stage N` or `Step N` still passes. `DOSSIER_MARKER_GUARD=off` turns the marker rule and the ledger header check off. D33 carries the reason and the known false positive (a `SPEC §`-style spec citation).
+- **The invariant guard reads ECMAScript regex.** `cli/ds invariant-check` runs the registered patterns with a 5 s timeout. The Python forms `(?P<name>`, `(?P=name)`, a leading `(?i)` / `(?s)` / `(?m)`, `\A`, `\Z` and `$` are translated; a pattern with other Python-only syntax is skipped, and the write gets an advisory that names it.
+- **`cli/ds` needs Node.js 22.18+.** Without it, `cli/ds` exits 69: the invariant guard lets the write through, the ledger verbs refuse, and the session start skips the stale-lock clear, the reconcile, the INDEX rebuild and the ledger summary and says so in its context.
+- **Every ledger writer is a `cli/ds` verb.** The skills call `"$DOSSIER_PLUGIN_ROOT"/cli/ds <verb>`: `row-flip`, `s-append`, `x-refresh`, `header-state`, `archive-move`, `z-write`, `regen-index`, `reconcile`, `clear-locks`, `ds-check`, `vm-checks`, `assert-scaffold`, `assert-grill` and `changelog-write`. The `hooks/lib-*.sh` writers are deleted. Each verb keeps the exit codes of the script it replaces, except that a failed file write now exits 70; an error line now starts with `ds <verb>:`.
+- **A rewritten ledger file gets the default file mode.** The bash writers left a rewritten `DOSSIER.md` or `INDEX.md` at mode 0600; `cli/ds` writes it at the default mode for the umask.
+- **INDEX rows sort by code point**, not by the locale of the shell, and dossier directories are read in sorted order.
+- **The freshness check runs in `cli/ds`.** The Edit/Write advisory runs `cli/ds verify-edit` from the mod, cache-only, with a 10 s timeout. `/skill:dossier-check` runs `cli/ds verify-sweep`, and `/skill:dossier-new` and `/skill:dossier-build` run `cli/ds resolve-pins`. Output lines and the cache layout are unchanged, and a cache that the Python helpers wrote stays valid. The verbs exit 69 without Node.js 22.18+ and 70 on an internal error; the Python scripts exited 0 when they could not load. The advisory no longer writes a stderr line, and it keeps its once-per-session memory in the mod, not in a `state-*.json` file under `.scratchpad/.verify-cache/`.
+- **The skill-routing lint is `tests/test_skill_routing.ts`.** Run it with `node --test`.
+- **The plugin's own tests need no Python.** The manifest and PAUSE-class parity checks run under `node --test` as `tests/test_manifest.ts` and `tests/test_pause_class_parity.ts`.
+- **The skill gate keeps its once-per-session memory in the mod**, not in a temp file. A hot reload of the plugin resets it, so one reminder can repeat.
+
+## 2026-09-28
+
+### Changed
+
+- **`dossier-reviewer` runs on `opus` at `effort: medium`; `dossier-scout` stays on `sonnet` and gains `effort: medium`.** A verdict gate runs on the tier that makes decisions, and a finder on the tier that gathers. D29 carries the rejected alternatives.
+
+## 2026-09-26
+
+Refactor for anyone who installs the plugin, against the Claude Code plugin docs as of 2.1.283. `RESEARCH.md` D24, D26, D27, F38 and F39 carry the reasons and the rejected alternatives.
+
+### Fixed
+
+- **Skill bodies call their helpers through `"$DOSSIER_PLUGIN_ROOT"`, braced.** Claude Code substitutes that form when it loads a skill and exports no plugin variable to the Bash tool, so the bare `$CLAUDE_PLUGIN_ROOT` — twenty uses across seventeen lines — read as empty and each helper call resolved to `/hooks/lib-*.sh`. Probed on 2.1.283: bare printed `[]`, braced printed the plugin path. The first `FORMAT.md` and `ADAPTERS.md` cite in each skill now carries the same prefix, so the model can open them from a consuming project. `test_manifest.sh` exits 1 on the bare form and on a repo-relative `plugins/<name>/` path in any skill or agent body.
+- **`skill_gate.py` reads `command_name` on `UserPromptExpansion`**, the documented field; it read `command`, so on the documented payload a typed `/simplify` mid-build raised nothing. It also matches `code-review`, the current name behind the `/review` alias.
+- **`/skill:dossier-status` projects §T into the TaskList only when the session has the Task tools**, which Claude Code provides by default only on older models.
+
+### Removed
+
+- **The TaskList roll** — the `roll` skill, `sessionend-roll.py`, `roll_lib.py` and the `SessionEnd` registration. Claude Code keeps tasks across compaction and `--resume`, and `CLAUDE_CODE_TASK_LIST_ID` shares a list across sessions. The roll wrote `.scratchpad/.tasklist-roll/` into every project whose session ended with a task, dossier or not. Nothing reads those files now. Remove them with `rm -rf .scratchpad/.tasklist-roll` in each project.
+- **`migrate`** — a one-time converter for the pre-v2 `{PLAN,SPEC,AUDIT}.md` layout. Run it from a checkout at `b3ad496` if a legacy tree turns up.
+- **The `rtk`, `cavemem`, `caveman` and `fastedit` adapters** and the step-0 host-env probe their skills ran. `ADAPTERS.md` keeps `context7`, `Workflow` and whetstone, each detected where it is used.
+- **`MultiEdit`** from the PreToolUse matcher and the three guards: Claude Code no longer has that tool.
+- **`DOSSIER_RUN_SLICE`, `DOSSIER_LINT_SKILL`, `DOSSIER_FLAKE_RUNNER`, `DOSSIER_TIGER_CHECK`** and the source-checkout paths beside them. Every whetstone route resolves a bare command on `PATH`.
+
+### Added
+
+- **`/skill:dossier-new` reports an unignored `.scratchpad/`** and names the per-clone fix, `echo .scratchpad/ >> .git/info/exclude`.
+- **Six `claude plugin eval` cases under `evals/`** — five skills and one near-miss negative, graded on the `Skill` call. Run with `--ablation none`.
+
+## 2026-09-09
+
+### Changed
+
+- **The TaskList roll is `SessionEnd`-only; the `PreCompact` registration is gone.** It was registered on both, and the compact-time roll preserved nothing: the harness TaskList survives compaction — post-compaction `TaskUpdate` calls still address ids created before the boundary, seen in 22 transcripts. It also duplicated a snapshot the operator harness takes at the same moment from its own task store. What this removes is that duplication, not a worse snapshot: the harness holds the tasks across the boundary, and the roll only copied what it could already read. Neither source dominates the other: the two disagreed in 18 of 49 sessions whose transcript was at least as fresh, in both directions. `parse_transcript` replays one transcript file while subagent and workflow transcripts write into the same task directory, so the store holds ids the replay cannot see; the store in turn can go stale mid-session and lose pending ids the replay still holds. The replay is not richer — it carries no field the store lacks, and `.tlr` v1 drops `blocks`. `SessionEnd` keeps the roll because a TaskList does not carry across sessions. See `RESEARCH.md` D24.
+
+- **`precompact-roll.py` is now `sessionend-roll.py`.** The old name described a registration the hook no longer has. `hooks.json`, the `roll` skill and `RESEARCH.md` F13 follow it, and its stderr prefixes move from `roll-precompact` to `roll-sessionend`. Earlier changelog entries keep the old name because that is what the file was called then.
+
+- **`restore` no longer defaults to the newest filename, and `dump` now stamps UTC.** The explicit `dump` is model-transcribed, so it paraphrases and drops descriptions, and it was also writing local-time names and `ts:` values with a `Z` suffix. On a `+0530` machine that made an explicit roll sort after a hook roll written three minutes later, so the documented newest-name default selected the paraphrase over the verbatim copy. `restore` now prefers the newest `trig: sessionend` file and falls back to any trigger only when none exists. See `RESEARCH.md` F36.
+
+### Added
+
+- **The roll directory now prunes.** `roll_lib.prune_rolls` keeps the newest `ROLL_RETAIN` (20) `.tlr` files per project and unlinks the rest; the `SessionEnd` hook calls it after each write. `.scratchpad/.tasklist-roll/` previously only grew — no unlink, prune or cap existed anywhere in `roll_lib.py`. An explicit `/skill:dossier-roll dump` does not prune. Three tests: pruning fires past the ceiling, does not fire at it, and the hook itself prunes.
+
+## 2026-08-25
+
+### Added
+
+- **A live dossier now reaches the operator, not only the model.** `session-start.sh` set `systemMessage` only when the tree was in a conflicting state — more than one live row, or drift. The ordinary case, exactly one live wave, went to `additionalContext`, which the model reads and the operator never sees, so a wave stayed invisible to the person deciding about it for its whole length. One live row now raises `dossier live: <slug> · <P> · T <done>/<tot> · B <n> — /skill:dossier-status for the sit-rep.`, computed from the INDEX row and advisory: the hook exits 0 either way. It fires on `startup`, `resume`, `fork` and `clear` — every source that means a session began for the operator — and stays silent on `compact`, which is the harness reclaiming context mid-turn and not a moment the operator asked for a status line. `additionalContext` still carries the live dossier on all five sources, so the model never loses the fact. Set `DOSSIER_LIVE_NUDGE=0` in `settings.json` `env` to turn it off; `README.md` lists it beside the other hook-read knobs. `test_session_start.sh` covers one-live, the exact `P/T/B` payload, each of the four firing sources, `compact`, the opt-out, two-live (the consolidate warning still wins) and no-live.
+
+- **Paused dossiers are named when a wave closes**, from two surfaces that fail independently:
+
+  - `/skill:dossier-status` step 6 prints a `PAUSED` line on every full sit-rep, `(none)` when the set is empty. Step 1 already enumerated paused rows separately; nothing printed them. The LIGHT path exits before step 6, which is where no `.scratchpad/dossier/` exists to hold a paused wave.
+  - `skill_gate.py` fires on the `Skill` PreToolUse event for `/skill:dossier-close` and returns the paused slugs as `additionalContext`. Computed from `.scratchpad/INDEX.md`, deduped per session, exit 0 always.
+
+  Two surfaces rather than one because `skill_gate.py`'s payload field names are inferred by composition, not captured from a live Skill hook — its docstring has said so since it shipped — so a harness shape change disables it with no error and no failing test. `close/SKILL.md` step 5 therefore reads the INDEX itself and treats the hook as a bonus. `test_skill_gate.sh` covers paused-present, paused-absent, no INDEX, paused-without-live, per-session dedup, and that a bare `close` stays silent (the gate matches the namespaced name only).
+
+### Fixed
+
+- **`skill_gate.py` exited 1 with a traceback on a non-UTF-8 `.scratchpad/INDEX.md`.** Its docstring has claimed "Always exit 0; fail-open on any parse or filesystem error" since it shipped, but both INDEX readers and the lock reader caught `OSError` alone, and `read_text(encoding="utf-8")` raises `UnicodeDecodeError`, which is a `ValueError`. A PreToolUse hook that raises fails dark. All three now catch `UnicodeDecodeError` too, and `test_skill_gate.sh` writes a `0xff` byte into the INDEX and asserts exit 0 plus silence on both the `/skill:dossier-close` and the builtin path.
+
+### Changed
+
+- **`session-start.sh` emits `sessionTitle` only when `DOSSIER_SESSION_TITLE=1`.** The 2026-07-31 entry promised the hook "never clobbers `--name`/`/rename` or other title-emitting hooks", and the guard it relied on reads `session_title` off the hook input. That field can only carry a title that existed *before* the event; a sibling SessionStart hook writes its title *during* the same event, and no hook can see another hook's output. So the guard held for `/rename` on resume and was dead on `startup` — the launch path — where it silently took over every session in a repo with a live dossier. Since a wave's slug does not change for the length of the wave, every launch got the same name.
+
+  No guard inside the hook can fix this, because a hook reads only its own stdin. `RESEARCH.md` F6 records the multi-hook `sessionTitle` winner as undocumented upstream, and the observed winner on Claude Code 2.1.245 was the plugin: four repos with a live dossier each kept the slug and discarded the sibling hook's title. The emission is opt-in now, and off by default: set `DOSSIER_SESSION_TITLE=1` in `settings.json` `env` to restore it. `test_session_start.sh` covers the unset and `0` paths; the existing title assertions run with the flag exported.
+
+## 2026-08-05 (a read of every tracked file)
+
+Every tracked file was read on its own, then five lenses hunted the assembled graph and each finding was handed to a separate agent told to refute it. Contract: `.dossier/2026-08-05-audit-debt.md`.
+
+### Fixed
+
+- `converge.py` decided a wave's liveness with a substring test over the ledger's first 400 characters, so a `paused` wave whose Goal prose contained the word `live` came back live — and since a no-argument `/skill:dossier-converge` resolves its contract from that list, the paused wave's criteria reached a shell. It reads the header's state token now, with `marker_guard.py`'s own pattern, so the line the write guard polices is the line this reads.
+- `lib-row-flip.sh` accepted an ASCII hyphen as a cite when flipping a row to `x`, while `lib-vm-checks.sh` reads `""`, `—` and `-` alike as empty. The flip wrote a row its own checker calls a Vm.3 violation; it refuses all three now, and `test_lib_dossier_edit.sh` asserts the parity for each.
+- `skill_gate.py` never matched `/skill:whetstone-tiger-style` — the allowlist named five of the six directories under `plugins/whetstone/skills/`, so a tiger-style run under a live dossier got no §S reminder. `test_skill_gate.sh` pins the allowlist to one entry per directory.
+- `verify_hook.py` recorded a fingerprint only after the whole payload was scanned, so a claim repeated inside one tool call fired one reminder per occurrence. Repeats within a call collapse to one.
+- `.github/workflows/ci.yml` shellchecked `plugins/whetstone/skills/*/scripts/*.sh` and `plugins/whetstone/tests/*.sh` but never `plugins/whetstone/bin/*`, which carry no `.sh` suffix.
+
+## 2026-08-05 (the ledger reads by name)
+
+### Changed
+
+- **Task rows carry `who` and `needs`, and no phase.** `| id | state | who | task | needs | cite | verify |`. `who` is `A` (the agent can finish it alone) or `H` (it needs the operator), set when the row is written rather than discovered when a run stalls. `needs` lists the ids that must reach `x` first and defaults to empty, so a row states a dependency only where one exists. The frontier — every `.` row whose `needs` are all `x` — is derived on read, never stored. A phase column made the operator declare the shape of the work before the work was understood; `needs` expresses the same ordering only where it is real.
+
+- **Sections are words, not sigils.** `## Goal`, `## Tasks`, `## Status`, `## Closeout` and the rest. `hooks/lib-sections.sh` holds one pattern per section, matching both this spelling and the `## §G — Goal` … `## §Z — Closeout` form every dossier written before today carries, with a descriptive tail allowed after either. `/skill:dossier-new` writes words; nothing rewrites an existing ledger, so archived dossiers stay readable indefinitely and no migration exists to run.
+
+- **Columns resolve by header name.** `lib-vm-checks.sh`, `lib-row-flip.sh`, `lib-regen-index.sh` and `session-start.sh` read the positions they need out of the header row. Three separate readers had been counting cells, each found only when something read a ledger in the new shape; `FORMAT.md` had a rule forbidding a dependency column outright because adding one would shift them. Both the rule and the class it guarded are gone. `lib-vm-checks.sh` warns, `lib-row-flip.sh` refuses at exit 1, and `lib-regen-index.sh` writes a stderr line when a Tasks header names no `state` column.
+
+### Fixed
+
+- `converge.py` matched a `stdout:` expect against stdout **and** stderr, so a wave reported MET on text the command never printed to stdout, and `stdout: (nothing)` reported UNMET against an empty stdout sitting beside a warning. The streams are separate; a failed criterion now shows its first stderr line on the report line.
+- `converge.py` resolved a contract by any hyphen-delimited suffix while its docstring claimed equality against the date-stripped slug, so `check.md` claimed wave `2026-08-01-claim-check`. It now matches what the docstring says.
+- `lib-row-flip.sh` exits 1 on a row with fewer cells than its header names, rather than writing past its end.
+- `session-start.sh` lost the whole sit-rep body to an awk range that collapsed on its own opening heading: no `just did:` lines, and the resume-context dumps shipped as bare headers. The regression was introduced and closed in the same wave; `test_session_start.sh` now reads that output.
+- All six stdlib test runners honour `-k`, refuse a bare `-k`, and exit 1 when the filter matches nothing. One honoured it; five accepted and ignored it, so a contract criterion naming a test that does not exist reported success.
+
+## 2026-07-31 (slop gate leaves the plugin)
+
+### Removed
+
+- **`slop_guard.py` and its test are gone.** Denying `TODO` / `FIXME` / `XXX` / `HACK` and hardcoded credentials is a coding standard, not dossier workflow, and a plugin should not ship one person's style opinion to everyone who installs it. Every sibling PreToolUse hook detects something intrinsically dossier — a ledger header token, a §V citation, a registered invariant. This one detected `TODO`; the live-wave scope added two days ago existed only to justify its address here. It now lives in the operator's own harness, where it applies in every repo and no longer lapses between waves. Consumers who relied on `DOSSIER_SLOP_GATE` should move the rule to their own hook config; nothing in this plugin replaces it.
+
+- **`dossier_header.py` and `test_header_parity.sh` are gone** as a direct consequence. That module existed to stop the marker guard and the slop gate from drifting apart on what a ledger header means. With one consumer left, the two live constants moved back into `marker_guard.py` and the other 98 lines — the on-disk state reader, its bounds and its awk-parity harness — had no caller but their own test.
+
+### Changed
+
+- Tenet 7 in `ARCHITECTURE.md` now names `/skill:dossier-backprop` as the zero-technical-debt mechanism, which is what it actually was; the marker gate was never the plugin's contribution to that idea.
+
+## 2026-07-31 (claims match code)
+
+### Changed
+
+- `verify/SKILL.md` no longer says the PreToolUse hook "fires on every Edit/Write inside the build". It is active inside a build, but `verify_hook.py:99` returns 0 for `.scratchpad/` paths and for `DOSSIER.md` / `PLAN.md` / `SPEC.md`, so ledger writes are never scanned — a large share of the writes a build actually makes.
+- `test_manifest.sh` asserts that `ci.yml` invokes it. The test it replaced carried that guard and the replacement dropped it; a gate nobody runs enforces nothing.
+- `dossier_header.py` documents that a UTF-8 BOM on line 1 reads as no-state, and why the obvious `utf-8-sig` fix is not applied: `lib-regen-index.sh` does not strip a BOM either, so changing one side alone would reintroduce the awk-vs-Python divergence this module exists to prevent. Both readers change together or neither does.
+
+## 2026-07-31 (frontmatter that actually parses)
+
+### Fixed
+
+Three skills carried YAML frontmatter the host could not parse as intended. A skill whose frontmatter fails to parse loads with **every field silently dropped** — it keeps its file but loses its name, description and trigger surface, so it simply stops firing. Nothing reported an error; `claude plugin validate` was what surfaced it.
+
+- `backprop` — the description's `"bug: <description>"` trigger puts a colon-space inside the scalar, so it has to be quoted. It always was. **The trim in the previous entry stripped the quotes**: that rewrite replaced the whole `description:` line and emitted a plain scalar, not noticing the original was single-quoted. `backprop` was the only description in either plugin that carried quotes, which is exactly why it was the only one broken. Re-quoted; the trigger text is byte-identical either way.
+- `ship` — `argument-hint` opened with `[`, which YAML reads as a flow sequence. Two bracketed groups in a row is a parse error. This predates the trim.
+- `migrate` — same bracket shape, but well-formed, so it parsed *successfully* into a **list** instead of a string. No error anywhere; the wrong type just loaded. This predates the trim.
+
+## 2026-07-31 (leaner descriptions, precise claims)
+
+Every session injects each skill's full `description` frontmatter, so description length is a per-session context cost paid whether or not the skill is used. This wave cuts that cost without touching the trigger surface.
+
+### Changed
+
+- Skill descriptions trimmed: **4,201 → 2,694 chars across 10 listed dossier skills (35.9%)**. Mechanism prose was cut; every quoted invocation phrase and every firing condition was kept verbatim. A script asserted each replacement 1:1 and re-checked all 59 quoted triggers against the rewritten text, because a skill that stops firing is indistinguishable from a skill that was not needed. Three were deliberately protected: `verify`'s `.scratchpad/dossier/` scope clause, `migrate`'s legacy-artifact shapes (`PLAN+SPEC+AUDIT+closeout/`, `ck/cavekit/SPEC.md`), and `tdd-cycle`'s `/skill:dossier-build` composition note.
+
+### Fixed
+
+- `build/SKILL.md` and `backprop/SKILL.md` rebuttal tables claimed `marker_guard.py` "exits 2" on phase markers in source. It does not — that path emits an advisory nudge and exits 0; only a non-canonical DOSSIER.md header token exits 2. The prose in both files was corrected earlier in the same wave; the table rows carrying the identical claim were missed.
+- `fakeimpl_stop.py`'s docstring opened by saying `.scratchpad` is "excluded by pathspec" and then said, four lines later, that exclusion is deliberately *not* a git pathspec. The first sentence was a leftover from the abandoned approach.
+
+## 2026-07-31 (gate scoping and honest claims)
+
+Behaviour changes a consumer will notice, plus corrections to documentation that overstated what is enforced.
+
+### Fixed
+
+- **Slop gate no longer fires in projects that never asked for it.** It was the only PreToolUse hook without a scope check, so `TODO` in any file in any repo was hard-denied. It is now a dossier workflow policy: active only while a wave is `live` or `paused`, silent once closed or archived, silent in a bare repo. An unparseable ledger counts as not-active.
+
+- **Fake-impl backstop now sees new files.** Dirty-tree detection used `git diff --name-only HEAD`, which is empty when a session's only output is untracked — precisely where a fake implementation lives. It now uses `git status --porcelain -uall`, filtering out any path under a `.scratchpad` directory — the suite writes there itself, and in a repo that does not gitignore it those writes would otherwise arm the gate on a tree you never dirtied. The filter is applied to the paths rather than as a git pathspec, because a pathspec anchors to the directory git runs in and would miss a `.scratchpad` nested below it or sitting above it. Still default-off.
+
+- **Links in this plugin's README resolve from the install path.** They pointed at repo-root docs with `../../`, which exists in the repo and not in the plugin cache.
+
+- **Vm.6 can now see a crashed `/skill:dossier-close`.** Its target-token pattern required `[A-Za-z0-9_-]`, but `/skill:dossier-close` writes the em-dash target that `close/SKILL.md` mandates, so an unclosed `ds:close — START` was invisible to `/skill:dossier-check` — the exact operation whose interrupted state Vm.6 exists to catch. `session-start.sh` saw it; the two enforcers disagreed.
+
+- `lib-changelog-write.sh` now removes its temp file on failure. It is the only ledger writer whose target sits outside `.scratchpad/`, so an interrupted write left a `CHANGELOG.md.tmp.XXXXXX` in the project root.
+
+### Removed
+
+- `hooks/lib-drift-gate.sh`. It wrapped `lib-ds-check.sh` in a `git diff --exit-code` on `.scratchpad/INDEX.md`, which only means anything where `.scratchpad` is tracked; where it is gitignored the gate either passed vacuously or, after being taught to detect that, refused outright. `/skill:dossier-check` and `/skill:dossier-status` already call `lib-ds-check.sh` directly, so nothing is lost.
+
+### Changed
+
+- `verify` no longer claims to fire on every edit; it is dormant without a `.scratchpad/dossier/` directory, and now says so.
+- `DS_HEALTH_CMD`, `DS_LIGHT_LOG` and `DS_RECOVER_DAYS` are documented as honoured by the `status` skill rather than by hook code — strong defaults, not enforcement.
+- Adapter coverage moved from grepping `ADAPTERS.md` prose to resolving every `plugin:id` referenced in shipped docs against a real skill or agent file.
+
+## 2026-07-31 (docs consolidation)
+
+Repo-level architecture and decision docs; plugin README gutted to a pointer. No plugin behaviour changed.
+
+### Added
+
+- Root `ARCHITECTURE.md` — declared priority ordering (Honesty > Recoverability > Leverage), the evidence-strength enforcement rule, tenets, testing standard, evolution mechanism, sourced lineage. The verdict-grammar table now lives here and only here.
+- Root `RESEARCH.md` — append-only ledger of decisions with their rejected alternatives, facts with a recheck trigger, and open strides. Records why there is no `version` field, so it stops being re-proposed.
+- Root `CLAUDE.md` — pointer plus the rails cheapest to violate.
+
+### Changed
+
+- `README.md` at this path is now a pointer; install, commands, gates, configuration and the drift-gate recipe moved to the root README. `FORMAT.md` and `ADAPTERS.md` unchanged and still local.
+- `homepage` in `plugin.json` and `marketplace.json` points at the repo root rather than this directory.
+
+### Removed
+
+- `test_verdict_grammar.sh`, `test_whetstone_surfaces.sh` — asserted that two READMEs contained matching prose. `test_bundle_ux.sh` replaced by `test_manifest.sh`, keeping only the `marketplace.json` structural checks.
+
+## 2026-07-29 (optional quality gates)
+
+Two env-gated quality backstops for ad-hoc (non-covenant) work, plus a light-path sit-rep and a recovery mode on `/skill:dossier-status`. The slop gate is ON by default (opt-out); the fake-impl backstop stays opt-in.
+
+### Added
+
+- `slop_guard.py` (PreToolUse) — denies placeholder markers (TODO/FIXME/XXX/HACK) and hardcoded weak-secret literals in new edit content. **On by default**; set `DOSSIER_SLOP_GATE=0` (or false/no/off) to disable. Markdown skipped. Layers under, never duplicates, dossier-reviewer's judgement.
+- `fakeimpl_stop.py` (Stop, Layer A) — runs `DOSSIER_FAKEIMPL_CMD` on a dirty tree and blocks completion on a non-zero exit, so an unverified "it works" can't stand. Off unless the var is set; never duplicates the in-covenant `run_slice.sh` proof.
+- `/skill:dossier-status` light sit-rep — with no `.scratchpad/dossier/` tree in cwd, falls through to `git status` + last-N commits (plus optional `$DS_HEALTH_CMD`) instead of bailing.
+- `ds:status --recover` — reconstruct context after a crash or compaction: cavemem first, session-transcript grep fallback, always names which source fired.
+
+### Changed
+
+- Slop gate flipped to **on by default** (opt-out via `DOSSIER_SLOP_GATE=0`) — placeholder/secret slop is blocked without opt-in.
+- Root marketplace README overhauled: features, the commands a human actually types, and a quality-gates + env-var reference.
+
+## 2026-07-20 (cohesion)
+
+Skills-cohesion wave: the pair reads as one system — whetstone composed at every dossier lifecycle gate, both directions, one verdict grammar. 8 tasks, TDD, doubt gates drew 11 actionable findings. `[90cd0cd..1fa3c25]`
+
+### Added
+
+- ADAPTERS §whetstone script/skill routes: `run_slice.sh` RED/GREEN proof (ds:build step 6), `/skill:whetstone-merge-resolve` merge-class conflict route, `flake_runner.sh` triage (ds:backprop step 4.5), `lint_skill.py` touched-SKILL gate — all deterministic-resolution (`DOSSIER_RUN_SLICE` / `DOSSIER_FLAKE_RUNNER` / `DOSSIER_LINT_SKILL`), all absent-skip.
+- `skill_gate.py` whetstone branch — reverse breadcrumbs: whetstone skill invocations on any live dossier get a reminder to record ONE §S verdict line (first live row = current; whetstone stays zero-hook).
+- Backprop flake triage: `0<r<1` = flaky → closed §B row + quarantine pointer, no §V invariant minted; resume row keyed on `flake=<rate>`.
+- Loop rails in the build covenant: stall rule (identical failure twice = strategy change), budget clean-landing (WIP commit + §S handoff), reset-don't-patch (fresh context via ds:roll); mirrored in the shortcuts table.
+- Shared `## Verdict grammar` table, byte-identical in both READMEs; doc-contract tests for every route, all CI-wired.
+
+### Changed
+
+- tdd-cycle description recomposed: self-exclusion clause (root cause of 47-day 0-use) inverted into a routing clause — standalone drives; under a covenant `/skill:dossier-build` drives and composes `run_slice.sh`.
+- CI lints ALL dossier skills (dir sweep replaces per-file list); ds:build auto-lints any touched SKILL.md (absent-skip).
+- Root README + marketplace.json present the pair as a suite (install-both, either-works-alone).
+
+## 2026-07-20
+
+Skills-uplift wave: whetstone composes into the dossier lifecycle (doubt gate at design-class builds), Define + Ship coverage gaps closed. 7 tasks, TDD, adversarial doubt + fresh-context review per task. `[d50f755..469b76b]`
+
+### Added
+
+- `skills/grill/` — Define-phase interrogation (`/skill:dossier-grill`): FACT-vs-DECISION tree, serial→frontier-batch questioning, stakeholder questionnaire fork, artifact gated by `hooks/lib-assert-grill.sh` (slug-glob discovery, `CONSUMED:` stamp, `--consume` atomic mode).
+- `skills/ship/` — Ship-stage changelog (`/skill:dossier-ship`): §T ledger × git log derivation, cite classifier (`cat-file -t`, no pathspec fallback), spec-vs-convention mapping tables in `reference/changelog-mapping.md`, atomic `hooks/lib-changelog-write.sh` keyed on wave range-cite.
+- `hooks/skill_gate.py` — non-blocking breadcrumb when built-in `/review` `/security-review` `/simplify` fires mid-build (PreToolUse `Skill` matcher + `UserPromptExpansion`); live-dossier + `.ds-lock` correlation, session dedup, fail-open; payload shape inferred, disclosed in docstring.
+- ADAPTERS `§whetstone` — agent-availability detection path (session agent list + recoverable `Agent type not found` error contract, SPIKE-verified on 2.1.205).
+- Five new test suites (`test_adapters_whetstone`, `test_build_doubt_gate`, `test_whetstone_surfaces`, `test_lib_assert_grill`, `test_lib_changelog_write`, `test_skill_gate`), all CI-wired; CI now lints grill + ship via whetstone skill-smith.
+
+### Changed
+
+- `/skill:dossier-build` gains `--doubt` and step 5.6 DOUBT gate — auto-fires `whetstone-doubter` on design-class tasks (forcing function, not opt-in); Autonomous mode gains the 8-class excuse-rebuttal table.
+- `/skill:dossier-new` gains conditional step 1.5 grill gate (exit-code routed, trivial runs untouched); `/skill:dossier-close` step 5 gains the non-blocking `/skill:dossier-ship` advisory.
+- READMEs (dossier + whetstone) cross-surface the composition — whetstone discoverable from the dossier flow without typing its trigger.
+
+## 2026-07-07
+
+Loops-uplift wave: borrowing the "designing loops" article's levers — scripts over reasoning, deterministic exit criteria, a fresh-context reviewer, and encode-the-fix-into-the-system. 9 tasks, TDD. `[e8ddd78..8ad517e]`
+
+### Added
+
+- `hooks/lib-vm-checks.sh` — deterministic Vm.2/3/6/8/9 sweep (§S ISO timestamp, §T `x`-row cite, START/DONE pairing, write-temp orphans, stale locks). Replaces the prose one-liners `/skill:dossier-check` re-derived from scratch each run; findings are prefixed `CRITICAL` / `WARN` and fold straight into the 🔴 / 🟡 buckets.
+- `hooks/lib-assert-scaffold.sh` — `/skill:dossier-new` post-scaffold assertion (step 3.5): exits non-zero naming any missing §-section or title before the §S DONE append, instead of eyeballing the Write output.
+- `hooks/invariant_guard.py` — opt-in PreToolUse write-time §V guard. Blocks (exit 2) an edit matching a project-registered forbidden pattern; **fail-open** with a missing / empty / malformed registry, so it changes nothing until `/skill:dossier-backprop` registers an invariant. Registry at `.scratchpad/dossier/.invariant-guards.json`; bypass `DOSSIER_INVARIANT_GUARD=off`.
+- `hooks/eval_skill_routing.py` + `evals/README.md` — deterministic trigger-phrase collision lint (in CI via `test_python.py`) plus the manual live-model routing-eval recipe it cannot replace.
+- `agents/dossier-reviewer.md` — fresh-context, artifact-only pre-commit reviewer for `ds:build --review` (auto for destructive-class tasks): severity-tagged two-axis findings, deterministic `REVIEW: PASS | CHANGES` verdict.
+- Two new shell suites (`test_lib_assert_scaffold`, `test_lib_vm_checks`) plus invariant-guard and routing-lint cases in `test_python.py`, all wired into CI.
+
+### Changed
+
+- `/skill:dossier-check` step 3 calls `lib-vm-checks.sh` for Vm.2/3/6/8/9 instead of re-deriving shell one-liners from prose; the §3 Vm table marks them deterministic.
+- `/skill:dossier-build` gains `--review` (step 6.5 reviewer gate) and a `review` PAUSE class; `/skill:dossier-new` gains the scaffold-completeness assertion.
+- `lib-clear-stale-locks.sh` gains `--dry-run` (non-mutating list) so the read-only `/skill:dossier-check` Vm.9 probe never clears a lock.
+- README documents the standalone `lib-ds-check.sh` drift gate for CI / pre-push; FORMAT.md gains a §-section TOC; `/skill:dossier-build` and `/skill:dossier-backprop` gain "common shortcuts (and why not)" anti-rationalization tables.
+
+## 2026-07-01
+
+Lifecycle-hardening wave: a rolled/fresh session can no longer be surprised by a phantom-live "sealed-zombie". 15 tasks, two adversarial review rounds. `[0e0569f..d00668e]`
+
+### Fixed
+
+- **The "two live dossiers" incident.** A closed-but-not-archived dossier — an interrupted `/skill:dossier-close`, or a legacy/non-canonical `sealed` header token — was silently re-stamped `live` by INDEX regen on every session, so a fresh session mis-reported it as a second live dossier. Root cause: `lib-regen-index.sh` trusted directory location and only special-cased `paused`, while `/skill:dossier-close` flipped the header and moved the directory as separate non-atomic steps. Regen is now a level-triggered reconciler over three witnesses (header token × location × §Z closure) rendering a distinct `drift!` state — never phantom-`live` — for any disagreement or non-canonical token.
+
+### Added
+
+- `hooks/lib-reconcile-state.sh` — SessionStart self-heal: a §Z-closed dossier stranded outside `_archive/` (or an archived dossier with a stale header) is auto-repaired under lock with a §S breadcrumb.
+- `hooks/lib-archive-move.sh` — the guarded, idempotent, resume-safe `/skill:dossier-close` commit-point (refuses a pre-existing dest, asserts the move landed, preserves the source on failure).
+- `hooks/lib-ds-check.sh` — deterministic Vm.1/Vm.4/Vm.15 gate; exits non-zero naming any dossier in drift, replacing the model-discretionary heuristics that missed the zombie.
+- `hooks/lib-z-write.sh` — atomic §Z closeout writer (`complete`/`successor`/`abandoned`) guaranteeing the §12 blank-line separation.
+- **Vm.15** (header ⇔ location ⇔ §Z concordance) plus a §17 `enforced-by` column marking each meta-invariant `code` vs `model` — ending the false "ds:check validates all Vm rules" claim.
+- Six new test suites (`test_lib_regen`, `test_lib_archive_move`, `test_lib_reconcile`, `test_lib_clear_locks`, `test_lib_ds_check`, `test_lib_z_write`), all wired into CI.
+
+### Changed
+
+- `session-start.sh` surfaces drift loudly via `systemMessage`, counts live by exact `state==live` (not substring), scans ALL non-archived dirs for unfinished ops (§S-scoped, `skill:target` keyed), and self-heals before regen.
+- `/skill:dossier-close` reordered so the header flip precedes the `§Z=written` checkpoint and the move routes through `lib-archive-move.sh` — atomic-or-resumable from every crash point.
+- `marker_guard.py` blocks (exit 2) a non-canonical header-token Edit/Write to DOSSIER.md; `lib-header-state.sh` remains the sole sanctioned writer.
+- Mutation helpers use unique `mktemp` temps for concurrency safety; `lib-row-flip` is §T-scoped and refuses §B rows and cite-less `x`; `lib-clear-stale-locks` is UTC-correct, never reaps a live-pid lock, and falls back to file mtime.
+- `verify_hook.py` is cache-only on the edit hot-path (no blocking network) and exempts dossier paths; `/skill:dossier-roll` restore dedups by task subject and records the source dossier identity in `.tlr`.
+
+## 2026-06-05
+
+### Added
+
+- SessionStart hook emits `sessionTitle` set to the live dossier slug — only on `startup`/`resume` sources, and only when no title is already set (never clobbers `--name`/`/rename` or other title-emitting hooks); fails open on malformed input or missing jq/python3. New `hooks/test_session_start.sh` covers source gating, title precedence, and fail-open paths.
+- `§workflow` adapter (ADAPTERS.md): `/skill:dossier-check`/`/skill:dossier-migrate` route scout missions through the native Workflow tool when scanning >2 repos — schema-validated findings, pipelined dispatch, budget-gated width, crash-resumable. Parallel Agent spawns remain the default at ≤2 repos and on installs without the tool. `/skill:dossier-build` stays Workflow-free by design.
+
+### Changed
+
+- `/skill:dossier-close` and `/skill:dossier-migrate` are now manual-only (`disable-model-invocation: true`): the model can never auto-fire archive/convert mutations; invoke via `/skill:dossier-close` and `/skill:dossier-migrate`.
+
+### Removed
+
+- `context-mode` adapter purged from ADAPTERS.md, README, FORMAT.md, the scout agent, and all skills — phantom dependency; its uses were already covered by the documented native fallbacks (parallel Bash/Read, Agent/Workflow fan-out). Standing rule: adapters only where no native harness equivalent exists.
+
+## 2026-06-03
+
+### Added
+
+- Python hook test suite `hooks/test_python.py` (tlr round-trip, transcript reconstruction, verify-layer offline-safety, pattern-regex compile) — stdlib-only, runnable directly or under pytest.
+- GitHub Actions CI (`.github/workflows/ci.yml`) running the python + shell test scripts, `ruff`, and `shellcheck` on push/PR. Actions are SHA-pinned (dogfooding the verify-layer's own rule).
+- On-demand `skills/verify/references/authorities.md` holding the coverage matrix, per-source raw-JSON cheatsheet, and catalog-extension guide.
+- `hooks/lib-header-state.sh` — atomic header `<state>` flip (`live`/`done`/`paused`); the sole writer of the dossier header state.
+- `hooks/resolve_pins.py` — proactive latest-version + EOL resolver (reuses the verify registry + shared 24h cache); seeds §C/§I pins before coding so the model writes the right version the first time.
+
+### Changed
+
+- SessionStart injection is now compact and decision-first: a one-line §T progress summary, a §X repo/unpushed count, and surfaced blocked (`!`) / needs-research (`?`) rows. The full §T/§X tables and INDEX detail are injected only when a resume is pending — cutting the recurring per-session/per-resume token cost substantially.
+- verify-layer reminders emit on a single channel (`additionalContext`) with two-line findings and one shared skip footer; stderr carries only a one-line finding count.
+- `dossier-scout` Bash allow/deny tables collapsed into a single deny-by-default principle (harness-level `disallowedTools` remains the hard guard).
+- Slimmed `skills/verify/SKILL.md` by moving the coverage matrix + cheatsheet into the on-demand reference file.
+- Lifecycle gained pause/resume (atomic `/skill:dossier-status` actions) + `ds:close --abandon "<reason>"` for dropped waves; `paused` is now a reachable, INDEX-rendered state.
+- SessionStart surfaces multiple live dossiers loudly via a user-visible `systemMessage`; `/skill:dossier-status` / `/skill:dossier-check` warn on >1 live (Vm.12) and stale-live (Vm.13).
+- `/skill:dossier-new` (Step 2.5) and `/skill:dossier-build` (Step 5.5 PIN CHECK) resolve + pin current versions / API docs before coding (proactive companion to the reactive verify hook); new `§context7` adapter for API-shape grounding.
+- `/skill:dossier-status` is now the **driver**: hydrates the Claude Code TaskList from §T (a projection — §T stays source of truth, `!`/`?` rows surface as blockers) and leads with a decision-first sit-rep (`--full` for the §T/§X tables).
+- `ds:build --auto`: autonomous mode loops actionable §T rows under native `/goal`, pausing only on a real decision (Vm.14 reason classes); mirrors §T ↔ TaskList at claim/flip; never auto-pushes or auto-closes.
+- TaskList now auto-dumps on `SessionEnd` as well as `PreCompact`.
+- Read-only verbs (`status`, `check`) declare `disallowed-tools: Edit, Write, NotebookEdit` (defense-in-depth; mutations route through Bash helpers).
+- README reframed around 4 primary verbs + autonomy; `build`/`backprop`/`roll`/`verify` documented as auto/internal/power-user.
+- `/skill:dossier-new` gained a clarify gate (resolve underspecified §G/§C before §T is authored); `/skill:dossier-build` gained a baseline-green check before RED and dependency-aware `--next`/`--auto` selection (phase prerequisites must be `x`).
+- `ds:migrate --from-ck` converts a cavekit (`ck`) root `SPEC.md` into a DOSSIER.md — near-1:1 given the shared §G/§C/§I/§V/§T/§B schema.
+
+### Fixed
+
+- `precompact-roll.py` no longer emits `hookSpecificOutput.additionalContext` on `SessionEnd`/`PreCompact` — neither is a member of the CC hook output union, so the emit failed validation (`Hook JSON output validation failed — (root): Invalid input`) on every session end and compaction. It now surfaces a top-level `systemMessage` breadcrumb; the `.tlr` write (the restore source) was always unaffected.
+- `marker_guard.py` downgraded from an exit-2 hard block to a non-blocking PreToolUse advisory, and narrowed to the unambiguous `PH<n>-<A><n>` audit-id form. Bare `Phase|Stage|Step N` comments no longer block legitimate infra/CI/shell writes (e.g. `# Step 1: dump` in a backup CronJob) across non-dossier repos.
+- The three python hooks (`marker_guard`, `verify_hook`, `precompact-roll`) now no-op cleanly on Python < 3.10 instead of raising.
+- Removed a dead `os` import in `verify_hook.py`.
+- Documented the `python3` ≥ 3.10 runtime prerequisite in the README install section.

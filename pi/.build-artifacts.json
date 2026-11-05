@@ -1,0 +1,9 @@
+{
+  "assembler": "claude-code-plugins/tools/build",
+  "schema": 1,
+  "target": "pi",
+  "plugins": [
+    "dossier",
+    "whetstone"
+  ]
+}

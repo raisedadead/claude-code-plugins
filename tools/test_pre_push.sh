@@ -122,9 +122,14 @@ git push -q origin v-old >"$TMP/tag.log" 2>&1 ||
 git checkout -q -- notes.txt
 git checkout -q main
 # shellcheck disable=SC2016
-printf '#!/usr/bin/env bash\nprintf "steps=%%s list=%%s\\n" "${CI_STEPS-unset}" "${CI_LIST-unset}"\n' >tools/ci.sh
+printf '#!/usr/bin/env bash\nprintf "steps=%%s list=%%s\\n" "${CI_STEPS-unset}" "${CI_LIST-unset}"\n[[ $(git -C "$PRE_PUSH_FOREIGN" rev-parse --is-bare-repository) == true ]] || { printf "foreign repository resolved to the pushing repository\\n" >&2; exit 1; }\n' >tools/ci.sh
 git commit -q -am "test: stub the checks"
-CI_LIST=1 env -u PRE_PUSH_STEPS git push -q origin main >"$TMP/stale.log" 2>&1 || fail "the stubbed push failed: $(tail -5 "$TMP/stale.log")"
+git init -q --bare "$TMP/foreign.git"
+PRE_PUSH_FOREIGN="$TMP/foreign.git" CI_LIST=1 env -u PRE_PUSH_STEPS git push -q origin main >"$TMP/stale.log" 2>&1 || fail "the stubbed push failed: $(tail -5 "$TMP/stale.log")"
 grep -q '^steps=unset list=unset$' "$TMP/stale.log" || fail "the hook passed a stale CI_STEPS or CI_LIST to the checks: $(tail -1 "$TMP/stale.log")"
+
+git worktree add -q -b linked "$TMP/linked"
+PRE_PUSH_FOREIGN="$TMP/foreign.git" env -u PRE_PUSH_STEPS git -C "$TMP/linked" push -q origin linked >"$TMP/linked.log" 2>&1 ||
+	fail "linked-worktree checks did not isolate the foreign repository: $(tail -5 "$TMP/linked.log")"
 
 printf 'ok pre-push hook\n'
