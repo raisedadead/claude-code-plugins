@@ -25,4 +25,8 @@ if [[ -n ${PRE_PUSH_STEPS:-} ]]; then
 	printf 'pre-push: PRE_PUSH_STEPS runs only: %s\n' "$PRE_PUSH_STEPS" >&2
 	export CI_STEPS="$PRE_PUSH_STEPS"
 fi
+
+# A linked worktree exports GIT_DIR, so a check's git command in another repo would act on this one.
+# shellcheck disable=SC2046
+unset $(git rev-parse --local-env-vars)
 exec bash tools/ci.sh all
