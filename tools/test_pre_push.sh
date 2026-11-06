@@ -127,4 +127,30 @@ git commit -q -am "test: stub the checks"
 CI_LIST=1 env -u PRE_PUSH_STEPS git push -q origin main >"$TMP/stale.log" 2>&1 || fail "the stubbed push failed: $(tail -5 "$TMP/stale.log")"
 grep -q '^steps=unset list=unset$' "$TMP/stale.log" || fail "the hook passed a stale CI_STEPS or CI_LIST to the checks: $(tail -1 "$TMP/stale.log")"
 
+git init -q "$TMP/foreign"
+git worktree add -q -b linked "$TMP/linked"
+cd "$TMP/linked"
+cat >tools/ci.sh <<'STUB'
+#!/usr/bin/env bash
+printf 'git_dir=%s\n' "${GIT_DIR-unset}"
+printf 'foreign=%s\n' "$(git -C "$FOREIGN" rev-parse --absolute-git-dir)"
+STUB
+git commit -q -am "test: report what the checks inherit"
+
+printf 'scratch\n' >>notes.txt
+refused linked-dirty 'DIRTY:' linked
+git checkout -q -- notes.txt
+
+cp "$(git rev-parse --git-path index)" "$TMP/alt-index"
+printf 'alt\n' >alt.txt
+GIT_INDEX_FILE="$TMP/alt-index" git add alt.txt
+GIT_INDEX_FILE="$TMP/alt-index" git commit -q -m "docs: commit through another index"
+GIT_INDEX_FILE="$TMP/alt-index" refused alt-index 'DIRTY:' linked
+git reset -q
+
+FOREIGN="$TMP/foreign" git push -q origin linked >"$TMP/linked.log" 2>&1 ||
+	fail "the hook refused a clean push from a linked worktree: $(tail -5 "$TMP/linked.log")"
+grep -qx 'git_dir=unset' "$TMP/linked.log" || fail "the checks inherited GIT_DIR from a linked worktree: $(cat "$TMP/linked.log")"
+grep -q '^foreign=.*/foreign/\.git$' "$TMP/linked.log" || fail "a check's git command missed the repo it named: $(cat "$TMP/linked.log")"
+
 printf 'ok pre-push hook\n'
