@@ -30,7 +30,7 @@ A second mission for the same agent asks what can go, where the doubt asks where
 
 - **Ladder** — delete > simplify > optimise > automate. New code runs the finer ladder: skip it, reuse an existing pattern, stdlib, the native platform, an installed dependency, a one-liner, then minimal new code with one test when it has logic. "It may be done" is an allowed answer.
 - **Verdict** — `SUBTRACT: NOTHING TO CUT` or `SUBTRACT: <n> CUTS` (n ≥ 1) as the first line, then one line per cut: the piece, the rung, and what still holds without it.
-- **Model** — opt-in through the operator's `advisorModel` setting. Read it from `.claude/settings.local.json`, `.claude/settings.json`, then `~/.claude/settings.json`; the first one set wins. When its value names `fable`, `opus`, `sonnet` or `haiku`, pass that family as the Agent `model`. Otherwise pass the session model's family. The plugin names no model for this mission; the `--advisor` flag and managed settings are not read.
+- **Model** — pass the session model's family as the Agent `model`. The `advisorModel` setting is for the advisor alone; this mission does not read it.
 - **Reconcile** — tag each cut `actionable` or `not-actionable`, as in step 4. The operator decides a cut that removes something they asked for.
 
 ## Doubt theater

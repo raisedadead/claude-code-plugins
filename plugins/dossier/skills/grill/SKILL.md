@@ -141,7 +141,7 @@ Report the artifact path and the confirmed slug. `ds:new <slug>` consumes the dr
 | every DECISION names its probe                | code-checkable shape (`probe=`); whether the probe ran = model            |
 | decisions re-derived after a premise change   | model — no script links a FACT to the decisions that used it              |
 | the decision set survives the set audit       | model-judgment, parsed — `DOUBT:` line from `whetstone-doubter`           |
-| the subtraction pass found what can go        | model-judgment, parsed — `SUBTRACT:` line; model opt-in via `advisorModel` |
+| the subtraction pass found what can go        | model-judgment, parsed — `SUBTRACT:` line; runs on the session's model    |
 | every DECISION carries a real operator answer | model — no script distinguishes a typed answer from an assumed one        |
 | "frontier is empty"                           | model — no fixed decision-tree schema exists to verify against            |
 | serial-vs-batch phase choice                  | model — governed by the group add/remove rule, not mechanically checkable |

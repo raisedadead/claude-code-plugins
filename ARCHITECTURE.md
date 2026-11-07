@@ -100,7 +100,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | surface             | signal                                                                                        | enforced by                                                                  |
 | ------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `whetstone-doubter` | `DOUBT: FAILURES` or `NO FAILURE FOUND`                                                       | model-judgment, parsed                                                       |
-| subtraction pass    | `SUBTRACT: NOTHING TO CUT` or `SUBTRACT: <n> CUTS`                                            | model-judgment, parsed; its model is opt-in via the operator's `advisorModel` |
+| subtraction pass    | `SUBTRACT: NOTHING TO CUT` or `SUBTRACT: <n> CUTS`                                            | model-judgment, parsed; it runs on the session's model family |
 | `dossier-reviewer`  | `REVIEW: PASS` or `CHANGES`                                                                   | model-judgment, parsed                                                       |
 | `skill-smith` lint  | `FAIL` / `WARN` lines; exit 1 if any `FAIL`                                                   | code — `lint-skill`                                                          |
 | `tdd-cycle` slice   | red, green and full-suite exit codes                                                          | code — `run_slice.sh`                                                        |
