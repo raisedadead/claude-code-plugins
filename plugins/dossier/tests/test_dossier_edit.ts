@@ -97,7 +97,8 @@ function succeeded(done: Run): void {
 }
 
 function git(...args: string[]): void {
-  execFileSync('git', args, { stdio: 'ignore' })
+  const env = { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null' }
+  execFileSync('git', args, { env, stdio: 'ignore' })
 }
 
 function commit(repo: string, message: string): void {
