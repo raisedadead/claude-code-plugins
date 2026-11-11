@@ -25,7 +25,9 @@ python3 tools/census/census.py verdict-log $(find ~/DEV ~/.dotfiles -maxdepth 8 
 claude --version
 ```
 
-Acted-on counts come from the ledger status lines dated on or after `<since>`:
+`verdict-log` takes no window, so its counts cover all time; say so in the report.
+
+Gate findings raised come from the ledger status lines dated on or after `<since>`. They count what the doubter and the reviewers raised and a build judged actionable, not what it folded in:
 
 ```bash
 find ~/DEV ~/.dotfiles -maxdepth 8 -path '*/.scratchpad/dossier/*' -name DOSSIER.md \
@@ -37,7 +39,7 @@ Read the entries since `<since>` in `https://raw.githubusercontent.com/anthropic
 
 ## 2. Check the last predictions
 
-The §O row of the last review holds its predictions. When its `check-by` date is on or before today, run each check. A confirmed prediction is promoted to a §F or §D row. A refuted one reverts its change, or carries forward with the reason. Then delete the row.
+Read every §O row whose `check-by` date is on or before today, and check its prediction. A confirmed prediction is promoted to a §F or §D row and the row is deleted. A refuted one reverts its change, or the row gets a new prediction and date with the reason. A row that waits on another row or on the operator keeps a `check-by` that names what it waits on.
 
 ## 3. Read the outcomes
 
@@ -47,7 +49,7 @@ An outcome is as good when the session reached the checked result the skill teac
 
 | skill | as good when |
 |---|---|
-| merge-resolve | no conflict markers remain and the tests ran, or the merge was aborted cleanly |
+| merge-resolve | no conflict markers remain and the tests pass no fewer than before the merge, or the merge was aborted cleanly |
 | skill-smith | `lint-skill` ran on the changed file and exited 0 |
 | backprop | the bug got a regression test or an invariant |
 
@@ -58,7 +60,7 @@ jq -r 'select(.attachment.type=="skill_listing") | .attachment.content' <transcr
   | grep -c '^- <plugin>:<skill>: '
 ```
 
-Without a trusted judge (step 4), each reading is model-judgment. Label it so; the operator confirms each cut.
+Each reading is model-judgment, with or without the judge in step 4. Label it so; the operator confirms each cut.
 
 ## 4. Judge (opt-in)
 
@@ -73,21 +75,21 @@ Give each plugin skill the first bucket that fits:
 | bucket | evidence | action |
 |---|---|---|
 | too new | first commit of its `SKILL.md` under 60 days ago | none |
-| not surfaced | a worse outcome, and the description absent from that session's listing | fix the listing before the description |
+| not surfaced | a worse outcome, and the description absent from that session's listing | shorten the descriptions that crowd the listing, then check it again next review |
 | missed by model | not-used sessions read, and any outcome worse | rewrite the description; add a should / should-not eval case |
-| not needed | not-used sessions read, every outcome as good | cut the `SKILL.md` once the operator confirms; a script another skill or `bin/` calls stays |
+| not needed | more opportunity sessions skipped the skill than used it, and every outcome read is as good | cut the `SKILL.md` once the operator confirms; a script another skill or `bin/` calls stays |
 | used | Skill calls or typed commands in the window | none |
-| used via script | its script ran (`script` column) | none |
+| used via script | its script ran (`script` column); `ds:build` calls some scripts directly, so this shows the script is used, not that the skill is read | none |
 | human missed | the operator did the step by hand where the skill fits | add a hand-off line where the need shows |
 | unclassified | no detector, or a detector too loose to read | none; name a better detector |
 
-First commit date: `git log --diff-filter=A --format=%as -- plugins/*/skills/<skill>/SKILL.md | tail -1`.
+First commit date: `git log --diff-filter=A --format=%as -- plugins/<plugin>/skills/<skill>/SKILL.md | tail -1`.
 
 ## 6. Act and predict
 
 Write one §O row in `RESEARCH.md` for this review: the stride names the actions, `started` is today, `prediction` lists what the next census will show for each action, and `check-by` is the next review date. Keep §O at 7 rows or fewer: drop or merge a row, with its reason, before you add one past the cap.
 
-Replace the suite-review line on `.scratchpad/dossier/LATER.md`, a month on:
+Add the `suite-review/T1` line to `.scratchpad/dossier/LATER.md`, or replace it when it is there, due a month on. Leave every other line as it is:
 
 ```
 - suite-review/T1 · Run /suite-review (last <today>, Claude Code <version>) · A · due <date>
