@@ -754,6 +754,38 @@ def test_opportunities_come_from_tight_detectors_and_fold_by_session() -> None:
     }
 
 
+def test_a_verify_hook_firing_is_the_verify_opportunity() -> None:
+    warning = "⚠ verify[lang_eol_prose] nginx 1.25.1 → current: nginx 1.31."
+    attachment = {
+        "type": "hook_additional_context",
+        "hookEvent": "PreToolUse",
+        "content": [
+            f"{warning}\nsilence a rule for this write: `# verify-skip: <ruleName>`"
+        ],
+    }
+    fired = {"type": "attachment", "sessionId": "s1", "attachment": attachment}
+    quoted = _output("g1", warning, sessionId="s2")
+    other = {
+        **fired,
+        "sessionId": "s3",
+        "attachment": {**attachment, "hookEvent": "PostToolUse"},
+    }
+    info = {
+        **fired,
+        "sessionId": "s4",
+        "attachment": {
+            **attachment,
+            "content": ["ℹ verify[npm_outdated] left-pad 1.0.0 → current: 1.3.0"],
+        },
+    }
+    stream = [fired, quoted, other, info]
+    events = census.opportunity_events(stream, "fallback", set())
+    assert events == {
+        ("s1", "dossier:verify", "trigger", "main"),
+        ("s4", "dossier:verify", "trigger", "main"),
+    }
+
+
 def test_the_not_used_sessions_are_listed_for_reading() -> None:
     events = {
         ("s2", "whetstone:merge-resolve", "trigger", "main"),

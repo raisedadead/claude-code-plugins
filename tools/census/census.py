@@ -175,12 +175,15 @@ CONFLICT_VERBS = {"merge", "rebase", "cherry-pick", "pull", "am", "stash"}
 CONFLICT = re.compile(r"CONFLICT \(|Automatic merge failed|could not apply [0-9a-f]")
 SKILL_FILE = re.compile(r"/skills/[^/]+/SKILL\.md$")
 BUG_ROW = re.compile(r"^\| ?B\d+ ?\|.*$", re.M)
+VERIFY_WARNING = re.compile(r"^\S+ verify\[[a-z_]+\] ", re.M)
 DETECTORS = {
     "whetstone:merge-resolve": "a conflict line in the result of git "
     + "/".join(sorted(CONFLICT_VERBS)),
     "whetstone:skill-smith": "an Edit or Write to a skills/<name>/SKILL.md",
     "dossier:backprop": "an Edit or MultiEdit that adds or changes a | B<n> | "
     "row in a DOSSIER.md",
+    "dossier:verify": "a PreToolUse hook context with a <icon> verify[<rule>] line "
+    "from ds verify-edit",
 }
 SKILL_COLUMNS = ("main", "subagent", "typed", "script")
 OPPORTUNITY_COLUMNS = (
@@ -409,6 +412,19 @@ def edit_triggers(payload: dict) -> set[str]:
     return found
 
 
+def verify_fired(record: dict) -> bool:
+    attachment = record.get("attachment") or {}
+    if record.get("type") != "attachment" or not isinstance(attachment, dict):
+        return False
+    if attachment.get("type") != "hook_additional_context":
+        return False
+    if attachment.get("hookEvent") != "PreToolUse":
+        return False
+    content = attachment.get("content")
+    texts = content if isinstance(content, list) else [content]
+    return any(VERIFY_WARNING.search(str(text)) for text in texts)
+
+
 def opportunity_events(
     stream: Iterable[dict], fallback: str, seen: set[str]
 ) -> set[tuple[str, str, str, str]]:
@@ -432,6 +448,8 @@ def opportunity_events(
             elif name in ("Edit", "Write", "MultiEdit"):
                 for skill in edit_triggers(payload):
                     events.add((session, skill, "trigger", side))
+        if verify_fired(record):
+            events.add((session, "dossier:verify", "trigger", side))
         for key, text in tool_results(record):
             if key in git_calls and CONFLICT.search(text):
                 call_session, call_side = git_calls.pop(key)
