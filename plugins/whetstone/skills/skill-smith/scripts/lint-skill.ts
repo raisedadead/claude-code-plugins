@@ -3,6 +3,8 @@ import { splitLines, strip, unicodeRegex } from '../../../hooks/text.ts'
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const FIRST_PERSON = unicodeRegex("\\bI\\b|\\bI'")
 const TRIGGER_MARKERS = ['use when', 'invoke when']
+const TRIGGER_START = new RegExp(`\\b(?:${TRIGGER_MARKERS.join('|')})\\b`)
+const QUOTE_OR_STOP = /"([^"]+)"|\.(?=\s|$)/g
 const YAML_INDICATORS = '[]{}*&!%@`>|'
 const BLOCK_SCALAR = /^[|>][1-9+-]{0,2}$/
 const LINE_BUDGET = 500
@@ -91,10 +93,14 @@ function triggerPhrases(text: string): Set<string> {
   const parts = text.split('---')
   const description = parts.length < 3 ? '' : field(parts[1] ?? '', 'description')
   const lower = description.toLowerCase()
-  const starts = TRIGGER_MARKERS.map((marker) => lower.indexOf(marker)).filter((at) => at >= 0)
-  if (!starts.length) return new Set()
-  const clause = lower.slice(Math.min(...starts)).split('.')[0] ?? ''
-  return new Set([...clause.matchAll(/"([^"]+)"/g)].map((found) => found[1] ?? ''))
+  const start = lower.search(TRIGGER_START)
+  if (start < 0) return new Set()
+  const phrases = new Set<string>()
+  for (const [, phrase] of lower.slice(start).matchAll(QUOTE_OR_STOP)) {
+    if (phrase === undefined) break
+    phrases.add(phrase)
+  }
+  return phrases
 }
 
 export function sharedTriggers(skills: { name: string; text: string }[]): string[] {

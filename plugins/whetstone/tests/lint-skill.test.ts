@@ -107,4 +107,15 @@ describe('shared trigger phrases', () => {
     ]
     expect(sharedTriggers(skills)).toEqual([])
   })
+
+  test('reads past a period inside a word or a quote, and starts only at a whole "Use when"', () => {
+    const skills = [
+      named('a', 'Finds the cause when a build breaks. Use when editing a SKILL.md or the user says "e.g. triage".'),
+      named('b', 'Triages. Invoke when the user says "E.g. Triage".'),
+    ]
+    expect(sharedTriggers(skills)).toEqual([
+      'WARN a: trigger phrase "e.g. triage" is also in b; the skills compete for one request',
+      'WARN b: trigger phrase "e.g. triage" is also in a; the skills compete for one request',
+    ])
+  })
 })

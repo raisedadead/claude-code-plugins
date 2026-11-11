@@ -75,4 +75,19 @@ describe('skill lint reminder on PostToolUse', () => {
     expect((await write('/w/notes/SKILL.md')).additionalContext).toBeUndefined()
     expect(reads).toEqual([`${FOLDER}/tidy/SKILL.md`])
   })
+
+  test('a Read of a failing SKILL.md, and a written file that cannot be read, get no context', async ($, on) => {
+    let readable = true
+    on('fs.read', async () => {
+      if (!readable) throw new Error('ENOENT')
+      return { value: skill('tidy', 'Tidies files.') }
+    })
+    on('fs.list', async () => ({ value: [entry('tidy')] }))
+    on('classic.PostToolUse', async () => ({}))
+    const call = (tool_name: string) =>
+      $.classic.PostToolUse({ tool_name, tool_input: { file_path: `${FOLDER}/tidy/SKILL.md` }, tool_response: {}, tool_use_id: 'u5' } as never)
+    expect((await call('Read')).additionalContext).toBeUndefined()
+    readable = false
+    expect((await call('Write')).additionalContext).toBeUndefined()
+  })
 })
