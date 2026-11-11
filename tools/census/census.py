@@ -314,7 +314,13 @@ def skill_uses(
                     uses[skill]["script"] += 1
             elif block.get("name") in ("Agent", "Task"):
                 uses[f"agent {payload.get('subagent_type', '?')}"]["spawn"] += 1
-        for name in typed_commands(record):
+        names = typed_commands(record)
+        key = record.get("uuid")
+        if names and key in seen:
+            continue
+        if names and key:
+            seen.add(key)
+        for name in names:
             uses[name]["typed"] += 1
     return uses
 
@@ -342,7 +348,7 @@ def census_skills(window: Window) -> None:
         "blocks in user records (typed); Bash commands that run one of "
         f"{sorted(SCRIPT_SKILLS)} as a command word (script). Calls and "
         "commands are different units, so no column sums them. A tool_use id "
-        "counts once across files. Refreshes F15."
+        "and a typed record's uuid count once across files. Refreshes F15."
     )
     print(window.describe())
     print(f"\n## plugin skills ({len(names)}, from {SKILLS}/*/skills/*/SKILL.md)")
@@ -828,7 +834,7 @@ def verdict_log(lines) -> dict[str, dict[str, int]]:
         kind = str(record.get("agent_type"))
         verdicts = record.get("verdicts")
         if verdicts is None:
-            counts[kind]["no message"] += 1
+            counts[kind]["no message or StructuredOutput call"] += 1
         elif not verdicts:
             counts[kind]["no verdict line"] += 1
         for verdict in verdicts or []:
@@ -916,7 +922,11 @@ def census_verdict_log() -> None:
         lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
         for kind, counts in verdict_log(lines).items():
             total[kind].update(counts)
-    print(f"source: {', '.join(paths)}, written by the dossier SubagentStop hook")
+    print(
+        f"source: {', '.join(paths)}, written by the dossier SubagentStop hook. "
+        "A FINDING: line counts once per judged finding, every other line once "
+        "per stop."
+    )
     for kind, counter in total.items():
         report(kind, counter)
 

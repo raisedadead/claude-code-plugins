@@ -323,7 +323,10 @@ def test_the_verdict_log_counts_verdicts_misses_and_empty_messages() -> None:
     ]
     assert census.verdict_log(lines) == {
         "whetstone:whetstone-doubter": {"DOUBT: FAILURES": 1, "SUBTRACT: 2 CUTS": 1},
-        "dossier:dossier-reviewer": {"no verdict line": 1, "no message": 1},
+        "dossier:dossier-reviewer": {
+            "no verdict line": 1,
+            "no message or StructuredOutput call": 1,
+        },
     }
 
 
@@ -640,6 +643,17 @@ def test_every_plugin_skill_prints_including_a_zero() -> None:
         "whetstone:tiger-style": ["0", "0", "0", "1"],
         "z:z": ["0", "0", "0", "0"],
     }, lines
+
+
+def test_a_typed_command_copied_into_another_file_counts_once() -> None:
+    def typed(uuid: str) -> dict:
+        return {**_prompt("<command-name>/dossier:build</command-name>"), "uuid": uuid}
+
+    seen: set[str] = set()
+    first = census.skill_uses([typed("u1")], seen)
+    copy = census.skill_uses([typed("u1"), typed("u2")], seen)
+    assert first["dossier:build"]["typed"] == 1
+    assert copy["dossier:build"]["typed"] == 1
 
 
 def test_the_window_reads_record_timestamps_and_drops_undated_records() -> None:
