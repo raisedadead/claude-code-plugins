@@ -294,18 +294,23 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 
 **Loop — one iteration = one task** (each its own commit + §S DONE, so a crash resumes cleanly):
 
-1. SELECT next actionable row: the first frontier row with `who=A` — `state=.`, every id in its `needs` cell already `x`, and the agent able to finish it alone. Resume any crashed `~` first (step 4). Leave `who=H` rows, and `!` and `?`, to the operator.
-1. No actionable row → §S `ds:build — auto-stop=no-unblocked`, print `DONE`, stop.
-1. A PAUSE condition (below) holds → §S `ds:build <id> PAUSE reason=<class>:<detail>`, print `PAUSE: <reason>`, release lock, stop.
+1. PUSH ROWS: a frontier `who=H` row whose task names a push is done once each §X repo it names has `git -C <repo-path> rev-list --count @{u}..HEAD` at `0` after a `git fetch`. Run the CI watch below on it, then flip it `x` with the pushed SHA as cite and §S `ds:build <id> operator=pushed`. Recognising a push row is model-judgment; every other `who=H` row stays the operator's to flip.
+1. SELECT next actionable row: the first frontier row with `who=A` — `state=.`, every id in its `needs` cell already `x`, and the agent able to finish it alone. Resume any crashed `~` first (step 4). Leave the remaining `who=H` rows, and `!` and `?`, to the operator.
+1. No actionable row → §S `ds:build — auto-stop=no-unblocked`, print `DONE`, then the hand-off below, stop.
+1. A PAUSE condition (below) holds → §S `ds:build <id> PAUSE reason=<class>:<detail>`, print `PAUSE: <reason>`, release lock, print the hand-off below, stop.
 1. Else run steps 5–12 verbatim (full covenant + TaskList mirror), then print `CONTINUE` (more `.` remain) or `DONE`.
 
-**Driver — native `/goal`.** A fresh evaluator keeps the turn going until done. Start `--auto` by setting it yourself: when no goal is active and the `ProposeGoal` tool is present, call it with this condition:
+**Hand-off.** Run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds handoff <dir>` and print its lines verbatim as the last lines of the turn. It computes them from §T: the `/goal` and `/dossier:build --auto` lines when an agent row can run after the operator's next step (each `after:` line names that step), else the operator's step (`operator:`, `answer:`) or `close:` when every row is `x`. The goal condition carries the current time, so §S lines from earlier runs cannot satisfy it. After `DONE`, when no goal is active, the output holds a `/goal` line and the `ProposeGoal` tool is present, also call it with that condition. After a `PAUSE` the operator answers first, so only print the lines.
+
+**CI watch after a push.** For each §X repo the push row names: the SHA is `git -C <repo-path> rev-parse @{u}`, the commit the push sent, and the GitHub name is `gh repo view <url> --json nameWithOwner --jq .nameWithOwner` with `<url>` from `git -C <repo-path> remote get-url origin`. List every run with `gh run list --repo <repo> --commit <sha> --json databaseId,status,conclusion,url`; while the list is empty, list again for up to 60 s. Watch each run with `gh run watch <id> --repo <repo> --exit-status` in the foreground, then read the verdict from `gh run view <id> --repo <repo> --json status,conclusion,url`. The watch's exit code alone is no verdict: a Bash timeout also exits non-zero. A run whose `status` is not yet `completed` gets another watch. Every `conclusion` `success`, `skipped` or `neutral` → flip. Any other conclusion → PAUSE `ci:<url>`. Still no run after 60 s → §S `ds:build <id> ci=none` and flip. `gh` absent or failing → PAUSE `ci:gh-unavailable`.
+
+**Driver — native `/goal`.** A fresh evaluator keeps the turn going until done. Start `--auto` by setting it yourself: when no goal is active and the `ProposeGoal` tool is present, call it with the condition of the `/goal` line that `ds handoff <dir>` prints:
 
 ```
-ds:build --auto printed DONE or PAUSE for <slug>, and §S records the matching auto-stop or PAUSE line.
+ds:build --auto printed DONE or PAUSE for <slug>, and §S records a matching auto-stop or PAUSE line stamped after <YYYY-MM-DD HH:MM>.
 ```
 
-`ask_user` stays at its default (`true`): the operator approves the goal once, then the loop needs no further turn from them. `ProposeGoal` absent → print the two lines that the operator types, in this order: `/goal <condition>` first, then `/dossier:build --auto`. Continue the loop in this turn. Proposing the goal is model-judgment; the evaluator that holds it is the harness.
+`ask_user` stays at its default (`true`): the operator approves the goal once, then the loop needs no further turn from them. `ProposeGoal` absent → print the two lines of `ds handoff` that the operator types, in this order: `/goal <condition>` first, then `/dossier:build --auto`. Continue the loop in this turn. Proposing the goal is model-judgment; the evaluator that holds it is the harness.
 
 `/goal clear` (or Esc) ends the run cleanly. `/goal` is the driver because it runs in the foreground, takes mid-run steer, and respects dependency order — Workflows and `/loop` give up all three, so the `--auto` loop stays on `/goal`.
 
@@ -323,6 +328,7 @@ An operator-written goal such as "finish the dossier" cannot pass an open `who=H
 | `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                                                                                                |
 | `tiger`             | `tiger-check` exit 1 (§7 tiger route) — an added line exceeds a limit the repo itself declared. Exit 2 is advisory and never pauses                                                                               |
 | `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — the operator answers it                                                                                                                                              |
+| `ci`                | a CI run on a pushed commit ends in a conclusion other than `success`, or `gh` cannot list the runs (CI watch above)                                                                                             |
 | `budget`            | `--max-tasks <n>` (default 10) or a turn ceiling reached → §S `auto-stop=budget`. Clean landing: commit WIP work to the task's files, row stays `~`, §S handoff note — the tree is recorded before the loop stops |
 
 **Excuse table — the rationalization each class invites, and the answer that holds.** Prose rails, model-enforced; the PAUSE itself stays the contract:
@@ -337,6 +343,7 @@ An operator-written goal such as "finish the dossier" cannot pass an open `who=H
 | `review`            | "the reviewer misread it — overrule"      | a second `CHANGES` after a fix cycle is a genuine disagreement; humans arbitrate those                                         |
 | `tiger`             | "the limit is arbitrary — bump it"        | the repo chose that number; raising a declared limit to pass a check decides something about the codebase, not about this task |
 | `x-stale`           | "refresh later, flip now"                 | stale §X hides push/ahead drift; a flip on stale state forges the ledger                                                       |
+| `ci`                | "the failure is flaky, carry on"          | rows after a push build on that commit; a red run is the operator's to read before anything stacks on it                       |
 | `budget`            | "one more task won't hurt"                | ceilings exist because 'one more' compounds; land clean (commit + §S) and hand back                                            |
 
 **Rails:** push stays the operator's, never automatic · `ds:close` stays an explicit operator step, so the loop stops at the last `x`-flip · per-task lock · atomic writes · marker guard + `verify` hooks stay active during WORK. Every PAUSE writes its reason to §S so `ds:status` shows WHY on return (Vm.14).

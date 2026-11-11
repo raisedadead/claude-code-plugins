@@ -25,6 +25,7 @@ import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
 import { DATE_PREFIX } from '../engine/converge.ts'
 import { delegationReport } from '../engine/delegation.ts'
 import { addEntry, entryError, FRONTIER_CLOSED, openDecisions } from '../engine/grill.ts'
+import { handoff } from '../engine/handoff.ts'
 import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
 import { addCarried, archivedCarried, isDue, LATER_FILE, laterRows, removeLater } from '../engine/later.ts'
 import { migrate } from '../engine/migrate.ts'
@@ -757,6 +758,22 @@ function delegationCheckVerb(args: string[]): number {
   return failures.length ? 1 : 0
 }
 
+function handoffVerb(args: string[]): number {
+  const [dir] = args
+  if (!dir) {
+    console.error('usage: ds handoff <dossier-dir>')
+    return EXIT_USAGE
+  }
+  const file = join(dir, 'DOSSIER.md')
+  if (!existsSync(file)) {
+    console.error(`ds handoff: not found: ${file}`)
+    return 1
+  }
+  const slug = basename(resolve(dir)).replace(DATE_PREFIX, '')
+  console.log(handoff(readFileSync(file, 'utf8'), slug, stamp(new Date())).join('\n'))
+  return 0
+}
+
 function laterFile(): string {
   return join(process.env.DOSSIER_LEDGER_ROOT || process.cwd(), '.scratchpad', 'dossier', LATER_FILE)
 }
@@ -793,6 +810,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'ds-check': dsCheckVerb,
   fakeimpl: fakeimplVerb,
   'grill-add': grillAddVerb,
+  handoff: handoffVerb,
   'header-state': headerStateVerb,
   'invariant-check': invariantCheckVerb,
   later: laterVerb,

@@ -200,7 +200,8 @@ One-line summary:
 ```
 ds:new <slug> → .scratchpad/dossier/<date>-<slug>/DOSSIER.md
 §X: <N> repos seeded
-next: ds:build T1 (when ready)
+next:
+<each line of "${CLAUDE_PLUGIN_ROOT}"/cli/ds handoff <dir>, verbatim>
 ```
 
 Add `.scratchpad/ is not gitignored here` plus the fix when step 1's ignore check fired.

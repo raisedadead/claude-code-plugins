@@ -88,7 +88,8 @@ DECISION: <the one thing the operator must decide, or "NONE → proceeding">
   └ <why a human is needed / what unblocks if NONE>
 [BLOCKED: T5 rolling-restart — needs ops review]       # state=!/? rows
 JUST DID: <last 1–2 §S cite-bearing entries>
-NEXT: ds:build --auto                                   # or ds:build <T-id>; "ready to close" → ds close <slug> <mode> --plan
+NEXT:                                                   # then each line of `ds handoff <dir>`, verbatim: the /goal and
+  <ds handoff line>                                     # /dossier:build --auto lines, or operator:/answer:/close:
 [⚠ §X stale <Nm> → confirm before flip]                 # step 4
 [DRIFT: <advisory line>]                                # each ds ds-check advisory
 [LATER: <later: line>, <due: lines>]                    # carried-work lines of `ds progress` with no dir; `ds later` lists them
