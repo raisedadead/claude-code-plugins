@@ -460,6 +460,12 @@ def tally_opportunities(
     return table
 
 
+def unused_sessions(events: set[tuple[str, str, str, str]], skill: str) -> list[str]:
+    triggered = {s for s, k, kind, _side in events if k == skill and kind == "trigger"}
+    used = {s for s, k, kind, _side in events if k == skill and kind != "trigger"}
+    return sorted(triggered - used)
+
+
 def census_opportunities(window: Window) -> None:
     seen: set[str] = set()
     events: set[tuple[str, str, str, str]] = set()
@@ -480,6 +486,10 @@ def census_opportunities(window: Window) -> None:
         counts = table.get(skill) or dict.fromkeys(OPPORTUNITY_COLUMNS, 0)
         cells = " ".join(f"{counts[column]:13d}" for column in OPPORTUNITY_COLUMNS)
         print(f"{cells}  {skill}  ({detector})")
+    for skill in DETECTORS:
+        print(f"\n## not used: {skill}")
+        for session in unused_sessions(events, skill):
+            print(f"  {session}")
 
 
 def census_verdicts() -> None:

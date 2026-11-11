@@ -735,6 +735,17 @@ def test_opportunities_come_from_tight_detectors_and_fold_by_session() -> None:
     }
 
 
+def test_the_not_used_sessions_are_listed_for_reading() -> None:
+    events = {
+        ("s2", "whetstone:merge-resolve", "trigger", "main"),
+        ("s1", "whetstone:merge-resolve", "trigger", "subagent"),
+        ("s3", "whetstone:merge-resolve", "trigger", "main"),
+        ("s3", "whetstone:merge-resolve", "script", "main"),
+        ("s4", "whetstone:skill-smith", "trigger", "main"),
+    }
+    assert census.unused_sessions(events, "whetstone:merge-resolve") == ["s1", "s2"]
+
+
 def _main() -> int:
     failures = 0
     for name, fn in sorted(globals().items()):

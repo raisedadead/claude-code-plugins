@@ -11,3 +11,6 @@ __pycache__/
 .scratchpad/
 plugins/*/evals/results/
 plugins/*/tsconfig.json
+!/.claude/
+/.claude/*
+!/.claude/skills/
