@@ -16,7 +16,7 @@
 | 4   | `python3 tools/test_check_rows.py` | exit 0 |
 | 5   | `python3 tools/check_rows.py` | exit 0 |
 | 6   | `awk '/^## [DFO] /{print $2; exit}' RESEARCH.md` | stdout: O |
-| 7   | `sh -c 'test $(grep -cE "^\| O[0-9]+ " RESEARCH.md) -le 7'` | exit 0 |
+| 7   | `sh -c 'test $(grep -cE "^[[:punct:]] O[0-9]+ " RESEARCH.md) -le 7'` | exit 0 |
 | 8   | `grep -q 'measured argument for O21' RESEARCH.md` | exit 1 |
 | 9   | `grep -q 'suite-review' ARCHITECTURE.md` | exit 0 |
 | 10  | `grep -q '2026-12-01' .scratchpad/dossier/LATER.md` | exit 0 |
