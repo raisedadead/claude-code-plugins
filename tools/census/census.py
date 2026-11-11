@@ -17,7 +17,7 @@ answer (F32):
    keyed by `<tool-use-id>`.
 
 Usage:
-    python3 tools/census/census.py skills
+    python3 tools/census/census.py skills | opportunities [--since YYYY-MM-DD]
     python3 tools/census/census.py verdicts
     python3 tools/census/census.py turns
     python3 tools/census/census.py review | advisor | guards | missed
@@ -151,32 +151,335 @@ def is_typed(text: str) -> bool:
     return not stripped.startswith(RELAYED)
 
 
-def census_skills() -> None:
-    """Skill and subagent invocation counts. Refreshes F15.
+SCRIPT_SKILLS = {
+    "tiger-check": "whetstone:tiger-style",
+    "lint-skill": "whetstone:skill-smith",
+    "flake-runner": "whetstone:flaky-test-audit",
+    "run-slice": "whetstone:tdd-cycle",
+    "verify-clean": "whetstone:merge-resolve",
+    "html-report": "whetstone:html-report",
+}
+HEREDOC = re.compile(
+    r"(?<!<)<<(?!<)-?\s*(['\"]?)([A-Za-z_]\w*)\1([^\n]*)\n.*?(?:^\s*\2\s*$|\Z)",
+    re.S | re.M,
+)
+SEPARATOR_CHARACTERS = set(";|&()`")
+ISO_DAY = re.compile(r"\d{4}-\d{2}-\d{2}")
+QUOTED_TEXT = re.compile(r"\"(?:\\.|[^\"\\])*\"|'[^']*'")
+SEPARATOR = re.compile(r"&&|\|\||[;|()\n&`]")
+ASSIGNMENT = re.compile(r"^[A-Za-z_]\w*=")
+PREFIX_WORDS = {"bash", "sh", "zsh", "bun", "env", "exec", "command", "time"}
+PREFIX_WORDS |= {"nohup", "then", "do", "else", "!", "{", "rtk", "proxy"}
+PREFIX_WORDS |= {"if", "elif", "while", "until"}
+CONFLICT_VERBS = {"merge", "rebase", "cherry-pick", "pull", "am", "stash"}
+CONFLICT = re.compile(r"CONFLICT \(|Automatic merge failed|could not apply [0-9a-f]")
+SKILL_FILE = re.compile(r"/skills/[^/]+/SKILL\.md$")
+BUG_ROW = re.compile(r"^\| ?B\d+ ?\|.*$", re.M)
+DETECTORS = {
+    "whetstone:merge-resolve": "a conflict line in the result of git "
+    + "/".join(sorted(CONFLICT_VERBS)),
+    "whetstone:skill-smith": "an Edit or Write to a skills/<name>/SKILL.md",
+    "dossier:backprop": "an Edit or MultiEdit that adds or changes a | B<n> | "
+    "row in a DOSSIER.md",
+}
+SKILL_COLUMNS = ("main", "subagent", "typed", "script")
+OPPORTUNITY_COLUMNS = (
+    "sessions",
+    "main",
+    "subagent only",
+    "used skill",
+    "used script",
+    "not used",
+)
 
-    A skill reaches a transcript two ways and both are counted: the `Skill`
-    tool call, and an operator-typed slash command, which lands as a
-    `<command-name>` block in a user record rather than as a tool call.
-    """
-    skills: collections.Counter = collections.Counter()
-    typed: collections.Counter = collections.Counter()
-    agents: collections.Counter = collections.Counter()
+
+@dataclasses.dataclass
+class Window:
+    since: datetime.datetime | None
+    undated: int = 0
+
+    def filter(self, stream: Iterable[dict]):
+        for record in stream:
+            if self.since is None:
+                yield record
+                continue
+            stamp = utc_stamp(record.get("timestamp"))
+            if stamp is None:
+                self.undated += record.get("type") in ("assistant", "user")
+            elif stamp.replace(tzinfo=stamp.tzinfo or UTC) >= self.since:
+                yield record
+
+    def describe(self) -> str:
+        if self.since is None:
+            return "window: every record"
+        return (
+            f"window: record timestamp at or after {self.since:%Y-%m-%d} 00:00 UTC; "
+            f"{self.undated} undated assistant or user records dropped"
+        )
+
+
+def since_date(text: str) -> datetime.datetime:
+    if not ISO_DAY.fullmatch(text):
+        raise ValueError(text)
+    day = datetime.date.fromisoformat(text)
+    return datetime.datetime(day.year, day.month, day.day, tzinfo=UTC)
+
+
+def command_segments(command: str) -> list[list[str]]:
+    text = HEREDOC.sub(
+        lambda found: found.group(3) + "\n", command.replace("\\\n", " ")
+    )
+    text = QUOTED_TEXT.sub(unquote_word, text)
+    segments: list[list[str]] = []
+    for part in SEPARATOR.split(text):
+        words = part.split()
+        while words and (words[0] in PREFIX_WORDS or ASSIGNMENT.match(words[0])):
+            words = words[1:]
+        if words:
+            segments.append(words)
+    return segments
+
+
+def unquote_word(found: re.Match) -> str:
+    inner = found.group(0)[1:-1]
+    if any(c.isspace() or c in SEPARATOR_CHARACTERS for c in inner):
+        return "Q"
+    return inner or "Q"
+
+
+def program(word: str) -> str:
+    name = word.rsplit("/", 1)[-1]
+    for suffix in (".sh", ".ts"):
+        name = name.removesuffix(suffix)
+    return name.replace("_", "-").removesuffix("-cli")
+
+
+def script_skills(command: str) -> set[str]:
+    names = (program(words[0]) for words in command_segments(command))
+    return {SCRIPT_SKILLS[name] for name in names if name in SCRIPT_SKILLS}
+
+
+def git_verb(words: list[str]) -> str | None:
+    if program(words[0]) != "git":
+        return None
+    rest = words[1:]
+    while rest and rest[0].startswith("-"):
+        rest = rest[2:] if rest[0] in ("-C", "-c") else rest[1:]
+    return rest[0] if rest else None
+
+
+def plugin_skills() -> list[str]:
+    return sorted(
+        f"{path.parts[-4]}:{path.parts[-2]}"
+        for path in SKILLS.glob("*/skills/*/SKILL.md")
+    )
+
+
+def typed_commands(record: dict) -> list[str]:
+    if record.get("type") != "user":
+        return []
+    return [
+        name.strip().lstrip("/")
+        for chunk in text_blocks(record)
+        for name in COMMAND_NAME.findall(chunk)
+    ]
+
+
+def fresh_tool_uses(record: dict, seen: set[str]):
+    for block in tool_uses(record):
+        key = block.get("id")
+        if key and key in seen:
+            continue
+        if key:
+            seen.add(key)
+        yield block
+
+
+def side_of(record: dict) -> str:
+    return "subagent" if record.get("isSidechain") else "main"
+
+
+def skill_uses(
+    stream: Iterable[dict], seen: set[str] | None = None
+) -> dict[str, collections.Counter]:
+    seen = set() if seen is None else seen
+    uses: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    for record in stream:
+        for block in fresh_tool_uses(record, seen):
+            payload = block.get("input") or {}
+            if block.get("name") == "Skill":
+                uses[str(payload.get("skill", "?"))][side_of(record)] += 1
+            elif block.get("name") == "Bash":
+                for skill in script_skills(str(payload.get("command") or "")):
+                    uses[skill]["script"] += 1
+            elif block.get("name") in ("Agent", "Task"):
+                uses[f"agent {payload.get('subagent_type', '?')}"]["spawn"] += 1
+        for name in typed_commands(record):
+            uses[name]["typed"] += 1
+    return uses
+
+
+def skill_table(uses: dict[str, collections.Counter], names: list[str]) -> list[str]:
+    lines = [" ".join(f"{column:>8}" for column in SKILL_COLUMNS) + "  skill"]
+    for name in names:
+        counts = uses.get(name) or collections.Counter()
+        cells = " ".join(f"{counts[column]:8d}" for column in SKILL_COLUMNS)
+        lines.append(f"{cells}  {name}")
+    return lines
+
+
+def census_skills(window: Window) -> None:
+    seen: set[str] = set()
+    uses: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
     files = transcripts()
     for path in files:
-        for record in records(path):
-            for block in tool_uses(record):
-                payload = block.get("input") or {}
-                if block.get("name") == "Skill":
-                    skills[payload.get("skill", "?")] += 1
-                elif block.get("name") in ("Agent", "Task"):
-                    agents[payload.get("subagent_type", "?")] += 1
-            for chunk in text_blocks(record):
-                for name in COMMAND_NAME.findall(chunk):
-                    typed[name.strip()] += 1
-    print(f"transcripts: {len(files)}")
-    report("Skill tool calls", skills, 40)
-    report("operator-typed slash commands", typed, 40)
+        for name, counts in skill_uses(window.filter(records(path)), seen).items():
+            uses[name].update(counts)
+    names = plugin_skills()
+    print(
+        f"source: {len(files)} transcripts under {TRANSCRIPTS}. Columns: Skill "
+        "tool_use blocks on the main thread and in subagents; <command-name> "
+        "blocks in user records (typed); Bash commands that run one of "
+        f"{sorted(SCRIPT_SKILLS)} as a command word (script). Calls and "
+        "commands are different units, so no column sums them. A tool_use id "
+        "counts once across files. Refreshes F15."
+    )
+    print(window.describe())
+    print(f"\n## plugin skills ({len(names)}, from {SKILLS}/*/skills/*/SKILL.md)")
+    print("\n".join(skill_table(uses, names)))
+    other = collections.Counter(
+        {
+            name: counts["main"] + counts["subagent"] + counts["typed"]
+            for name, counts in uses.items()
+            if name not in names and not name.startswith("agent ")
+        }
+    )
+    report("other skills and typed commands", +other, 40)
+    agents = collections.Counter(
+        {
+            name.removeprefix("agent "): counts["spawn"]
+            for name, counts in uses.items()
+            if name.startswith("agent ")
+        }
+    )
     report("subagent spawns", agents, 25)
+
+
+def tool_results(record: dict):
+    content = (record.get("message") or {}).get("content")
+    for block in content if isinstance(content, list) else []:
+        if not isinstance(block, dict) or block.get("type") != "tool_result":
+            continue
+        key = block.get("tool_use_id")
+        inner = block.get("content")
+        if isinstance(inner, str):
+            yield key, inner
+        elif isinstance(inner, list):
+            for part in inner:
+                if isinstance(part, dict):
+                    yield key, part.get("text") or ""
+
+
+def edit_triggers(payload: dict) -> set[str]:
+    path = str(payload.get("file_path") or "")
+    found: set[str] = set()
+    if SKILL_FILE.search(path):
+        found.add("whetstone:skill-smith")
+    if path.endswith("DOSSIER.md") and "content" not in payload:
+        pairs = [
+            (edit.get("old_string"), edit.get("new_string"))
+            for edit in payload.get("edits") or []
+            if isinstance(edit, dict)
+        ] or [(payload.get("old_string"), payload.get("new_string"))]
+        if any(
+            set(BUG_ROW.findall(str(new or ""))) - set(BUG_ROW.findall(str(old or "")))
+            for old, new in pairs
+        ):
+            found.add("dossier:backprop")
+    return found
+
+
+def opportunity_events(
+    stream: Iterable[dict], fallback: str, seen: set[str]
+) -> set[tuple[str, str, str, str]]:
+    events: set[tuple[str, str, str, str]] = set()
+    git_calls: dict[str, tuple[str, str]] = {}
+    for record in stream:
+        session = str(record.get("sessionId") or fallback)
+        side = side_of(record)
+        for block in fresh_tool_uses(record, seen):
+            payload = block.get("input") or {}
+            name = block.get("name")
+            if name == "Skill":
+                events.add((session, str(payload.get("skill")), "skill", side))
+            elif name == "Bash":
+                command = str(payload.get("command") or "")
+                for skill in script_skills(command):
+                    events.add((session, skill, "script", side))
+                verbs = {git_verb(words) for words in command_segments(command)}
+                if block.get("id") and verbs & CONFLICT_VERBS:
+                    git_calls[block["id"]] = (session, side)
+            elif name in ("Edit", "Write", "MultiEdit"):
+                for skill in edit_triggers(payload):
+                    events.add((session, skill, "trigger", side))
+        for key, text in tool_results(record):
+            if key in git_calls and CONFLICT.search(text):
+                call_session, call_side = git_calls.pop(key)
+                events.add(
+                    (call_session, "whetstone:merge-resolve", "trigger", call_side)
+                )
+        for name in typed_commands(record):
+            events.add((session, name, "skill", side))
+    return events
+
+
+def tally_opportunities(
+    events: set[tuple[str, str, str, str]],
+) -> dict[str, dict[str, int]]:
+    triggers: dict[str, dict[str, set]] = collections.defaultdict(dict)
+    used: dict[tuple[str, str], set] = collections.defaultdict(set)
+    for session, skill, kind, side in events:
+        if kind == "trigger":
+            triggers[skill].setdefault(session, set()).add(side)
+        else:
+            used[(session, skill)].add(kind)
+    table: dict[str, dict[str, int]] = {}
+    for skill, sessions in triggers.items():
+        counts = dict.fromkeys(OPPORTUNITY_COLUMNS, 0)
+        for session, sides in sessions.items():
+            how = used[(session, skill)]
+            counts["sessions"] += 1
+            counts["main" if "main" in sides else "subagent only"] += 1
+            if "skill" in how:
+                counts["used skill"] += 1
+            elif "script" in how:
+                counts["used script"] += 1
+            else:
+                counts["not used"] += 1
+        table[skill] = counts
+    return table
+
+
+def census_opportunities(window: Window) -> None:
+    seen: set[str] = set()
+    events: set[tuple[str, str, str, str]] = set()
+    files = transcripts()
+    for path in files:
+        events |= opportunity_events(window.filter(records(path)), path, seen)
+    table = tally_opportunities(events)
+    print(
+        f"source: {len(files)} transcripts under {TRANSCRIPTS}, folded into "
+        "sessions by sessionId. A session is an opportunity when its detector "
+        "fires, and used when the skill or its script ran anywhere in the same "
+        "session, before or after. Detectors are heuristics; the outcome of a "
+        "not-used session is read by hand."
+    )
+    print(window.describe())
+    print(" ".join(f"{column:>13}" for column in OPPORTUNITY_COLUMNS) + "  skill")
+    for skill, detector in DETECTORS.items():
+        counts = table.get(skill) or dict.fromkeys(OPPORTUNITY_COLUMNS, 0)
+        cells = " ".join(f"{counts[column]:13d}" for column in OPPORTUNITY_COLUMNS)
+        print(f"{cells}  {skill}  ({detector})")
 
 
 def census_verdicts() -> None:
@@ -911,8 +1214,11 @@ def census_runs() -> None:
             print(f"  {count:6d}  {shape}")
 
 
-MODES = {
+WINDOWED = {
     "skills": census_skills,
+    "opportunities": census_opportunities,
+}
+MODES = {
     "verdicts": census_verdicts,
     "turns": census_turns,
     "review": census_review,
@@ -926,11 +1232,37 @@ MODES = {
 
 
 def main(argv: list[str]) -> int:
-    mode = argv[1] if len(argv) > 1 else ""
-    if mode not in MODES:
-        print(f"usage: census.py {{{' | '.join(MODES)}}}", file=sys.stderr)
+    args = list(argv)
+    window = Window(None)
+    flags = [at for at, arg in enumerate(args) if arg.split("=")[0] == "--since"]
+    if flags:
+        at = flags[0]
+        if "=" in args[at]:
+            value = args.pop(at).split("=", 1)[1]
+        else:
+            value = args[at + 1] if at + 1 < len(args) else ""
+            del args[at : at + 2]
+        if (args[1] if len(args) > 1 else "") not in WINDOWED:
+            print(
+                f"census.py: --since applies to {' | '.join(WINDOWED)}", file=sys.stderr
+            )
+            return 64
+        try:
+            window = Window(since_date(value))
+        except ValueError:
+            print(
+                f"census.py: --since takes YYYY-MM-DD, got {value!r}", file=sys.stderr
+            )
+            return 64
+    mode = args[1] if len(args) > 1 else ""
+    if mode in WINDOWED:
+        WINDOWED[mode](window)
+    elif mode in MODES:
+        MODES[mode]()
+    else:
+        modes = " | ".join([*WINDOWED, *MODES])
+        print(f"usage: census.py {{{modes}}} [--since YYYY-MM-DD]", file=sys.stderr)
         return 64
-    MODES[mode]()
     return 0
 
 

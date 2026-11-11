@@ -550,6 +550,191 @@ def test_a_compaction_summary_breaks_a_run() -> None:
     assert census.call_runs(census.turn_sequence(records)) == []
 
 
+def _bash(tool_id: str, command: str, sidechain: bool = False, **extra) -> dict:
+    block = {"type": "tool_use", "id": tool_id, "name": "Bash"}
+    block["input"] = {"command": command}
+    return {
+        "type": "assistant",
+        "isSidechain": sidechain,
+        "message": {"content": [block]},
+        **extra,
+    }
+
+
+def _output(tool_id: str, text: str, **extra) -> dict:
+    block = {"type": "tool_result", "tool_use_id": tool_id, "content": text}
+    return {"type": "user", "message": {"content": [block]}, **extra}
+
+
+def _edit(path: str, new: str, old: str = "", **extra) -> dict:
+    block = {"type": "tool_use", "id": f"e-{path}-{new}", "name": "Edit"}
+    block["input"] = {"file_path": path, "old_string": old, "new_string": new}
+    return {"type": "assistant", "message": {"content": [block]}, **extra}
+
+
+def _write(path: str, content: str, session: str) -> dict:
+    block = {"type": "tool_use", "id": f"w-{path}", "name": "Write"}
+    block["input"] = {"file_path": path, "content": content}
+    return {"type": "assistant", "sessionId": session, "message": {"content": [block]}}
+
+
+def _multi_edit(path: str, new: str, session: str) -> dict:
+    block = {"type": "tool_use", "id": f"me-{path}", "name": "MultiEdit"}
+    edits = [
+        {"old_string": "a", "new_string": "b"},
+        {"old_string": "", "new_string": new},
+    ]
+    block["input"] = {"file_path": path, "edits": edits}
+    return {"type": "assistant", "sessionId": session, "message": {"content": [block]}}
+
+
+def test_a_script_counts_as_use_only_where_it_runs_as_a_command() -> None:
+    runs = {
+        "git add a.py && tiger-check": {"whetstone:tiger-style"},
+        '"$D"/bin/lint-skill skills/x': {"whetstone:skill-smith"},
+        "bash plugins/x/scripts/verify_clean.sh -": {"whetstone:merge-resolve"},
+        "X=1 run_slice.sh red pytest; flake-runner 5 t": {
+            "whetstone:tdd-cycle",
+            "whetstone:flaky-test-audit",
+        },
+        "if true; then html-report a.md; fi": {"whetstone:html-report"},
+        'bun "$p/skills/skill-smith/scripts/lint-skill-cli.ts" a': {
+            "whetstone:skill-smith"
+        },
+        "rtk proxy bun $d/scripts/tiger-check-cli.ts": {"whetstone:tiger-style"},
+        "if tiger-check; then echo ok; fi": {"whetstone:tiger-style"},
+        "while ! verify_clean.sh; do sleep 1; done": {"whetstone:merge-resolve"},
+        "cat <<< hi; tiger-check": {"whetstone:tiger-style"},
+    }
+    mentions = [
+        "which run-slice tiger-check lint-skill",
+        "grep tiger-check file",
+        'grep -E "lint-skill|tiger-check" notes.md',
+        "grep -n \\\ntiger-check file",
+        "python3 - <<'EOF'\ntiger-check\nEOF",
+        'git commit -m "subject\ntiger-check ran clean"',
+    ]
+    for command, skills in runs.items():
+        assert census.script_skills(command) == skills, command
+    for command in mentions:
+        assert census.script_skills(command) == set(), command
+
+
+def test_every_mapped_script_names_a_plugin_skill() -> None:
+    assert set(census.SCRIPT_SKILLS.values()) <= set(census.plugin_skills())
+
+
+def test_every_plugin_skill_prints_including_a_zero() -> None:
+    uses = census.skill_uses(
+        [
+            _skill("dossier:build"),
+            {**_skill("dossier:build"), "isSidechain": True},
+            _prompt("<command-name>/dossier:build</command-name>"),
+            _bash("b1", "git add x && tiger-check"),
+        ]
+    )
+    lines = census.skill_table(uses, ["dossier:build", "whetstone:tiger-style", "z:z"])
+    rows = {line.split()[-1]: line.split()[:-1] for line in lines[1:]}
+    assert rows == {
+        "dossier:build": ["1", "1", "1", "0"],
+        "whetstone:tiger-style": ["0", "0", "0", "1"],
+        "z:z": ["0", "0", "0", "0"],
+    }, lines
+
+
+def test_the_window_reads_record_timestamps_and_drops_undated_records() -> None:
+    window = census.Window(census.since_date("2026-10-01"))
+    kept = list(
+        window.filter(
+            [
+                {"timestamp": "2026-09-30T23:59:59Z", "n": 1},
+                {"timestamp": "2026-10-01T00:00:00Z", "n": 2},
+                {"type": "user", "n": 3},
+                {"type": "custom-title", "n": 4},
+            ]
+        )
+    )
+    assert [r["n"] for r in kept] == [2]
+    assert window.undated == 1
+    assert list(census.Window(None).filter([{"n": 3}])) == [{"n": 3}]
+
+
+def test_a_bad_since_value_is_a_usage_error() -> None:
+    assert census.main(["census.py", "skills", "--since", "last week"]) == 64
+    assert census.main(["census.py", "skills", "--since", "20261001"]) == 64
+    assert census.main(["census.py", "rows", "--since", "2026-10-01"]) == 64
+    assert census.main(["census.py", "rows", "--since=2026-10-01"]) == 64
+
+
+def test_opportunities_come_from_tight_detectors_and_fold_by_session() -> None:
+    merge = "git -C repo merge main"
+    conflict = "CONFLICT (content): Merge conflict in a.py"
+    main = [
+        _bash("m1", merge, sessionId="s1"),
+        _output("m1", conflict, sessionId="s1"),
+        _bash("m2", "cat notes.txt", sessionId="s1"),
+        _output("m2", conflict, sessionId="s1"),
+        _edit("/r/plugins/w/skills/x/SKILL.md", "body", sessionId="s1"),
+    ]
+    side = [
+        _bash("m3", "git merge-base a b", sidechain=True, sessionId="s1"),
+        _output("m3", conflict, sessionId="s1"),
+        _edit(
+            "/r/.scratchpad/dossier/w/DOSSIER.md",
+            "| B2 | x | y | — | — |",
+            sessionId="s2",
+            isSidechain=True,
+        ),
+        _bash("m4", "lint-skill skills/x", sidechain=True, sessionId="s1"),
+    ]
+    other = [
+        _edit("/r/a/DOSSIER.md", "| T2 | . | A | B2 |", "| T2 |", sessionId="s3"),
+        _bash("m5", "git rebase main", sessionId="s3"),
+        _output("m5", "Successfully rebased", sessionId="s3"),
+        _bash("m1", merge, sessionId="s4"),
+        _output("m1", conflict, sessionId="s4"),
+        _bash("m6", f"cd r && {merge}", sessionId="s5"),
+        _output("m6", conflict, sessionId="s5"),
+        {
+            **_prompt("<command-name>/whetstone:merge-resolve</command-name>"),
+            "sessionId": "s5",
+        },
+        _write("/r/b/DOSSIER.md", "# w\n\n| B1 | x | y | — | — |\n", "s6"),
+        _write("/r/.claude/skills/y/SKILL.md", "body", "s6"),
+        _multi_edit("/r/c/DOSSIER.md", "| B4 | x | y | — | — |", "s7"),
+    ]
+    seen: set[str] = set()
+    events = set()
+    for stream in (main, side, other):
+        events |= census.opportunity_events(stream, "fallback", seen)
+    assert census.tally_opportunities(events) == {
+        "whetstone:merge-resolve": {
+            "sessions": 2,
+            "main": 2,
+            "subagent only": 0,
+            "used skill": 1,
+            "used script": 0,
+            "not used": 1,
+        },
+        "whetstone:skill-smith": {
+            "sessions": 2,
+            "main": 2,
+            "subagent only": 0,
+            "used skill": 0,
+            "used script": 1,
+            "not used": 1,
+        },
+        "dossier:backprop": {
+            "sessions": 2,
+            "main": 1,
+            "subagent only": 1,
+            "used skill": 0,
+            "used script": 0,
+            "not used": 2,
+        },
+    }
+
+
 def _main() -> int:
     failures = 0
     for name, fn in sorted(globals().items()):
