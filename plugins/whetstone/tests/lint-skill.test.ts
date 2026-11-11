@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'claude-code/testing'
-import { lintSkill } from '../skills/skill-smith/scripts/lint-skill.ts'
+import { lintSkill, sharedTriggers } from '../skills/skill-smith/scripts/lint-skill.ts'
 
 const skill = (frontmatter: string, body = 'body\n') => `---\n${frontmatter}\n---\n\n${body}`
 const has = (findings: string[], fn: (f: string) => boolean) => findings.some(fn)
@@ -81,5 +81,30 @@ describe('lint-skill', () => {
     const deep = lintSkill(front, 's', ['SKILL.md', 'reference/a.md', 'reference/nested/x.md'])
     expect(deep).toEqual(['WARN s: reference nested too deep (reference/nested/x.md); keep references one level deep'])
     expect(lintSkill(front, 's', ['scripts/__pycache__/x.pyc', '.cache/a/b'])).toEqual([])
+  })
+})
+
+describe('shared trigger phrases', () => {
+  const named = (name: string, description: string) => ({ name, text: skill(`name: ${name}\ndescription: ${description}`) })
+
+  test('warns each skill that shares a quoted trigger phrase, in any case', () => {
+    const skills = [
+      named('a', 'Checks drift. Invoke when the user says "check drift", "audit".'),
+      named('b', 'Reviews code. Use when the user says "Check Drift" or "review".'),
+      named('c', 'Plans work. Use when the user says "plan".'),
+    ]
+    expect(sharedTriggers(skills)).toEqual([
+      'WARN a: trigger phrase "check drift" is also in b; the skills compete for one request',
+      'WARN b: trigger phrase "check drift" is also in a; the skills compete for one request',
+    ])
+  })
+
+  test('stays silent on distinct phrases, an unquoted mention and a quote outside the trigger clause', () => {
+    const skills = [
+      named('a', 'Checks drift. Invoke when the user says "check drift".'),
+      named('b', 'Says "audit" first. Use when the user wants to check drift or says "review".'),
+      named('c', 'Mentions "check drift" before its clause. Use when the user says "plan".'),
+    ]
+    expect(sharedTriggers(skills)).toEqual([])
   })
 })

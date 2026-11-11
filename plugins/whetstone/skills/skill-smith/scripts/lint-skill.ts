@@ -87,6 +87,26 @@ function depthFindings(files: string[], hint: string): string[] {
     .map((parts) => `WARN ${hint}: reference nested too deep (${parts.join('/')}); keep references one level deep`)
 }
 
+function triggerPhrases(text: string): Set<string> {
+  const parts = text.split('---')
+  const description = parts.length < 3 ? '' : field(parts[1] ?? '', 'description')
+  const lower = description.toLowerCase()
+  const starts = TRIGGER_MARKERS.map((marker) => lower.indexOf(marker)).filter((at) => at >= 0)
+  if (!starts.length) return new Set()
+  const clause = lower.slice(Math.min(...starts)).split('.')[0] ?? ''
+  return new Set([...clause.matchAll(/"([^"]+)"/g)].map((found) => found[1] ?? ''))
+}
+
+export function sharedTriggers(skills: { name: string; text: string }[]): string[] {
+  const phrases = skills.map(({ name, text }) => ({ name, found: triggerPhrases(text) }))
+  return phrases.flatMap(({ name, found }) =>
+    [...found].flatMap((phrase) => {
+      const others = phrases.filter((other) => other.name !== name && other.found.has(phrase)).map((other) => other.name)
+      return others.length ? [`WARN ${name}: trigger phrase "${phrase}" is also in ${others.join(', ')}; the skills compete for one request`] : []
+    }),
+  )
+}
+
 export function lintSkill(text: string, nameHint: string, files: string[]): string[] {
   const parts = text.split('---')
   if (parts.length < 3) return [`FAIL ${nameHint}: no YAML frontmatter (--- … ---)`]

@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join, sep } from 'node:path'
 import { byCodePoint } from '../../../hooks/text.ts'
-import { lintSkill } from './lint-skill.ts'
+import { lintSkill, sharedTriggers } from './lint-skill.ts'
 
 function isFile(path: string): boolean {
   try {
@@ -46,13 +46,22 @@ function lintFile(skillMd: string): string[] {
   return lintSkill(readFileSync(skillMd, 'utf8'), parentName(dir), filesUnder(dir))
 }
 
+function sharedInFolders(skillMds: string[]): string[] {
+  const folders = new Map<string, string[]>()
+  for (const path of skillMds) {
+    const folder = dirname(dirname(path))
+    folders.set(folder, [...(folders.get(folder) ?? []), path])
+  }
+  return [...folders.values()].flatMap((paths) => sharedTriggers(paths.map((path) => ({ name: parentName(dirname(path)), text: readFileSync(path, 'utf8') }))))
+}
+
 function lintTarget(target: string): string[] {
   if (!statSync(target).isDirectory()) return lintFile(target)
-  return filesUnder(target)
+  const skillMds = filesUnder(target)
     .filter((rel) => basename(rel) === 'SKILL.md')
     .map((rel) => join(target, rel))
     .sort(byParts)
-    .flatMap(lintFile)
+  return [...skillMds.flatMap(lintFile), ...sharedInFolders(skillMds)]
 }
 
 const targets = process.argv.length > 2 ? process.argv.slice(2) : [process.cwd()]

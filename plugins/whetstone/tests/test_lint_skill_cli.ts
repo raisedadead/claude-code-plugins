@@ -41,3 +41,20 @@ test('names the parent directory through a ./ segment', () => {
     rmSync(root, { recursive: true, force: true })
   }
 })
+
+test('a skills directory warns on a shared trigger phrase and keeps exit 0', () => {
+  const root = mkdtempSync(join(tmpdir(), 'lint-skill-'))
+  try {
+    for (const name of ['foo', 'bar']) {
+      mkdirSync(join(root, 'skills', name), { recursive: true })
+      const description = `Does ${name}. Use when the user says "tidy up".`
+      writeFileSync(join(root, 'skills', name, 'SKILL.md'), `---\nname: ${name}\ndescription: ${description}\n---\n# ${name}\n`)
+    }
+    const result = lint(root, 'skills')
+    assert.equal(result.status, 0, result.stdout + result.stderr)
+    assert.match(result.stdout, /WARN bar: trigger phrase "tidy up" is also in foo/)
+    assert.match(result.stdout, /WARN foo: trigger phrase "tidy up" is also in bar/)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
