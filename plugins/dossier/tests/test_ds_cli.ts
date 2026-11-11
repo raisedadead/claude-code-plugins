@@ -82,6 +82,41 @@ test('verdict-log appends one record per verdict-agent stop, keyed by agent id',
   })
 })
 
+test('verdict-log reads a structured-output verdict from the agent transcript', () => {
+  withRoot((root) => {
+    let agents = 0
+    const stopAt = (path: string) => ({ agent_type: 'reviewer', agent_transcript_path: path })
+    const turn = (...content: unknown[]) => JSON.stringify({ message: { content } })
+    const ended = (input: unknown) => {
+      agents += 1
+      const path = join(root, `agent-${agents}.jsonl`)
+      const earlier = turn({ type: 'text', text: 'REVIEW: PASS' })
+      const call = turn({ type: 'tool_use', name: 'StructuredOutput', input })
+      writeFileSync(path, `${[earlier, 'not json', 'null', turn(null, 7), call].join('\n')}\n`)
+      return stopAt(path)
+    }
+    const stops = [
+      ended({ findings: [{ title: 'a' }, { title: 'b' }] }),
+      ended({ findings: [{ title: 'a' }] }),
+      ended({ findings: [] }),
+      ended({ real: true, why: 'holds' }),
+      ended({ real: false, why: 'refuted' }),
+      ended({ other: 1 }),
+      stopAt(join(root, 'missing.jsonl')),
+      stopAt(root),
+    ]
+    for (const stop of stops) assert.equal(logVerdict(root, stop).status, 0)
+    const log = join(root, '.scratchpad', 'dossier', '.verdicts.jsonl')
+    const verdicts = readFileSync(log, 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) => (JSON.parse(line) as Record<string, unknown>).verdicts)
+    const reviews = [['REVIEW: 2 findings'], ['REVIEW: 1 finding'], ['REVIEW: clean']]
+    const findings = [['FINDING: real'], ['FINDING: not real']]
+    assert.deepEqual(verdicts, [...reviews, ...findings, [], null, null])
+  })
+})
+
 test('verdict-log writes nothing for another agent, outside a dossier project, or on a bad payload', () => {
   withRoot((root) => {
     assert.equal(logVerdict(root, { agent_type: 'general-purpose', last_assistant_message: 'REVIEW: PASS' }).status, 0)

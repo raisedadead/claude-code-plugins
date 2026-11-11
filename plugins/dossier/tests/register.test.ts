@@ -102,15 +102,24 @@ describe('dossier mod wiring', () => {
 
   test('a doubter stop goes to the verdict log, and another agent or a blocked stop does not', async ($, on) => {
     const runs: string[][] = []
+    const inputs: unknown[] = []
     let block: string | undefined
     on('fs.stat', async () => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false } }))
     on('process.run', async (_, e) => {
       runs.push([...e.argv])
+      inputs.push(e.init?.stdin)
       return { value: { exitCode: 0, stdout: '', stderr: '', isStdoutTruncated: false, isStderrTruncated: false } }
     })
     on('classic.SubagentStop', async () => (block ? { block } : {}))
     const stop = (agent_type: string) =>
-      $.classic.SubagentStop({ cwd: '/w', session_id: 's5', agent_id: 'a1', agent_type, last_assistant_message: 'DOUBT: FAILURES' } as never)
+      $.classic.SubagentStop({
+        cwd: '/w',
+        session_id: 's5',
+        agent_id: 'a1',
+        agent_type,
+        last_assistant_message: 'DOUBT: FAILURES',
+        agent_transcript_path: '/t/agent-a1.jsonl',
+      } as never)
     await stop('general-purpose')
     expect(runs).toEqual([])
     block = 'keep going'
@@ -119,6 +128,8 @@ describe('dossier mod wiring', () => {
     block = undefined
     await stop('whetstone:whetstone-doubter')
     expect(runs.map((argv) => argv.slice(-2))).toEqual([['verdict-log', '/w']])
+    const sent = JSON.parse(String(inputs[0]))
+    expect(sent).toMatchObject({ agent_id: 'a1', agent_transcript_path: '/t/agent-a1.jsonl' })
   })
 
   test('a Write in a dossier project asks the cli to verify it', async ($, on) => {

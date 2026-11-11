@@ -8,6 +8,17 @@ export function isVerdictAgent(type: unknown): boolean {
   return typeof type === 'string' && VERDICT_AGENTS.has(type)
 }
 
+export function structuredVerdicts(output: unknown): string[] {
+  if (typeof output !== 'object' || output === null) return []
+  const { findings, real } = output as Record<string, unknown>
+  if (Array.isArray(findings)) {
+    const count = findings.length
+    return [count === 0 ? 'REVIEW: clean' : `REVIEW: ${count} finding${count === 1 ? '' : 's'}`]
+  }
+  if (typeof real === 'boolean') return [real ? 'FINDING: real' : 'FINDING: not real']
+  return []
+}
+
 export function verdictLines(text: string, agent?: unknown): string[] {
   const lines = splitLines(text).map((line) => line.replace(/[*`#>]/g, '').trim())
   if (agent === 'reviewer') {

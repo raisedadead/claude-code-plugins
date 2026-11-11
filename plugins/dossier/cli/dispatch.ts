@@ -31,7 +31,7 @@ import { migrate } from '../engine/migrate.ts'
 import { firstWorktree, GIT_DIRS, linkedPrimary, WORKTREES } from '../engine/root.ts'
 import { sessionReport } from '../engine/session.ts'
 import { splitLines, strip } from '../engine/text.ts'
-import { isVerdictAgent, verdictLines } from '../engine/verdicts.ts'
+import { isVerdictAgent, structuredVerdicts, verdictLines } from '../engine/verdicts.ts'
 import {
   hasRepo,
   headerState,
@@ -701,15 +701,47 @@ function verdictLogVerb(args: string[]): number {
   const dossiers = join(root, '.scratchpad', 'dossier')
   const stop = stdinPayload()
   if (!isDir(dossiers) || !isVerdictAgent(stop.agent_type)) return 0
-  const message = stop.last_assistant_message
   const record = {
     ts: new Date().toISOString(),
     agent_type: stop.agent_type,
     agent_id: typeof stop.agent_id === 'string' ? stop.agent_id : null,
-    verdicts: typeof message === 'string' ? verdictLines(message, stop.agent_type) : null,
+    verdicts: stopVerdicts(stop),
   }
   appendFileSync(join(dossiers, '.verdicts.jsonl'), `${JSON.stringify(record)}\n`)
   return 0
+}
+
+function stopVerdicts(stop: Record<string, unknown>): string[] | null {
+  const message = stop.last_assistant_message
+  if (typeof message === 'string') return verdictLines(message, stop.agent_type)
+  return transcriptVerdicts(stop.agent_transcript_path)
+}
+
+function isStructuredOutput(block: unknown): boolean {
+  if (typeof block !== 'object' || block === null) return false
+  const { type, name } = block as Record<string, unknown>
+  return type === 'tool_use' && name === 'StructuredOutput'
+}
+
+function transcriptVerdicts(path: unknown): string[] | null {
+  if (typeof path !== 'string') return null
+  let text: string
+  try {
+    text = readFileSync(path, 'utf8')
+  } catch {
+    return null
+  }
+  const calls = splitLines(text).flatMap((line) => {
+    try {
+      const entry = JSON.parse(line) as { message?: { content?: unknown } }
+      const content = entry.message?.content
+      return Array.isArray(content) ? content.filter(isStructuredOutput) : []
+    } catch {
+      return []
+    }
+  })
+  const last = calls.at(-1) as { input?: unknown } | undefined
+  return last === undefined ? null : structuredVerdicts(last.input)
 }
 
 function delegationCheckVerb(args: string[]): number {

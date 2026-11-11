@@ -282,10 +282,11 @@ export async function verdictGate(io: Io, cwd: string, stop: Record<string, unkn
   if (!isVerdictAgent(stop.agent_type)) return
   const root = await ledgerRoot(io, cwd)
   if (!(await io.isDir(`${root}/.scratchpad/dossier`))) return
-  const { agent_type, agent_id, last_assistant_message } = stop
+  const { agent_type, agent_id, last_assistant_message, agent_transcript_path } = stop
   try {
     const argv = ['sh', io.cli ?? 'cli/ds', 'verdict-log', root]
-    await io.run(argv, { stdin: JSON.stringify({ agent_type, agent_id, last_assistant_message }), timeoutMs: VERDICT_TIMEOUT_MS })
+    const payload = { agent_type, agent_id, last_assistant_message, agent_transcript_path }
+    await io.run(argv, { stdin: JSON.stringify(payload), timeoutMs: VERDICT_TIMEOUT_MS })
   } catch {
     return
   }
