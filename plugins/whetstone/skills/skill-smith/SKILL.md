@@ -48,7 +48,7 @@ Done = `lint-skill <path>` exits 0 **and** you have read the change against all 
 
 ## Dossier breadcrumb
 
-In a repo with a live dossier ledger, record the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip: this skill ships no hooks and no dossier dependency.
+In a repo with a live dossier ledger, record the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip: this skill has no dossier dependency. After an Edit or Write of a `skills/<name>/SKILL.md`, whetstone's PostToolUse hook runs the lint without the nesting-depth check and adds its lines as a reminder.
 
 ## Claim check
 
