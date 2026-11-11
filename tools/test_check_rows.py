@@ -29,6 +29,14 @@ def test_a_short_row_is_malformed() -> None:
     assert "has 3 cells, wants 5" in result.stdout, result.stdout
 
 
+def test_an_open_stride_carries_started_prediction_and_check_by() -> None:
+    old = _run("| O1 | a stride | why | S | open |\n")
+    assert old.returncode == MALFORMED, old.stdout
+    assert "has 5 cells, wants 8" in old.stdout, old.stdout
+    row = "| O1 | a stride | why | S | open | 2026-11-11 | a result | 2026-12-01 |\n"
+    assert _run(row).returncode == CLEAN
+
+
 def test_a_complete_fact_row_is_clean() -> None:
     result = _run("| F32 | 2026-08-16 | a fact | a source | a trigger |\n")
     assert result.returncode == CLEAN, result.stdout
@@ -82,12 +90,11 @@ def _check(path: Path, *flags: str) -> subprocess.CompletedProcess[str]:
 
 
 LONG = "x" * 1001
+TAIL = "| why | S | open | 2026-11-11 | a result | 2026-12-01 |\n"
 
 
 def test_a_changed_row_over_the_length_warns_and_still_exits_clean() -> None:
-    path = _repo(
-        "| O1 | short | why | S | open |\n", f"| O1 | {LONG} | why | S | open |\n"
-    )
+    path = _repo(f"| O1 | short {TAIL}", f"| O1 | {LONG} {TAIL}")
     result = _check(path, "--base", "HEAD")
     assert result.returncode == CLEAN, result.stdout
     assert "WARN RESEARCH.md:1: O1 is" in result.stdout, result.stdout
@@ -95,22 +102,20 @@ def test_a_changed_row_over_the_length_warns_and_still_exits_clean() -> None:
 
 
 def test_an_unchanged_long_row_does_not_warn() -> None:
-    row = f"| O1 | {LONG} | why | S | open |\n"
-    result = _check(
-        _repo(row, row + "| O2 | new | why | S | open |\n"), "--base", "HEAD"
-    )
+    row = f"| O1 | {LONG} {TAIL}"
+    result = _check(_repo(row, row + f"| O2 | new {TAIL}"), "--base", "HEAD")
     assert result.returncode == CLEAN, result.stdout
     assert "WARN" not in result.stdout, result.stdout
 
 
 def test_column_padding_does_not_count_toward_the_length() -> None:
-    padded = "| O1 | short" + " " * 1200 + "| why | S | open |\n"
+    padded = "| O1 | short" + " " * 1200 + TAIL
     result = _check(_repo("", padded), "--base", "HEAD")
     assert "WARN" not in result.stdout, result.stdout
 
 
 def test_no_base_skips_the_length_warning_and_says_so() -> None:
-    path = _repo("", f"| O1 | {LONG} | why | S | open |\n")
+    path = _repo("", f"| O1 | {LONG} {TAIL}")
     result = _check(path)
     assert "NOTE row length not checked: no --base given" in result.stdout, (
         result.stdout

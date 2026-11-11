@@ -32,7 +32,7 @@ FACT_ROW = re.compile(r"^\| F\d+ ")
 SOURCE_ROW = re.compile(r"^\| (?!-)")
 UNESCAPED_PIPE = re.compile(r"(?<!\\)\|")
 DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
-CELLS = {"D": 6, "F": 5, "O": 5}
+CELLS = {"D": 6, "F": 5, "O": 8}
 MAX_ROW_CHARS = 1000
 MAX_AGE_DAYS = 60
 
