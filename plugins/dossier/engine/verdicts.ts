@@ -10,13 +10,22 @@ export function isVerdictAgent(type: unknown): boolean {
 
 export function structuredVerdicts(output: unknown): string[] {
   if (typeof output !== 'object' || output === null) return []
-  const { findings, real } = output as Record<string, unknown>
+  const { findings, real, verdicts } = output as Record<string, unknown>
   if (Array.isArray(findings)) {
     const count = findings.length
     return [count === 0 ? 'REVIEW: clean' : `REVIEW: ${count} finding${count === 1 ? '' : 's'}`]
   }
-  if (typeof real === 'boolean') return [real ? 'FINDING: real' : 'FINDING: not real']
+  if (typeof real === 'boolean') return [findingVerdict(real)]
+  if (Array.isArray(verdicts)) return verdicts.flatMap((item: unknown) => (isJudged(item) ? [findingVerdict(item.real)] : []))
   return []
+}
+
+function isJudged(item: unknown): item is { real: boolean } {
+  return typeof item === 'object' && item !== null && typeof (item as Record<string, unknown>).real === 'boolean'
+}
+
+function findingVerdict(real: boolean): string {
+  return real ? 'FINDING: real' : 'FINDING: not real'
 }
 
 export function verdictLines(text: string, agent?: unknown): string[] {

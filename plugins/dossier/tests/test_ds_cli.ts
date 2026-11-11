@@ -101,6 +101,7 @@ test('verdict-log reads a structured-output verdict from the agent transcript', 
       ended({ findings: [] }),
       ended({ real: true, why: 'holds' }),
       ended({ real: false, why: 'refuted' }),
+      ended({ verdicts: [{ index: 0, real: false }, { index: 1, real: true }, { index: 2 }] }),
       ended({ other: 1 }),
       stopAt(join(root, 'missing.jsonl')),
       stopAt(root),
@@ -112,7 +113,7 @@ test('verdict-log reads a structured-output verdict from the agent transcript', 
       .split('\n')
       .map((line) => (JSON.parse(line) as Record<string, unknown>).verdicts)
     const reviews = [['REVIEW: 2 findings'], ['REVIEW: 1 finding'], ['REVIEW: clean']]
-    const findings = [['FINDING: real'], ['FINDING: not real']]
+    const findings = [['FINDING: real'], ['FINDING: not real'], ['FINDING: not real', 'FINDING: real']]
     assert.deepEqual(verdicts, [...reviews, ...findings, [], null, null])
   })
 })
