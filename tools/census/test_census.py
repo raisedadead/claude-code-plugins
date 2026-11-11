@@ -654,6 +654,11 @@ def test_a_typed_command_copied_into_another_file_counts_once() -> None:
     copy = census.skill_uses([typed("u1"), typed("u2")], seen)
     assert first["dossier:build"]["typed"] == 1
     assert copy["dossier:build"]["typed"] == 1
+    used: set[str] = set()
+    origin = census.opportunity_events([{**typed("u1"), "sessionId": "s1"}], "f", used)
+    copied = census.opportunity_events([{**typed("u1"), "sessionId": "s2"}], "f", used)
+    assert origin == {("s1", "dossier:build", "skill", "main")}
+    assert copied == set()
 
 
 def test_the_window_reads_record_timestamps_and_drops_undated_records() -> None:

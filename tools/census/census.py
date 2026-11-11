@@ -285,6 +285,16 @@ def typed_commands(record: dict) -> list[str]:
     ]
 
 
+def fresh_typed_commands(record: dict, seen: set[str]) -> list[str]:
+    names = typed_commands(record)
+    key = record.get("uuid")
+    if names and key in seen:
+        return []
+    if names and key:
+        seen.add(key)
+    return names
+
+
 def fresh_tool_uses(record: dict, seen: set[str]):
     for block in tool_uses(record):
         key = block.get("id")
@@ -314,13 +324,7 @@ def skill_uses(
                     uses[skill]["script"] += 1
             elif block.get("name") in ("Agent", "Task"):
                 uses[f"agent {payload.get('subagent_type', '?')}"]["spawn"] += 1
-        names = typed_commands(record)
-        key = record.get("uuid")
-        if names and key in seen:
-            continue
-        if names and key:
-            seen.add(key)
-        for name in names:
+        for name in fresh_typed_commands(record, seen):
             uses[name]["typed"] += 1
     return uses
 
@@ -434,7 +438,7 @@ def opportunity_events(
                 events.add(
                     (call_session, "whetstone:merge-resolve", "trigger", call_side)
                 )
-        for name in typed_commands(record):
+        for name in fresh_typed_commands(record, seen):
             events.add((session, name, "skill", side))
     return events
 
