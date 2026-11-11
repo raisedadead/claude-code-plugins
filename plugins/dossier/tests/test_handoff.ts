@@ -30,6 +30,32 @@ test('only the operator rows the next agent row needs are named', () => {
   assert.deepEqual(handoff(text, 'demo', STAMP), ['after: T1 Push main', ...GOAL])
 })
 
+const RUN = 'https://github.com/o/r/actions/runs/1'
+
+function withStatus(text: string, ...lines: string[]): string {
+  return [text, '', '## Status', '', ...lines].join('\n')
+}
+
+test('a push row whose CI watch paused names the failed run, not the push', () => {
+  const rows = ledger('| T1 | . | H | Push main | — | — | v |', '| T2 | . | A | refresh | T1 | — | v |')
+  const text = withStatus(rows, '2026-11-11 14:00 ds:build T1 START', `2026-11-11 14:05 ds:build T1 PAUSE reason=ci:${RUN}`)
+  assert.deepEqual(handoff(text, 'demo', STAMP), [`ci: T1 ${RUN}`, ...GOAL])
+  const alone = withStatus(ledger('| T1 | . | H | Push main | — | — | v |'), `2026-11-11 14:05 ds:build T1 PAUSE reason=ci:${RUN}`)
+  assert.deepEqual(handoff(alone, 'demo', STAMP), [`ci: T1 ${RUN}`])
+})
+
+test('a CI pause on another row, or followed by a later line, leaves the push step', () => {
+  const rows = ledger('| T1 | . | H | Push main | — | — | v |')
+  const other = withStatus(rows, `2026-11-11 14:05 ds:build T9 PAUSE reason=ci:${RUN}`)
+  assert.deepEqual(handoff(other, 'demo', STAMP), ['operator: T1 Push main'])
+  const later = withStatus(rows, `2026-11-11 14:05 ds:build T1 PAUSE reason=ci:${RUN}`, '2026-11-11 14:20 ds:build T1 PAUSE reason=push:not pushed')
+  assert.deepEqual(handoff(later, 'demo', STAMP), ['operator: T1 Push main'])
+  const joined = withStatus(rows, `2026-11-11 14:05 ds:build T1 PAUSE reason=ci:${RUN} 2026-11-11 14:20 ds:build T1 START`)
+  assert.deepEqual(handoff(joined, 'demo', STAMP), ['operator: T1 Push main'])
+  const quoted = [rows, '', '## Constraints', '', `2026-11-11 14:05 ds:build T1 PAUSE reason=ci:${RUN}`].join('\n')
+  assert.deepEqual(handoff(quoted, 'demo', STAMP), ['operator: T1 Push main'])
+})
+
 test('an operator row in progress is still the operator step', () => {
   assert.deepEqual(handoff(ledger('| T1 | ~ | H | Push main | — | — | v |'), 'demo', STAMP), ['operator: T1 Push main'])
 })
