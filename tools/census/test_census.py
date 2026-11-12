@@ -282,16 +282,16 @@ def test_guard_fires_count_tool_results_not_prose() -> None:
 
 
 def test_a_trigger_phrase_with_no_skill_call_after_it_is_a_miss() -> None:
-    triggers = {"dossier:status": ["where are we"], "dossier:check": ["check drift"]}
+    triggers = {"dossier:status": ["where are we"], "dossier:converge": ["are we done"]}
     records = [
         _prompt("where are we on this?"),
         _skill("dossier:status"),
-        _prompt("please check drift now"),
+        _prompt("so are we done now"),
         _prompt("where are we"),
     ]
     assert census.missed_calls(records, triggers) == {
         "dossier:status": {"asked": 2, "missed": 1},
-        "dossier:check": {"asked": 1, "missed": 1},
+        "dossier:converge": {"asked": 1, "missed": 1},
     }
 
 
@@ -309,8 +309,8 @@ def test_a_typed_command_a_skill_body_or_a_word_inside_another_is_not_a_miss() -
 
 
 def test_trigger_phrases_come_from_the_quoted_invoke_clause() -> None:
-    description = 'Drift detector. Invoke when the user says "ds:check", "check drift", or before a PR.'
-    assert census.trigger_phrases(description) == ["ds:check", "check drift"]
+    description = 'Verdict. Invoke when the user says "ds:converge", "are we done", or before a PR.'
+    assert census.trigger_phrases(description) == ["ds:converge", "are we done"]
 
 
 def test_the_verdict_log_counts_verdicts_misses_and_empty_messages() -> None:

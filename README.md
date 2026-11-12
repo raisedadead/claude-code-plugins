@@ -29,13 +29,12 @@ dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globa
 
 ## Commands
 
-**dossier — the four you type:**
+**dossier — the three you type:**
 
 | Command                                    | What it does                                                                                 |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| `/dossier:status` (or "ds", "what's next") | Session-open driver. Decision-first sit-rep. `--full` for tables, `--recover` after a crash. |
+| `/dossier:status` (or "ds", "what's next") | Session-open driver. Decision-first sit-rep. `--full` for tables, `--recover` after a crash, `--drift` for a read-only drift audit across every repo the wave touches. |
 | `/dossier:new "<goal>"`                    | Start a wave. Grills the goal first, then prompts scope and repos; pins library versions.    |
-| `/dossier:check`                           | Read-only drift audit across every repo the wave touches.                                    |
 | `/dossier:close`                           | `--complete` · `--successor <slug>` · `--abandon "<why>"`. Shows the plan, then closes.      |
 
 `/dossier-tasks` opens the task pane: the needs tree under the progress line. The status line shows that line too, and ends with `/dossier-tasks`. In the pane, `enter` on an open agent row puts `/dossier:build T<n>` in an empty prompt box; on any other row it shows the full task.

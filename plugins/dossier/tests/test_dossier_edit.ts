@@ -194,8 +194,8 @@ test('s-append stamps the entry to the second and places it in the status sectio
   const bare = join(tmp, 'no-z')
   mkdirSync(bare, { recursive: true })
   writeFileSync(join(bare, 'DOSSIER.md'), '## §S — Rolling status log\n\n2026-06-01 10:00 ds:new — x\n')
-  succeeded(await run(['s-append', bare, 'ds:check — drift=0']))
-  assert.ok(readFileSync(join(bare, 'DOSSIER.md'), 'utf8').includes('ds:check — drift=0'), 'append-EOF fallback failed')
+  succeeded(await run(['s-append', bare, 'ds:status — drift=0']))
+  assert.ok(readFileSync(join(bare, 'DOSSIER.md'), 'utf8').includes('ds:status — drift=0'), 'append-EOF fallback failed')
 
   assert.deepEqual(orphans(dir), [], 'append left .tmp orphan')
 })

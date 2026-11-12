@@ -4,7 +4,7 @@ Loaded on demand. The procedure lives in `../SKILL.md`; this file is the lookup 
 
 ## PreToolUse hook coverage
 
-Matches `Edit | Write`, but it is **gated on the repo**: the mod scans nothing unless `<session cwd>/.scratchpad/dossier` is a directory. The same payload that emits a finding inside a dossier repo emits nothing outside one, so existing files in a plain repo carry unexamined claims — that gap is what `ds:check` step 2a (`ds verify-sweep`) is for, and what `/dossier:verify` on demand covers, having no such gate. Advisory in both cases: a finding is an `additionalContext` nudge, never a block.
+Matches `Edit | Write`, but it is **gated on the repo**: the mod scans nothing unless `<session cwd>/.scratchpad/dossier` is a directory. The same payload that emits a finding inside a dossier repo emits nothing outside one, so existing files in a plain repo carry unexamined claims — that gap is what `ds:status --drift` (`ds verify-sweep`) is for, and what `/dossier:verify` on demand covers, having no such gate. Advisory in both cases: a finding is an `additionalContext` nudge, never a block.
 
 Patterns in `engine/verify.ts`, catalog in `engine/verify-authorities.ts` (140 EOL aliases, 34 Docker images, 31 AI models, 7 package registries).
 

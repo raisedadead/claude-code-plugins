@@ -539,7 +539,7 @@ function dsCheckVerb(args: string[]): number {
   if (notes.length) console.log(notes.join('\n'))
   const drift = /<!-- drift:([0-9]+) slugs:([^>]*) -->/.exec(readFileSync(index, 'utf8'))
   if (!drift) return 0
-  console.error(`ds:check: Vm.1/Vm.4 DRIFT — ${drift[1]} dossier(s) with header/location/§Z disagreement: ${drift[2]}`)
+  console.error(`ds ds-check: Vm.1/Vm.4 DRIFT — ${drift[1]} dossier(s) with header/location/§Z disagreement: ${drift[2]}`)
   console.error('reconcile: session-start self-heals §Z-closed drift; otherwise finish the close (rerun ds close <wave>) or fix the header token.')
   return 1
 }

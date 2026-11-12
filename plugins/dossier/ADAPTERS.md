@@ -9,7 +9,7 @@ Decision ids (D2, D4, D18) refer to [RESEARCH.md](https://github.com/raisedadead
 | Adapter            | Present when                                                 | Used by                                                  | If absent                 |
 | ------------------ | ------------------------------------------------------------ | -------------------------------------------------------- | ------------------------- |
 | `context7` MCP     | a tool ending `__resolve-library-id` / `__query-docs`        | `ds:build` step 5.5 — ground the current API of a pin    | WebFetch the official docs |
-| `Workflow` tool    | `Workflow` in the tool list (native harness tool)            | `ds:check` step 2 — scout fan-out when §X > 2 repos      | parallel `Agent` spawns   |
+| `Workflow` tool    | `Workflow` in the tool list (native harness tool)            | `ds:status --drift` — scout fan-out when §X > 2 repos    | parallel `Agent` spawns   |
 | `whetstone` plugin | `whetstone:whetstone-doubter` in the agent list; `bin/` on `PATH` | `ds:build` doubt, TDD, lint, tiger, conflict routes; `ds:grill` set audit (skip noted in the hand-off; a grill has no §S); `ds:backprop` flake triage and loop-first method (`whetstone:diagnose`) | graceful skip, §S-noted   |
 
 Personal tooling — output compressors, memory servers, alternative edit tools — belongs in the operator's own harness, not here. The same test D18 applies to gates applies to adapters: this file carries what helps anyone who installs the plugin, not one operator's preferences.
@@ -22,7 +22,7 @@ MCP server serving version-current API docs. The middle segment of the tool name
 
 ## §workflow — deterministic scout fan-out
 
-Scope: research fan-out only — `ds:check` step 2 (§V/§T/§X scan). The `ds:build` loop stays on `/goal`: Workflows run in the background with no mid-run steer, which breaks commit-per-flip and §S resume.
+Scope: research fan-out only — `ds:status --drift` step 1 (§V/§T/§X scan). The `ds:build` loop stays on `/goal`: Workflows run in the background with no mid-run steer, which breaks commit-per-flip and §S resume.
 
 - targets ≤ 2, or no `Workflow` tool → parallel `Agent` spawns (`subagent_type: dossier:dossier-scout`).
 - targets > 2 → one Workflow run. A skill that instructs the call is the operator opt-in the Workflow tool contract asks for.

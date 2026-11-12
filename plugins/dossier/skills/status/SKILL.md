@@ -1,6 +1,6 @@
 ---
 name: status
-description: The dossier driver + read-only sit-rep. Default session-open action. Invoke when the user says "ds:status", "ds", "dossier status", "where are we", "sit-rep", "what's next", "check dossier", or session-start before any other ds:* verb.
+description: The dossier driver + read-only sit-rep, with a drift audit under --drift. Default session-open action. Invoke when the user says "ds:status", "ds", "dossier status", "where are we", "sit-rep", "what's next", "check dossier", "check drift", "audit dossier", "does code still match spec", "verify invariants", before opening a PR, or session-start before any other ds:* verb.
 ---
 
 # ds:status — the dossier driver (sit-rep)
@@ -76,7 +76,7 @@ Scan §S for `START` lines with no matching `DONE` for the same `<target>`. Each
 
 ### 4. Detect stale §X (optional warning)
 
-For each §X row run `git status -sb` + `git rev-list --count` and compare against the recorded values. A difference flags `§X stale (refresh via ds:build or ds:check)`. Refreshing is a write op and belongs to those verbs.
+For each §X row run `git status -sb` + `git rev-list --count` and compare against the recorded values. A difference flags `§X stale (refresh via ds:build)`. Refreshing is a write op and belongs to those verbs.
 
 ### 5. Report (decision-first)
 
@@ -120,6 +120,42 @@ The **pause / resume actions in step 1a are outside that path** and are not read
 1. Fold the normal sit-rep (steps 1–5) underneath.
 
 Always end with `recovery source: transcripts | none`. Worst case is `none`.
+
+### 8. `--drift` mode
+
+`ds:status --drift` checks the ledger against the repos and reports a severity-tagged list. It changes no DOSSIER.md and no repo, and appends no §S. `--all` adds the archived dossiers.
+
+1. **Scouts.** Spawn one `dossier:dossier-scout` per §X repo, in parallel. With more than 2 repos and the `Workflow` tool present, send the same missions through the §workflow fan-out (`${CLAUDE_PLUGIN_ROOT}/ADAPTERS.md`). Mission:
+
+   ```
+   You are a dossier-scout. Read-only.
+   Dossier: <path-to-DOSSIER.md>. Repo to scan: <repo-path>.
+   Headings may be plain (`## Invariants`, `## Tasks`, `## Repos`) or sigils
+   (`## §V`, `## §T`, `## §X`); match whichever the file carries.
+   1. Each §V row whose check is a shell predicate: run it, report PASS/FAIL.
+   2. Each §V row whose check is a test name: find and run it, report PASS/FAIL/MISSING.
+   3. Each §T `x` row with cite=<sha>: report VALID/MISSING in <repo-path>'s git log.
+   4. §X for <repo>: git status -sb, ahead count, latest tag, push state. Do not edit DOSSIER.md.
+   Output: a terse pipe-table, one row per finding.
+   <paste DOSSIER.md here>
+   ```
+
+1. **Verify sweep.** The verify hook sees new writes only, so run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds verify-sweep <touched-files...>` on the files the §T `x`-row commits cite plus the files `git status -sb` lists. Findings are 🟡 warnings. Exit 69 or 70 → skip it and name the stderr line.
+
+1. **Local checks**, while the scouts run. `"${CLAUDE_PLUGIN_ROOT}"/cli/ds ds-check .scratchpad` covers Vm.1 and Vm.4: exit 1 is 🔴. `"${CLAUDE_PLUGIN_ROOT}"/cli/ds vm-checks .scratchpad` covers Vm.2, 3, 6, 8 and 9: each line is prefixed `CRITICAL` (🔴) or `WARN` (🟡), and exit 1 means at least one finding. Exit 69 or 70 from either means the check did not run; report its stderr line as the finding. By hand: Vm.5 (INDEX counts match §T/§B), Vm.12 (more than 1 live → 🟡), Vm.13 (newest §S older than `DS_STALE_LIVE_DAYS`, 14), Vm.14 (a bare `PAUSE` with no `reason=`).
+
+1. **Report:**
+
+   ```
+   ds:status --drift <slug>: <N> critical, <M> warnings, <K> info
+   🔴 <repo>: <finding>        # §V failing with a commit cited; §T cite missing
+   🟡 <repo>: <finding>        # §X stale; incomplete op; §V test MISSING
+   🟢 <repo>: <finding>
+   Vm: Vm.1 ✓ Vm.2 ✓ Vm.3 ✗ (2 rows) ...
+   Remediations (not applied): <T-id> cite missing → ds:backprop; §X stale → ds:build --next
+   ```
+
+A scout that times out is reported as `scout-failed` for its repo; the others go on. Besides the step-6 writes, the sweep fills `.scratchpad/.verify-cache/` (24 hours; 30 days for a resolved action SHA), a cache that costs only a re-fetch to delete.
 
 ## Exit codes
 

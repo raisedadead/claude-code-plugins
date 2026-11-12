@@ -85,7 +85,7 @@ Per-source raw-JSON `curl` / `gh api` paths, and how to add a new authority (pur
 
 ## Composition
 
-- **With `ds:check`**: the drift detector runs `ds verify-sweep` on touched files automatically; findings fold into 🟡 warnings.
+- **With `ds:status --drift`**: the drift audit runs `ds verify-sweep` on touched files automatically; findings fold into 🟡 warnings.
 - **With `ds:build`**: the PreToolUse hook is active inside the build (a live wave means the `.scratchpad/dossier/` gate passes), so no explicit invocation is needed. It skips dossier paths themselves — `.scratchpad/` and `DOSSIER.md` — so ledger writes stay unscanned.
 - **With `ds:backprop`**: when a bug's root cause is "stale claim baked into code", the backprop fix adds the missing alias to `engine/verify-authorities.ts` so recurrence is caught at write time.
 
@@ -94,4 +94,4 @@ Per-source raw-JSON `curl` / `gh api` paths, and how to add a new authority (pur
 - `engine/verify-authorities.ts` — alias maps + registry definitions
 - `engine/verify.ts` — check functions and the pattern registry
 - `hooks/gates.ts` `verifyGate` — PreToolUse advisory
-- `cli/verify.ts` — HTTP cache, `ds verify-sweep` (used by ds:check), `ds verify-edit`, `ds resolve-pins`
+- `cli/verify.ts` — HTTP cache, `ds verify-sweep` (used by ds:status --drift), `ds verify-edit`, `ds resolve-pins`

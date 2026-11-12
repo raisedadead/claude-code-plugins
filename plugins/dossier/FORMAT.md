@@ -149,7 +149,7 @@ Config:
 | VALKEY_ENDPOINT  | string | valkey.artemis.svc:6379 | k8s svc DNS        |
 ```
 
-**Pinned deps (proactive verify):** when a task introduces a library, record the resolved latest from `cli/ds resolve-pins <ecosystem>:<pkg>` here so the model and `ds:check` share one source of truth:
+**Pinned deps (proactive verify):** when a task introduces a library, record the resolved latest from `cli/ds resolve-pins <ecosystem>:<pkg>` here so the model and `ds:status --drift` share one source of truth:
 
 ```markdown
 Pinned deps:
@@ -244,7 +244,7 @@ Format rules:
 
 ## 10. §X — Cross-repo state
 
-Live table of every repo this dossier touches. Refreshed by `ds:build` + `ds:check`. Captures ahead-count, tag, push state.
+Live table of every repo this dossier touches. Refreshed by `ds:build`; `ds:status --drift` reports the current values. Captures ahead-count, tag, push state.
 
 ```markdown
 ## §X — Cross-repo state
@@ -297,7 +297,7 @@ Examples (note the blank lines between entries):
 
 2026-05-14 14:50 ds:build T2 DONE → x
 
-2026-05-14 15:01 ds:check — drift report: 0 violations, §X clean
+2026-05-14 15:01 ds:build T3 DONE → x cite=a1b2c3d
 ```
 
 Format rules:
@@ -497,4 +497,4 @@ Pause/resume are NOT multi-step ops: they write a single atomic §S line (`pause
 | Vm.16 | at most one dossier per `<date>-<slug>` path, live or `_archive/`; the same slug under a different date is not detected                                                           | model — `ds:new` collision check                      |
 | Vm.X  | stale §X (>30min) warns + requires operator confirm on flip                                                                                                                       | model — `ds:build` step 8a guard                      |
 
-`ds:check` runs the **code**-enforced rules deterministically (`ds ds-check` exits non-zero on any Vm.1/Vm.4/Vm.15 drift) and applies the **model**-enforced rules best-effort on read. The `enforced by` column is the honest map: a `model` row is guidance a skill follows, not a guarantee — do not read "ds:check ran" as "every Vm holds".
+`ds:status --drift` runs the **code**-enforced rules deterministically (`ds ds-check` exits non-zero on any Vm.1/Vm.4/Vm.15 drift) and applies the **model**-enforced rules best-effort on read. The `enforced by` column is the honest map: a `model` row is guidance a skill follows, not a guarantee — do not read "the drift audit ran" as "every Vm holds".

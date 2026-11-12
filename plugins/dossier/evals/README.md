@@ -17,7 +17,7 @@ Exit 1 on any finding. CI runs it with the other Vitest suites (`the shipped ski
 
 ## Layer 2 — live-model routing (manual, not in CI)
 
-The lint cannot tell whether `"where are we"` reaches `dossier:status` rather than `dossier:check`; only a live model resolves that. Each directory here is a [`claude plugin eval`](https://code.claude.com/docs/en/plugin-evals) case: a `prompt.md` a user might type, and a `tool_used` grader on the `Skill` call it should produce — or, for `none-*` cases, must not produce.
+The lint cannot tell whether `"where are we"` reaches `dossier:status` rather than `dossier:converge`; only a live model resolves that. Each directory here is a [`claude plugin eval`](https://code.claude.com/docs/en/plugin-evals) case: a `prompt.md` a user might type, and a `tool_used` grader on the `Skill` call it should produce — or, for `none-*` cases, must not produce.
 
 ```bash
 claude plugin eval plugins/dossier --ablation none --runs 3

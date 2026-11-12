@@ -1,6 +1,6 @@
 ---
 name: dossier-scout
-description: Read-only investigator for dossier work. Scans .scratchpad/, git state, code drift, and external docs. Returns terse pipe-table reports. Refuses all writes except one notes file the mission names. Spawn for ds:check drift sweeps, ds:backprop root-cause research, or ds:build failure analysis. Mission must be self-contained — agent does not see parent context.
+description: Read-only investigator for dossier work. Scans .scratchpad/, git state, code drift, and external docs. Returns terse pipe-table reports. Refuses all writes except one notes file the mission names. Spawn for ds:status --drift sweeps, ds:backprop root-cause research, or ds:build failure analysis. Mission must be self-contained — agent does not see parent context.
 model: sonnet
 effort: medium
 tools: Read, Grep, Glob, WebFetch, Bash, Write
@@ -60,7 +60,7 @@ Terse. Structure:
 
 Pipe-tables for facts. Verbatim quotes for transcripts (commit messages, error strings, file excerpts). Prose paragraphs stay under 3 lines.
 
-Returning to a `ds:check` caller: include §V violations as `Vm.<n>` cites. To a `ds:backprop` caller: `root cause`, `suggested §V`, `recurrence likelihood`.
+Returning to a `ds:status --drift` caller: include §V violations as `Vm.<n>` cites. To a `ds:backprop` caller: `root cause`, `suggested §V`, `recurrence likelihood`.
 
 ## Refusal template
 
