@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -20,12 +20,12 @@ function cleanEnv(): NodeJS.ProcessEnv {
   return env
 }
 
-async function converge(root: string, rows: string[]): Promise<Run> {
+async function converge(root: string, rows: string[], env: NodeJS.ProcessEnv = cleanEnv()): Promise<Run> {
   const contract = join(root, 'contract.md')
   const table = ['| id | command | expect |', '| --- | --- | --- |', ...rows.map((row, i) => `| ${i + 1} | ${row} |`)]
   writeFileSync(contract, ['# c', '', '| field | value |', '| --- | --- |', '| consumer | tests |', '', '## done-when', '', ...table, ''].join('\n'))
   try {
-    const { stdout } = await execFileAsync('sh', [DS, 'converge', contract], { cwd: root, env: cleanEnv(), encoding: 'utf8' })
+    const { stdout } = await execFileAsync('sh', [DS, 'converge', contract], { cwd: root, env, encoding: 'utf8' })
     return { status: 0, stdout }
   } catch (error) {
     const failed = error as { code?: unknown; stdout?: string }
@@ -127,14 +127,22 @@ test('an escaped pipe inside a regex search pattern is refused before any comman
 test('shell pipes, sh -c pipes, bracketed pipes and plain grep patterns still run', async () => {
   await withTmp(async (root) => {
     const file = ledger(root)
-    const result = await converge(root, [
-      "`printf 'a' \\| grep -q a` | exit 0",
-      "`sh -c 'printf a \\| grep -q a'` | exit 0",
-      `\`grep -Eq '^[\\|] T1 [\\|] x ' ${file}\` | exit 1`,
-      `\`grep -Eq '^[\\|] T1 [\\|] [.] ' ${file}\` | exit 0`,
-      `\`grep -q '^\\| T1 \\| x ' ${file}\` | exit 1`,
-      `\`rg -qF '\\| T1 \\|' ${file}\` | exit 0`,
-    ])
+    const bin = join(root, 'bin')
+    mkdirSync(bin)
+    writeFileSync(join(bin, 'rg'), '#!/bin/sh\nexec grep "$@"\n', { mode: 0o755 })
+    const env = { ...cleanEnv(), PATH: `${bin}:${process.env.PATH ?? ''}` }
+    const result = await converge(
+      root,
+      [
+        "`printf 'a' \\| grep -q a` | exit 0",
+        "`sh -c 'printf a \\| grep -q a'` | exit 0",
+        `\`grep -Eq '^[\\|] T1 [\\|] x ' ${file}\` | exit 1`,
+        `\`grep -Eq '^[\\|] T1 [\\|] [.] ' ${file}\` | exit 0`,
+        `\`grep -q '^\\| T1 \\| x ' ${file}\` | exit 1`,
+        `\`rg -qF '\\| T1 \\|' ${file}\` | exit 0`,
+      ],
+      env,
+    )
     assert.equal(verdict(result), 'CONVERGE: MET 6/6', result.stdout)
   })
 })
