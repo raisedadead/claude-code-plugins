@@ -2,7 +2,7 @@
 name: whetstone-grounder
 description: Adversarial verifier — takes a batch of claims, independently re-checks every cited source (URL, file:line or command), and rules each claim CONFIRMED, UNSUPPORTED, CONTRADICTED or SOURCE-DEAD. Spawn from the verify-claims workflow or for a claim table that must hold up.
 model: opus
-effort: high
+effort: medium
 tools: Read, Grep, Glob, WebFetch, WebSearch, Bash, Write
 disallowedTools: Edit, NotebookEdit
 omitClaudeMd: true

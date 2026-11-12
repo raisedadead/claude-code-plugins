@@ -94,7 +94,7 @@ Availability gate per ADAPTERS §whetstone: proceed only if the session agent li
 When present:
 
 1. EXTRACT the intended approach: artifact (what will be built, with its `PROBE: <command> → <output line>` lines) + contract (§T task text, `verify` predicate, touched §V invariants). No reasoning trail. The contract also states: each host call the design depends on (a host API, a spawned CLI, an MCP tool, a path the host installs) has a `PROBE:` line from a real session; a host call without one is a FAILURE.
-1. Spawn `whetstone:whetstone-doubter` (`Agent` tool, artifact-only mission per whetstone's doubt-pass template).
+1. Spawn `whetstone:whetstone-doubter` (`Agent` tool, artifact-only mission per whetstone's doubt-pass template). Pass the session model's family as the Agent `model`, as the doubt-pass template does.
 1. Parse the verdict line — `DOUBT: FAILURES | NO FAILURE FOUND` (model-judgment parsed, not computed).
 1. FAILURES → classify each finding actionable / not-actionable; fold actionable ones into the approach BEFORE the first RED. A finding that contradicts the §T contract itself: interactive → surface to operator; under `--auto` → PAUSE (`ambiguous`).
 1. Append §S: `ds:build <T-id> doubt=<FAILURES:<n>-actionable | clean>`.
