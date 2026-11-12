@@ -226,19 +226,13 @@ test('a missing contract fails the parse', async () => {
 test('an escaped pipe survives the cell split', async () => {
   const result = await run(join(FIXTURES, 'met.md'))
   assert.equal(result.status, MET, out(result))
-  assert.ok(result.stdout.includes('| cat'), result.stdout)
+  assert.ok(result.stdout.includes('| grep -q a'), result.stdout)
 })
 
 test('a nonzero expected exit counts as met', async () => {
   const result = await run(join(FIXTURES, 'met.md'))
   assert.ok(result.stdout.includes('false'), result.stdout)
   assert.equal(result.status, MET, result.stdout)
-})
-
-test('stdout nothing requires empty output', async () => {
-  const result = await run(join(FIXTURES, 'unmet.md'))
-  assert.equal(result.status, UNMET, result.stdout)
-  assert.ok(result.stdout.includes('nope') || result.stdout.includes('yes'), result.stdout)
 })
 
 test('a criterion pointed at another contract is allowed', async () => {
@@ -526,46 +520,12 @@ test('the prompt hook counts the rows this runner refuses', async () => {
   })
 })
 
-test('a matching substring with a failed command is unmet', async () => {
-  const result = await runText(
-    'loud-failure.md',
-    singleCriterion(
-      '| id  | command                        | expect        |',
-      '| --- | ----------------------------- | ------------- |',
-      "| 1   | `sh -c 'echo hello; exit 3'`  | stdout: hello |",
-    ),
-  )
-  assert.equal(verdict(result), 'CONVERGE: UNMET 1 of 1', result.stdout)
-  assert.equal(result.status, UNMET, result.stdout)
-})
-
-test('stdout nothing with a failed command is unmet', async () => {
-  const result = await runText(
-    'silent-failure.md',
-    singleCriterion(
-      '| id  | command        | expect            |',
-      '| --- | -------------- | ----------------- |',
-      "| 1   | `sh -c 'exit 3'` | stdout: (nothing) |",
-    ),
-  )
-  assert.equal(verdict(result), 'CONVERGE: UNMET 1 of 1', result.stdout)
-  assert.equal(result.status, UNMET, result.stdout)
-})
-
 test('an unmet line names the exit code the command returned', async () => {
   const result = await runText(
     'actual-exit.md',
     singleCriterion('| id  | command          | expect |', '| --- | ---------------- | ------ |', "| 1   | `sh -c 'exit 3'` | exit 0 |"),
   )
   assert.match(result.stdout, /^ {2}UNMET 1\. sh -c 'exit 3' {2}\[exit 0; got exit 3\]$/m, result.stdout)
-})
-
-test('an unmet stdout line with exit 0 names no exit code', async () => {
-  const result = await runText(
-    'wrong-text.md',
-    singleCriterion('| id  | command          | expect        |', '| --- | ---------------- | ------------- |', "| 1   | `sh -c 'echo bye'` | stdout: hello |"),
-  )
-  assert.match(result.stdout, /^ {2}UNMET 1\. sh -c 'echo bye' {2}\[stdout: hello\]/m, result.stdout)
 })
 
 test('every command is named before the first one runs', async () => {
@@ -576,25 +536,6 @@ test('every command is named before the first one runs', async () => {
   assert.equal(planned.length, 5, result.stdout)
   assert.equal(ran.length, 5, result.stdout)
   assert.ok(Math.max(...planned) < Math.min(...ran), result.stdout)
-})
-
-test('stderr does not satisfy a stdout expect', async () => {
-  const result = await run(join(FIXTURES, 'stderr-only.md'))
-  assert.equal(verdict(result), 'CONVERGE: UNMET 1 of 1', out(result))
-  assert.equal(result.status, UNMET, out(result))
-})
-
-test('stdout nothing ignores a noisy stderr', async () => {
-  const result = await runText(
-    'noisy-but-silent.md',
-    singleCriterion(
-      '| id  | command                   | expect            |',
-      '| --- | ------------------------- | ----------------- |',
-      "| 1   | `sh -c 'echo noise >&2'`  | stdout: (nothing) |",
-    ),
-  )
-  assert.equal(verdict(result), 'CONVERGE: MET 1/1', out(result))
-  assert.equal(result.status, MET, out(result))
 })
 
 test('a failed criterion reports its stderr', async () => {

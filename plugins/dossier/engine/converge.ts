@@ -1,8 +1,9 @@
 import { CELL, splitLines, strip, unicodeRegex } from './text.ts'
 
 const ROW = unicodeRegex('^\\|(.+)\\|\\s*$')
-const EXPECT = unicodeRegex('^(?:exit\\s+\\d+|stdout:\\s*\\S[^\\n]*)$')
 const EXIT = unicodeRegex('^exit\\s+(\\d+)$')
+export const STDOUT_HINT =
+  'stdout: is not an expect; check the output inside the command and expect exit 0, as `test "$(cmd)" -eq N` for a count or `test -z "$(cmd)"` for no output'
 const DETAIL_MAX = 120
 const RUNTIME_SUFFIXES = new Set(['.py', '.sh', '.js', '.ts', '.go', '.rs', '.rb'])
 const DOC_SUFFIXES = new Set(['.md', '.json', '.txt', '.yml', '.yaml'])
@@ -94,19 +95,9 @@ export function hasConsumer(text: string): boolean {
   })
 }
 
-export function readableExpect(expect: string): boolean {
-  return EXPECT.test(strip(expect))
-}
-
-export function met(expect: string, code: number, out: string): boolean {
-  const wanted = strip(expect)
-  if (wanted.startsWith('stdout:')) {
-    const text = strip(wanted.slice('stdout:'.length))
-    if (text === '(nothing)') return code === 0 && strip(out) === ''
-    return code === 0 && out.includes(text)
-  }
-  const exit = EXIT.exec(wanted)
-  return exit ? code === Number(exit[1]) : false
+export function expectedExit(expect: string): number | undefined {
+  const exit = EXIT.exec(strip(expect))
+  return exit ? Number(exit[1]) : undefined
 }
 
 export function detail(stream: string): string {

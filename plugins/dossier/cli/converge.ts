@@ -2,7 +2,19 @@ import { spawnSync } from 'node:child_process'
 import { readdirSync, readFileSync, statSync, writeSync } from 'node:fs'
 import { constants } from 'node:os'
 import { dirname, join } from 'node:path'
-import { contractPaths, DATE_PREFIX, detail, field, hasConsumer, isCommand, layerMix, met, numberedRows, pyRepr, readableExpect } from '../engine/converge.ts'
+import {
+  contractPaths,
+  DATE_PREFIX,
+  detail,
+  expectedExit,
+  field,
+  hasConsumer,
+  isCommand,
+  layerMix,
+  numberedRows,
+  pyRepr,
+  STDOUT_HINT,
+} from '../engine/converge.ts'
 import { headerToken } from '../engine/ledger.ts'
 import { byCodePoint, splitLines, strip } from '../engine/text.ts'
 import { childEnv } from './env.ts'
@@ -107,7 +119,7 @@ function fail(reason: string): number {
   return PARSE
 }
 
-function run(command: string, root: string, level: number): { code: number; out: string; err: string } {
+function run(command: string, root: string, level: number): { code: number; err: string } {
   const done = spawnSync('/bin/sh', ['-c', command], {
     cwd: root,
     encoding: 'utf8',
@@ -117,10 +129,10 @@ function run(command: string, root: string, level: number): { code: number; out:
     killSignal: 'SIGKILL',
   })
   if ((done.error as NodeJS.ErrnoException | undefined)?.code === 'ETIMEDOUT') {
-    return { code: 124, out: '', err: `timed out after ${TIMEOUT_SECONDS}s` }
+    return { code: 124, err: `timed out after ${TIMEOUT_SECONDS}s` }
   }
   const code = done.signal ? -(constants.signals[done.signal] ?? 1) : (done.status ?? 1)
-  return { code, out: done.stdout ?? '', err: done.stderr ?? '' }
+  return { code, err: done.stderr ?? '' }
 }
 
 function resolveContract(root: string, from: string): string | number {
@@ -157,7 +169,8 @@ export function convergeVerb(args: string[]): number {
     if (row.length !== 3) return fail(`criterion ${row[0]} is not exactly id | command | expect`)
     const [ident = '', command = '', expect = ''] = row
     if (!isCommand(command)) return fail(`criterion ${ident} is not a backticked command: ${pyRepr(command)}`)
-    if (!readableExpect(expect)) return fail(`criterion ${ident} has an unreadable expect: ${pyRepr(expect)}`)
+    if (strip(expect).startsWith('stdout:')) return fail(`criterion ${ident} — ${STDOUT_HINT}`)
+    if (expectedExit(expect) === undefined) return fail(`criterion ${ident} has an unreadable expect: ${pyRepr(expect)}`)
   }
   if (!hasConsumer(text)) return fail(`${contract} names no consumer`)
   for (const [ident, command = ''] of rows) say(`will run ${ident}. ${command.slice(1, -1)}`)
@@ -165,10 +178,9 @@ export function convergeVerb(args: string[]): number {
   for (const [ident, command = '', expect = ''] of rows) {
     const bare = command.slice(1, -1)
     const result = run(bare, root, level)
-    const ok = met(expect, result.code, result.out)
+    const ok = result.code === expectedExit(expect)
     if (!ok) unmet++
-    const shown = !ok && (result.code !== 0 || expect.startsWith('exit'))
-    const got = shown ? `; got exit ${result.code}` : ''
+    const got = ok ? '' : `; got exit ${result.code}`
     let line = `  ${ok ? 'MET  ' : 'UNMET'} ${ident}. ${bare}  [${expect}${got}]`
     const why = ok ? '' : detail(result.err)
     if (why) line += `  — ${why}`

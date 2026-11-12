@@ -45,12 +45,14 @@ Criteria are shell, and `ds:close` resolves a contract with no argument, so the 
 | id  | command             | expect            |
 | --- | ------------------- | ----------------- |
 | 1   | `pytest -q`         | exit 0            |
-| 2   | `mytool --version`  | stdout: 1.        |
+| 2   | `test -z "$(git status --porcelain)"` | exit 0 |
 ```
 
-`expect` is `exit <n>`, `stdout: <substring>`, or `stdout: (nothing)`. Both `stdout:` forms also need exit 0, and `stdout: (nothing)` means output that is empty or only whitespace. A `grep -c` that finds no match prints `0` but exits 1, so `stdout: 0` is never met: write a zero count as `grep -q <pattern> <file>` with `exit 1`.
+`expect` has one form, `exit <n>`. A check on output goes inside the command: `test "$(cmd)" -eq N` for a count, `test -z "$(cmd)"` for no output, each with `exit 0`.
 
-Four shapes are refused at parse time — each `CONVERGE: PARSE`, exit 2:
+Five shapes are refused at parse time — each `CONVERGE: PARSE`, exit 2:
+
+- **A `stdout:` expect.** A substring match passed `stdout: 0` on a count of `120`. The refusal names the `test` rewrite.
 
 - **A numbered row that is not exactly `id | command | expect`.** A row whose `expect` cell was lost to a formatter used to be skipped while the prompt hook still counted it — `MET 1/1` for a contract of two criteria, one of which never ran. (An extra cell, which is how an unescaped pipe arrives, was already refused for not being backticked.)
 
@@ -58,7 +60,7 @@ Four shapes are refused at parse time — each `CONVERGE: PARSE`, exit 2:
 
 - **A missing or empty `consumer`.** The field that asks whether the work reaches anyone, and the one nobody writes unprompted. A wave once hardened a checker through three review rounds while no consumer could execute it.
 
-- **An empty or unreadable `expect`.** A bare `stdout:` matches every output and would report MET on any command that exits 0, so it is refused along with the rest of the malformed forms.
+- **An empty or unreadable `expect`.** Anything other than `exit <n>`.
 
 Nesting is bounded rather than banned. A criterion may invoke the runner — this runner's own contract does — and the invocation count travels in `DS_CONVERGE_DEPTH`: one nested level runs, the next is refused (`CONVERGE: PARSE`, exit 2). Reading a command string cannot decide what will recurse; counting invocations can.
 
