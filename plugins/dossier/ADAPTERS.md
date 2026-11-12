@@ -13,7 +13,7 @@ Decision ids (D2, D4, D18) refer to [RESEARCH.md](https://github.com/raisedadead
 | `whetstone` plugin | `whetstone:whetstone-doubter` in the agent list; `bin/` on `PATH` | `ds:build` doubt, TDD, lint, tiger, conflict routes; `ds:grill` set audit (skip noted in the hand-off; a grill has no §S); `ds:backprop` flake triage and loop-first method (`whetstone:diagnose`) | graceful skip, §S-noted   |
 | `signoff` agent    | `signoff` in the agent list; the plugin does not ship one    | `ds:new` step 3.7 — judge the design notes and their evidence file before the contract commit | §S `signoff=skipped-absent`; `ds design-check` still runs |
 
-Personal tooling — output compressors, memory servers, alternative edit tools — belongs in the operator's own harness, not here. The same test D18 applies to gates applies to adapters: this file carries what helps anyone who installs the plugin, not one operator's preferences. The `signoff` row is the one agent the operator brings: step 3.7 states the reply it reads (`missing:` lines, then `SIGNOFF: PASS` or `SIGNOFF: CHANGES`), so any agent that keeps that shape fits (D26).
+Personal tooling — output compressors, memory servers, alternative edit tools — belongs in the operator's own harness, not here. The same test D18 applies to gates applies to adapters: this file carries what helps anyone who installs the plugin, not one operator's preferences. The `signoff` row is the one agent the operator brings: step 3.7 states what it reads (`missing:` lines in a findings file, and a reply that ends `SIGNOFF: PASS` or `SIGNOFF: CHANGES`), so any agent that keeps that shape fits (D26).
 
 ## §context7 — current library API docs
 
