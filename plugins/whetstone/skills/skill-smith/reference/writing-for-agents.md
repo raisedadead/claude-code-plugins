@@ -70,6 +70,15 @@ You win twice: fewer tokens, and a sharper hook for the agent to hang its thinki
 
 **Negation** is the failure mode beside this lever: steering by prohibition drags the forbidden behaviour into context and makes it _more_ available, not less. _Don't think of an elephant_, and the elephant is all there is; the negation is a weak modifier the strongly-activated concept overruns, so the ban half-reads as an instruction to do the thing. Prompt the **positive**: state the target behaviour ("write one-line comments") so the banned one is never spoken. A prohibition earns its place only as a hard guardrail you cannot phrase positively; even then, pair it with the positive target so attention lands on what to do.
 
+## Few tools
+
+A skill offers the agent few tools, each one good. Four rules:
+
+1. **One way per step.** A step names one tool or command. A list of interchangeable tools is a choice the agent pays for on every run.
+1. **Scripts in TypeScript, else Python.** A script the skill tells the agent to write is TypeScript, else Python. Bash is for a launcher, a hook that runs before Node, or a one-line command.
+1. **One command over a fixed chain.** A run of deterministic calls with one result, and no decision between them, becomes one command with one exit code.
+1. **No menus.** State the default. A real choice says how to pick.
+
 ## Pruning
 
 - Keep each meaning in a **single source of truth**: one authoritative place, so changing the behaviour is a one-place edit. **Duplication** (the same meaning in more than one place) costs maintenance and tokens, and inflates a meaning's prominence on the ladder past its real rank. (The accidental inverse of a leading word, which repeats a token on purpose, never the meaning.)
