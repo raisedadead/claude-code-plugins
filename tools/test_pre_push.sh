@@ -1,28 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-TMP="$(mktemp -d "${TMPDIR:-/tmp}/pre-push.XXXXXX")"
-export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
-export GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=maintenance.auto GIT_CONFIG_VALUE_0=false
-export PRE_PUSH_STEPS=rails CI_STEPS=not-a-step
-
-cleanup() { rm -rf "$TMP"; }
-trap cleanup EXIT
-
-fail() {
-	printf 'FAIL: %s\n' "$1" >&2
-	exit 1
-}
-
-refused() {
-	local log="$TMP/$1.log" mark="$2"
-	shift 2
-	if git push -q origin "$@" >"$log" 2>&1; then
-		fail "the hook let the push through ($mark expected)"
-	fi
-	grep -q "$mark" "$log" || fail "the refusal does not name $mark: $(tail -5 "$log")"
-}
+# shellcheck source=pre_push_lib.sh
+source "$(dirname "$0")/pre_push_lib.sh"
 
 mkdir -p "$TMP/rails/plugins/dossier/skills/build" "$TMP/rails/plugins/dossier/agents" "$TMP/rails/.dossier"
 printf 'Write the test first.\n' | tee "$TMP/rails/plugins/dossier/skills/build/SKILL.md" \
@@ -47,26 +27,7 @@ printf 'You don\342\200\231t.\n' >"$TMP/rails/CLAUDE.md"
 (cd "$TMP/rails" && LC_ALL=C bash "$ROOT/tools/rails_ceiling.sh") ||
 	fail "the rails check missed a curly-apostrophe negation under LC_ALL=C"
 
-mkdir -p "$TMP/work"
-(
-	cd "$ROOT"
-	git ls-files -z --cached --others --exclude-standard |
-		while IFS= read -r -d '' path; do [[ -e $path ]] && printf '%s\0' "$path"; done |
-		tar --null -T - -cf -
-) | tar -C "$TMP/work" -xf -
-git init -q --bare "$TMP/remote.git"
-git -C "$TMP/remote.git" config receive.autogc false
-cd "$TMP/work"
-git init -q -b main
-git config user.email test@example.invalid
-git config user.name test
-git config core.hooksPath .githooks
-git config core.excludesFile /dev/null
-ln -s "$ROOT/node_modules" node_modules
-printf 'node_modules\n' >>.git/info/exclude
-git add -A
-git commit -q -m "chore: snapshot"
-git remote add origin "$TMP/remote.git"
+enter_work_repo
 
 git push -q origin main >"$TMP/clean.log" 2>&1 ||
 	fail "the hook refused a clean tree, or read a stale CI_STEPS: $(tail -5 "$TMP/clean.log")"
@@ -97,71 +58,5 @@ grep -q 'TS2322' "$TMP/tools.log" || fail "the types step did not fail on a type
 grep -q 'Format issues' "$TMP/tools.log" || fail "the format step did not fail on an unformatted file"
 grep -qE '^CI: FAIL 3 of 4 in [0-9.]+s — format lint types$' "$TMP/tools.log" || fail "the summary does not name the failed steps: $(tail -1 "$TMP/tools.log")"
 git reset -q --hard origin/main
-
-printf "          node-version: '0.0.1'\n" >>.github/workflows/ci.yml
-git commit -q -am "ci: pin two node versions"
-refused pin 'PIN: no single node pin' main
-git reset -q --hard origin/main
-
-printf 'note\n' >notes.txt
-git add notes.txt
-git commit -q -m "docs: add a note"
-printf '| O99 | broken | row |\n' >>RESEARCH.md
-refused dirty 'DIRTY:' main
-git checkout -q -- RESEARCH.md
-
-git branch side origin/main~0
-git commit -q --allow-empty -m "chore: move past side"
-refused ref 'REF:' side
-
-git tag v-old origin/main
-printf 'scratch\n' >>notes.txt
-git push -q origin v-old >"$TMP/tag.log" 2>&1 ||
-	fail "the hook refused a tag on an older commit from a dirty tree: $(tail -5 "$TMP/tag.log")"
-
-git checkout -q -- notes.txt
-git checkout -q main
-# shellcheck disable=SC2016
-printf '#!/usr/bin/env bash\nprintf "steps=%%s list=%%s\\n" "${CI_STEPS-unset}" "${CI_LIST-unset}"\n' >tools/ci.sh
-git commit -q -am "test: stub the checks"
-CI_LIST=1 env -u PRE_PUSH_STEPS git push -q origin main >"$TMP/stale.log" 2>&1 || fail "the stubbed push failed: $(tail -5 "$TMP/stale.log")"
-grep -q '^steps=unset list=unset$' "$TMP/stale.log" || fail "the hook passed a stale CI_STEPS or CI_LIST to the checks: $(tail -1 "$TMP/stale.log")"
-
-git init -q "$TMP/foreign"
-git worktree add -q -b linked "$TMP/linked"
-cd "$TMP/linked"
-cat >tools/ci.sh <<'STUB'
-#!/usr/bin/env bash
-printf 'git_dir=%s\n' "${GIT_DIR-unset}"
-printf 'foreign=%s\n' "$(git -C "$FOREIGN" rev-parse --absolute-git-dir)"
-STUB
-git commit -q -am "test: report what the checks inherit"
-
-printf 'scratch\n' >>notes.txt
-refused linked-dirty 'DIRTY:' linked
-git checkout -q -- notes.txt
-
-cp "$(git rev-parse --git-path index)" "$TMP/alt-index"
-printf 'alt\n' >alt.txt
-GIT_INDEX_FILE="$TMP/alt-index" git add alt.txt
-GIT_INDEX_FILE="$TMP/alt-index" git commit -q -m "docs: commit through another index"
-GIT_INDEX_FILE="$TMP/alt-index" refused alt-index 'DIRTY:' linked
-git reset -q
-
-FOREIGN="$TMP/foreign" git push -q origin linked >"$TMP/linked.log" 2>&1 ||
-	fail "the hook refused a clean push from a linked worktree: $(tail -5 "$TMP/linked.log")"
-grep -qx 'git_dir=unset' "$TMP/linked.log" || fail "the checks inherited GIT_DIR from a linked worktree: $(cat "$TMP/linked.log")"
-grep -q '^foreign=.*/foreign/\.git$' "$TMP/linked.log" || fail "a check's git command missed the repo it named: $(cat "$TMP/linked.log")"
-
-mkdir -p "$TMP/septree/.githooks"
-cp "$ROOT/.githooks/pre-push" "$TMP/septree/.githooks/"
-sep=(git --git-dir="$TMP/sep.git" --work-tree="$TMP/septree")
-"${sep[@]}" init -q -b main
-"${sep[@]}" config core.hooksPath .githooks
-"${sep[@]}" -c user.email=test@example.invalid -c user.name=test commit -q --allow-empty -m "chore: separate git dir"
-if (cd "$TMP/septree" && "${sep[@]}" push -q "$TMP/remote.git" main:sep) >"$TMP/sep.log" 2>&1; then
-	fail "the hook let a push with a separate git dir through"
-fi
-grep -q 'GITDIR:' "$TMP/sep.log" || fail "the separate git dir refusal does not name GITDIR: $(tail -3 "$TMP/sep.log")"
 
 printf 'ok pre-push hook\n'

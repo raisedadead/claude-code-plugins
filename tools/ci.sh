@@ -52,8 +52,16 @@ else
 	CLAUDE_PIN="$(pin "$WORKFLOW" 's/.*@anthropic-ai\/claude-code@([0-9.]+).*/\1/p' claude-code)"
 	RUFF_PIN="$(pin requirements-dev.txt 's/^ruff==([0-9.]+)$/\1/p' ruff)"
 	py=(uv run -q --no-project --python "$PYTHON_PIN" python)
-	claude=(npx -y "@anthropic-ai/claude-code@$CLAUDE_PIN")
+	claude=()
 	ruff=(uvx "ruff@$RUFF_PIN")
+fi
+
+if [[ ${CI:-} != true && -z ${CI_LIST:-} && $job != tools ]]; then
+	claude_bin="$(npx -y --prefer-offline -p "@anthropic-ai/claude-code@$CLAUDE_PIN" sh -c 'command -v claude')" || {
+		printf 'CLAUDE: npx could not resolve @anthropic-ai/claude-code@%s\n' "$CLAUDE_PIN" >&2
+		exit 1
+	}
+	claude=("$claude_bin")
 fi
 
 JOBS="${CI_JOBS:-$(getconf _NPROCESSORS_ONLN)}"
@@ -132,7 +140,7 @@ shellcheck_at_pin() {
 		printf 'shellcheck is %s; CI runs %s\n' "$(shellcheck --version | sed -n 2p)" "$SHELLCHECK_PIN"
 		return 1
 	fi
-	shellcheck "$@"
+	shellcheck -x -P SCRIPTDIR "$@"
 }
 
 every_test_named() {
@@ -162,32 +170,29 @@ validate() {
 
 declare -A COVERAGE_FLOOR=([dossier]='96 93' [whetstone]='98 99')
 
-coverage() {
-	local plugin funcs lines out
-	for plugin in "$@"; do
-		read -r funcs lines <<<"${COVERAGE_FLOOR[$plugin]}"
-		if ! out="$(bun test --parallel --coverage --timeout 30000 "./plugins/$plugin/tests/"test_*.ts 2>&1)"; then
-			printf '%s\n' "$out"
-			return 1
-		fi
-		if ! bash tools/coverage_floor.sh "$plugin" "$funcs" "$lines" <<<"$out"; then
-			printf '%s\n' "$out"
-			return 1
-		fi
-	done
+bun_suite() {
+	local plugin="$1" funcs lines out
+	read -r funcs lines <<<"${COVERAGE_FLOOR[$plugin]}"
+	if ! out="$(bun test --parallel --coverage --timeout 30000 "./plugins/$plugin/tests/"test_*.ts 2>&1)"; then
+		printf '%s\n' "$out"
+		return 1
+	fi
+	if ! bash tools/coverage_floor.sh "$plugin" "$funcs" "$lines" <<<"$out"; then
+		printf '%s\n' "$out"
+		return 1
+	fi
 }
 
 if [[ $job == dossier || $job == whetstone || $job == all ]]; then
 	step install pnpm install --frozen-lockfile
 	wait
-	covered=(dossier whetstone)
-	[[ $job == all ]] || covered=("$job")
-	step coverage coverage "${covered[@]}"
 fi
 
 if [[ $job == dossier || $job == all ]]; then
-	step dossier-tests bun test --parallel --dots --timeout 30000 ./plugins/dossier/tests/test_*.ts
-	step node-tests node_modules/.bin/vitest run --reporter=dot plugins/dossier/tests/test_*.ts plugins/whetstone/tests/test_*.ts
+	step dossier-tests bun_suite dossier
+	if [[ ${CI:-} == true || -n ${CI_LIST:-} || " ${CI_STEPS:-} " == *" node-tests "* ]]; then
+		step node-tests node_modules/.bin/vitest run --reporter=dot plugins/dossier/tests/test_*.ts plugins/whetstone/tests/test_*.ts
+	fi
 	step format node_modules/.bin/oxfmt --check
 	step lint node_modules/.bin/oxlint --deny-warnings
 	step types node_modules/.bin/tsc -p .
@@ -197,6 +202,8 @@ if [[ $job == dossier || $job == all ]]; then
 	step validate validate
 	step dossier-mod "${claude[@]}" plugin test plugins/dossier
 	step pre-push bash tools/test_pre_push.sh
+	step pre-push-refusals bash tools/test_pre_push_refusals.sh
+	step pre-push-worktree bash tools/test_pre_push_worktree.sh
 	step dossier-shellcheck shellcheck_at_pin plugins/dossier/cli/ds tools/*.sh .githooks/pre-push
 fi
 
@@ -211,7 +218,7 @@ if [[ $job == tools || $job == all ]]; then
 fi
 
 if [[ $job == whetstone || $job == all ]]; then
-	step whetstone-tests bun test --parallel --dots --timeout 30000 ./plugins/whetstone/tests/test_*.ts
+	step whetstone-tests bun_suite whetstone
 	each \
 		plugins/whetstone/tests/test_flake_runner.sh \
 		plugins/whetstone/tests/test_verify_clean.sh \
