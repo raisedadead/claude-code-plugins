@@ -113,7 +113,8 @@ function removedNames(text: string): string[] {
 }
 
 function listed(repo: string, text: string, hit: string): boolean {
-  if (text.includes(hit)) return true
+  const exact = new RegExp(`(?<![\\w./~@-])${hit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\w/@-]|\\.\\w)`)
+  if (exact.test(text)) return true
   for (const match of text.matchAll(FOLDER)) {
     const folder = match[1] ?? ''
     if (folder.split('/').some((part) => part === '.' || part === '..')) continue

@@ -108,6 +108,12 @@ test('a removed name with a hit file the notes do not list fails; CHANGELOG.md a
   assert.equal(lines.filter((line) => line.startsWith('FAIL removes')).length, 1, lines.join('\n'))
 })
 
+test('a hit path listed only as the tail of a longer path does not count', async () => {
+  const { code, lines } = await check(notes(['REMOVES: oldskill', '', 'Files: archive/docs/old.md']))
+  assert.equal(code, 1, lines.join('\n'))
+  assert.ok(lines.includes('FAIL removes oldskill: docs/old.md is not in the notes'), lines.join('\n'))
+})
+
 test('a removed name is covered by a listed repo folder, but not by ./', async () => {
   const listed = await check(notes(['REMOVES: oldskill', '', 'Deleted: docs/']))
   assert.equal(listed.code, 0, listed.lines.join('\n'))
