@@ -18,8 +18,6 @@ function repo(): string {
   const { dir, clean } = tempRoot('dossier-fakeimpl-')
   cleanups.push(clean)
   git(dir, ['init', '-q'])
-  git(dir, ['config', 'user.email', 't@example.com'])
-  git(dir, ['config', 'user.name', 'tester'])
   git(dir, ['config', 'core.excludesFile', '/dev/null'])
   writeFileSync(join(dir, 'a.txt'), 'seed\n')
   git(dir, ['add', '-A'])

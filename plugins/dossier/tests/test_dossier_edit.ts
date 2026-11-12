@@ -97,12 +97,11 @@ function succeeded(done: Run): void {
 }
 
 function git(...args: string[]): void {
-  const env = { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null' }
-  execFileSync('git', args, { env, stdio: 'ignore' })
+  execFileSync('git', args, { stdio: 'ignore' })
 }
 
 function commit(repo: string, message: string): void {
-  git('-C', repo, '-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '--allow-empty', '-m', message)
+  git('-C', repo, 'commit', '-q', '--allow-empty', '-m', message)
 }
 
 function shapedDir(dir: string, header: string, sep: string, row: string, heading = '## §T — Task ledger', tailHeading = '## §S — log'): void {

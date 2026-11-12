@@ -35,8 +35,6 @@ function git(repo: string, ...args: string[]): void {
 
 function initRepo(root: string): void {
   git(root, 'init', '-q', '-b', 'main')
-  git(root, 'config', 'user.email', 't@example.com')
-  git(root, 'config', 'user.name', 't')
 }
 
 function ledger(root: string, dirname: string, state = 'live'): string {

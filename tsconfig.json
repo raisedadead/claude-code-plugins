@@ -19,6 +19,7 @@
     "plugins/whetstone/hooks/text.ts",
     "plugins/*/skills/*/scripts/*.ts",
     "plugins/*/tests/test_*.ts",
+    "plugins/dossier/tests/setup.ts",
     "vitest.config.ts"
   ]
 }

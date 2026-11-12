@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
-import { test as base } from 'vitest'
+import { afterAll, test as base } from 'vitest'
 
 const test = base.concurrent
 const execFileAsync = promisify(execFile)
@@ -27,8 +27,8 @@ async function run(file: string, args: string[], cwd?: string, env?: Record<stri
   }
 }
 
-async function must(file: string, args: string[], cwd?: string): Promise<string> {
-  const done = await run(file, args, cwd)
+async function must(file: string, args: string[], cwd?: string, env?: Record<string, string>): Promise<string> {
+  const done = await run(file, args, cwd, env)
   assert.equal(done.status, 0, `${file} ${args.join(' ')}: ${done.stderr}`)
   return done.stdout
 }
@@ -79,18 +79,42 @@ function contract(criterion = '`true`'): string {
 
 type Setup = { criterion?: string; bugs?: string; changelog?: boolean }
 
+const templates = new Map<string, Promise<string>>()
+
+afterAll(async () => {
+  for (const made of await Promise.allSettled(templates.values())) {
+    if (made.status === 'fulfilled') rmSync(made.value, { recursive: true, force: true })
+  }
+})
+
+async function seed(options: Setup): Promise<string> {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), 'ds-close-seed-')))
+  const git = (...args: string[]) => must('git', ['-C', root, ...args])
+  try {
+    await git('init', '-q', '-b', 'main')
+    writeFileSync(join(root, '.gitignore'), '.scratchpad/\n')
+    mkdirSync(join(root, '.dossier'))
+    writeFileSync(join(root, '.dossier', `${SLUG}.md`), contract(options.criterion))
+    if (options.changelog) writeFileSync(join(root, 'CHANGELOG.md'), '# Changelog\n')
+    await git('add', '.')
+    await git('commit', '-q', '-m', 'init')
+    return root
+  } catch (error) {
+    rmSync(root, { recursive: true, force: true })
+    throw error
+  }
+}
+
+function template(options: Setup): Promise<string> {
+  const key = JSON.stringify([options.criterion, options.changelog])
+  const made = templates.get(key) ?? seed(options)
+  templates.set(key, made)
+  return made
+}
+
 async function repo(rows: Row[], options: Setup = {}): Promise<string> {
   const root = realpathSync(mkdtempSync(join(tmpdir(), 'ds-close-')))
-  const git = (...args: string[]) => must('git', ['-C', root, ...args])
-  await git('init', '-q', '-b', 'main')
-  await git('config', 'user.email', 't@t')
-  await git('config', 'user.name', 't')
-  writeFileSync(join(root, '.gitignore'), '.scratchpad/\n')
-  mkdirSync(join(root, '.dossier'))
-  writeFileSync(join(root, '.dossier', `${SLUG}.md`), contract(options.criterion))
-  if (options.changelog) writeFileSync(join(root, 'CHANGELOG.md'), '# Changelog\n')
-  await git('add', '.')
-  await git('commit', '-q', '-m', 'init')
+  cpSync(await template(options), root, { recursive: true })
   mkdirSync(join(root, '.scratchpad', 'dossier', SLUG), { recursive: true })
   writeFileSync(join(root, '.scratchpad', 'dossier', SLUG, 'DOSSIER.md'), ledger(rows, options.bugs))
   return root
@@ -222,8 +246,7 @@ async function changelogRepo(...dates: string[]): Promise<string> {
   for (const [at, date] of dates.entries()) {
     writeFileSync(join(path, 'CHANGELOG.md'), `# Changelog\n${at}\n`)
     await must('git', ['-C', path, 'add', '.'])
-    const commit = `git -C '${path}' -c user.email=t@t -c user.name=t commit -q -m c --date=${date}`
-    await must('sh', ['-c', `GIT_COMMITTER_DATE=${date} ${commit}`])
+    await must('git', ['-C', path, 'commit', '-q', '-m', 'c', `--date=${date}`], undefined, { GIT_COMMITTER_DATE: date })
   }
   return path
 }
