@@ -64,6 +64,7 @@ test('a regex search that does not start its segment is refused too', async () =
       `\`git grep --no-index -Eq '\\| T1' ${file}\``,
       `\`! grep -Eq '\\| T1 \\| x ' ${file}\``,
       `\`sh -c 'grep -E x ${file} \\| wc -l'\``,
+      `\`rg -q '\\| T1' ${file} \\| awk -F: '{ print }'\``,
     ])
   })
 })
@@ -84,9 +85,11 @@ test('shell pipes, plain grep pipes, bracketed pipes, rg -F and awk patterns sti
         `\`grep -q '^\\| T1 \\| x ' ${file}\` | exit 1`,
         `\`rg -qF '\\| T1 \\|' ${file}\` | exit 0`,
         `\`test "$(awk -F'\\|' '{ print $2 }' ${file})" = ' T1 '\` | exit 0`,
+        "`printf a \\| sed -E 's/a/b/' \\| grep -q '\\| T1'` | exit 1",
+        `\`grep -q 'x\\|y' ${file}; xargs -P 2 true < /dev/null\` | exit 0`,
       ],
       env,
     )
-    assert.equal(verdict(result), 'CONVERGE: MET 7/7', result.stdout)
+    assert.equal(verdict(result), 'CONVERGE: MET 9/9', result.stdout)
   })
 })

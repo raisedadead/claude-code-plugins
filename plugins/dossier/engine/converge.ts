@@ -89,7 +89,7 @@ function shellSegments(text: string): string[][] {
     } else if (char === '\\') {
       word += text[++i] ?? ''
       started = true
-    } else if ('|;&\n'.includes(char)) {
+    } else if ('|;&\n()`'.includes(char)) {
       end()
       segments.push([])
     } else if (/[ \t\r]/.test(char)) end()
@@ -102,12 +102,22 @@ function shellSegments(text: string): string[][] {
   return segments
 }
 
-function namesRegexSearch(command: string): boolean {
-  const tokens = command.split(/[\s|;&()`$"'<>!{}=]+/).filter(Boolean)
-  const tools = new Set(tokens.map((token) => token.split('/').pop()))
-  if (tools.has('egrep')) return true
-  if (tools.has('grep') && tokens.some((token) => token === '--extended-regexp' || token === '--perl-regexp' || /^-[a-zA-Z]*[EP]/.test(token))) return true
-  return tools.has('rg') && !tokens.some((token) => token === '--fixed-strings' || /^-[a-zA-Z]*F/.test(token))
+const SEARCH_TOOLS = new Set(['grep', 'egrep', 'rg'])
+const NESTED_SCRIPTS = 4
+
+function regexSearch(words: string[]): boolean {
+  const at = words.findIndex((word) => SEARCH_TOOLS.has(word.split('/').pop() ?? ''))
+  if (at < 0) return false
+  const tool = words[at]?.split('/').pop()
+  const args = words.slice(at + 1)
+  if (tool === 'egrep') return true
+  if (tool === 'rg') return !args.some((arg) => arg === '--fixed-strings' || /^-[a-zA-Z]*F/.test(arg))
+  return args.some((arg) => arg === '--extended-regexp' || arg === '--perl-regexp' || /^-[a-zA-Z]*[EP]/.test(arg))
+}
+
+function namesRegexSearch(command: string, depth = 0): boolean {
+  if (depth > NESTED_SCRIPTS) return false
+  return shellSegments(command).some((words) => regexSearch(words) || words.some((word) => /\s/.test(word) && namesRegexSearch(word, depth + 1)))
 }
 
 export function pipeInPattern(command: string): boolean {

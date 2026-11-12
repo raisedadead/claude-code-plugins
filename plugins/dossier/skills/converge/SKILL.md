@@ -58,7 +58,7 @@ Six shapes are refused at parse time — each `CONVERGE: PARSE`, exit 2:
 
 - **A `stdout:` expect.** A substring match passed `stdout: 0` on a count of `120`. The refusal names the `test` rewrite.
 
-- **A `|` outside brackets in a `grep -E`, `egrep`, `grep -P` or `rg` pattern.** The runner unescapes `\|`, so `grep -E '^\| T1'` became an "or" that matched every line. A text scan: a command that names such a tool anywhere (`$(grep -cE …)`, `git grep -E`, inside `sh -c`) and holds a quoted `|` is refused; `rg -F` is exempt, and `awk` and `sed` patterns are not read.
+- **A `|` outside brackets in a `grep -E`, `egrep`, `grep -P` or `rg` pattern.** The runner unescapes `\|`, so `grep -E '^\| T1'` became an "or" that matched every line. A text scan: a command that runs such a search anywhere (`$(grep -cE …)`, `git grep -E`, inside `sh -c`) and holds a quoted `|` anywhere is refused; `rg -F` is exempt, and `awk` and `sed` alone are not read.
 
 - **A numbered row that is not exactly `id | command | expect`.** A row whose `expect` cell was lost to a formatter used to be skipped while the prompt hook still counted it — `MET 1/1` for a contract of two criteria, one of which never ran. (An extra cell, which is how an unescaped pipe arrives, was already refused for not being backticked.)
 
