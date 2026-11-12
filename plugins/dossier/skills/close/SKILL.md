@@ -44,10 +44,11 @@ The last line before the verdict names the steps still to run.
 Put the plan in front of the operator, with a one-line `--summary` proposal. Resolve each `✗` before the run:
 
 - An open agent row: `ds:build` it, or carry it when it is `who=H` or waits on a `+<k>d` need.
+- A row or a bug that cannot finish now, and that no flag carries: recommend a pause of the wave. The `ds:status` pause action runs when the operator says yes. Do not look for a mode that closes over the row.
 - An open bug: `ds:backprop B<n>`.
 - An unmet or unparsed contract: fix it, or add `--accept-unmet` on the operator's explicit say-so. The flag records the unmet ids in §S.
 - A done-when table that changed after the contract commit, beside other files or not committed: put the table edit in a commit of its own, so the change is visible to the operator. The check compares the parsed table at each commit; it shows the edit and does not judge it. A mixed edit stops refusing once the table at HEAD is one seen alone: the add commit's table, or the result of a contract-only commit that started from a table seen alone. So put the table back to one seen alone, then make the edit in its own commit; the reverted edit stays on a `·` line. A contract-only commit on top of an unseen edit does not settle it, and a table changed in a merge counts as unseen.
-- Work that will not finish: `--abandon "<reason>"` on the operator's say-so.
+- Work that will never finish: `--abandon "<reason>"`, only when the operator asks for it. When you offer the operator a choice, the pause comes first.
 
 Then print each `paused` row in `<root>/.scratchpad/INDEX.md` (`<root>` is the path `ds root` prints) with its route: resume it through `ds:status`, or close it with `--abandon`. The CHANGELOG check covers the ledger repo, the repo of a tracked contract, and each §X repo written as an absolute path, and stays silent when none of them tracks a `CHANGELOG.md`. A `⚠` CHANGELOG line means no `CHANGELOG.md` in those repos changed since the contract commit (write the entry, or close without one), or that the check did not run because the contract is untracked.
 

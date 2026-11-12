@@ -10,7 +10,8 @@ test('an open bug refuses --complete, and --abandon closes over open rows and bu
   await within(
     async (root) => {
       const refused = await close(root, '--complete', '--plan')
-      assert.match(refused.stdout, /✗ B1 has no fix cite/)
+      assert.match(refused.stdout, /✗ T2 open — .*pause the wave .*--abandon only on the operator's say-so/)
+      assert.match(refused.stdout, /✗ B1 has no fix cite — .*pause the wave .*--abandon only on the operator's say-so/)
       const done = await close(root, '--abandon', 'dropped', '--summary', 'not needed')
       assert.equal(done.status, 0, done.stdout + done.stderr)
       assert.match(archived(root), /^abandoned: true$/m)
