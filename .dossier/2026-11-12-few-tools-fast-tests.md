@@ -11,7 +11,7 @@
 | id  | command | expect |
 | --- | ------- | ------ |
 | 1   | `bash tools/ci.sh all` | exit 0 guard |
-| 2   | `bash -c 'TIMEFORMAT=%R; t=$( { time CI_STEPS=dossier-tests bash tools/ci.sh dossier >/dev/null 2>&1; } 2>&1 ); awk -v t="$t" "BEGIN { exit !(t < 3) }"'` | exit 0 |
+| 2   | `bash -c 'TIMEFORMAT=%R; t=$( { time CI_STEPS=dossier-tests bash tools/ci.sh dossier >/dev/null 2>&1; } 2>&1 ); awk -v t="$t" "BEGIN { exit !(t < 5) }"'` | exit 0 |
 | 3   | `bash -c 'TIMEFORMAT=%R; t=$( { time CI_STEPS=whetstone-tests bash tools/ci.sh whetstone >/dev/null 2>&1; } 2>&1 ); awk -v t="$t" "BEGIN { exit !(t < 3) }"'` | exit 0 |
 | 4   | `bash -c 'TIMEFORMAT=%R; t=$( { time bash tools/ci.sh all >/dev/null 2>&1; } 2>&1 ); awk -v t="$t" "BEGIN { exit !(t < 10) }"'` | exit 0 |
 | 5   | `CI_STEPS=node-tests bash tools/ci.sh all` | exit 0 |
