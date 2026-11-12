@@ -24,7 +24,7 @@ Spend disproportionate effort here. **Be aggressive. Be creative. Refuse to give
 ### Ways to construct one, in roughly this order
 
 1. **Failing test** at whatever seam reaches the bug: unit, integration, e2e.
-2. **Curl / HTTP script** against a running dev server.
+2. **A `curl` command** against a running dev server; a TypeScript script when the repro needs more than one request.
 3. **CLI invocation** with a fixture input, diffing stdout against a known-good snapshot.
 4. **Headless browser script** (Playwright) that drives the UI and asserts on DOM/console/network.
 5. **Replay a captured trace.** Save a real network request / payload / event log to disk; replay it through the code path in isolation.
@@ -32,7 +32,7 @@ Spend disproportionate effort here. **Be aggressive. Be creative. Refuse to give
 7. **Property / fuzz loop.** If the bug is "sometimes wrong output", run 1000 random inputs and look for the failure mode.
 8. **Bisection harness.** If the bug appeared between two known states (commit, dataset, version), automate "boot at state X, check, repeat" so you can `git bisect run` it.
 9. **Differential loop.** Run the same input through old-version vs new-version (or two configs) and diff outputs.
-10. **Human-in-the-loop script.** Last resort. If a human must click, drive _them_ with a copy of `scripts/hitl-loop.template.ts`: edit the `step` and `capture` calls in `main()`, then run `node <copy>.ts`, so the loop is still structured. Each captured value prints as `KEY=VALUE` for you to read. `capture` echoes its answer to the terminal, so capture observations and leave signing in to a `step`.
+10. **Human-in-the-loop script.** Last resort. If a human must click, drive _them_ with a copy of `scripts/hitl-loop.template.ts` saved as `<name>.mts`, so it runs as a module in any project: edit the `step` and `capture` calls in `main()`, then run `node <name>.mts`, so the loop is still structured. Each captured value prints as `KEY=VALUE` for you to read. `capture` echoes its answer to the terminal, so capture observations and leave signing in to a `step`.
 
 Build the right feedback loop, and the bug is 90% fixed.
 
@@ -109,7 +109,7 @@ Tool preference:
 
 **Tag every debug log** with a unique prefix, e.g. `[DEBUG-a4f2]`. Cleanup at the end becomes a single grep. Untagged logs survive; tagged logs die.
 
-**Perf branch.** For performance regressions, logs are usually wrong. Instead: establish a baseline measurement (timing harness, `performance.now()`, profiler, query plan), then bisect. Measure first, fix second.
+**Perf branch.** For performance regressions, logs are usually wrong. Instead: establish a baseline measurement with a timing harness around the Phase 1 loop, then bisect. Reach for a profiler when the timing shows the slow call but not where inside it the time goes, and for the query plan when that call is a database query. Measure first, fix second.
 
 ## Phase 5: Fix + regression test
 

@@ -27,8 +27,8 @@ Exit 0 after the light sit-rep.
 
 Warn (advisory, never blocking) when the tree needs tidying:
 
-- **>1 live dossier** (Vm.12): print a CONSOLIDATE block listing each live slug and its §S-tail age, then suggest picking the current one and **pausing** or **closing** the rest.
-- **stale-live** (Vm.13): any live dossier whose last §S entry is older than `${DS_STALE_LIVE_DAYS:-14}` days → suggest pause or `ds:close --abandon`.
+- **>1 live dossier** (Vm.12): print a CONSOLIDATE block listing each live slug and its §S-tail age, then suggest picking the current one and **pausing** the rest. Suggest **closing** one only when the operator has said its work will not resume.
+- **stale-live** (Vm.13): any live dossier whose last §S entry is older than `${DS_STALE_LIVE_DAYS:-14}` days → suggest pause; suggest `ds:close --abandon` only when the operator has said its work will not resume.
 - **drift** (Vm.15): an INDEX carrying a `<!-- drift:N slugs:... -->` trailer (any dossier rendered `drift!` — header/location/§Z disagreement, the sealed-zombie class) gets a DRIFT block naming each drift slug and its likely cause, then a route: a `§Z`-closed drift auto-heals on the next SessionStart (session-start runs `ds reconcile`); anything else is operator-resolved — finish the close (rerun `ds close <wave>`) or correct the header through `ds header-state`, which is the supported writer (the dossier mod's header guard denies a non-canonical token written any other way). Run `cli/ds ds-check .scratchpad` for the deterministic list.
 
 ds:status suggests; the operator — or the model on explicit request — performs one of the actions below.
@@ -76,7 +76,7 @@ Scan §S for `START` lines with no matching `DONE` for the same `<target>`. Each
 
 ### 4. Detect stale §X (optional warning)
 
-For each §X row run `git status -sb` + `git rev-list --count` and compare against the recorded values. A difference flags `§X stale (refresh via ds:build)`. Refreshing is a write op and belongs to those verbs.
+For each §X row run `git status -sb` + `git rev-list --count` and compare against the recorded values. A difference flags `§X stale (refresh via ds:build)`. Refreshing is a write op and belongs to `ds:build`.
 
 ### 5. Report (decision-first)
 

@@ -7,7 +7,7 @@ An agent will happily report success it cannot demonstrate. These two plugins ma
 | Plugin        | What it does                                                                                                                                              |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **dossier**   | Wave-scoped workflow. One resumable `DOSSIER.md` drives a wave — tasks, bugs, invariants, cross-repo state — with in-session quality gates.               |
-| **whetstone** | Per-task craft — red-green TDD, a flaky-test rate, diagnosis, doubt review, grilling, a merge check, research and HTML reports, skill lint, column budget. TDD, the flaky-test rate, the merge check, skill lint, column budget and HTML report end in a script's exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment. |
+| **whetstone** | Per-task craft — red-green TDD, a flaky-test rate, diagnosis, doubt review, grilling, a merge check, research and HTML reports, skill lint, column budget. TDD, the merge check, skill lint, column budget and HTML report end in a script's exit code; the flaky-test rate is computed and printed, and sets no exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment. |
 
 dossier drives the wave; whetstone is the craft at each gate. Designed to be used together, independent by invariant — either works alone, and every composition route skips silently when its sibling is absent.
 

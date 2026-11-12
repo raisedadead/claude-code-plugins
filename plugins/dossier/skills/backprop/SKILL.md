@@ -160,7 +160,7 @@ NO → §B `invariant added` stays `—`, and §S notes `§V=skipped:one-off`.
 
 ### 8. FIX (GREEN)
 
-Implement the fix. Regression test → GREEN. Full suite (or scoped) → no regressions.
+Implement the fix. Regression test → GREEN. Full suite → no regressions.
 
 Commit:
 
@@ -204,7 +204,7 @@ Each rebuttal appears once in the steps above; they are collected here so the te
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
 | Write the fix before a failing test            | §5 — a test that passes pre-fix doesn't characterize the bug. RED first; if it's green, revisit step 4.            |
 | Skip the §V invariant ("it's a one-off")       | §7 — only `low`/one-off skips. `high`/systemic MUST add a §V row, or the whole class recurs.                       |
-| Green the regression test, skip the full suite | §8 — a scoped GREEN can mask a fresh regression. Run the full (or scoped) suite before committing the fix.         |
+| Green the regression test, skip the full suite | §8 — a scoped GREEN can mask a fresh regression. Run the full suite before committing the fix.                     |
 | Tag the test with `// PH<n>-B<k>`              | §5 — test name + §S `test=<sha>` carry the link. The marker guard denies it (opt-out: `DOSSIER_MARKER_GUARD=off`). |
 
 ## Auto-trigger from ds:build

@@ -72,7 +72,7 @@ wrong: Node 20 LTS · right: current LTS = v24 (Krypton) + v22 (Jod). v20 EOL 20
 
 ## Hard rules
 
-- **Raw JSON only.** `curl -s <url>` (raw bytes) then `jq` or Python for the exact field. `WebFetch` returns a model summary of the JSON, and that summary can hallucinate — this is the rule the rest depend on.
+- **Raw JSON only.** `curl -s <url>` (raw bytes) then `jq -r '<path>'` for the exact field. `WebFetch` returns a model summary of the JSON, and that summary can hallucinate — this is the rule the rest depend on.
 - **Cite the authority URL in every row.** A verdict carries its source.
 - **Quote the exact text or field you compared**, so the comparison reproduces.
 - **Authority unreachable → `Unverifiable`, naming the URL that failed.**

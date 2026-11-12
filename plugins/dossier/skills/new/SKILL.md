@@ -54,7 +54,7 @@ Ask one block at a time, tersely, no preamble:
 1. **§G goal** — one-line outcome, then up to 5 scope bullets (IN / NOT IN).
 1. **§C constraints** — locked decisions, stack notes. Bullets, ≤10.
 1. **§X repos** — each repo this dossier touches, as `<org>/<name>` or an absolute path. Operator-provided; no git-remote magic.
-1. **Initial §T tasks** (optional) — T1..Tn now, or later via `ds:build`. Give a row `who=H` only after the agent tried to prove it in a scratch fixture (a throwaway directory, an isolated tmux socket, a disposable session) and could not. A re-check that waits on a date gets its own row with a `T<n>+<k>d` need, so `ds close --carry` carries it; a row that joins it to work done now holds the wave open until the date.
+1. **Initial §T tasks** — ask for T1..Tn now; an empty answer leaves §T empty. Give a row `who=H` only after the agent tried to prove it in a scratch fixture (a throwaway directory, an isolated tmux socket, a disposable session) and could not. A re-check that waits on a date gets its own row with a `T<n>+<k>d` need, so `ds close --carry` carries it; a row that joins it to work done now holds the wave open until the date.
 
 **A wide refactor is sequenced expand–contract.** One mechanical change whose blast radius breaks many call sites at once (rename a column, retype a shared symbol) cannot land green as one task. Expand first: add the new form beside the old. Then migrate the call sites in batches, one task each, each `needs` the expand. Contract last: delete the old form in a task that `needs` every batch.
 
@@ -183,7 +183,7 @@ A row that passes before the work cannot judge the work. Run every row once, now
 "${CLAUDE_PLUGIN_ROOT}"/cli/ds converge --baseline <contract-path>
 ```
 
-`BASELINE: OK` (exit 0) appends `ds:converge — baseline OK …` to §S; then go to step 3.7. `BASELINE: FAIL <ids>` (exit 1) appends `ds:converge — baseline FAIL <ids>` to §S (nothing is written when no live wave owns the contract) and names each row that passed or did not run (exit 124, 126 or 127), or each `guard` row that failed: rewrite the row so it fails until the work lands (a script the wave has not written yet: `test -f tools/x.sh && bash tools/x.sh`), or, for a row that must stay green throughout (a full CI run), end its expect cell with `guard` (`exit 0 guard`), then rerun. Which row is a guard is model-judgment; the baseline line lists every guard so the operator sees them. `CONVERGE: PARSE` (exit 2) is a contract to fix first.
+`BASELINE: OK` (exit 0) appends `ds:converge — baseline OK …` to §S; then go to step 3.7. `BASELINE: FAIL <ids>` (exit 1) appends `ds:converge — baseline FAIL <ids>` to §S (nothing is written when no live wave owns the contract) and names each row that passed or did not run (exit 124, 126 or 127), or each `guard` row that failed: rewrite the row so it fails until the work lands (a script the wave has not written yet: `test -f tools/x.ts && node tools/x.ts`), or, for a row that must stay green throughout (a full CI run), end its expect cell with `guard` (`exit 0 guard`), then rerun. Which row is a guard is model-judgment; the baseline line lists every guard so the operator sees them. `CONVERGE: PARSE` (exit 2) is a contract to fix first.
 
 ### 3.7. Sign off the design
 
@@ -197,16 +197,20 @@ The sign-off judges the design before any build, from a notes file and the lines
    ```
 
    `DESIGN: OK` (exit 0) writes `<notes minus .md>-evidence.md` with every cited line. `DESIGN: FAIL <n>` (exit 1) names each cite that does not resolve, each check that passes today or did not run, and each file that names a `REMOVES:` item and is not in the notes: fix the notes and run it again. `DESIGN: PARSE` (exit 2) is a notes file to fix first.
-1. With `signoff` in the session's agent list, spawn one `signoff` agent. Its mission names the notes file, the evidence file and the repo, and tells it to judge from those two files alone. Without it, the verdict is `skipped-absent`.
-1. Append §S `ds:new signoff=<PASS|CHANGES|skipped-absent> notes=<notes>`. On `CHANGES`, fix each `missing:` line once, re-run step 2, and ask for one re-check; a second `CHANGES` goes to the operator with both lists.
+1. With `signoff` in the session's agent list, spawn one `signoff` agent. The plugin does not ship it: it is the operator's own agent (ADAPTERS.md). Put the full text of the notes file and the evidence file in its mission, because the agent may have no read tool, and name a notes path for its findings. It writes one `missing: <what>, at <file:line or section>` line per finding there and ends its reply with `SIGNOFF: PASS` or `SIGNOFF: CHANGES`. Without the agent, the verdict is `skipped-absent`.
+1. Append §S `ds:new signoff=<PASS|CHANGES|skipped-absent> notes=<notes>`. On `CHANGES`, fix each `missing:` line once, re-run item 2 (`ds design-check`), and ask for one re-check; a second `CHANGES` goes to the operator with both lists.
 
 Then commit the contract (tracked home). Whether the sign-off is sound is model-judgment; that the line exists is code: step 5 exits 1 without it.
 
 ### 4. Initial §X refresh
 
-For each repo row added in step 2, run `git status -sb`, `git rev-list --count <upstream>..HEAD` and `git describe --tags --abbrev=0` in that repo, then populate the §X row.
+For each repo row added in step 2, run:
 
-A path that is missing or is not a git tree keeps placeholders plus the note `_(repo not found — verify path)_`.
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds x-refresh <dir> <repo-label> <repo-path>
+```
+
+When it refuses with `not a git repo`, the row keeps its placeholders plus the note `_(repo not found — verify path)_`.
 
 ### 5. Finish
 

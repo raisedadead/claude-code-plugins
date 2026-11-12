@@ -52,7 +52,7 @@ In a repo with a live dossier ledger, record the verdict as one §S line through
 
 ## Claim check
 
-`claim-check --stdin | <path>...` (also `node ${CLAUDE_PLUGIN_ROOT}/hooks/claim-check-cli.ts`) reads shipped prose for a narrower defect than structure: a sentence asserting that something of ours **blocks**, **enforces**, **gates**, **denies**, **prevents** or **refuses**, while naming nothing a reader could check.
+`claim-check --stdin | <path>...` reads shipped prose for a narrower defect than structure: a sentence asserting that something of ours **blocks**, **enforces**, **gates**, **denies**, **prevents** or **refuses**, while naming nothing a reader could check.
 
 `--stdin` lints text that is not a file yet — a turn's own output, a commit message, a draft. It takes no paths: one input surface per invocation, so a clean file can never vouch for dirty stdin. Empty input is clean.
 
