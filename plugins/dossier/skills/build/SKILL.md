@@ -127,6 +127,8 @@ If `verify` is shell predicate: run after work, must exit 0. If `verify` is `—
 
 **Stall rule:** an identical failure twice running is a stuck signal rather than bad luck. The second occurrence forces a strategy change before the third attempt — a different diagnosis, a different seam, or a scout spawn. Retry caps count ATTEMPTS; this rule catches the tighter loop inside them.
 
+**Repeat workaround:** a second workaround for the same tool defect is a bug, not a habit. Before the commit that carries it, write a §B row for the defect, then run `ds:backprop` on it. Seeing that two workarounds share a defect is model-judgment; no hook checks it.
+
 Tests failing with an unclear root cause: **spawn a `dossier-scout` subagent** with the mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>", and let its report guide the fix.
 
 A failure that implies a missing invariant: run `ds:backprop`, which registers the invariant first and greens the symptom under it. Any test failure that is a bug, not this task's new RED, gets the same hand-off: name `ds:backprop <bug>` before the fix, so the bug can leave an invariant behind.
