@@ -4,7 +4,7 @@ Two layers of confidence that a `SKILL.md` **description** steers the router to 
 
 ## Layer 1 — deterministic lint (in CI)
 
-`tests/test_skill_routing.ts` — a static pass, no model, no network:
+`tests/test_skill_routing.ts` — one test that runs a static pass on the shipped skill descriptions, with no model and no network:
 
 - **Trigger-phrase collision** — two skills claiming the same quoted phrase in their `description`. `FAIL`.
 - **Missing trigger clause** — a `description` with no `Invoke when` / `Use when` clause. `FAIL`.

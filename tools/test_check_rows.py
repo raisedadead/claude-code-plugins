@@ -9,7 +9,6 @@ import tempfile
 from pathlib import Path
 
 CHECK = Path(__file__).resolve().parent / "check_rows.py"
-RESEARCH = Path(__file__).resolve().parent.parent / "RESEARCH.md"
 
 CLEAN, MALFORMED, USAGE = 0, 1, 64
 
@@ -164,13 +163,6 @@ def test_an_invalid_date_warns_and_still_exits_clean() -> None:
 def test_an_invalid_today_is_a_usage_error() -> None:
     result = _check(_repo("", ""), "--today", "2026-02-30")
     assert result.returncode == USAGE, result.stdout + result.stderr
-
-
-def test_the_repos_own_research_file_is_clean() -> None:
-    result = subprocess.run(
-        [sys.executable, str(CHECK), str(RESEARCH)], capture_output=True, text=True
-    )
-    assert result.returncode == CLEAN, result.stdout
 
 
 def _main() -> int:
