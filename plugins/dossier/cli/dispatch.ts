@@ -831,6 +831,18 @@ function handoffVerb(args: string[]): number {
   return 0
 }
 
+function newFinishVerb(args: string[]): number {
+  const dir = resolve(required('new-finish', args[0], 'ds new-finish <dossier-dir>'))
+  const [, text] = readDossier('new-finish', dir)
+  if (!statusSection(text).some((line) => line.includes('ds:new signoff='))) {
+    refuse('new-finish', `no "ds:new signoff=" line in §S of ${dir}/DOSSIER.md; run the ds:new sign-off step first`)
+  }
+  regenIndex(resolve(dir, '..', '..'))
+  const slug = basename(dir).replace(DATE_PREFIX, '')
+  console.log(sAppendTo(dir, `ds:new — DONE slug=${slug} dir=${dir}`))
+  return handoffVerb([dir])
+}
+
 function laterFile(): string {
   return join(process.env.DOSSIER_LEDGER_ROOT || process.cwd(), '.scratchpad', 'dossier', LATER_FILE)
 }
@@ -872,6 +884,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   'header-state': headerStateVerb,
   'invariant-check': invariantCheckVerb,
   later: laterVerb,
+  'new-finish': newFinishVerb,
   progress: progressVerb,
   reconcile: reconcileVerb,
   root: rootVerb,
@@ -898,6 +911,7 @@ const LEDGER_VERBS = new Set([
   'grill-add',
   'header-state',
   'migrate',
+  'new-finish',
   'reconcile',
   'regen-index',
   'row-flip',
