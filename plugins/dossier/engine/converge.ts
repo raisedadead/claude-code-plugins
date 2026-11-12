@@ -102,16 +102,19 @@ function shellSegments(text: string): string[][] {
   return segments
 }
 
-function regexSearch([name = '', ...args]: string[]): boolean {
-  const tool = name.split('/').pop()
-  if (tool === 'egrep') return true
-  if (tool === 'rg') return !args.some((arg) => arg === '--fixed-strings' || /^-[a-zA-Z]*F/.test(arg))
-  if (tool !== 'grep') return false
-  return args.some((arg) => arg === '--extended-regexp' || arg === '--perl-regexp' || /^-[a-zA-Z]*[EP]/.test(arg))
+function namesRegexSearch(command: string): boolean {
+  const tokens = command.split(/[\s|;&()`$"'<>!{}=]+/).filter(Boolean)
+  const tools = new Set(tokens.map((token) => token.split('/').pop()))
+  if (tools.has('egrep')) return true
+  if (tools.has('grep') && tokens.some((token) => token === '--extended-regexp' || token === '--perl-regexp' || /^-[a-zA-Z]*[EP]/.test(token))) return true
+  return tools.has('rg') && !tokens.some((token) => token === '--fixed-strings' || /^-[a-zA-Z]*F/.test(token))
 }
 
 export function pipeInPattern(command: string): boolean {
-  return shellSegments(command).some((words) => regexSearch(words) && words.slice(1).some((word) => word.replace(/\[[^\]]*\]/g, '').includes('|')))
+  const quotedPipe = shellSegments(command)
+    .flat()
+    .some((word) => word.replace(/\[[^\]]*\]/g, '').includes('|'))
+  return quotedPipe && namesRegexSearch(command)
 }
 
 export function isCommand(text: string): boolean {
