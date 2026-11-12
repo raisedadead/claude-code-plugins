@@ -39,6 +39,11 @@ else
 		fi
 		exec fnm exec --using "$NODE_PIN" -- bash tools/ci.sh "$@"
 	fi
+	BUN_PIN="$(pin "$WORKFLOW" "s/^ *bun-version: '([0-9.]+)'$/\1/p" bun)"
+	if [[ $job != tools && "$(bun --version 2>/dev/null)" != "$BUN_PIN" ]]; then
+		printf 'BUN: CI runs bun %s; this is %s\n' "$BUN_PIN" "$(bun --version 2>/dev/null || printf 'not installed')" >&2
+		exit 1
+	fi
 	if ! command -v uv >/dev/null; then
 		printf 'PYTHON: install uv; the local run uses it for the Python and ruff that CI runs\n' >&2
 		exit 1
@@ -161,7 +166,8 @@ if [[ $job == dossier || $job == whetstone || $job == all ]]; then
 fi
 
 if [[ $job == dossier || $job == all ]]; then
-	step dossier-tests node_modules/.bin/vitest run --reporter=dot plugins/dossier/tests/test_*.ts
+	step dossier-tests bun test --dots --timeout 30000 ./plugins/dossier/tests/test_*.ts
+	step node-tests node_modules/.bin/vitest run --reporter=dot plugins/dossier/tests/test_*.ts
 	step format node_modules/.bin/oxfmt --check
 	step lint node_modules/.bin/oxlint --deny-warnings
 	step types node_modules/.bin/tsc -p .

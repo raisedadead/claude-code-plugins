@@ -22,6 +22,7 @@ import { convergenceStateVerb, convergeVerb, staleContracts } from './converge.t
 import { closeVerb } from './close.ts'
 import { claimRoots } from './env.ts'
 import { milestoneOf, progressVerb } from './progress.ts'
+import { io } from './stdio.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
 import { DATE_PREFIX } from '../engine/converge.ts'
 import { delegationReport } from '../engine/delegation.ts'
@@ -625,7 +626,7 @@ function invariantCheckVerb(args: string[]): number {
   }
   let payload: unknown
   try {
-    payload = JSON.parse(readFileSync(0, 'utf8'))
+    payload = JSON.parse(io.stdin())
   } catch {
     return 0
   }
@@ -644,7 +645,7 @@ function invariantCheckVerb(args: string[]): number {
 
 function stdinPayload(): Record<string, unknown> {
   try {
-    const payload: unknown = JSON.parse(readFileSync(0, 'utf8'))
+    const payload: unknown = JSON.parse(io.stdin())
     return typeof payload === 'object' && payload !== null && !Array.isArray(payload) ? (payload as Record<string, unknown>) : {}
   } catch {
     return {}

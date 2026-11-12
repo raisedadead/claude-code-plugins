@@ -1,5 +1,4 @@
 import { join } from 'node:path'
-import { vi } from 'vitest'
 
 process.env.NODE_COMPILE_CACHE ??= join(import.meta.dirname, '..', '..', '..', 'node_modules', '.cache', 'dossier-tests-compile-cache')
 
@@ -18,19 +17,4 @@ Object.assign(process.env, {
   GIT_AUTHOR_EMAIL: 't@t',
   GIT_COMMITTER_NAME: 't',
   GIT_COMMITTER_EMAIL: 't@t',
-})
-
-vi.mock('node:fs', async (original) => {
-  const fs = await original<typeof import('node:fs')>()
-  const { io } = await import('./stdio.ts')
-  const readFileSync = ((path: unknown, ...rest: unknown[]) =>
-    path === 0 ? io.stdin : (fs.readFileSync as (...args: unknown[]) => unknown)(path, ...rest)) as typeof fs.readFileSync
-  const writeSync = ((fd: number, data: unknown, ...rest: unknown[]) => {
-    if (io.sink && fd === 1 && typeof data === 'string' && rest.length === 0) {
-      io.sink(data)
-      return Buffer.byteLength(data)
-    }
-    return (fs.writeSync as (...args: unknown[]) => number)(fd, data, ...rest)
-  }) as typeof fs.writeSync
-  return { ...fs, default: { ...fs, readFileSync, writeSync }, readFileSync, writeSync }
 })

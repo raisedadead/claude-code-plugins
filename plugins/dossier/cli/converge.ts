@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { readdirSync, readFileSync, realpathSync, statSync, writeSync } from 'node:fs'
+import { readdirSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { constants } from 'node:os'
 import { dirname, join } from 'node:path'
 import {
@@ -21,6 +21,7 @@ import {
 import { headerToken } from '../engine/ledger.ts'
 import { byCodePoint, splitLines, strip } from '../engine/text.ts'
 import { childEnv } from './env.ts'
+import { io } from './stdio.ts'
 
 const MET = 0
 const UNMET = 1
@@ -32,7 +33,7 @@ const MAX_DEPTH = 2
 const MAX_BUFFER = 256 * 1024 * 1024
 
 function say(line: string): void {
-  writeSync(1, `${line}\n`)
+  io.out(`${line}\n`)
 }
 
 function isFile(path: string): boolean {
@@ -274,7 +275,7 @@ function payloadPath(raw: string, key: 'cwd' | 'from'): string | undefined {
 export function convergenceStateVerb(): number {
   let raw = ''
   try {
-    raw = readFileSync(0, 'utf8')
+    raw = io.stdin()
   } catch {
     return 0
   }

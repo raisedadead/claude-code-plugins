@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { format } from 'node:util'
 import { main } from '../cli/dispatch.ts'
-import { io } from './stdio.ts'
+import { io } from '../cli/stdio.ts'
 
 export interface Run {
   code: number
@@ -25,11 +25,11 @@ function text(chunk: unknown): string {
 export async function ds(cwd: string, args: string[], env: Readonly<Record<string, string>> = {}, input = ''): Promise<Run> {
   const home = process.cwd()
   const saved = new Map<string, string | undefined>([...SAVED, ...Object.keys(env)].map((name) => [name, process.env[name]]))
-  const writers = { log: console.log, error: console.error, write: process.stdout.write }
+  const writers = { log: console.log, error: console.error, write: process.stdout.write, stdin: io.stdin, out: io.out }
   let stdout = ''
   let stderr = ''
-  io.stdin = input
-  io.sink = (chunk) => {
+  io.stdin = () => input
+  io.out = (chunk) => {
     stdout += chunk
   }
   console.log = (...parts: unknown[]) => {
@@ -49,8 +49,8 @@ export async function ds(cwd: string, args: string[], env: Readonly<Record<strin
     const code = await main(args)
     return { code, stdout, stderr }
   } finally {
-    io.stdin = ''
-    io.sink = undefined
+    io.stdin = writers.stdin
+    io.out = writers.out
     console.log = writers.log
     console.error = writers.error
     process.stdout.write = writers.write
