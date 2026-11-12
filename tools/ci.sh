@@ -160,9 +160,26 @@ validate() {
 		"${claude[@]}" plugin validate .
 }
 
+declare -A COVERAGE_FLOOR=([dossier]='96 93' [whetstone]='98 99')
+
+coverage() {
+	local plugin funcs lines out
+	for plugin in "$@"; do
+		read -r funcs lines <<<"${COVERAGE_FLOOR[$plugin]}"
+		if ! out="$(bun test --parallel --coverage --timeout 30000 "./plugins/$plugin/tests/"test_*.ts 2>&1)"; then
+			printf '%s\n' "$out"
+			return 1
+		fi
+		bash tools/coverage_floor.sh "$plugin" "$funcs" "$lines" <<<"$out" || return 1
+	done
+}
+
 if [[ $job == dossier || $job == whetstone || $job == all ]]; then
 	step install pnpm install --frozen-lockfile
 	wait
+	covered=(dossier whetstone)
+	[[ $job == all ]] || covered=("$job")
+	step coverage coverage "${covered[@]}"
 fi
 
 if [[ $job == dossier || $job == all ]]; then
@@ -186,6 +203,7 @@ if [[ $job == tools || $job == all ]]; then
 	step census "${py[@]}" tools/census/test_census.py
 	step ruff "${ruff[@]}" check tools
 	step pipe-grep-test bash tools/test_pipe_grep.sh
+	step coverage-floor-test bash tools/test_coverage_floor.sh
 	step pipe-grep bash tools/pipe_grep.sh
 fi
 

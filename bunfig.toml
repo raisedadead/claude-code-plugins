@@ -1,2 +1,3 @@
 [test]
 preload = ["./plugins/dossier/tests/preload.ts"]
+coveragePathIgnorePatterns = ["plugins/*/tests/**"]
