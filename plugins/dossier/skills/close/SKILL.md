@@ -31,10 +31,10 @@ argument-hint: --complete | --successor <slug> | --abandon "<reason>" [--carry T
 
 | mark | meaning                                                               |
 | ---- | --------------------------------------------------------------------- |
-| `✗`  | blocks the run — an open row, an uncited `x` row, an open bug, a lock |
+| `✗`  | blocks the run — an open row, an uncited `x` row, an open bug, a lock, a done-when table edited beside other files or left uncommitted |
 | `✓`  | the contract converged                                                |
-| `⚠`  | advisory — an unpushed repo, an accepted unmet criterion, CHANGELOG, lessons |
-| `·`  | no contract, so converge did not run                                  |
+| `⚠`  | advisory — an unpushed repo, an accepted unmet criterion, no passing baseline, CHANGELOG, lessons |
+| `·`  | a check that did not run, or a done-when edit made in its own commit  |
 | `↷`  | a row this close carries                                              |
 
 The last line before the verdict names the steps still to run.
@@ -46,9 +46,12 @@ Put the plan in front of the operator, with a one-line `--summary` proposal. Res
 - An open agent row: `ds:build` it, or carry it when it is `who=H` or waits on a `+<k>d` need.
 - An open bug: `ds:backprop B<n>`.
 - An unmet or unparsed contract: fix it, or add `--accept-unmet` on the operator's explicit say-so. The flag records the unmet ids in §S.
+- A done-when table that changed after the contract commit, beside other files or not committed: put the table edit in a commit of its own, so the change is visible to the operator. The check compares the parsed table at each commit; it shows the edit and does not judge it.
 - Work that will not finish: `--abandon "<reason>"` on the operator's say-so.
 
 Then print each `paused` row in `<root>/.scratchpad/INDEX.md` (`<root>` is the path `ds root` prints) with its route: resume it through `ds:status`, or close it with `--abandon`. The CHANGELOG check covers the ledger repo, the repo of a tracked contract, and each §X repo written as an absolute path, and stays silent when none of them tracks a `CHANGELOG.md`. A `⚠` CHANGELOG line means no `CHANGELOG.md` in those repos changed since the contract commit (write the entry, or close without one), or that the check did not run because the contract is untracked.
+
+A `⚠ no passing converge baseline` line means §S has no `ds:converge — baseline OK` line, or its latest baseline line is a FAIL: the contract's rows were never seen to fail. Advisory.
 
 A `⚠ lessons` line lists the wave's grill decisions. It prints only where the repo root has a `RESEARCH.md` and a grill artifact names this wave on its `CONSUMED:` line. Ask the operator which decisions become a §D row, and write those rows before the run. Advisory: the close runs whatever the answer.
 

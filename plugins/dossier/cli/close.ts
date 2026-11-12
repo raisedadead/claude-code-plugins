@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, relative } from 'node:path'
-import { DATE_PREFIX } from '../engine/converge.ts'
+import { DATE_PREFIX, numberedRows } from '../engine/converge.ts'
 import { addCarried, carriedRow, LATER_FILE } from '../engine/later.ts'
 import { headerToken, lines, namedRows, openOps, SEC, statusSection, unlines, unpushedRepos, zClosed, zColumn, zWrite } from '../engine/ledger.ts'
 import { migrate } from '../engine/migrate.ts'
@@ -235,6 +235,38 @@ function takeLock(dir: string): void {
 
 const isChangelog = (path: string): boolean => basename(path) === 'CHANGELOG.md'
 
+function addCommit(top: string, contract: string): string | undefined {
+  return git(top, 'log', '--diff-filter=A', '--format=%H', '--', relative(top, contract)).out.split('\n').pop() || undefined
+}
+
+function baselineAdvisory(text: string): string | undefined {
+  const last = statusSection(text)
+    .filter((line) => line.includes('ds:converge — baseline'))
+    .pop()
+  return last?.includes('ds:converge — baseline OK') ? undefined : "no passing converge baseline in §S — the contract's rows were never seen to fail"
+}
+
+function contractEdits(contract: string | undefined): string[] {
+  if (contract === undefined) return []
+  const top = topLevel(dirname(contract))
+  const path = relative(top, contract)
+  if (!git(top, 'ls-files', '--error-unmatch', '--', path).ok) return ['· contract edit check did not run: the contract is untracked']
+  const added = addCommit(top, contract)
+  if (!added) return ['· contract edit check did not run: the contract is not committed']
+  const table = (text: string): string => JSON.stringify(numberedRows(text))
+  const at = (rev: string): string => table(git(top, 'show', `${rev}:${path}`).out)
+  const out: string[] = []
+  if (table(readFileSync(contract, 'utf8')) !== at('HEAD')) out.push('✗ contract done-when table has uncommitted edits — commit them alone, or revert them')
+  for (const sha of git(top, 'log', '--reverse', '--format=%H', `${added}..HEAD`, '--', path).out.split('\n').filter(Boolean)) {
+    if (at(sha) === at(`${sha}^`)) continue
+    const files = git(top, 'show', '--name-only', '--format=', sha).out.split('\n').filter(Boolean)
+    const short = sha.slice(0, 7)
+    if (files.length === 1) out.push(`· contract done-when table changed in ${short} (contract-only commit)`)
+    else out.push(`✗ contract done-when table changed in ${short} beside other files — the edit must be its own commit`)
+  }
+  return out
+}
+
 function changelogAdvisory(contract: string | undefined, root: string, text: string): string | undefined {
   const top = contract && !contract.endsWith('/CONTRACT.md') ? dirname(dirname(contract)) : undefined
   const tracked = top && topLevel(top)
@@ -245,7 +277,7 @@ function changelogAdvisory(contract: string | undefined, root: string, text: str
   const kept = repos.filter((repo) => git(repo, 'ls-files', '--cached', '--others', '--exclude-standard').out.split('\n').some(isChangelog))
   if (!kept.length) return undefined
   if (!contract || !top) return 'no tracked contract — the CHANGELOG.md check did not run'
-  const added = git(top, 'log', '--diff-filter=A', '--format=%H', '--', relative(top, contract)).out.split('\n').pop()
+  const added = addCommit(top, contract)
   if (!added) return 'the contract is not committed — the CHANGELOG.md check did not run'
   const since = git(top, 'show', '-s', '--format=%cI', added).out
   for (const repo of kept) {
@@ -310,10 +342,17 @@ function check(options: Options, tools: CloseTools, at: Wave, text: string, rows
   const into = mode.kind === 'successor' ? mode.value : `the carried-work list (.scratchpad/dossier/${LATER_FILE})`
   if (carried.length) result.findings.push(`↷ carry ${carried.map((row) => carryNote(row).replace(` ${row.task} `, ' ')).join(', ')} → ${into}`)
   if (!holder && mode.kind !== 'abandoned') {
-    const verdict = converge(tools, waveContract(at.dir, at.root), options.acceptUnmet)
+    const contract = waveContract(at.dir, at.root)
+    const verdict = converge(tools, contract, options.acceptUnmet)
     result.findings.push(verdict.line)
     if (verdict.blocks) result.blocked = true
     result.record = verdict.record
+    for (const line of contractEdits(contract)) {
+      result.findings.push(line)
+      if (line.startsWith('✗')) result.blocked = true
+    }
+    const baseline = contract && baselineAdvisory(text)
+    if (baseline) result.findings.push(`⚠ ${baseline}`)
   }
   for (const repo of unpushedRepos(text)) result.findings.push(`⚠ ${repo} not pushed — the push stays yours`)
   const changelog = mode.kind === 'abandoned' ? undefined : changelogAdvisory(waveContract(at.dir, at.root), at.root, text)
