@@ -21,6 +21,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { clock } from './clock.ts'
 import { convergenceStateVerb, convergeVerb, staleContracts } from './converge.ts'
 import { closeVerb } from './close.ts'
+import { designCheckVerb } from './design.ts'
 import { claimRoots } from './env.ts'
 import { milestoneOf, progressVerb } from './progress.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
@@ -863,6 +864,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   converge: (args: string[]) => convergeVerb(args, sAppendTo),
   'convergence-state': convergenceStateVerb,
   'delegation-check': delegationCheckVerb,
+  'design-check': designCheckVerb,
   'ds-check': dsCheckVerb,
   fakeimpl: fakeimplVerb,
   'grill-add': grillAddVerb,

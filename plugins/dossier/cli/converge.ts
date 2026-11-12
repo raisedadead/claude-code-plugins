@@ -122,7 +122,7 @@ function fail(reason: string): number {
   return PARSE
 }
 
-function run(command: string, root: string, level: number): { code: number; err: string } {
+export function run(command: string, root: string, level: number): { code: number; err: string } {
   const done = spawnSync('/bin/sh', ['-c', command], {
     cwd: root,
     encoding: 'utf8',
@@ -174,7 +174,7 @@ function owner(root: string, contract: string, from: string): string | undefined
 
 type Outcome = { ident: string; guard: boolean; ok: boolean; ran: boolean }
 
-const NOT_RUN = new Set([124, 126, 127])
+export const NOT_RUN = new Set([124, 126, 127])
 
 function baseline(outcomes: Outcome[], append: Append, contract: string, from: string): number {
   const wrong = outcomes.filter(({ guard, ok, ran }) => (guard ? !ok : ok || !ran)).map(({ ident }) => ident)
