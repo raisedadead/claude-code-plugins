@@ -27,6 +27,8 @@ No argument → the runner resolves the live wave's contract: the tracked `.doss
 
 **Read the `CONVERGE:` line before the exit code.** No `CONVERGE:` line means nothing ran.
 
+`--baseline` is the run `ds:new` makes before it commits the contract. It ends in `BASELINE: OK <n> fail; guards <ids>` (exit 0) or `BASELINE: FAIL <ids>` (exit 1): every row without `guard` must fail, every `guard` row must pass. The verdict goes to §S of the live wave that owns the contract, where `ds close` looks for it.
+
 Criteria are shell, and `ds:close` resolves a contract with no argument, so the runner names the work first: a `contract: <path>` header — carrying `(wave-dir, untracked)` when that home won — then one `will run <id>. <command>` line per criterion, flushed before the first command starts. The flush is load-bearing: every caller here reads a pipe, and a buffered block arrives at exit, after the commands it was meant to preview. In a repo somebody else wrote, read that block — the untracked home is a file no diff ever showed a reviewer.
 
 ## What a contract looks like
@@ -48,7 +50,7 @@ Criteria are shell, and `ds:close` resolves a contract with no argument, so the 
 | 2   | `test -z "$(git status --porcelain)"` | exit 0 |
 ```
 
-`expect` has one form, `exit <n>`. A check on output goes inside the command: `test "$(cmd)" -eq N` for a count, `test -z "$(cmd)"` for no output, each with `exit 0`.
+`expect` has one form, `exit <n>`. A row that is green before the work and must stay green is written `exit 0 guard`. A check on output goes inside the command: `test "$(cmd)" -eq N` for a count, `test -z "$(cmd)"` for no output, each with `exit 0`.
 
 A literal pipe in a search pattern is `[|]`, written `[\|]` in the table.
 

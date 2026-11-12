@@ -839,7 +839,7 @@ const VERBS: Record<string, (args: string[]) => number | Promise<number>> = {
   migrate: migrateVerb,
   'clear-locks': clearLocksVerb,
   close: dsCloseVerb,
-  converge: convergeVerb,
+  converge: (args: string[]) => convergeVerb(args, sAppendTo),
   'convergence-state': convergenceStateVerb,
   'delegation-check': delegationCheckVerb,
   'ds-check': dsCheckVerb,

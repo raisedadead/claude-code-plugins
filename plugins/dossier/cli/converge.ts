@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { readdirSync, readFileSync, statSync, writeSync } from 'node:fs'
+import { readdirSync, readFileSync, realpathSync, statSync, writeSync } from 'node:fs'
 import { constants } from 'node:os'
 import { dirname, join } from 'node:path'
 import {
@@ -10,6 +10,7 @@ import {
   field,
   hasConsumer,
   isCommand,
+  isGuard,
   layerMix,
   numberedRows,
   PIPE_HINT,
@@ -154,9 +155,41 @@ function resolveContract(root: string, from: string): string | number {
   return owners[0]?.contract ?? fail('no contract')
 }
 
-export function convergeVerb(args: string[]): number {
+type Append = (dir: string, event: string) => void
+
+function owner(root: string, contract: string, from: string): string | undefined {
+  const real = (path: string): string => {
+    try {
+      return realpathSync(path)
+    } catch {
+      return path
+    }
+  }
+  const slug = liveSlugs(root).find((name) => {
+    const found = contractFor(root, name, from)
+    return found !== undefined && real(found) === real(contract)
+  })
+  return slug && join(root, '.scratchpad', 'dossier', slug)
+}
+
+type Outcome = { ident: string; guard: boolean; ok: boolean }
+
+function baseline(outcomes: Outcome[], append: Append, contract: string, from: string): number {
+  const wrong = outcomes.filter(({ guard, ok }) => ok !== guard).map(({ ident }) => ident)
+  const guards = outcomes.filter(({ guard }) => guard).map(({ ident }) => ident)
+  const verdict = wrong.length ? `FAIL ${wrong.join(',')}` : `OK ${outcomes.length - guards.length} fail; guards ${guards.join(',') || 'none'}`
+  const dir = owner(process.env.DOSSIER_LEDGER_ROOT || from, contract, from)
+  if (dir) append(dir, `ds:converge — baseline ${verdict}`)
+  const notes = [...(guards.length ? ['guard is model-judgment'] : []), ...(dir ? [] : ['no live wave owns this contract; §S not written'])]
+  say(`BASELINE: ${verdict}${notes.length ? ` (${notes.join('; ')})` : ''}`)
+  return wrong.length ? UNMET : MET
+}
+
+export function convergeVerb(argv: string[], append: Append = () => {}): number {
   const level = depth()
   if (level >= MAX_DEPTH) return fail(`converge nested ${level} deep; refusing to recurse further`)
+  const isBaseline = argv.includes('--baseline')
+  const args = argv.filter((arg) => arg !== '--baseline')
   const root = process.cwd()
   const resolved = args[0] === undefined ? resolveContract(process.env.DOSSIER_LEDGER_ROOT || root, root) : pyPath(args[0])
   if (typeof resolved === 'number') return resolved
@@ -177,18 +210,20 @@ export function convergeVerb(args: string[]): number {
   }
   if (!hasConsumer(text)) return fail(`${contract} names no consumer`)
   for (const [ident, command = ''] of rows) say(`will run ${ident}. ${command.slice(1, -1)}`)
-  let unmet = 0
+  const outcomes: Outcome[] = []
   for (const [ident, command = '', expect = ''] of rows) {
     const bare = command.slice(1, -1)
     const result = run(bare, root, level)
     const ok = result.code === expectedExit(expect)
-    if (!ok) unmet++
+    outcomes.push({ ident, guard: isGuard(expect), ok })
     const got = ok ? '' : `; got exit ${result.code}`
     let line = `  ${ok ? 'MET  ' : 'UNMET'} ${ident}. ${bare}  [${expect}${got}]`
     const why = ok ? '' : detail(result.err)
     if (why) line += `  — ${why}`
     say(line)
   }
+  if (isBaseline) return baseline(outcomes, append, contract, root)
+  const unmet = outcomes.filter(({ ok }) => !ok).length
   if (unmet) {
     say(`CONVERGE: UNMET ${unmet} of ${rows.length}`)
     return UNMET

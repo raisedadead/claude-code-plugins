@@ -1,7 +1,7 @@
 import { CELL, splitLines, strip, unicodeRegex } from './text.ts'
 
 const ROW = unicodeRegex('^\\|(.+)\\|\\s*$')
-const EXIT = unicodeRegex('^exit\\s+(\\d+)$')
+const EXIT = unicodeRegex('^exit\\s+(?:(\\d+)|(0)\\s+guard)$')
 export const STDOUT_HINT =
   'stdout: is not an expect; check the output inside the command and expect exit 0, as `test "$(cmd)" -eq N` for a count or `test -z "$(cmd)"` for no output'
 const DETAIL_MAX = 120
@@ -145,7 +145,11 @@ export function hasConsumer(text: string): boolean {
 
 export function expectedExit(expect: string): number | undefined {
   const exit = EXIT.exec(strip(expect))
-  return exit ? Number(exit[1]) : undefined
+  return exit ? Number(exit[1] ?? exit[2]) : undefined
+}
+
+export function isGuard(expect: string): boolean {
+  return EXIT.exec(strip(expect))?.[2] !== undefined
 }
 
 export function detail(stream: string): string {

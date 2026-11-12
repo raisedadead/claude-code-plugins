@@ -95,9 +95,9 @@ A criterion that cannot be written as a command is a criterion nobody can check.
 
 A done-when command reads source and repo state only. It does not read a deployed target, a pushed remote, or anything that waits on an operator step. A runtime rewrite or an operator delay then fails the check. Put pushes, deploys and reloads in `who=H` rows. `ds close --carry` carries them as `after:` rows.
 
-A §T row marked `route=delegate` adds the done-when row `` `<plugin>/cli/ds delegation-check <dossier-dir>` `` with `exit 0`, so `ds:converge` checks each delegated row's review and rebuild lines.
+A §T row marked `route=delegate` adds the done-when row `` `<plugin>/cli/ds delegation-check <dossier-dir>` `` with `exit 0 guard` (it passes before any row is built), so `ds:converge` checks each delegated row's review and rebuild lines.
 
-In the tracked home, commit before the first task — the `UserPromptSubmit` hook counts budget from the commit that added the contract.
+In the tracked home, commit the contract after the step-3.6 baseline and before the first task — the `UserPromptSubmit` hook counts budget from the commit that added the contract.
 
 ### 3. Scaffold DOSSIER.md
 
@@ -174,6 +174,16 @@ Before touching INDEX or §S, confirm the write landed intact:
 ```
 
 It exits 1 naming any missing `§`-section (or the title line) — deterministic, so nobody eyeballs the Write output. On failure the INDEX regen and the §S DONE line (step 6) both wait: report the missing sections, re-run the step-3 Write to repair, then re-assert. Mirrors the post-move assertion `ds:close` runs via `ds archive-move`. Exit 69 (no Node.js 22.18+) or 70 (internal error) means the assertion did not run: report its stderr line and stop before step 6.
+
+### 3.6. Baseline the contract
+
+A row that passes before the work cannot judge the work. Run every row once, now:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds converge --baseline <contract-path>
+```
+
+`BASELINE: OK` (exit 0) appends `ds:converge — baseline OK …` to §S; then commit the contract (tracked home). `BASELINE: FAIL <ids>` (exit 1) names each row that passed, or each `guard` row that failed: rewrite the row so it fails until the work lands, or, for a row that must stay green throughout (a full CI run), end its expect cell with `guard` (`exit 0 guard`), then rerun. Which row is a guard is model-judgment; the baseline line lists every guard so the operator sees them. `CONVERGE: PARSE` (exit 2) is a contract to fix first.
 
 ### 4. Initial §X refresh
 

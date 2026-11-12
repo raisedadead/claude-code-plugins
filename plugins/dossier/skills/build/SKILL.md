@@ -160,7 +160,7 @@ Run every git command in this step from the repo root; the `.` pathspec covers o
 1. **Review, one rebuild.** Step 6.5 runs on every delegated row, and this item replaces its `CHANGES` path. `REVIEW: CHANGES` → `SendMessage` the builder the Critical findings with `Fix these. Keep the test unless a finding names it. Return GREEN.`, or spawn a fresh builder with the mission and those findings when the builder is gone. Append §S `ds:build <T-id> rebuild=1`, then run items 4 and 5 again. A second `CHANGES`, or a second red result, is a PAUSE (`review`).
 1. **Commit** (step 7) from the main thread.
 
-A builder that runs past 30 minutes leaves a lock that FORMAT.md §14 calls stale, so start no other `ds:build` on this dossier while it runs. No step runs `ds delegation-check`. The operator who writes the first `route=delegate` marker in a wave also adds the done-when row `| <n> | \`<plugin>/cli/ds delegation-check <dossier-dir>\` | exit 0 |` to the wave contract, so `ds:converge` runs it.
+A builder that runs past 30 minutes leaves a lock that FORMAT.md §14 calls stale, so start no other `ds:build` on this dossier while it runs. No step runs `ds delegation-check`. The operator who writes the first `route=delegate` marker in a wave also adds the done-when row `| <n> | \`<plugin>/cli/ds delegation-check <dossier-dir>\` | exit 0 guard |` to the wave contract, so `ds:converge` runs it.
 
 ### 6.5. REVIEW (fresh-context, optional)
 
