@@ -98,7 +98,7 @@ The invariant guard is where the ratchet lands: for a recurring bug class with a
 [{ "id": "no-raw-sql", "pattern": "execute\\(f?\"SELECT", "message": "parameterize", "paths": ["src/*.py"] }]
 ```
 
-A `paths` glob is relative to the project root, and `*` also matches `/`. An edit is in scope when any of these forms of the edited path matches a glob: the absolute path as sent, the absolute path with symlinks resolved, and the path relative to the root. For an edit in a linked worktree, the path relative to the top of that worktree is also used. Thus `src/*.py` covers `src/` in every worktree, `**/*.py` also covers `.py` files at the top level, and a glob that starts with `/` matches the absolute path as sent or as resolved.
+A `paths` glob is relative to the project root, and `*` also matches `/`. The guard checks no file outside the project root and its linked worktrees, whatever the glob, and a guard with no `paths` covers only those. An edit is in scope when any of these forms of the edited path matches a glob: the absolute path as sent, the absolute path with symlinks resolved, and the path relative to the root. For an edit in a linked worktree, the path relative to the top of that worktree is also used. Thus `src/*.py` covers `src/` in every worktree, `**/*.py` also covers `.py` files at the top level, and a glob that starts with `/` matches the absolute path as sent or as resolved.
 
 In a dossier repo, when a doubter or reviewer subagent stops (`whetstone-doubter`, `dossier-reviewer`, or an agent named `reviewer`), its first verdict line is appended to `.scratchpad/dossier/.verdicts.jsonl`. It is a log, not a gate: it never blocks.
 
