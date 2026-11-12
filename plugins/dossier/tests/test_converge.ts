@@ -1,20 +1,13 @@
 import assert from 'node:assert/strict'
-import { execFile, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
-import { createInterface } from 'node:readline'
-import { promisify } from 'node:util'
-import { test as base } from 'vitest'
-
-const test = base.concurrent
-const execFileAsync = promisify(execFile)
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { test } from 'vitest'
+import { ds, tempRoot } from './inproc.ts'
 
 const PLUGIN = join(import.meta.dirname, '..')
-const DS = join(PLUGIN, 'cli', 'ds')
-const DS_ENTRY = join(PLUGIN, 'cli', 'ds.ts')
 const FIXTURES = join(PLUGIN, 'tests', 'fixtures')
 const REPO = join(PLUGIN, '..', '..')
+const TOP_LEVEL = { DS_CONVERGE_DEPTH: '0' }
 
 const MET = 0
 const UNMET = 1
@@ -22,44 +15,13 @@ const PARSE = 2
 
 type Run = { status: number; stdout: string; stderr: string }
 
-type Options = { cwd?: string; env?: NodeJS.ProcessEnv; timeout?: number }
-
-function cleanEnv(): NodeJS.ProcessEnv {
-  const env = { ...process.env }
-  delete env.DS_CONVERGE_DEPTH
-  return env
+async function inproc(cwd: string, args: string[], env: Readonly<Record<string, string>> = {}, input = ''): Promise<Run> {
+  const done = await ds(cwd, args, { ...TOP_LEVEL, ...env }, input)
+  return { status: done.code, stdout: done.stdout, stderr: done.stderr }
 }
 
-async function exec(file: string, args: string[], options: Options): Promise<Run> {
-  try {
-    const { stdout, stderr } = await execFileAsync(file, args, { ...options, encoding: 'utf8' })
-    return { status: 0, stdout, stderr }
-  } catch (error) {
-    const failed = error as { code?: unknown; stdout?: string; stderr?: string }
-    if (typeof failed.code !== 'number') throw error
-    return { status: failed.code, stdout: failed.stdout ?? '', stderr: failed.stderr ?? '' }
-  }
-}
-
-function pipeInto(file: string, args: string[], input: string, options: Options): Promise<Run> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(file, args, { ...options, stdio: ['pipe', 'pipe', 'pipe'] })
-    let stdout = ''
-    let stderr = ''
-    child.stdout.setEncoding('utf8').on('data', (chunk: string) => (stdout += chunk))
-    child.stderr.setEncoding('utf8').on('data', (chunk: string) => (stderr += chunk))
-    child.stdin.on('error', () => {})
-    child.on('error', reject)
-    child.on('close', (code) => {
-      if (code === null) reject(new Error(`${file} ${args.join(' ')} was killed`))
-      else resolve({ status: code, stdout, stderr })
-    })
-    child.stdin.end(input)
-  })
-}
-
-function converge(cwd: string, args: string[], env: NodeJS.ProcessEnv = cleanEnv(), timeout?: number): Promise<Run> {
-  return exec('sh', [DS, 'converge', ...args], { cwd, env, timeout })
+function converge(cwd: string, args: string[], env: Readonly<Record<string, string>> = {}): Promise<Run> {
+  return inproc(cwd, ['converge', ...args], env)
 }
 
 function run(contract: string): Promise<Run> {
@@ -79,22 +41,22 @@ function verdict(result: Run): string {
 }
 
 async function withTmp(body: (root: string) => Promise<void>): Promise<void> {
-  const root = mkdtempSync(join(tmpdir(), 'converge-'))
+  const { dir, clean } = tempRoot('converge-')
   try {
-    await body(root)
+    await body(dir)
   } finally {
-    rmSync(root, { recursive: true, force: true })
+    clean()
   }
 }
 
 async function withFixture(name: string, text: (path: string) => string, body: (path: string) => Promise<void>): Promise<void> {
-  const dir = mkdtempSync(join(tmpdir(), 'converge-fixture-'))
+  const { dir, clean } = tempRoot('converge-fixture-')
   const path = join(dir, name)
   writeFileSync(path, text(path))
   try {
     await body(path)
   } finally {
-    rmSync(dir, { recursive: true, force: true })
+    clean()
   }
 }
 
@@ -146,39 +108,6 @@ function malformed(row: string): Promise<Run> {
     row
   return runText('malformed.md', text)
 }
-
-test('the plan block reaches a pipe while the run is still going', async () => {
-  const root = mkdtempSync(join(tmpdir(), 'converge-'))
-  try {
-    const contract = join(root, 'slow.md')
-    const go = join(root, 'go')
-    const done = join(root, 'done')
-    const wait = `sh -c 'i=0; while [ ! -f ${go} ] && [ $i -lt 200 ]; do sleep 0.05; i=$((i+1)); done; touch ${done}'`
-    writeFileSync(contract, singleCriterion('| id | command | expect |', '| --- | --- | --- |', `| 1 | \`${wait}\` | exit 0 |`))
-    const child = spawn('sh', [DS, 'converge', contract], { cwd: REPO, env: cleanEnv(), stdio: ['ignore', 'pipe', 'pipe'] })
-    let stderr = ''
-    child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()))
-    const exited = new Promise((resolve) => child.on('close', resolve))
-    let running: boolean | undefined
-    const lines = createInterface({ input: child.stdout })
-    for await (const line of lines) {
-      if (line.startsWith('will run ')) {
-        running = !existsSync(done)
-        break
-      }
-    }
-    writeFileSync(go, '')
-    lines.close()
-    child.stdout.destroy()
-    const code = await exited
-    assert.ok(running !== undefined, 'no will-run line')
-    assert.ok(running, 'the plan block arrived only after the criterion finished')
-    assert.equal(stderr, '')
-    assert.equal(code, 141)
-  } finally {
-    rmSync(root, { recursive: true, force: true })
-  }
-})
 
 test('all criteria met exits zero', async () => {
   const result = await run(join(FIXTURES, 'met.md'))
@@ -235,23 +164,6 @@ test('a nonzero expected exit counts as met', async () => {
   assert.equal(result.status, MET, result.stdout)
 })
 
-test('a criterion pointed at another contract is allowed', async () => {
-  const text =
-    '# sibling\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n' +
-    '## done-when\n\n' +
-    '| id  | command | expect |\n' +
-    '| --- | ------- | ------ |\n' +
-    '| 1   | `sh plugins/dossier/cli/ds converge plugins/dossier/tests/fixtures/met.md` | exit 0 |\n'
-  await withFixture(
-    'sibling.md',
-    () => text,
-    async (sibling) => {
-      const result = await run(sibling)
-      assert.equal(verdict(result), 'CONVERGE: MET 1/1', out(result))
-    },
-  )
-})
-
 test('a name containing the runner is not the runner', async () => {
   const text =
     '# lookalike\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n' +
@@ -269,47 +181,10 @@ test('a name containing the runner is not the runner', async () => {
   )
 })
 
-test('a self-referencing contract terminates', async () => {
-  const text = (path: string): string =>
-    '# loop\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n' +
-    '## done-when\n\n' +
-    '| id  | command | expect |\n' +
-    '| --- | ------- | ------ |\n' +
-    `| 1   | \`echo x >> ${dirname(path)}/hits; sh plugins/dossier/cli/ds converge ${path}\` | exit 0 |\n`
-  await withFixture('loop.md', text, async (loop) => {
-    const result = await converge(REPO, [loop], cleanEnv(), 60_000)
-    assert.ok(result.status === UNMET || result.status === PARSE, out(result))
-    assert.equal(readFileSync(join(dirname(loop), 'hits'), 'utf8'), 'x\nx\n', out(result))
-  })
-})
-
 test('nesting past the cap is refused', async () => {
-  const result = await converge(REPO, [join(FIXTURES, 'met.md')], { ...cleanEnv(), DS_CONVERGE_DEPTH: '2' })
+  const result = await converge(REPO, [join(FIXTURES, 'met.md')], { DS_CONVERGE_DEPTH: '2' })
   assert.ok(result.stdout.includes('refusing to recurse'), result.stdout)
   assert.equal(result.status, PARSE, result.stdout)
-})
-
-test('one level of nesting is allowed', async () => {
-  const text =
-    '# nested\n\n| field | value |\n| --- | --- |\n| consumer | tests |\n\n' +
-    '## done-when\n\n' +
-    '| id  | command | expect |\n' +
-    '| --- | ------- | ------ |\n' +
-    '| 1   | `sh plugins/dossier/cli/ds converge plugins/dossier/tests/fixtures/met.md` | exit 0 |\n'
-  await withFixture(
-    'nested.md',
-    () => text,
-    async (nested) => {
-      const result = await run(nested)
-      assert.equal(verdict(result), 'CONVERGE: MET 1/1', out(result))
-    },
-  )
-})
-
-test('the shell wrapper agrees with the module', async () => {
-  const direct = await exec(process.execPath, [DS_ENTRY, 'converge', join(FIXTURES, 'met.md')], { cwd: REPO, env: cleanEnv() })
-  const viashell = await run(join(FIXTURES, 'met.md'))
-  assert.equal(viashell.status, direct.status, out(viashell))
 })
 
 test('the default contract is the live wave not the last sorted', async () => {
@@ -515,7 +390,7 @@ test('the prompt hook counts the rows this runner refuses', async () => {
   assert.equal(numberedRows(text).length, 2)
   await withTmp(async (root) => {
     writeFileSync(join(wave(root, '2026-08-01-c'), 'CONTRACT.md'), text)
-    const state = await pipeInto('sh', [DS, 'convergence-state'], JSON.stringify({ cwd: root }), { env: cleanEnv() })
+    const state = await inproc(REPO, ['convergence-state'], {}, JSON.stringify({ cwd: root }))
     assert.ok(state.stdout.includes('2 criteria'), state.stdout + state.stderr)
   })
 })

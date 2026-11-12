@@ -3,8 +3,9 @@ import { spawnSync } from 'node:child_process'
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
-import { test } from 'vitest'
-import { ds, type Run } from './inproc.ts'
+import { afterAll, test } from 'vitest'
+import { ds, type Run, tempRoot } from './inproc.ts'
+import { type Template, template } from './repo.ts'
 
 const CONTRACT = [
   '# demo-wave',
@@ -23,9 +24,12 @@ const CONTRACT = [
   '',
 ].join('\n')
 
+const home = tempRoot('convergence-state-home-')
+mkdirSync(join(home.dir, '.scratchpad', 'dossier'), { recursive: true })
+
 function run(payload: unknown): Promise<Run> {
   const input = typeof payload === 'string' ? payload : JSON.stringify(payload)
-  return ds(process.cwd(), ['convergence-state'], {}, input)
+  return ds(home.dir, ['convergence-state'], {}, input)
 }
 
 function git(repo: string, ...args: string[]): void {
@@ -64,8 +68,26 @@ function repoWithContract(root: string): void {
   git(root, 'commit', '-q', '-m', 'chore: contract')
 }
 
+const bare = template(initRepo)
+const contracted = template(repoWithContract)
+
+afterAll(() => {
+  bare.clean()
+  contracted.clean()
+  home.clean()
+})
+
 async function withTmp(body: (root: string) => Promise<void>): Promise<void> {
   const root = mkdtempSync(join(tmpdir(), 'convergence-state-'))
+  try {
+    await body(root)
+  } finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+}
+
+async function withRepo(shape: Template, body: (root: string) => Promise<void>): Promise<void> {
+  const root = shape.copy('convergence-state-')
   try {
     await body(root)
   } finally {
@@ -82,8 +104,7 @@ test('a repo with no contract says nothing', async () => {
 })
 
 test('a repo with a contract names the wave', async () => {
-  await withTmp(async (root) => {
-    repoWithContract(root)
+  await withRepo(contracted, async (root) => {
     const result = await run({ cwd: root })
     assert.equal(result.code, 0, result.stderr)
     assert.ok(result.stdout.includes('demo-wave'), result.stdout)
@@ -91,8 +112,7 @@ test('a repo with a contract names the wave', async () => {
 })
 
 test('it reports criteria count without running them', async () => {
-  await withTmp(async (root) => {
-    repoWithContract(root)
+  await withRepo(contracted, async (root) => {
     const marker = join(root, 'ran-marker')
     tracked(root, '2026-08-01-demo-wave.md', CONTRACT.replace('| 1   | `true`  | exit 0 |', `| 1   | \`touch ${marker}\` | exit 0 |`))
     const result = await run({ cwd: root })
@@ -102,8 +122,7 @@ test('it reports criteria count without running them', async () => {
 })
 
 test('it reports budget usage', async () => {
-  await withTmp(async (root) => {
-    repoWithContract(root)
+  await withRepo(contracted, async (root) => {
     assert.ok((await run({ cwd: root })).stdout.includes('commits: 0 of 4'))
     writeFileSync(join(root, 'later.py'), 'x = 1\n')
     git(root, 'add', 'later.py')
@@ -168,8 +187,7 @@ test('an unreadable contract never breaks the prompt', async () => {
 })
 
 test('it reports the layer mix of recent work', async () => {
-  await withTmp(async (root) => {
-    repoWithContract(root)
+  await withRepo(contracted, async (root) => {
     writeFileSync(join(root, 'a.py'), 'x = 1\n')
     writeFileSync(join(root, 'README.md'), 'hi\n')
     mkdirSync(join(root, 'tests'))
@@ -182,8 +200,7 @@ test('it reports the layer mix of recent work', async () => {
 })
 
 test('a path merely containing test is runtime', async () => {
-  await withTmp(async (root) => {
-    repoWithContract(root)
+  await withRepo(contracted, async (root) => {
     writeFileSync(join(root, 'latest.py'), 'x = 1\n')
     git(root, 'add', 'latest.py')
     git(root, 'commit', '-q', '-m', 'feat: latest')
@@ -193,8 +210,7 @@ test('a path merely containing test is runtime', async () => {
 })
 
 test('a contractless live wave is named', async () => {
-  await withTmp(async (root) => {
-    initRepo(root)
+  await withRepo(bare, async (root) => {
     ledger(root, '2026-08-01-demo')
     const result = await run({ cwd: root })
     assert.equal(result.code, 0, result.stderr)
@@ -213,8 +229,7 @@ test('a contractless archived wave is not named', async () => {
 })
 
 test('the live wave is reported not the alphabetical last', async () => {
-  await withTmp(async (root) => {
-    initRepo(root)
+  await withRepo(bare, async (root) => {
     tracked(root, '2026-08-01-aaa-live.md', CONTRACT.replace('demo-wave', 'aaa-live'))
     tracked(root, '2026-08-01-zzz-closed.md', CONTRACT.replace('demo-wave', 'zzz-closed'))
     ledger(root, '2026-08-01-aaa-live')
@@ -259,8 +274,7 @@ test('no live wave means silence', async () => {
 })
 
 test('it finishes fast enough to sit on every prompt', async () => {
-  await withTmp(async (root) => {
-    initRepo(root)
+  await withRepo(bare, async (root) => {
     const markers = [join(root, 'ran-1'), join(root, 'ran-2')]
     const slow = CONTRACT.replace('| 1   | `true`  | exit 0 |', `| 1   | \`touch ${markers[0]}\` | exit 0 |`).replace(
       '| 2   | `false` | exit 1 |',

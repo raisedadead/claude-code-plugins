@@ -1,38 +1,49 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { afterEach, beforeEach, test } from 'vitest'
-import { ds, tempRoot } from './inproc.ts'
+import { afterAll, afterEach, test } from 'vitest'
+import { ds } from './inproc.ts'
+import { type Template, template } from './repo.ts'
 
 const ISOLATED = { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_SYSTEM: '/dev/null' }
 const EVAL = { id: 'V1', pattern: 'eval\\(', message: 'no eval' }
 
 let base = ''
 let project = ''
-let clean = (): void => {}
 
 function git(dir: string, ...args: string[]): void {
   execFileSync('git', ['-C', dir, '-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { env: { ...process.env, ...ISOLATED }, stdio: 'ignore' })
 }
 
-function repo(name: string): string {
-  const dir = join(base, name)
+function repo(root: string, name: string): string {
+  const dir = join(root, name)
   mkdirSync(join(dir, 'src'), { recursive: true })
   git(dir, 'init', '-q')
   git(dir, 'commit', '-q', '--allow-empty', '-m', 'init')
   return dir
 }
 
-beforeEach(() => {
-  const made = tempRoot('ds-guard-scope-')
-  base = made.dir
-  clean = made.clean
-  project = repo('proj')
-  mkdirSync(join(project, '.scratchpad', 'dossier'), { recursive: true })
+function seedProject(root: string): void {
+  mkdirSync(join(repo(root, 'proj'), '.scratchpad', 'dossier'), { recursive: true })
+}
+
+const alone = template(seedProject)
+const paired = template((root) => {
+  seedProject(root)
+  repo(root, 'other')
 })
 
-afterEach(() => clean())
+function setup(shape: Template): void {
+  base = shape.copy('ds-guard-scope-')
+  project = join(base, 'proj')
+}
+
+afterEach(() => rmSync(base, { recursive: true, force: true }))
+afterAll(() => {
+  alone.clean()
+  paired.clean()
+})
 
 function registry(paths?: string[]): void {
   const entry = paths ? { ...EVAL, paths } : EVAL
@@ -45,12 +56,14 @@ async function check(file: string, env: Record<string, string> = {}): Promise<nu
 }
 
 test('a GIT_DIR in the environment does not pull an unrelated repo into scope', async () => {
+  setup(paired)
   registry(['*'])
-  const other = repo('other')
+  const other = join(base, 'other')
   assert.equal(await check(join(other, 'src', 'app.py'), { GIT_DIR: join(project, '.git') }), 0)
 })
 
 test('a path that reaches the root through a symlink and a .. segment is still checked', async () => {
+  setup(alone)
   registry(['src/*.py'])
   const out = join(base, 'out')
   mkdirSync(out)
@@ -59,24 +72,28 @@ test('a path that reaches the root through a symlink and a .. segment is still c
 })
 
 test('a root-relative glob does not reach a file in an unrelated repo', async () => {
+  setup(paired)
   registry(['src/*.py'])
-  const other = repo('other')
+  const other = join(base, 'other')
   assert.equal(await check(join(other, 'src', 'app.py')), 0)
 })
 
 test('an unscoped guard does not reach a file in an unrelated repo', async () => {
+  setup(paired)
   registry()
-  const other = repo('other')
+  const other = join(base, 'other')
   assert.equal(await check(join(other, 'src', 'app.py')), 0)
 })
 
 test('a star glob does not reach a file in an unrelated repo', async () => {
+  setup(paired)
   registry(['*'])
-  const other = repo('other')
+  const other = join(base, 'other')
   assert.equal(await check(join(other, 'src', 'app.py')), 0)
 })
 
 test('the guard still blocks the same edit inside the root and in a linked worktree', async () => {
+  setup(alone)
   registry(['src/*.py'])
   const tree = join(base, 'tree')
   git(project, 'worktree', 'add', '-q', tree)
@@ -85,6 +102,7 @@ test('the guard still blocks the same edit inside the root and in a linked workt
 })
 
 test('an unscoped guard still blocks the same edit inside the root', async () => {
+  setup(alone)
   registry()
   assert.equal(await check(join(project, 'src', 'app.py')), 1)
 })

@@ -10,7 +10,7 @@ afterEach(() => {
 })
 
 function root(): string {
-  const { dir, clean } = tempRoot('dossier-assertgrill-')
+  const { dir, clean } = tempRoot('dossier-assertgrill-', true)
   cleanups.push(clean)
   return dir
 }

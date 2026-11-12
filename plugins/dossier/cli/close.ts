@@ -124,7 +124,7 @@ type Verdict = { line: string; record: string; blocks: boolean }
 
 function converge(tools: CloseTools, contract: string | undefined, accept: boolean): Verdict {
   if (contract === undefined) return { line: '· converge: no contract', record: 'absent', blocks: false }
-  const done = spawnSync('sh', [tools.cli, 'converge', contract], { encoding: 'utf8', env: childEnv({}) })
+  const done = spawnSync(process.execPath, [tools.cli, 'converge', contract], { encoding: 'utf8', env: childEnv({}) })
   const out = done.stdout ?? ''
   const met = /CONVERGE: MET (\d+\/\d+)/.exec(out)
   if (met) return { line: `✓ converge ${met[1]}`, record: `met:${met[1]}`, blocks: false }

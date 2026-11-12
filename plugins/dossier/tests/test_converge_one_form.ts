@@ -1,37 +1,17 @@
 import assert from 'node:assert/strict'
-import { execFile } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { promisify } from 'node:util'
-import { test as base } from 'vitest'
-
-const test = base.concurrent
-const execFileAsync = promisify(execFile)
-
-const PLUGIN = join(import.meta.dirname, '..')
-const DS = join(PLUGIN, 'cli', 'ds')
+import { test } from 'vitest'
+import { ds, tempRoot } from './inproc.ts'
 
 type Run = { status: number; stdout: string }
 
-function cleanEnv(): NodeJS.ProcessEnv {
-  const env = { ...process.env }
-  delete env.DS_CONVERGE_DEPTH
-  return env
-}
-
-async function converge(root: string, rows: string[], env: NodeJS.ProcessEnv = cleanEnv()): Promise<Run> {
+async function converge(root: string, rows: string[], env: Readonly<Record<string, string>> = {}): Promise<Run> {
   const contract = join(root, 'contract.md')
   const table = ['| id | command | expect |', '| --- | --- | --- |', ...rows.map((row, i) => `| ${i + 1} | ${row} |`)]
   writeFileSync(contract, ['# c', '', '| field | value |', '| --- | --- |', '| consumer | tests |', '', '## done-when', '', ...table, ''].join('\n'))
-  try {
-    const { stdout } = await execFileAsync('sh', [DS, 'converge', contract], { cwd: root, env, encoding: 'utf8' })
-    return { status: 0, stdout }
-  } catch (error) {
-    const failed = error as { code?: unknown; stdout?: string }
-    if (typeof failed.code !== 'number') throw error
-    return { status: failed.code, stdout: failed.stdout ?? '' }
-  }
+  const done = await ds(root, ['converge', contract], { DS_CONVERGE_DEPTH: '0', ...env })
+  return { status: done.code, stdout: done.stdout }
 }
 
 function verdict(result: Run): string {
@@ -39,11 +19,11 @@ function verdict(result: Run): string {
 }
 
 async function withTmp(body: (root: string) => Promise<void>): Promise<void> {
-  const root = mkdtempSync(join(tmpdir(), 'converge-one-form-'))
+  const { dir, clean } = tempRoot('converge-one-form-')
   try {
-    await body(root)
+    await body(dir)
   } finally {
-    rmSync(root, { recursive: true, force: true })
+    clean()
   }
 }
 
@@ -130,7 +110,7 @@ test('shell pipes, sh -c pipes, bracketed pipes and plain grep patterns still ru
     const bin = join(root, 'bin')
     mkdirSync(bin)
     writeFileSync(join(bin, 'rg'), '#!/bin/sh\nexec grep "$@"\n', { mode: 0o755 })
-    const env = { ...cleanEnv(), PATH: `${bin}:${process.env.PATH ?? ''}` }
+    const env = { PATH: `${bin}:${process.env.PATH ?? ''}` }
     const result = await converge(
       root,
       [

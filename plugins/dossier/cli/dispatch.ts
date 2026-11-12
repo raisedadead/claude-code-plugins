@@ -18,11 +18,11 @@ import {
 } from 'node:fs'
 import { constants, tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
+import { clock } from './clock.ts'
 import { convergenceStateVerb, convergeVerb, staleContracts } from './converge.ts'
 import { closeVerb } from './close.ts'
 import { claimRoots } from './env.ts'
 import { milestoneOf, progressVerb } from './progress.ts'
-import { io } from './stdio.ts'
 import { resolvePinsVerb, verifyEditVerb, verifySweepVerb } from './verify.ts'
 import { DATE_PREFIX } from '../engine/converge.ts'
 import { delegationReport } from '../engine/delegation.ts'
@@ -123,7 +123,7 @@ function dossierFile(dir: string): string {
 function readDossier(verb: string, dir: string): [string, string] {
   const file = dossierFile(dir)
   if (!isFile(file)) refuse(verb, `not found: ${file}`)
-  return [file, migrate(readFileSync(file, 'utf8'), stamp(new Date(), true)).text]
+  return [file, migrate(readFileSync(file, 'utf8'), stamp(clock.now(), true)).text]
 }
 
 function subdirs(parent: string): string[] {
@@ -177,7 +177,7 @@ function rowFlipVerb(args: string[]): number {
 
 function sAppendTo(dir: string, event: string): string {
   const [file, text] = readDossier('s-append', dir)
-  const entry = `${stamp(new Date(), true)} ${event}`
+  const entry = `${stamp(clock.now(), true)} ${event}`
   atomicWrite(file, sAppend(text, entry))
   return entry
 }
@@ -231,7 +231,7 @@ function zWriteVerb(args: string[]): number {
   const dir = required('z-write', args[0], usage)
   const kind = required('z-write', args[1], 'kind required (complete|successor|abandoned)')
   const [file, text] = readDossier('z-write', dir)
-  const result = zWrite(text, file, kind, args[2] ?? '', args[3] ?? '', args[4] || '—', stamp(new Date()))
+  const result = zWrite(text, file, kind, args[2] ?? '', args[3] ?? '', args[4] || '—', stamp(clock.now()))
   if ('error' in result) refuse('z-write', result.error)
   atomicWrite(file, result.text)
   return 0
@@ -417,7 +417,7 @@ function migrateVerb(args: string[]): number {
   if (holder) refuse('migrate', `${dir} locked by ${holder} — rerun when it finishes`)
   const file = dossierFile(dir)
   if (!isFile(file)) refuse('migrate', `not found: ${file}`)
-  const result = migrate(readFileSync(file, 'utf8'), stamp(new Date(), true))
+  const result = migrate(readFileSync(file, 'utf8'), stamp(clock.now(), true))
   if (!result.applied.length) return 0
   atomicWrite(file, result.text)
   console.log(`migrated ${dir}: ${result.applied.join(', ')}`)
@@ -432,8 +432,8 @@ function dsCloseVerb(args: string[]): number {
     archiveMove,
     regenIndex,
     lockHeld,
-    stamp: () => stamp(new Date()),
-    cli: join(import.meta.dirname, 'ds'),
+    stamp: () => stamp(clock.now()),
+    cli: join(import.meta.dirname, 'ds.ts'),
   })
 }
 
@@ -626,7 +626,7 @@ function invariantCheckVerb(args: string[]): number {
   }
   let payload: unknown
   try {
-    payload = JSON.parse(io.stdin())
+    payload = JSON.parse(readFileSync(0, 'utf8'))
   } catch {
     return 0
   }
@@ -645,7 +645,7 @@ function invariantCheckVerb(args: string[]): number {
 
 function stdinPayload(): Record<string, unknown> {
   try {
-    const payload: unknown = JSON.parse(io.stdin())
+    const payload: unknown = JSON.parse(readFileSync(0, 'utf8'))
     return typeof payload === 'object' && payload !== null && !Array.isArray(payload) ? (payload as Record<string, unknown>) : {}
   } catch {
     return {}
@@ -659,7 +659,7 @@ function text(value: unknown): string {
 function seedLater(dossiers: string): void {
   const list = `${dossiers}/${LATER_FILE}`
   if (isFile(list)) return
-  const today = stamp(new Date()).slice(0, 10)
+  const today = stamp(clock.now()).slice(0, 10)
   const archive = `${dossiers}/_archive`
   const rows = subdirs(archive)
     .sort()
@@ -700,7 +700,7 @@ function sessionStartVerb(): number {
     nudgeFlag: process.env.DOSSIER_LIVE_NUDGE ?? '1',
     notes,
     later: isFile(laterFile()) ? readFileSync(laterFile(), 'utf8') : undefined,
-    today: stamp(new Date()).slice(0, 10),
+    today: stamp(clock.now()).slice(0, 10),
   })
   const specific = { hookEventName: 'SessionStart', additionalContext: report.context, ...(report.title ? { sessionTitle: report.title } : {}) }
   console.log(JSON.stringify({ continue: true, hookSpecificOutput: specific, ...(report.system ? { systemMessage: report.system } : {}) }))
@@ -826,7 +826,7 @@ function handoffVerb(args: string[]): number {
     return 1
   }
   const slug = basename(resolve(dir)).replace(DATE_PREFIX, '')
-  console.log(handoff(readFileSync(file, 'utf8'), slug, stamp(new Date(), true)).join('\n'))
+  console.log(handoff(readFileSync(file, 'utf8'), slug, stamp(clock.now(), true)).join('\n'))
   return 0
 }
 
@@ -838,7 +838,7 @@ function laterVerb(args: string[]): number {
   const [action, key, ...extra] = args
   const file = laterFile()
   const text = isFile(file) ? readFileSync(file, 'utf8') : undefined
-  const today = stamp(new Date()).slice(0, 10)
+  const today = stamp(clock.now()).slice(0, 10)
   if (action === undefined) {
     const rows = laterRows(text)
     for (const row of rows) console.log(`${row.key} · ${row.task} · ${row.who}${row.due ? ` · due ${row.due}` : ''}${isDue(row, today) ? ' — due now' : ''}`)

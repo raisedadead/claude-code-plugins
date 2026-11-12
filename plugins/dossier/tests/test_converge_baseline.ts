@@ -1,35 +1,16 @@
 import assert from 'node:assert/strict'
-import { execFile } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { promisify } from 'node:util'
-import { test as base } from 'vitest'
+import { test } from 'vitest'
+import { ds as inproc, tempRoot } from './inproc.ts'
 
-const test = base.concurrent
-const execFileAsync = promisify(execFile)
-
-const DS = join(import.meta.dirname, '..', 'cli', 'ds')
 const SLUG = '2026-11-12-demo'
 
 type Run = { status: number; stdout: string }
 
-function cleanEnv(): NodeJS.ProcessEnv {
-  const env = { ...process.env }
-  delete env.DS_CONVERGE_DEPTH
-  delete env.DOSSIER_LEDGER_ROOT
-  return env
-}
-
 async function ds(root: string, args: string[]): Promise<Run> {
-  try {
-    const { stdout } = await execFileAsync('sh', [DS, ...args], { cwd: root, env: cleanEnv(), encoding: 'utf8' })
-    return { status: 0, stdout }
-  } catch (error) {
-    const failed = error as { code?: unknown; stdout?: string }
-    if (typeof failed.code !== 'number') throw error
-    return { status: failed.code, stdout: failed.stdout ?? '' }
-  }
+  const done = await inproc(root, args, { DS_CONVERGE_DEPTH: '0' })
+  return { status: done.code, stdout: done.stdout }
 }
 
 function contract(rows: string[]): string {
@@ -38,7 +19,7 @@ function contract(rows: string[]): string {
 }
 
 async function withWave(rows: string[], body: (root: string, path: string, status: () => string[]) => Promise<void>, live = true): Promise<void> {
-  const root = realpathSync(mkdtempSync(join(tmpdir(), 'converge-baseline-')))
+  const { dir: root, clean } = tempRoot('converge-baseline-')
   try {
     const dir = join(root, '.scratchpad', 'dossier', SLUG)
     mkdirSync(dir, { recursive: true })
@@ -56,7 +37,7 @@ async function withWave(rows: string[], body: (root: string, path: string, statu
         .filter((line) => line.includes('ds:converge'))
     await body(root, path, status)
   } finally {
-    rmSync(root, { recursive: true, force: true })
+    clean()
   }
 }
 

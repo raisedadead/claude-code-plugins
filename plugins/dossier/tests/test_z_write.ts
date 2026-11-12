@@ -13,7 +13,7 @@ afterEach(() => {
 })
 
 function root(): string {
-  const { dir, clean } = tempRoot('dossier-zwrite-')
+  const { dir, clean } = tempRoot('dossier-zwrite-', true)
   cleanups.push(clean)
   return dir
 }

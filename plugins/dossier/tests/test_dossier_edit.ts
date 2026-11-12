@@ -42,6 +42,7 @@ let tmp = ''
 let clean = (): void => {}
 beforeEach(() => {
   ;({ dir: tmp, clean } = tempRoot('dossier-edit-'))
+  mkdirSync(join(tmp, '.scratchpad', 'dossier'), { recursive: true })
 })
 afterEach(() => clean())
 

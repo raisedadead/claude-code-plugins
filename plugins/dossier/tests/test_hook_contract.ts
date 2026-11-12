@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { afterEach, beforeEach, test } from 'vitest'
+import { afterAll, afterEach, beforeEach, test } from 'vitest'
 import { rootRelative } from '../engine/guards.ts'
 import { editGate, type Io, ledgerRoot, promptGate, sessionGate, stopGate, verdictGate, verifyGate } from '../hooks/gates.ts'
 import { ds, tempRoot } from './inproc.ts'
+import { template } from './repo.ts'
 
 const CLI = join(import.meta.dirname, '..', 'cli', 'ds')
 const SLUG = '2026-06-05-contract'
@@ -20,23 +21,33 @@ let root = ''
 let elsewhere = ''
 const cleanups: (() => void)[] = []
 
+const seeded = template((dir) => {
+  gitIn(dir, 'init', '-q')
+  mkdirSync(join(dir, '.scratchpad', 'dossier', SLUG), { recursive: true })
+  writeFileSync(join(dir, '.scratchpad', 'dossier', SLUG, 'DOSSIER.md'), LIVE)
+})
+
 beforeEach(() => {
-  const made = tempRoot('ds-contract-')
+  const made = seeded.copy('ds-contract-')
   const away = tempRoot('ds-contract-cwd-')
-  cleanups.push(made.clean, away.clean)
-  root = made.dir
+  cleanups.push(() => rmSync(made, { recursive: true, force: true }), away.clean)
+  root = made
   elsewhere = away.dir
-  git('init', '-q')
-  mkdirSync(join(root, '.scratchpad', 'dossier', SLUG), { recursive: true })
-  writeFileSync(join(root, '.scratchpad', 'dossier', SLUG, 'DOSSIER.md'), LIVE)
+  mkdirSync(join(elsewhere, '.scratchpad', 'dossier'), { recursive: true })
 })
 
 afterEach(() => {
   for (const clean of cleanups.splice(0)) clean()
 })
 
+afterAll(() => seeded.clean())
+
+function gitIn(dir: string, ...args: string[]): void {
+  execFileSync('git', ['-C', dir, ...args], { env: { ...process.env, ...ISOLATED }, stdio: 'ignore' })
+}
+
 function git(...args: string[]): void {
-  execFileSync('git', ['-C', root, ...args], { env: { ...process.env, ...ISOLATED }, stdio: 'ignore' })
+  gitIn(root, ...args)
 }
 
 function realIo(env: Record<string, string> = {}): { io: Io; calls: Call[] } {

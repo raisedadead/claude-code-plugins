@@ -2,27 +2,25 @@ import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { afterEach, test } from 'vitest'
-import { ds, tempRoot } from './inproc.ts'
-
-const cleanups: (() => void)[] = []
-afterEach(() => {
-  for (const clean of cleanups.splice(0)) clean()
-})
+import { afterAll, test } from 'vitest'
+import { ds } from './inproc.ts'
+import { template } from './repo.ts'
 
 function git(dir: string, args: string[]): void {
   execFileSync('git', ['-C', dir, ...args], { stdio: 'ignore' })
 }
 
-function repo(): string {
-  const { dir, clean } = tempRoot('dossier-fakeimpl-')
-  cleanups.push(clean)
+const seeded = template((dir) => {
   git(dir, ['init', '-q'])
   git(dir, ['config', 'core.excludesFile', '/dev/null'])
   writeFileSync(join(dir, 'a.txt'), 'seed\n')
   git(dir, ['add', '-A'])
   git(dir, ['commit', '-qm', 'seed'])
-  return dir
+})
+afterAll(() => seeded.clean())
+
+function repo(): string {
+  return seeded.copy('dossier-fakeimpl-')
 }
 
 function dirty(dir: string): void {

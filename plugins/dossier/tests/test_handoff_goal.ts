@@ -1,23 +1,34 @@
 import assert from 'node:assert/strict'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { setTimeout as sleep } from 'node:timers/promises'
 import { afterEach, beforeEach, test } from 'vitest'
+import { clock } from '../cli/clock.ts'
 import { ds, tempRoot } from './inproc.ts'
+
+const realNow = clock.now
+
+function nextSecond(): void {
+  clock.now = () => new Date(Date.now() + 1000)
+}
 
 const SECONDS = /^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) /
 
+let home = ''
 let dir = ''
 let clean = (): void => {}
 
 beforeEach(() => {
   const made = tempRoot('ds-handoff-goal-')
   clean = made.clean
+  home = made.dir
   dir = join(made.dir, '.scratchpad', 'dossier', '2026-11-12-demo')
   mkdirSync(dir, { recursive: true })
 })
 
-afterEach(() => clean())
+afterEach(() => {
+  clock.now = realNow
+  clean()
+})
 
 function ledger(rows: string[], status: string[] = []): void {
   const text = [
@@ -49,7 +60,7 @@ function satisfies(goal: string, line: string): boolean {
 }
 
 async function goal(): Promise<string> {
-  const done = await ds(dir, ['handoff', dir])
+  const done = await ds(home, ['handoff', dir])
   assert.equal(done.code, 0, done.stderr)
   const line = done.stdout.split('\n').find((text) => text.startsWith('/goal '))
   assert.ok(line, done.stdout)
@@ -58,7 +69,7 @@ async function goal(): Promise<string> {
 
 test('s-append prints the line it wrote, stamped to the second', async () => {
   ledger(['| T1 | . | A | a | — | — | v |'])
-  const done = await ds(dir, ['s-append', dir, 'ds:build T1 START'])
+  const done = await ds(home, ['s-append', dir, 'ds:build T1 START'])
   const printed = done.stdout.trim()
   assert.match(printed, SECONDS)
   assert.ok(readFileSync(join(dir, 'DOSSIER.md'), 'utf8').split('\n').includes(printed), printed)
@@ -68,16 +79,16 @@ test('the goal is met by a stop line s-append prints after the handoff', async (
   ledger(['| T1 | . | A | a | — | — | v |'])
   const condition = await goal()
   assert.ok(condition.includes('demo'), condition)
-  await sleep(1100)
-  const pause = (await ds(dir, ['s-append', dir, 'ds:build T1 PAUSE reason=push:main'])).stdout.trim()
-  const stop = (await ds(dir, ['s-append', dir, 'ds:build — auto-stop=no-unblocked'])).stdout.trim()
+  nextSecond()
+  const pause = (await ds(home, ['s-append', dir, 'ds:build T1 PAUSE reason=push:main'])).stdout.trim()
+  const stop = (await ds(home, ['s-append', dir, 'ds:build — auto-stop=no-unblocked'])).stdout.trim()
   assert.ok(satisfies(condition, pause), `${condition}\n${pause}`)
   assert.ok(satisfies(condition, stop), `${condition}\n${stop}`)
 })
 
 async function lines(...events: string[]): Promise<string[]> {
-  for (const event of events) assert.equal((await ds(dir, ['s-append', dir, event])).code, 0)
-  const done = await ds(dir, ['handoff', dir])
+  for (const event of events) assert.equal((await ds(home, ['s-append', dir, event])).code, 0)
+  const done = await ds(home, ['handoff', dir])
   assert.equal(done.code, 0, done.stderr)
   return done.stdout.trim().split('\n')
 }
@@ -144,7 +155,7 @@ test('the goal is not met by a stop line from before the handoff or by a non-sto
   ledger(['| T1 | x | A | a | — | c | v |', '| T2 | . | A | b | T1 | — | v |'], ['2026-11-12 09:05:00 ds:build T1 PAUSE reason=push:main'])
   const condition = await goal()
   assert.ok(!satisfies(condition, '2026-11-12 09:05:00 ds:build T1 PAUSE reason=push:main'), condition)
-  await sleep(1100)
-  const start = (await ds(dir, ['s-append', dir, 'ds:build T1 START'])).stdout.trim()
+  nextSecond()
+  const start = (await ds(home, ['s-append', dir, 'ds:build T1 START'])).stdout.trim()
   assert.ok(!satisfies(condition, start), `${condition}\n${start}`)
 })

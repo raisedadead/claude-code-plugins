@@ -12,6 +12,7 @@ afterEach(() => {
 function root(): string {
   const { dir, clean } = tempRoot('dossier-scaffold-')
   cleanups.push(clean)
+  mkdirSync(join(dir, '.scratchpad', 'dossier'), { recursive: true })
   return dir
 }
 

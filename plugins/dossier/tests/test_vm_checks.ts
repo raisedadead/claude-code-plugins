@@ -7,7 +7,7 @@ import { ds, tempRoot } from './inproc.ts'
 let ws = ''
 let clean = (): void => {}
 beforeEach(() => {
-  ;({ dir: ws, clean } = tempRoot('dossier-vm-'))
+  ;({ dir: ws, clean } = tempRoot('dossier-vm-', true))
 })
 afterEach(() => clean())
 

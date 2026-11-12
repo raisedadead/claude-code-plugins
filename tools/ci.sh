@@ -166,7 +166,7 @@ if [[ $job == dossier || $job == whetstone || $job == all ]]; then
 fi
 
 if [[ $job == dossier || $job == all ]]; then
-	step dossier-tests bun test --dots --timeout 30000 ./plugins/dossier/tests/test_*.ts
+	step dossier-tests bun test --parallel --dots --timeout 30000 ./plugins/dossier/tests/test_*.ts
 	step node-tests node_modules/.bin/vitest run --reporter=dot plugins/dossier/tests/test_*.ts
 	step format node_modules/.bin/oxfmt --check
 	step lint node_modules/.bin/oxlint --deny-warnings
