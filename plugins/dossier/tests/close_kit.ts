@@ -19,7 +19,7 @@ export async function run(file: string, args: string[], cwd?: string, env?: Reco
   }
   const done = spawnSync(file, args, { cwd, encoding: 'utf8', env: env && { ...process.env, ...env } })
   if (done.error) throw done.error
-  if (done.status === null) throw new Error(`${file} ${args.join(' ')} ended on ${done.signal}`)
+  if (done.status === null) throw new Error(`${file} ${args.join(' ')} ended on ${done.signal}: ${done.stderr}`)
   return { status: done.status, stdout: done.stdout, stderr: done.stderr }
 }
 
