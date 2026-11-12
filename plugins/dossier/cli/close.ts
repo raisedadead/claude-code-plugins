@@ -342,7 +342,8 @@ function check(options: Options, tools: CloseTools, at: Wave, text: string, rows
   if (mode.kind !== 'abandoned') {
     const open = rows.filter((row) => row.state !== 'x' && !options.carry.includes(row.id))
     const stop = `pause the wave (ds:status pause ${at.slug}); --abandon only on the operator's say-so`
-    if (open.length) fail(`${open.map((row) => row.id).join(' ')} open — finish them, --carry them, or ${stop}`)
+    const carry = open.every(carriable) ? ' --carry them,' : ''
+    if (open.length) fail(`${open.map((row) => row.id).join(' ')} open — finish them,${carry} or ${stop}`)
     const uncited = rows.filter((row) => row.state === 'x' && EMPTY.includes(row.cite))
     if (uncited.length) fail(`${uncited.map((row) => row.id).join(' ')} done with no cite`)
     for (const id of bugsOpen(text)) fail(`${id} has no fix cite — ds:backprop ${id}, or ${stop}`)
