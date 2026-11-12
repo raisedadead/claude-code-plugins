@@ -1,4 +1,4 @@
-import { byCodePoint, pythonInt } from '../../../hooks/text.ts'
+import { byCodePoint, pythonInt } from '../hooks/text.ts'
 
 export class InputError extends Error {}
 

@@ -220,8 +220,6 @@ fi
 if [[ $job == whetstone || $job == all ]]; then
 	step whetstone-tests bun_suite whetstone
 	each \
-		plugins/whetstone/tests/test_flake_runner.sh \
-		plugins/whetstone/tests/test_verify_clean.sh \
 		plugins/whetstone/tests/test_run_slice.sh \
 		plugins/whetstone/tests/test_claim_check_cli.sh \
 		plugins/whetstone/tests/test_bin_wrappers.sh

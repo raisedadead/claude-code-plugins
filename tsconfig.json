@@ -18,6 +18,7 @@
     "plugins/whetstone/hooks/claim-check*.ts",
     "plugins/whetstone/hooks/text.ts",
     "plugins/*/skills/*/scripts/*.ts",
+    "plugins/whetstone/scripts/*.ts",
     "plugins/*/tests/test_*.ts",
     "plugins/dossier/tests/setup.ts",
     "vitest.config.ts"

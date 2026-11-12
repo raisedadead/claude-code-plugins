@@ -20,7 +20,7 @@ A test is flaky when it passes and fails on the same code. That is a number: run
 
    ```bash
    FLAKE_TEST_NAME="<test-id>" \
-     "${CLAUDE_PLUGIN_ROOT}"/skills/flaky-test-audit/scripts/flake_runner.sh 10 results.json <test-command>
+     flake-runner 10 results.json <test-command>
    ```
 
    Pass the test id verbatim — the runner JSON-escapes it, so an id carrying quotes or backslashes still keys valid JSON. Or produce `results.json` directly from a framework's JSON reporter aggregated across N runs (adapters doc).
@@ -28,7 +28,7 @@ A test is flaky when it passes and fails on the same code. That is a number: run
 1. **Compute the rate:**
 
    ```bash
-   node "${CLAUDE_PLUGIN_ROOT}"/skills/flaky-test-audit/scripts/compute-flakiness-cli.ts \
+   node "${CLAUDE_PLUGIN_ROOT}"/scripts/compute-flakiness-cli.ts \
      results.json prev-quarantine.json quarantine.json
    ```
 

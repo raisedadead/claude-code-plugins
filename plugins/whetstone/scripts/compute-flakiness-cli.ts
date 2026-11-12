@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { computeRates, InputError, newFlags, quarantine, reportLines } from './compute-flakiness.ts'
-import { byCodePoint } from '../../../hooks/text.ts'
+import { byCodePoint } from '../hooks/text.ts'
 
 const EXIT_USAGE = 251
 const EXIT_BAD_INPUT = 252
