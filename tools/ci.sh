@@ -167,7 +167,7 @@ fi
 
 if [[ $job == dossier || $job == all ]]; then
 	step dossier-tests bun test --parallel --dots --timeout 30000 ./plugins/dossier/tests/test_*.ts
-	step node-tests node_modules/.bin/vitest run --reporter=dot plugins/dossier/tests/test_*.ts
+	step node-tests node_modules/.bin/vitest run --reporter=dot plugins/dossier/tests/test_*.ts plugins/whetstone/tests/test_*.ts
 	step format node_modules/.bin/oxfmt --check
 	step lint node_modules/.bin/oxlint --deny-warnings
 	step types node_modules/.bin/tsc -p .
@@ -190,7 +190,7 @@ if [[ $job == tools || $job == all ]]; then
 fi
 
 if [[ $job == whetstone || $job == all ]]; then
-	step whetstone-tests node_modules/.bin/vitest run --reporter=dot plugins/whetstone/tests/test_*.ts
+	step whetstone-tests bun test --parallel --dots --timeout 30000 ./plugins/whetstone/tests/test_*.ts
 	each \
 		plugins/whetstone/tests/test_flake_runner.sh \
 		plugins/whetstone/tests/test_verify_clean.sh \
