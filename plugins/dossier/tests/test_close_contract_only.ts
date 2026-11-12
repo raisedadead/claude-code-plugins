@@ -60,7 +60,27 @@ test('a mixed table edit after a contract-only commit still refuses', async () =
   })
 })
 
-test('a merged contract-only edit from a side branch does not settle a mixed edit on main', async () => {
+test('a table changed only in a merge refuses until it is back to a table seen alone', async () => {
+  await within(async ({ root, path, close }) => {
+    git(root, 'switch', '-q', '-c', 'side')
+    git(root, 'commit', '-q', '--allow-empty', '-m', 'side moves')
+    git(root, 'switch', '-q', 'main')
+    git(root, 'commit', '-q', '--allow-empty', '-m', 'main moves')
+    git(root, 'merge', '-q', '--no-commit', '-s', 'ours', 'side')
+    writeFileSync(path, contract('true'))
+    git(root, 'add', path)
+    git(root, 'commit', '-q', '--no-edit')
+    const refused = await close()
+    assert.equal(refused.status, 1, refused.stdout)
+    assert.equal(lines(refused, '✗').filter((line) => line.includes('never seen alone')).length, 1, refused.stdout)
+    alone(root, path, 'test -f done.txt')
+    alone(root, path, 'true')
+    const settled = await close()
+    assert.equal(settled.status, 0, settled.stdout)
+  })
+})
+
+test('a mixed edit kept by a merge is not settled by a side-branch contract-only edit', async () => {
   await within(async ({ root, path, close }) => {
     const row2 = (text: string): string => text.replace('| exit 0 |', '| exit 0 |\n| 2 | `true` | exit 0 |')
     git(root, 'branch', 'side')

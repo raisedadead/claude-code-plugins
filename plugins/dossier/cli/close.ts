@@ -257,8 +257,7 @@ function contractEdits(contract: string | undefined): string[] {
   const at = (rev: string): string => table(git(top, 'show', `${rev}:${path}`).out)
   const out: string[] = []
   if (table(readFileSync(contract, 'utf8')) !== at('HEAD')) out.push('✗ contract done-when table has uncommitted edits — commit them alone, or revert them')
-  let seen = at(added)
-  let seenAt = added.slice(0, 7)
+  const seen = new Map([[at(added), added.slice(0, 7)]])
   const mixed: string[] = []
   for (const sha of git(top, 'log', '--reverse', '--topo-order', '--full-history', '--no-merges', '--format=%H', `${added}..HEAD`, '--', path).out.split(
     '\n',
@@ -267,19 +266,18 @@ function contractEdits(contract: string | undefined): string[] {
     const short = sha.slice(0, 7)
     const alone = git(top, 'show', '--name-only', '--format=', sha).out.split('\n').filter(Boolean).length === 1
     if (!alone) mixed.push(short)
-    else if (at(`${sha}^`) === seen) {
-      seen = at(sha)
-      seenAt = short
+    else if (seen.has(at(`${sha}^`))) {
+      seen.set(at(sha), short)
       out.push(`· contract done-when table changed in ${short} (contract-only commit)`)
     } else out.push(`· contract done-when table changed in ${short} alone, on top of a table not seen alone`)
   }
-  const restored = at('HEAD') === seen
+  const seenAt = seen.get(at('HEAD'))
+  const fix = 'put the table back to one seen alone, then make the edit in its own commit'
   for (const short of mixed) {
-    if (restored) out.push(`· contract done-when table changed in ${short} beside other files and is back to the table seen alone at ${seenAt}`)
-    else out.push(`✗ contract done-when table changed in ${short} beside other files — revert it, then make the edit in its own commit`)
+    if (seenAt) out.push(`· contract done-when table changed in ${short} beside other files and is back to the table seen alone at ${seenAt}`)
+    else out.push(`✗ contract done-when table changed in ${short} beside other files — ${fix}`)
   }
-  if (!restored && !mixed.length)
-    out.push(`✗ contract done-when table at HEAD differs from the table seen alone at ${seenAt} — make the edit in its own commit`)
+  if (!seenAt && !mixed.length) out.push(`✗ contract done-when table at HEAD was never seen alone — ${fix}`)
   return out
 }
 
