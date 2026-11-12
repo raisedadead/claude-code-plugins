@@ -96,6 +96,49 @@ test('a count of 120 does not meet a check for 0', async () => {
   })
 })
 
+function ledger(root: string): string {
+  const path = join(root, 'ledger.md')
+  writeFileSync(path, '| T1 | . | A |\n')
+  return path
+}
+
+test('an escaped pipe inside a regex search pattern is refused before any command runs', async () => {
+  await withTmp(async (root) => {
+    const file = ledger(root)
+    const ran = join(root, 'ran')
+    const searches = [
+      `\`grep -Eq '^\\| T1 \\| x ' ${file}\``,
+      `\`grep -qE "^\\| T1" ${file}\``,
+      `\`grep --extended-regexp -q '\\| T1' ${file}\``,
+      `\`egrep -q '\\| T1 \\| x' ${file}\``,
+      `\`grep -Pq '\\| T1' ${file}\``,
+      `\`rg -q '\\| T1 \\| x' ${file}\``,
+      `\`grep -c x ${file} \\| grep -Eq '1\\|2'\``,
+    ]
+    for (const search of searches) {
+      const result = await converge(root, [`\`touch ${ran}\` | exit 0`, `${search} | exit 1`])
+      assert.equal(result.status, 2, `${search}\n${result.stdout}`)
+      assert.match(verdict(result), /^CONVERGE: PARSE — criterion 2 .*\[\|\]/, result.stdout)
+    }
+    assert.ok(!existsSync(ran), 'a command ran before the refusal')
+  })
+})
+
+test('shell pipes, sh -c pipes, bracketed pipes and plain grep patterns still run', async () => {
+  await withTmp(async (root) => {
+    const file = ledger(root)
+    const result = await converge(root, [
+      "`printf 'a' \\| grep -q a` | exit 0",
+      "`sh -c 'printf a \\| grep -q a'` | exit 0",
+      `\`grep -Eq '^[\\|] T1 [\\|] x ' ${file}\` | exit 1`,
+      `\`grep -Eq '^[\\|] T1 [\\|] [.] ' ${file}\` | exit 0`,
+      `\`grep -q '^\\| T1 \\| x ' ${file}\` | exit 1`,
+      `\`rg -qF '\\| T1 \\|' ${file}\` | exit 0`,
+    ])
+    assert.equal(verdict(result), 'CONVERGE: MET 6/6', result.stdout)
+  })
+})
+
 test('exit expects still run and judge by exit code', async () => {
   await withTmp(async (root) => {
     const result = await converge(root, ['`true` | exit 0', '`false` | exit 1', '`sh -c "exit 3"` | exit 3'])

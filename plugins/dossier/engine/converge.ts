@@ -66,6 +66,54 @@ export function shlexWords(text: string): string[] | undefined {
   return words
 }
 
+export const PIPE_HINT = 'a | in a grep -E, egrep, grep -P or rg pattern means "or"; match a literal pipe with [|], written [\\|] in the table'
+
+function shellSegments(text: string): string[][] {
+  const segments: string[][] = [[]]
+  let word = ''
+  let started = false
+  let quote = ''
+  const end = (): void => {
+    if (started) segments[segments.length - 1]?.push(word)
+    word = ''
+    started = false
+  }
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i] ?? ''
+    if (quote) {
+      if (char === quote) quote = ''
+      else word += char
+    } else if (char === "'" || char === '"') {
+      quote = char
+      started = true
+    } else if (char === '\\') {
+      word += text[++i] ?? ''
+      started = true
+    } else if ('|;&\n'.includes(char)) {
+      end()
+      segments.push([])
+    } else if (/[ \t\r]/.test(char)) end()
+    else {
+      word += char
+      started = true
+    }
+  }
+  end()
+  return segments
+}
+
+function regexSearch([name = '', ...args]: string[]): boolean {
+  const tool = name.split('/').pop()
+  if (tool === 'egrep') return true
+  if (tool === 'rg') return !args.some((arg) => arg === '--fixed-strings' || /^-[a-zA-Z]*F/.test(arg))
+  if (tool !== 'grep') return false
+  return args.some((arg) => arg === '--extended-regexp' || arg === '--perl-regexp' || /^-[a-zA-Z]*[EP]/.test(arg))
+}
+
+export function pipeInPattern(command: string): boolean {
+  return shellSegments(command).some((words) => regexSearch(words) && words.slice(1).some((word) => word.replace(/\[[^\]]*\]/g, '').includes('|')))
+}
+
 export function isCommand(text: string): boolean {
   if (!(text.startsWith('`') && text.endsWith('`') && text.length > 2)) return false
   return (shlexWords(text.slice(1, -1))?.length ?? 0) > 0

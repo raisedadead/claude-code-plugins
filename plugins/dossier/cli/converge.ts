@@ -12,6 +12,8 @@ import {
   isCommand,
   layerMix,
   numberedRows,
+  PIPE_HINT,
+  pipeInPattern,
   pyRepr,
   STDOUT_HINT,
 } from '../engine/converge.ts'
@@ -169,6 +171,7 @@ export function convergeVerb(args: string[]): number {
     if (row.length !== 3) return fail(`criterion ${row[0]} is not exactly id | command | expect`)
     const [ident = '', command = '', expect = ''] = row
     if (!isCommand(command)) return fail(`criterion ${ident} is not a backticked command: ${pyRepr(command)}`)
+    if (pipeInPattern(command.slice(1, -1))) return fail(`criterion ${ident} — ${PIPE_HINT}`)
     if (strip(expect).startsWith('stdout:')) return fail(`criterion ${ident} — ${STDOUT_HINT}`)
     if (expectedExit(expect) === undefined) return fail(`criterion ${ident} has an unreadable expect: ${pyRepr(expect)}`)
   }
