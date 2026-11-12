@@ -64,9 +64,16 @@ export function markerDenial({ filePath, chunks }: Edit): string | undefined {
   ].join('\n')
 }
 
-function inScope(path: string, paths: unknown): boolean {
+export function rootRelative(path: string, root: string): string | undefined {
+  const normal = posix(path)
+  const base = posix(root)
+  if (base === '/') return normal.startsWith('/') ? normal.slice(1) : undefined
+  return normal.startsWith(`${base}/`) ? normal.slice(base.length + 1) : undefined
+}
+
+function inScope(candidates: string[], paths: unknown): boolean {
   if (!Array.isArray(paths) || paths.length === 0) return true
-  return paths.some((glob) => typeof glob === 'string' && fnmatch(posix(path), glob))
+  return paths.some((glob) => typeof glob === 'string' && candidates.some((path) => fnmatch(posix(path), glob)))
 }
 
 export function parseRegistry(text: string): Guard[] {
@@ -79,11 +86,11 @@ export function parseRegistry(text: string): Guard[] {
   }
 }
 
-export function invariantVerdict({ filePath, chunks }: Edit, registry: Guard[]): { deny?: string; skipped: string[] } {
+export function invariantVerdict({ filePath, chunks }: Edit, registry: Guard[], candidates: string[]): { deny?: string; skipped: string[] } {
   const skipped: string[] = []
   for (const entry of registry) {
     if (typeof entry.pattern !== 'string' || !entry.pattern) continue
-    if (!inScope(filePath, entry.paths)) continue
+    if (!inScope(candidates, entry.paths)) continue
     const compiled = compilePython(entry.pattern)
     if (!compiled) {
       skipped.push(String(entry.id ?? '?'))

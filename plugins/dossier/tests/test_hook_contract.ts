@@ -1,10 +1,11 @@
 import assert from 'node:assert/strict'
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, test } from 'vitest'
-import { editGate, type Io, promptGate, sessionGate, stopGate, verdictGate, verifyGate } from '../hooks/gates.ts'
+import { rootRelative } from '../engine/guards.ts'
+import { editGate, type Io, ledgerRoot, promptGate, sessionGate, stopGate, verdictGate, verifyGate } from '../hooks/gates.ts'
 import { ds, tempRoot } from './inproc.ts'
 
 const CLI = join(import.meta.dirname, '..', 'cli', 'ds')
@@ -48,6 +49,10 @@ function realIo(env: Record<string, string> = {}): { io: Io; calls: Call[] } {
     list: async (path) => readdirSync(path),
     env: async (name) => shared[name],
     run: async (argv, init) => {
+      if (argv[0] === 'git') {
+        const done = spawnSync('git', argv.slice(1), { encoding: 'utf8', env: { ...process.env, ...ISOLATED } })
+        return { exitCode: done.status ?? 1, stdout: done.stdout, stderr: done.stderr }
+      }
       const [shell, cli, verb = '', ...args] = argv
       if (shell !== 'sh' || cli !== CLI) throw new Error(`not a ds call: ${argv.join(' ')}`)
       const cwd = init.cwd ?? elsewhere
@@ -91,6 +96,102 @@ test('invariant-check: an edit off the pattern passes the gate', async () => {
   assert.deepEqual(shape(calls), [{ verb: 'invariant-check', args: [root], cwd: elsewhere, exitCode: 0 }])
   assert.equal(calls[0]?.stdout, '')
   assert.deepEqual(verdict, {})
+})
+
+test('invariant-check: a root-relative guard glob matches the absolute path the edit tools send', async () => {
+  registry([{ ...EVAL_GUARD, paths: ['src/*.py'] }])
+  const { io, calls } = realIo()
+  const file = join(root, 'src', 'app.py')
+  const verdict = await editGate(io, root, { tool: 'Write', file_path: file, content: 'x = eval(y)\n' })
+  assert.deepEqual(shape(calls), [{ verb: 'invariant-check', args: [root], cwd: elsewhere, exitCode: 1 }])
+  assert.equal(verdict.deny?.split('\n')[0], `dossier invariant guard: edit to '${file}' violates §V V1.`)
+})
+
+async function evalEdit(gateRoot: string, file: string): Promise<{ exitCode?: number; denied: boolean }> {
+  const { io, calls } = realIo()
+  const verdict = await editGate(io, gateRoot, { tool: 'Write', file_path: file, content: 'x = eval(y)\n' })
+  return { exitCode: calls[0]?.exitCode, denied: verdict.deny !== undefined }
+}
+
+const DENIED = { exitCode: 1, denied: true }
+const PASSED = { exitCode: 0, denied: false }
+
+test('invariant-check: a root-relative guard glob matches a path with a .. segment', async () => {
+  registry([{ ...EVAL_GUARD, paths: ['src/*.py'] }])
+  assert.deepEqual(await evalEdit(root, `${root}/sub/../src/app.py`), DENIED)
+})
+
+test('invariant-check: a root-relative guard glob does not match a path in a sibling directory that shares the root prefix', async () => {
+  registry([{ ...EVAL_GUARD, paths: ['src/*.py'] }])
+  assert.deepEqual(await evalEdit(root, `${root}-sibling/src/app.py`), PASSED)
+})
+
+test('invariant-check: globs that start with */ or **/ still match the absolute path', async () => {
+  registry([{ ...EVAL_GUARD, paths: ['*/src/*.py', '**/*.py'] }])
+  assert.deepEqual(await evalEdit(root, join(root, 'src', 'app.py')), DENIED)
+  assert.deepEqual(await evalEdit(root, join(root, 'app.py')), DENIED)
+})
+
+test('invariant-check: a root-relative guard glob matches a path that reaches the root through a symlink', async () => {
+  registry([{ ...EVAL_GUARD, paths: ['src/*.py'] }])
+  const link = join(elsewhere, 'link')
+  symlinkSync(root, link)
+  assert.deepEqual(await evalEdit(root, join(link, 'src', 'app.py')), DENIED)
+})
+
+test('invariant-check: a root-relative guard glob matches a path under a symlink in the root that points outside it', async () => {
+  registry([{ ...EVAL_GUARD, paths: ['lib/*.py'] }])
+  const shared = join(elsewhere, 'shared')
+  mkdirSync(shared)
+  symlinkSync(shared, join(root, 'lib'))
+  assert.deepEqual(await evalEdit(root, join(root, 'lib', 'app.py')), DENIED)
+})
+
+test('invariant-check: a guard glob that starts with / matches the resolved absolute path', async () => {
+  registry([{ ...EVAL_GUARD, paths: [`${root}/src/*.py`] }])
+  assert.deepEqual(await evalEdit(root, join(root, 'src', 'app.py')), DENIED)
+})
+
+test('invariant-check: a guard glob that starts with / matches when written with the symlinked spelling of the root', async () => {
+  const link = join(elsewhere, 'link')
+  symlinkSync(root, link)
+  registry([{ ...EVAL_GUARD, paths: [`${link}/src/*.py`] }])
+  assert.deepEqual(await evalEdit(link, join(link, 'src', 'app.py')), DENIED)
+})
+
+test('invariant-check: a root-relative guard glob matches a path whose case differs from the root on a case-insensitive disk', async ({ skip }) => {
+  const upper = root.toUpperCase()
+  if (upper === root || !existsSync(upper)) skip()
+  registry([{ ...EVAL_GUARD, paths: ['src/*.py'] }])
+  assert.deepEqual(await evalEdit(root, join(upper, 'src', 'app.py')), DENIED)
+})
+
+test('invariant-check: an edit in a linked worktree matches a root-relative guard glob through the hook root lookup', async () => {
+  registry([{ ...EVAL_GUARD, paths: ['src/*.py'] }])
+  git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'init')
+  const tree = join(elsewhere, 'tree')
+  git('worktree', 'add', '-q', tree)
+  const { io, calls } = realIo()
+  const gateRoot = await ledgerRoot(io, tree)
+  assert.equal(gateRoot, root)
+  const verdict = await editGate(io, gateRoot, { tool: 'Write', file_path: join(tree, 'src', 'app.py'), content: 'x = eval(y)\n' })
+  assert.deepEqual(shape(calls), [{ verb: 'invariant-check', args: [root], cwd: elsewhere, exitCode: 1 }])
+  assert.deepEqual(Object.keys(verdict), ['deny'])
+})
+
+test('invariant-check: an edit from a sub-directory session matches a root-relative guard glob through the hook root lookup', async () => {
+  registry([{ ...EVAL_GUARD, paths: ['src/*.py'] }])
+  const sub = join(root, 'sub')
+  mkdirSync(sub)
+  const { io } = realIo()
+  const gateRoot = await ledgerRoot(io, sub)
+  assert.equal(gateRoot, root)
+  assert.deepEqual(await evalEdit(gateRoot, join(root, 'src', 'app.py')), DENIED)
+  assert.deepEqual(await evalEdit(gateRoot, join(sub, 'src', 'app.py')), PASSED)
+})
+
+test('invariant-check: a filesystem root of / still yields a root-relative path', () => {
+  assert.equal(rootRelative('/src/app.py', '/'), 'src/app.py')
 })
 
 test('verify-edit: a cached pin hit comes back as the gate advisory and marks the rule fired', async () => {

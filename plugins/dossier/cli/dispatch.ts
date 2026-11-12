@@ -10,13 +10,14 @@ import {
   openSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs'
 import { constants, tmpdir } from 'node:os'
-import { basename, dirname, join, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { convergenceStateVerb, convergeVerb, staleContracts } from './converge.ts'
 import { closeVerb } from './close.ts'
 import { claimRoots } from './env.ts'
@@ -26,7 +27,7 @@ import { DATE_PREFIX } from '../engine/converge.ts'
 import { delegationReport } from '../engine/delegation.ts'
 import { addEntry, entryError, FRONTIER_CLOSED, openDecisions } from '../engine/grill.ts'
 import { handoff } from '../engine/handoff.ts'
-import { invariantVerdict, parseRegistry, skippedAdvisory } from '../engine/guards.ts'
+import { invariantVerdict, parseRegistry, rootRelative, skippedAdvisory } from '../engine/guards.ts'
 import { addCarried, archivedCarried, isDue, LATER_FILE, laterRows, removeLater } from '../engine/later.ts'
 import { migrate } from '../engine/migrate.ts'
 import { firstWorktree, GIT_DIRS, linkedPrimary, WORKTREES } from '../engine/root.ts'
@@ -561,6 +562,40 @@ function vmChecksVerb(args: string[]): number {
   return 1
 }
 
+function existingRealPath(path: string): string {
+  const rest: string[] = []
+  let head = path
+  for (;;) {
+    try {
+      return join(realpathSync.native(head), ...rest)
+    } catch {
+      const parent = dirname(head)
+      if (parent === head) return path
+      rest.unshift(basename(head))
+      head = parent
+    }
+  }
+}
+
+function nearestDir(path: string): string {
+  let dir = dirname(path)
+  while (!existsSync(dir) && dirname(dir) !== dir) dir = dirname(dir)
+  return dir
+}
+
+function guardCandidates(root: string, filePath: string): string[] {
+  if (!isAbsolute(filePath)) return [filePath]
+  const raw = resolve(filePath)
+  const rawRoot = resolve(root)
+  const real = existingRealPath(raw)
+  const inside = [rootRelative(raw, rawRoot), rootRelative(real, existingRealPath(rawRoot))]
+  if (!inside.some((path) => path !== undefined)) {
+    const top = gitLine(['-C', nearestDir(raw), 'rev-parse', '--show-toplevel'])?.trim()
+    if (top) inside.push(rootRelative(raw, top), rootRelative(real, existingRealPath(top)))
+  }
+  return [raw, real, ...inside.filter((path): path is string => path !== undefined)]
+}
+
 function invariantCheckVerb(args: string[]): number {
   const [root] = args
   if (root === undefined) throw new Refusal('usage: ds invariant-check <project-root> < {"file_path", "chunks"}', EXIT_USAGE)
@@ -578,7 +613,7 @@ function invariantCheckVerb(args: string[]): number {
   }
   const { file_path: filePath, chunks } = (payload ?? {}) as { file_path?: unknown; chunks?: unknown }
   if (typeof filePath !== 'string' || !Array.isArray(chunks)) return 0
-  const verdict = invariantVerdict({ filePath, chunks: chunks.map(String) }, parseRegistry(registryText))
+  const verdict = invariantVerdict({ filePath, chunks: chunks.map(String) }, parseRegistry(registryText), guardCandidates(root, filePath))
   if (verdict.deny) {
     console.log(verdict.deny)
     return 1

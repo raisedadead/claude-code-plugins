@@ -95,8 +95,10 @@ In-session hooks. The four write-time gates — the header and marker guards (on
 The invariant guard is where the ratchet lands: for a recurring bug class with a regex shape, `ds:backprop` offers to register the pattern, and the guard then denies a matching edit (PreToolUse `deny`; the offer is model-judgment). Registry is a JSON list at `.scratchpad/dossier/.invariant-guards.json` — gitignored by design, so the suite leaves no artifact in a project that did not ask for one:
 
 ```json
-[{ "id": "no-raw-sql", "pattern": "execute\\(f?\"SELECT", "message": "parameterize", "paths": ["**/*.py"] }]
+[{ "id": "no-raw-sql", "pattern": "execute\\(f?\"SELECT", "message": "parameterize", "paths": ["src/*.py"] }]
 ```
+
+A `paths` glob is relative to the project root, and `*` also matches `/`. An edit is in scope when any of these forms of the edited path matches a glob: the absolute path as sent, the absolute path with symlinks resolved, and the path relative to the root. For an edit in a linked worktree, the path relative to the top of that worktree is also used. Thus `src/*.py` covers `src/` in every worktree, `**/*.py` also covers `.py` files at the top level, and a glob that starts with `/` matches the absolute path as sent or as resolved.
 
 In a dossier repo, when a doubter or reviewer subagent stops (`whetstone-doubter`, `dossier-reviewer`, or an agent named `reviewer`), its first verdict line is appended to `.scratchpad/dossier/.verdicts.jsonl`. It is a log, not a gate: it never blocks.
 
