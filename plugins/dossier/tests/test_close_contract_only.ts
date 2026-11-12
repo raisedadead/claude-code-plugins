@@ -13,11 +13,16 @@ function mixed(root: string, path: string, command: string): void {
   git(root, 'commit', '-q', '-m', 'mixed')
 }
 
-test('a mixed table edit redone in a contract-only commit closes', async () => {
+function alone(root: string, path: string, command: string): void {
+  writeFileSync(path, contract(command))
+  git(root, 'commit', '-q', '-m', 'contract only', '--', path)
+}
+
+test('a mixed table edit reverted, then redone in a contract-only commit, closes', async () => {
   await within(async ({ root, path, close }) => {
     mixed(root, path, 'true')
-    writeFileSync(path, contract('test -e done.txt'))
-    git(root, 'commit', '-q', '-am', 'contract only')
+    git(root, 'revert', '--no-edit', 'HEAD')
+    alone(root, path, 'test -e done.txt')
     const result = await close()
     assert.equal(result.status, 0, result.stdout)
     assert.deepEqual(lines(result, '✗'), [])
@@ -35,11 +40,39 @@ test('a mixed table edit reverted to the committed table closes', async () => {
   })
 })
 
+test('a contract-only commit on top of an unseen mixed edit does not settle it', async () => {
+  await within(async ({ root, path, close }) => {
+    mixed(root, path, 'true')
+    alone(root, path, 'test -e done.txt')
+    const result = await close()
+    assert.equal(result.status, 1, result.stdout)
+    assert.equal(lines(result, '✗').length, 1, result.stdout)
+  })
+})
+
 test('a mixed table edit after a contract-only commit still refuses', async () => {
   await within(async ({ root, path, close }) => {
-    writeFileSync(path, contract('test -e done.txt'))
-    git(root, 'commit', '-q', '-am', 'contract only')
+    alone(root, path, 'test -e done.txt')
     mixed(root, path, 'true')
+    const result = await close()
+    assert.equal(result.status, 1, result.stdout)
+    assert.equal(lines(result, '✗').length, 1, result.stdout)
+  })
+})
+
+test('a merged contract-only edit from a side branch does not settle a mixed edit on main', async () => {
+  await within(async ({ root, path, close }) => {
+    const row2 = (text: string): string => text.replace('| exit 0 |', '| exit 0 |\n| 2 | `true` | exit 0 |')
+    git(root, 'branch', 'side')
+    mixed(root, path, 'true')
+    git(root, 'switch', '-q', 'side')
+    writeFileSync(path, row2(contract('test -f done.txt')))
+    git(root, 'commit', '-q', '-m', 'contract only', '--', path)
+    git(root, 'switch', '-q', 'main')
+    git(root, 'merge', '-q', '--no-commit', '-s', 'ours', 'side')
+    writeFileSync(path, row2(contract('true')))
+    git(root, 'add', path)
+    git(root, 'commit', '-q', '--no-edit')
     const result = await close()
     assert.equal(result.status, 1, result.stdout)
     assert.equal(lines(result, '✗').length, 1, result.stdout)
