@@ -170,7 +170,10 @@ coverage() {
 			printf '%s\n' "$out"
 			return 1
 		fi
-		bash tools/coverage_floor.sh "$plugin" "$funcs" "$lines" <<<"$out" || return 1
+		if ! bash tools/coverage_floor.sh "$plugin" "$funcs" "$lines" <<<"$out"; then
+			printf '%s\n' "$out"
+			return 1
+		fi
 	done
 }
 

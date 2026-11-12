@@ -257,7 +257,7 @@ function contractEdits(contract: string | undefined): string[] {
   const at = (rev: string): string => table(git(top, 'show', `${rev}:${path}`).out)
   const out: string[] = []
   if (table(readFileSync(contract, 'utf8')) !== at('HEAD')) out.push('✗ contract done-when table has uncommitted edits — commit them alone, or revert them')
-  const changed = git(top, 'log', '--reverse', '--format=%H', `${added}..HEAD`, '--', path)
+  const changed = git(top, 'log', '--reverse', '--topo-order', '--format=%H', `${added}..HEAD`, '--', path)
     .out.split('\n')
     .filter((sha) => sha && at(sha) !== at(`${sha}^`))
     .map((sha) => ({ sha, alone: git(top, 'show', '--name-only', '--format=', sha).out.split('\n').filter(Boolean).length === 1 }))
