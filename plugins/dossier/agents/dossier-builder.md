@@ -1,6 +1,6 @@
 ---
 name: dossier-builder
-description: Builds one delegated ds:build task test-first from an artifact-only mission — writes the failing test and stops, then implements when told to. Changes only the files the task needs and never commits. Spawn from ds:build step 6.2 for a route=delegate row.
+description: Builds one delegated ds:build task test-first from an artifact-only mission — does what the mission's `Now:` line asks and stops, then implements when told to. Changes only the files the task needs and never commits. Spawn from ds:build step 6.2 for a route=delegate row.
 model: sonnet
 effort: medium
 tools: Read, Grep, Glob, Edit, Write, Bash

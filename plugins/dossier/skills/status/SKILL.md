@@ -76,7 +76,7 @@ Scan §S for `START` lines with no matching `DONE` for the same `<target>`. Each
 
 ### 4. Detect stale §X (optional warning)
 
-For each §X row run `git status -sb` + `git rev-list --count` and compare against the recorded values. A difference flags `§X stale (refresh via ds:build)`. Refreshing is a write op and belongs to `ds:build`.
+For each §X row run `git status -sb` + `git rev-list --count` and compare against the recorded values. A difference flags `§X stale (refresh via ds:build)`. Refreshing is a write op and belongs to `ds:new` (at scaffold) and `ds:build`.
 
 ### 5. Report (decision-first)
 
