@@ -595,7 +595,8 @@ def test_a_script_counts_as_use_only_where_it_runs_as_a_command() -> None:
     runs = {
         "git add a.py && tiger-check": {"whetstone:tiger-style"},
         '"$D"/bin/lint-skill skills/x': {"whetstone:skill-smith"},
-        "bash plugins/x/scripts/verify_clean.sh -": {"whetstone:merge-resolve"},
+        "bash plugins/x/scripts/run_slice.sh red t": {"whetstone:tdd-cycle"},
+        "verify-clean . 3 printf 5": set(),
         "X=1 run_slice.sh red pytest; flake-runner 5 t": {
             "whetstone:tdd-cycle",
             "whetstone:flaky-test-audit",
@@ -606,7 +607,7 @@ def test_a_script_counts_as_use_only_where_it_runs_as_a_command() -> None:
         },
         "rtk proxy bun $d/scripts/tiger-check-cli.ts": {"whetstone:tiger-style"},
         "if tiger-check; then echo ok; fi": {"whetstone:tiger-style"},
-        "while ! verify_clean.sh; do sleep 1; done": {"whetstone:merge-resolve"},
+        "while ! run-slice red t; do sleep 1; done": {"whetstone:tdd-cycle"},
         "cat <<< hi; tiger-check": {"whetstone:tiger-style"},
     }
     mentions = [
@@ -714,10 +715,6 @@ def test_opportunities_come_from_tight_detectors_and_fold_by_session() -> None:
         _output("m1", conflict, sessionId="s4"),
         _bash("m6", f"cd r && {merge}", sessionId="s5"),
         _output("m6", conflict, sessionId="s5"),
-        {
-            **_prompt("<command-name>/whetstone:merge-resolve</command-name>"),
-            "sessionId": "s5",
-        },
         _write("/r/b/DOSSIER.md", "# w\n\n| B1 | x | y | — | — |\n", "s6"),
         _write("/r/.claude/skills/y/SKILL.md", "body", "s6"),
         _multi_edit("/r/c/DOSSIER.md", "| B4 | x | y | — | — |", "s7"),
@@ -727,14 +724,6 @@ def test_opportunities_come_from_tight_detectors_and_fold_by_session() -> None:
     for stream in (main, side, other):
         events |= census.opportunity_events(stream, "fallback", seen)
     assert census.tally_opportunities(events) == {
-        "whetstone:merge-resolve": {
-            "sessions": 2,
-            "main": 2,
-            "subagent only": 0,
-            "used skill": 1,
-            "used script": 0,
-            "not used": 1,
-        },
         "whetstone:skill-smith": {
             "sessions": 2,
             "main": 2,
@@ -788,13 +777,13 @@ def test_a_verify_hook_firing_is_the_verify_opportunity() -> None:
 
 def test_the_not_used_sessions_are_listed_for_reading() -> None:
     events = {
-        ("s2", "whetstone:merge-resolve", "trigger", "main"),
-        ("s1", "whetstone:merge-resolve", "trigger", "subagent"),
-        ("s3", "whetstone:merge-resolve", "trigger", "main"),
-        ("s3", "whetstone:merge-resolve", "script", "main"),
+        ("s2", "whetstone:tiger-style", "trigger", "main"),
+        ("s1", "whetstone:tiger-style", "trigger", "subagent"),
+        ("s3", "whetstone:tiger-style", "trigger", "main"),
+        ("s3", "whetstone:tiger-style", "script", "main"),
         ("s4", "whetstone:skill-smith", "trigger", "main"),
     }
-    assert census.unused_sessions(events, "whetstone:merge-resolve") == ["s1", "s2"]
+    assert census.unused_sessions(events, "whetstone:tiger-style") == ["s1", "s2"]
 
 
 def _main() -> int:

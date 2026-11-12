@@ -32,7 +32,6 @@ const EMPTY_CELL = new Set(['', '—', '-'])
 export const WHETSTONE = new Set([
   'whetstone:doubt-pass',
   'whetstone:flaky-test-audit',
-  'whetstone:merge-resolve',
   'whetstone:skill-smith',
   'whetstone:tdd-cycle',
   'whetstone:tiger-style',

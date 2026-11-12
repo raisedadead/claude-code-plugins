@@ -49,7 +49,6 @@ An outcome is as good when the session reached the checked result the skill teac
 
 | skill | as good when |
 |---|---|
-| merge-resolve | no conflict markers remain and the tests pass no fewer than before the merge, or the merge was aborted cleanly |
 | skill-smith | `lint-skill` ran on the changed file and exited 0 |
 | backprop | the bug got a regression test or an invariant |
 

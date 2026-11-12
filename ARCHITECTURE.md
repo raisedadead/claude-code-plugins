@@ -12,7 +12,7 @@ Built by one operator for their own projects. The operator's conventions are the
 
 ## The pair
 
-`dossier` drives the wave. `whetstone` is the craft applied at each gate — grill and doubt before code, red/green and diagnose during, merge-resolve on conflict, lint after authoring — plus the research and HTML reports that carry evidence to a human reader (D49, D50).
+`dossier` drives the wave. `whetstone` is the craft applied at each gate — grill and doubt before code, red/green and diagnose during, `verify-clean` on conflict, lint after authoring — plus the research and HTML reports that carry evidence to a human reader (D49, D50).
 
 They are designed to be installed together and used together. They are also independent: either works alone, every composition route detects its sibling and skips when absent, and neither declares the other as a dependency. That independence is a hard invariant, not a nicety — `whetstone` stays independently publishable.
 
@@ -107,7 +107,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | `dossier-reviewer`  | `REVIEW: PASS` or `CHANGES`                                                                   | model-judgment, parsed                                                       |
 | `skill-smith` lint  | `FAIL` / `WARN` lines; exit 1 if any `FAIL`                                                   | code — `lint-skill`                                                          |
 | `tdd-cycle` slice   | red, green and full-suite exit codes                                                          | code — `run_slice.sh`                                                        |
-| `merge-resolve`     | exit 0 on marker count and pass count                                                         | code — `verify_clean.sh`                                                     |
+| conflict route      | exit 0 on marker count and pass count                                                         | code — `verify-clean`                                                        |
 | `flaky-test-audit`  | per-test rate; anything between 0 and 1 is flaky                                              | code — computed rate                                                         |
 | `tiger-style` check | `TIGER: CLEAN <n> file(s)[, <m> skipped]`, `BLOCK <n>` or `NAG <n>`; exit 0/1/2               | code — `tiger-check`                                                         |
 | `ds:converge`       | `CONVERGE: MET <n>/<n>`, `UNMET <n> of <m>` or `PARSE — <why>`; exit 0/1/2                    | code — `cli/ds converge`                                                     |

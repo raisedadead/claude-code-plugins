@@ -156,7 +156,6 @@ SCRIPT_SKILLS = {
     "lint-skill": "whetstone:skill-smith",
     "flake-runner": "whetstone:flaky-test-audit",
     "run-slice": "whetstone:tdd-cycle",
-    "verify-clean": "whetstone:merge-resolve",
     "html-report": "whetstone:html-report",
 }
 HEREDOC = re.compile(
@@ -171,14 +170,10 @@ ASSIGNMENT = re.compile(r"^[A-Za-z_]\w*=")
 PREFIX_WORDS = {"bash", "sh", "zsh", "bun", "env", "exec", "command", "time"}
 PREFIX_WORDS |= {"nohup", "then", "do", "else", "!", "{", "rtk", "proxy"}
 PREFIX_WORDS |= {"if", "elif", "while", "until"}
-CONFLICT_VERBS = {"merge", "rebase", "cherry-pick", "pull", "am", "stash"}
-CONFLICT = re.compile(r"CONFLICT \(|Automatic merge failed|could not apply [0-9a-f]")
 SKILL_FILE = re.compile(r"/skills/[^/]+/SKILL\.md$")
 BUG_ROW = re.compile(r"^\| ?B\d+ ?\|.*$", re.M)
 VERIFY_WARNING = re.compile(r"^\S+ verify\[[a-z_]+\] ", re.M)
 DETECTORS = {
-    "whetstone:merge-resolve": "a conflict line in the result of git "
-    + "/".join(sorted(CONFLICT_VERBS)),
     "whetstone:skill-smith": "an Edit or Write to a skills/<name>/SKILL.md",
     "dossier:backprop": "an Edit or MultiEdit that adds or changes a | B<n> | "
     "row in a DOSSIER.md",
@@ -260,15 +255,6 @@ def program(word: str) -> str:
 def script_skills(command: str) -> set[str]:
     names = (program(words[0]) for words in command_segments(command))
     return {SCRIPT_SKILLS[name] for name in names if name in SCRIPT_SKILLS}
-
-
-def git_verb(words: list[str]) -> str | None:
-    if program(words[0]) != "git":
-        return None
-    rest = words[1:]
-    while rest and rest[0].startswith("-"):
-        rest = rest[2:] if rest[0] in ("-C", "-c") else rest[1:]
-    return rest[0] if rest else None
 
 
 def plugin_skills() -> list[str]:
@@ -378,21 +364,6 @@ def census_skills(window: Window) -> None:
     report("subagent spawns", agents, 25)
 
 
-def tool_results(record: dict):
-    content = (record.get("message") or {}).get("content")
-    for block in content if isinstance(content, list) else []:
-        if not isinstance(block, dict) or block.get("type") != "tool_result":
-            continue
-        key = block.get("tool_use_id")
-        inner = block.get("content")
-        if isinstance(inner, str):
-            yield key, inner
-        elif isinstance(inner, list):
-            for part in inner:
-                if isinstance(part, dict):
-                    yield key, part.get("text") or ""
-
-
 def edit_triggers(payload: dict) -> set[str]:
     path = str(payload.get("file_path") or "")
     found: set[str] = set()
@@ -429,7 +400,6 @@ def opportunity_events(
     stream: Iterable[dict], fallback: str, seen: set[str]
 ) -> set[tuple[str, str, str, str]]:
     events: set[tuple[str, str, str, str]] = set()
-    git_calls: dict[str, tuple[str, str]] = {}
     for record in stream:
         session = str(record.get("sessionId") or fallback)
         side = side_of(record)
@@ -442,20 +412,11 @@ def opportunity_events(
                 command = str(payload.get("command") or "")
                 for skill in script_skills(command):
                     events.add((session, skill, "script", side))
-                verbs = {git_verb(words) for words in command_segments(command)}
-                if block.get("id") and verbs & CONFLICT_VERBS:
-                    git_calls[block["id"]] = (session, side)
             elif name in ("Edit", "Write", "MultiEdit"):
                 for skill in edit_triggers(payload):
                     events.add((session, skill, "trigger", side))
         if verify_fired(record):
             events.add((session, "dossier:verify", "trigger", side))
-        for key, text in tool_results(record):
-            if key in git_calls and CONFLICT.search(text):
-                call_session, call_side = git_calls.pop(key)
-                events.add(
-                    (call_session, "whetstone:merge-resolve", "trigger", call_side)
-                )
         for name in fresh_typed_commands(record, seen):
             events.add((session, name, "skill", side))
     return events

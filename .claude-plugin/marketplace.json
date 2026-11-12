@@ -13,7 +13,7 @@
     {
       "name": "dossier",
       "source": "./plugins/dossier",
-      "description": "Phase-scoped engineering workflow: single-file DOSSIER.md, cross-repo state, drift detection, resumable builds, evidence log. Composes the whetstone plugin at phase gates when installed (doubt, TDD proof, merge-resolve, skill lint) — fully functional without it.",
+      "description": "Phase-scoped engineering workflow: single-file DOSSIER.md, cross-repo state, drift detection, resumable builds, evidence log. Composes the whetstone plugin at phase gates when installed (doubt, TDD proof, merge check, skill lint) — fully functional without it.",
       "category": "workflow",
       "keywords": ["dossier", "spec-driven", "tdd", "workflow", "scratchpad"],
       "license": "ISC",
@@ -23,7 +23,7 @@
     {
       "name": "whetstone",
       "source": "./plugins/whetstone",
-      "description": "Engineering-craft skills: red-green TDD, flaky-test audit, diagnosis, doubt review, grilling, merge-resolve, grounded research reports, HTML reports, skill linting and a staged-diff column budget. TDD, flaky-test audit, merge-resolve, skill lint, column budget and HTML report end in a script's exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment. Auto-composed by the dossier plugin at its phase gates when both are installed — fully functional standalone.",
+      "description": "Engineering-craft skills: red-green TDD, flaky-test audit, diagnosis, doubt review, grilling, a merge check, grounded research reports, HTML reports, skill linting and a staged-diff column budget. TDD, flaky-test audit, the merge check, skill lint, column budget and HTML report end in a script's exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment. Auto-composed by the dossier plugin at its phase gates when both are installed — fully functional standalone.",
       "category": "workflow",
       "keywords": ["tdd", "testing", "code-review", "git", "skills"],
       "license": "ISC",

@@ -51,8 +51,6 @@ whetstone ships the craft dossier composes at its gates. Neither plugin declares
 
 **Agent route (`whetstone:whetstone-doubter`, `ds:build` step 5.6 and `ds:grill` step 5).** Present iff the session's agent list names it. If an `Agent` call is made anyway and the type is absent, the harness returns a recoverable tool error naming the available agents — on that error append §S `doubt=skipped-absent` and continue. Verdict line `DOUBT: FAILURES | NO FAILURE FOUND` — model-judgment, parsed.
 
-**Skill route (`whetstone:merge-resolve`, `ds:build` step 6).** Present iff the available-skills list names it. Plain `git merge` conflicts only; `rebase` / `cherry-pick` conflicts stay operator-driven, since their `--continue` commits escape `ds:build`'s task-scoped commit discipline. Absent → inline resolution, §S-noted.
-
 **Skill route (`whetstone:diagnose`, `ds:backprop` step 4).** Present iff the available-skills list names it. It builds the red feedback loop before any hypothesis. Absent → the agent builds the loop itself; either way the command goes in the START line as `loop=<command>`.
 
 **Script routes.** Claude Code puts an enabled plugin's `bin/` on the Bash tool's `PATH`, and `${CLAUDE_PLUGIN_ROOT}` names only the running plugin's own root, so `bin/` is the one supported way for dossier to reach a whetstone script ([plugins reference](https://code.claude.com/docs/en/plugins-reference)). Each route calls a bare command name; not on `PATH` means whetstone is absent.
@@ -63,6 +61,7 @@ whetstone ships the craft dossier composes at its gates. Neither plugin declares
 | `lint-skill`   | `ds:build` step 6 — lint a touched `SKILL.md` before commit   | §S `skill-lint=skipped-absent` |
 | `tiger-check`  | `ds:build` step 7 — column budget of the staged lines         | §S `tiger=skipped-absent`      |
 | `flake-runner` | `ds:backprop` step 4.5 — rerun a failing test, compute a rate | §S `flake-triage=skipped`      |
+| `verify-clean` | `ds:build` step 6 — marker count and pass count after a merge | §S `conflict=resolved-inline`  |
 
 `tiger-check` exits `0` clean · `1` a limit the repo declared was exceeded (blocking) · `2` the built-in 100-column fallback was exceeded (advisory) · `64` not a git work tree. Require a `TIGER:` line in stdout before trusting the number: a missing script makes `node` exit 1, which aliases BLOCK, and a missing `node` makes the wrapper exit 127.
 

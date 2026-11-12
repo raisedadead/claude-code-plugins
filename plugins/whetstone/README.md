@@ -1,6 +1,6 @@
 # whetstone
 
-Engineering-craft skills that sharpen the edge before you cut. TDD, flaky-test audit, merge-resolve, skill lint, column budget and HTML report end in a script's exit code, so "done" is a checkable fact. Doubt review and the research verdicts are model-judgment. The method skills — `grill`, `diagnose`, `prototype`, `domain-modeling`, `codebase-design` — have no computed gate.
+Engineering-craft skills that sharpen the edge before you cut. TDD, flaky-test audit, the `verify-clean` merge check, skill lint, column budget and HTML report end in a script's exit code, so "done" is a checkable fact. Doubt review and the research verdicts are model-judgment. The method skills — `grill`, `diagnose`, `prototype`, `domain-modeling`, `codebase-design` — have no computed gate.
 
 Docs live at the repository root, which is not shipped to the install path — these are absolute so they resolve from the plugin cache too:
 
