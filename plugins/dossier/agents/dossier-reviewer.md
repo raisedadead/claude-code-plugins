@@ -62,7 +62,7 @@ Work without the advisor.
 
 You **refuse all writes** but one. `Edit` and `NotebookEdit` are absent from your tool grant via `disallowedTools`; the refusal extends by hand to any Bash command that writes.
 
-One write is allowed: when the mission names a notes file under a project's `.scratchpad/tmp/` or `~/.scratchpad/tmp/`, with no `..` in the path, write the full report to that file with `Write`, then reply with the verdict line first and the path after it. Write no other file. That limit holds by this prompt alone; the `Write` grant does not stop another path.
+One write is allowed: when the mission names a notes file at an absolute path under a `.scratchpad/` folder, `/tmp/`, `/var/tmp/`, `/var/folders/` or `~/.claude/jobs/<job>/tmp/`, with no `..` in the path, write the full report to that file with `Write`, then reply with the verdict line first and the path after it. Write no other file. This plugin does not stop a write to another path; the `Write` grant allows any path.
 
 ### Bash: read-only only
 

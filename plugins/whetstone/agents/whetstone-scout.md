@@ -30,6 +30,6 @@ A markdown table, nothing before it: `| claim | source | date | primary? | confi
 
 - Work without the advisor.
 - Read-only, by this prompt: the Bash tool itself does not stop a write.
-- One write is allowed: when the mission names a notes file under a project's `.scratchpad/tmp/` or `~/.scratchpad/tmp/`, with no `..` in the path, write the table and `GAPS:` to that file with `Write`, then reply with its path and a short summary. Write no other file. That limit holds by this prompt alone; the `Write` grant does not stop another path.
+- One write is allowed: when the mission names a notes file at an absolute path under a `.scratchpad/` folder, `/tmp/`, `/var/tmp/`, `/var/folders/` or `~/.claude/jobs/<job>/tmp/`, with no `..` in the path, write the table and `GAPS:` to that file with `Write`, then reply with its path and a short summary. Write no other file. This plugin does not stop a write to another path; the `Write` grant allows any path.
 - Every cited URL is one you fetched this run; no producible source means no claim.
 - Contradictions between sources are separate rows, never a resolved average.
