@@ -584,17 +584,28 @@ function nearestDir(path: string): string {
   return dir
 }
 
-function guardCandidates(root: string, filePath: string): string[] {
+function commonDir(dir: string): string | undefined {
+  const common = gitLine(['-C', dir, ...GIT_DIRS])
+    ?.trim()
+    .split('\n')[1]
+  return common ? existingRealPath(common) : undefined
+}
+
+function guardCandidates(root: string, filePath: string): string[] | undefined {
   if (!isAbsolute(filePath)) return [filePath]
   const raw = resolve(filePath)
   const rawRoot = resolve(root)
   const real = existingRealPath(raw)
   const inside: (string | undefined)[] = [rootRelative(raw, rawRoot), rootRelative(real, existingRealPath(rawRoot))]
   if (!inside.some((path) => path !== undefined)) {
-    const top = gitLine(['-C', nearestDir(raw), 'rev-parse', '--show-toplevel'])?.trim()
+    const near = nearestDir(raw)
+    const shared = commonDir(near)
+    if (shared === undefined || shared !== commonDir(rawRoot)) return undefined
+    const top = gitLine(['-C', near, 'rev-parse', '--show-toplevel'])?.trim()
     if (top) inside.push(rootRelative(raw, top), rootRelative(real, existingRealPath(top)))
   }
-  return [raw, real, ...inside.filter((path): path is string => path !== undefined)]
+  const relative = inside.filter((path): path is string => path !== undefined)
+  return relative.length ? [raw, real, ...relative] : undefined
 }
 
 function invariantCheckVerb(args: string[]): number {
@@ -614,7 +625,9 @@ function invariantCheckVerb(args: string[]): number {
   }
   const { file_path: filePath, chunks } = (payload ?? {}) as { file_path?: unknown; chunks?: unknown }
   if (typeof filePath !== 'string' || !Array.isArray(chunks)) return 0
-  const verdict = invariantVerdict({ filePath, chunks: chunks.map(String) }, parseRegistry(registryText), guardCandidates(root, filePath))
+  const candidates = guardCandidates(root, filePath)
+  if (candidates === undefined) return 0
+  const verdict = invariantVerdict({ filePath, chunks: chunks.map(String) }, parseRegistry(registryText), candidates)
   if (verdict.deny) {
     console.log(verdict.deny)
     return 1
