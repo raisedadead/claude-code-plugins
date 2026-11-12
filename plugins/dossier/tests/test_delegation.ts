@@ -1,11 +1,9 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'vitest'
-
-const DS = join(import.meta.dirname, '..', 'cli', 'ds')
+import { ds } from './inproc.ts'
 
 type Row = [id: string, state: string, task: string]
 
@@ -30,21 +28,21 @@ function dossier(rows: Row[], status: string[]): string {
   ].join('\n')
 }
 
-function check(rows: Row[], status: string[]) {
+async function check(rows: Row[], status: string[]) {
   const dir = mkdtempSync(join(tmpdir(), 'ds-delegation-'))
   try {
     writeFileSync(join(dir, 'DOSSIER.md'), dossier(rows, status))
-    const done = spawnSync('sh', [DS, 'delegation-check', dir], { encoding: 'utf8' })
+    const done = await ds(process.cwd(), ['delegation-check', dir])
     const out = done.stdout.trim().split('\n')
     const fails = out.filter((line) => line.startsWith('FAIL '))
-    return { status: done.status, out, fails, done }
+    return { status: done.code, out, fails, done }
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }
 }
 
-test('delegation-check exits 1 on a delegated x row with no review line', () => {
-  const run = check(
+test('delegation-check exits 1 on a delegated x row with no review line', async () => {
+  const run = await check(
     [['T1', 'x', 'build the verb']],
     [
       '2026-11-01 10:00 ds:build T1 START class=interface',
@@ -58,8 +56,8 @@ test('delegation-check exits 1 on a delegated x row with no review line', () => 
   assert.equal(run.out.at(-1), 'DELEGATION: FAIL 1')
 })
 
-test('delegation-check exits 1 on a row with more than one rebuild line', () => {
-  const run = check(
+test('delegation-check exits 1 on a row with more than one rebuild line', async () => {
+  const run = await check(
     [['T2', 'x', 'build the verb']],
     [
       '2026-11-01 10:01:05 ds:build T2 delegate=general-purpose',
@@ -74,23 +72,23 @@ test('delegation-check exits 1 on a row with more than one rebuild line', () => 
   assert.equal(run.out.at(-1), 'DELEGATION: FAIL 1')
 })
 
-test('delegation-check exits 1 on a started route=pi row with no approval line', () => {
+test('delegation-check exits 1 on a started route=pi row with no approval line', async () => {
   const started = '2026-11-01 10:00 ds:build T3 START class=interface'
-  const run = check([['T3', '~', 'route=pi port the parser']], [started])
+  const run = await check([['T3', '~', 'route=pi port the parser']], [started])
   assert.equal(run.status, 1, run.done.stderr)
   assert.equal(run.fails.length, 1, run.done.stdout)
   assert.match(run.fails[0] ?? '', /^FAIL T3: \S/)
   assert.equal(run.out.at(-1), 'DELEGATION: FAIL 1')
 })
 
-test('delegation-check exits 1 on a route=delegate x row built with no spawn line', () => {
-  const run = check([['T6', 'x', 'build the check; route=delegate']], [])
+test('delegation-check exits 1 on a route=delegate x row built with no spawn line', async () => {
+  const run = await check([['T6', 'x', 'build the check; route=delegate']], [])
   assert.equal(run.status, 1, run.done.stderr)
   assert.match(run.fails[0] ?? '', /^FAIL T6: \S/)
 })
 
-test('delegation-check exits 0 on a clean ledger and counts the delegated rows', () => {
-  const run = check(
+test('delegation-check exits 0 on a clean ledger and counts the delegated rows', async () => {
+  const run = await check(
     [
       ['T1', 'x', 'build the verb'],
       ['T2', '~', 'build the parser'],
@@ -115,8 +113,8 @@ test('delegation-check exits 0 on a clean ledger and counts the delegated rows',
   assert.equal(run.out.at(-1), 'DELEGATION: CLEAN 2 delegated rows')
 })
 
-test("delegation-check does not count T1's lines for T12", () => {
-  const borrowed = check(
+test("delegation-check does not count T1's lines for T12", async () => {
+  const borrowed = await check(
     [
       ['T1', 'x', 'build the verb'],
       ['T12', 'x', 'build the parser'],
@@ -134,7 +132,7 @@ test("delegation-check does not count T1's lines for T12", () => {
   )
   assert.equal(borrowed.out.at(-1), 'DELEGATION: FAIL 1')
 
-  const apart = check(
+  const apart = await check(
     [
       ['T1', 'x', 'build the verb'],
       ['T12', 'x', 'build the parser'],
@@ -150,8 +148,8 @@ test("delegation-check does not count T1's lines for T12", () => {
   assert.equal(apart.out.at(-1), 'DELEGATION: CLEAN 1 delegated rows')
 })
 
-test('delegation-check reads two entries a formatter joined into one line', () => {
-  const run = check(
+test('delegation-check reads two entries a formatter joined into one line', async () => {
+  const run = await check(
     [['T2', 'x', 'build the verb']],
     [
       '2026-11-01 10:01 ds:build T2 delegate=general-purpose 2026-11-01 10:05 ds:build T2 rebuild=1 critical=2',
@@ -162,8 +160,8 @@ test('delegation-check reads two entries a formatter joined into one line', () =
   assert.equal(run.out.at(-1), 'DELEGATION: FAIL 1')
 })
 
-test('delegation-check with no directory prints the usage line alone', () => {
-  const done = spawnSync('sh', [DS, 'delegation-check'], { encoding: 'utf8' })
-  assert.equal(done.status, 64)
+test('delegation-check with no directory prints the usage line alone', async () => {
+  const done = await ds(process.cwd(), ['delegation-check'])
+  assert.equal(done.code, 64)
   assert.match(done.stderr, /usage: ds delegation-check <dossier-dir>\s*$/)
 })

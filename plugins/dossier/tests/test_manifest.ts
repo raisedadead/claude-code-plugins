@@ -4,6 +4,7 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync
 import { tmpdir } from 'node:os'
 import { dirname, join, normalize, relative, sep } from 'node:path'
 import { test } from 'vitest'
+import { ds } from './inproc.ts'
 import { shlexWords } from '../engine/converge.ts'
 
 const ROOT = realpathSync(join(import.meta.dirname, '..', '..', '..'))
@@ -174,8 +175,8 @@ test('every skill, agent or workflow id a shipped doc names exists', () => {
   withTree(unknown, (root) => assert.deepEqual(idProblems(root), ['plugins/dossier/FORMAT.md -> dossier:nope', 'plugins/dossier/FORMAT.md -> whetstone:gone']))
 })
 
-test("FORMAT.md's cli/ds roster names only verbs the dispatcher knows", () => {
-  const usage = spawnSync(join(ROOT, 'plugins', 'dossier', 'cli', 'ds'), { encoding: 'utf8' }).stderr ?? ''
+test("FORMAT.md's cli/ds roster names only verbs the dispatcher knows", async () => {
+  const usage = (await ds(ROOT, [])).stderr
   assert.deepEqual(verbProblems(readFileSync(join(ROOT, 'plugins', 'dossier', 'FORMAT.md'), 'utf8'), usage), [])
   const table = 'The verbs of `${CLAUDE_PLUGIN_ROOT}/cli/ds` below:\n\n| verb |\n| --- |\n| `ds a` |\n| `ds b` |\n'
   assert.deepEqual(verbProblems(table, 'usage: ds <a|b>'), [])

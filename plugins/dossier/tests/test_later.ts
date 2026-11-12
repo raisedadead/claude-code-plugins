@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'vitest'
+import { ds as inproc } from './inproc.ts'
 import { addCarried, archivedCarried, carriedRow, laterRows, laterSummary, removeLater } from '../engine/later.ts'
 import type { Row } from '../engine/progress.ts'
-
-const DS = join(import.meta.dirname, '..', 'cli', 'ds')
 
 function row(id: string, who: string, task: string, needs: string[] = []): Row {
   return { id, state: '.', who, task, needs, cite: '—', verify: '—' }
@@ -106,22 +104,22 @@ function root(): string {
 }
 
 function ds(dir: string, ...args: string[]) {
-  return spawnSync('sh', [DS, ...args], { cwd: dir, encoding: 'utf8', env: { ...process.env, DOSSIER_LEDGER_ROOT: dir } })
+  return inproc(dir, args, { DOSSIER_LEDGER_ROOT: dir })
 }
 
-test('ds later lists the rows, and ds later done removes one and refuses an unknown key', () => {
+test('ds later lists the rows, and ds later done removes one and refuses an unknown key', async () => {
   const dir = root()
   try {
     const list = join(dir, '.scratchpad', 'dossier', 'LATER.md')
     writeFileSync(list, addCarried(undefined, [{ key: 'a/T1', task: 'one', who: 'H' }]).text)
-    const shown = ds(dir, 'later')
-    assert.equal(shown.status, 0, shown.stderr)
+    const shown = await ds(dir, 'later')
+    assert.equal(shown.code, 0, shown.stderr)
     assert.match(shown.stdout, /^a\/T1 · one · H$/m)
-    assert.equal(ds(dir, 'later', 'done', 'a/T9').status, 1)
-    const done = ds(dir, 'later', 'done', 'a/T1')
-    assert.equal(done.status, 0, done.stderr)
+    assert.equal((await ds(dir, 'later', 'done', 'a/T9')).code, 1)
+    const done = await ds(dir, 'later', 'done', 'a/T1')
+    assert.equal(done.code, 0, done.stderr)
     assert.deepEqual(laterRows(readFileSync(list, 'utf8')), [])
-    assert.equal(ds(dir, 'later', 'bogus').status, 64)
+    assert.equal((await ds(dir, 'later', 'bogus')).code, 64)
   } finally {
     rmSync(dir, { recursive: true, force: true })
   }

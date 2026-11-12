@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'vitest'
+import { ds } from './inproc.ts'
 import { needsTree, progress, progressLine, progressTable, taskRows } from '../engine/progress.ts'
 
-const DS = join(import.meta.dirname, '..', 'cli', 'ds')
 const FIXTURE = join(import.meta.dirname, 'fixtures', 'progress')
 const LEDGER = readFileSync(join(FIXTURE, 'DOSSIER.md'), 'utf8')
 
@@ -94,34 +93,34 @@ test('the table rounds down so an unfinished wave never shows 100%', () => {
   assert.match(table, /^After the milestone: T17 T16\+7d, T18 T16\+30d$/m)
 })
 
-test('ds progress reads the milestone from the wave contract', () => {
-  const done = spawnSync('sh', [DS, 'progress', FIXTURE, '--json'], { encoding: 'utf8' })
-  assert.equal(done.status, 0, done.stderr)
+test('ds progress reads the milestone from the wave contract', async () => {
+  const done = await ds(process.cwd(), ['progress', FIXTURE, '--json'])
+  assert.equal(done.code, 0, done.stderr)
   assert.deepEqual(JSON.parse(done.stdout).milestone, { id: 'T16', done: 9, total: 16 })
 })
 
-test('ds progress --line prints one line per wave', () => {
-  const done = spawnSync('sh', [DS, 'progress', FIXTURE, '--line'], { encoding: 'utf8' })
+test('ds progress --line prints one line per wave', async () => {
+  const done = await ds(process.cwd(), ['progress', FIXTURE, '--line'])
   assert.equal(done.stdout, 'progress 47% · 9/19 · next T3\n')
 })
 
-test('ds progress reads carried work from the list, not from an archived after line', () => {
+test('ds progress reads carried work from the list, not from an archived after line', async () => {
   const root = mkdtempSync(join(tmpdir(), 'ds-progress-'))
   try {
     const archive = join(root, '.scratchpad', 'dossier', '_archive', '2026-01-01-old')
     mkdirSync(archive, { recursive: true })
     writeFileSync(join(archive, 'DOSSIER.md'), '# old\n\n## Closeout\n\n2026-01-01 10:00 — closed\n\nafter: T7 smoke test (T6+7d)\n')
     writeFileSync(join(root, '.scratchpad', 'dossier', 'LATER.md'), '# Carried work\n\n- 2026-01-01-old/T8 · approve rollout · H\n')
-    const done = spawnSync('sh', [DS, 'progress', '--line'], { cwd: root, encoding: 'utf8', env: { ...process.env, DOSSIER_LEDGER_ROOT: root } })
-    assert.equal(done.status, 0, done.stderr)
+    const done = await ds(root, ['progress', '--line'], { DOSSIER_LEDGER_ROOT: root })
+    assert.equal(done.code, 0, done.stderr)
     assert.equal(done.stdout, 'later: 1 carried — ds later lists them\n')
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
 })
 
-test('ds progress exits 1 on a directory with no ledger', () => {
-  const done = spawnSync('sh', [DS, 'progress', import.meta.dirname], { encoding: 'utf8' })
-  assert.equal(done.status, 1)
+test('ds progress exits 1 on a directory with no ledger', async () => {
+  const done = await ds(process.cwd(), ['progress', import.meta.dirname])
+  assert.equal(done.code, 1)
   assert.match(done.stderr, /not found: .*DOSSIER\.md/)
 })

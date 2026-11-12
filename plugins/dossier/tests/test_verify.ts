@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'vitest'
+import { ds as inproc } from './inproc.ts'
 import { cachedLookup } from '../cli/verify.ts'
 import { compilePython } from '../engine/pyregex.ts'
 import {
@@ -24,21 +24,10 @@ import {
   scan,
 } from '../engine/verify.ts'
 
-const DS = join(import.meta.dirname, '..', 'cli', 'ds')
-
 const offline: Lookup = async () => ({ status: 'offline', data: null })
 
 function payload(data: unknown): Lookup {
   return async () => ({ status: 'ok', data })
-}
-
-function withDir<T>(body: (dir: string) => T): T {
-  const dir = mkdtempSync(join(tmpdir(), 'ds-verify-'))
-  try {
-    return body(dir)
-  } finally {
-    rmSync(dir, { recursive: true, force: true })
-  }
 }
 
 async function withDirAsync(body: (dir: string) => Promise<void>): Promise<void> {
@@ -75,8 +64,8 @@ async function claims(content: string, path = 'app.py', rules = [probe]): Promis
   return (await scan(content, path, rules)).map((hit) => hit.finding[0])
 }
 
-function ds(args: string[], cwd: string, input = '', env: NodeJS.ProcessEnv = {}) {
-  return spawnSync('sh', [DS, ...args], { cwd, input, encoding: 'utf8', env: { ...process.env, ...env } })
+function ds(args: string[], cwd: string, input = '', env: Record<string, string> = {}) {
+  return inproc(cwd, args, env, input)
 }
 
 function seedCache(root: string, url: string, data: unknown): void {
@@ -251,13 +240,13 @@ test('a cached miss replays as missing in cache-only mode', async () => {
   })
 })
 
-test('verify-sweep reports a stale claim on disk', () => {
-  withDir((dir) => {
+test('verify-sweep reports a stale claim on disk', async () => {
+  await withDirAsync(async (dir) => {
     mkdirSync(join(dir, '.github', 'workflows'), { recursive: true })
     const file = join(dir, '.github', 'workflows', 'ci.yml')
     writeFileSync(file, 'steps:\n  - uses: actions/checkout@v4\n  - uses: actions/checkout@v4\n')
-    const done = ds(['verify-sweep', file], dir, '', { DOSSIER_VERIFY_CACHE_ONLY: '1' })
-    assert.equal(done.status, 0)
+    const done = await ds(['verify-sweep', file], dir, '', { DOSSIER_VERIFY_CACHE_ONLY: '1' })
+    assert.equal(done.code, 0)
     assert.equal(
       done.stdout,
       `${file}:github_action_unpinned: uses: actions/checkout@v4 -> resolve: gh api repos/actions/checkout/git/refs/tags/v4  [src: https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions]\n`,
@@ -265,26 +254,26 @@ test('verify-sweep reports a stale claim on disk', () => {
   })
 })
 
-test('verify-sweep stays silent on benign, skipped and missing files', () => {
-  withDir((dir) => {
+test('verify-sweep stays silent on benign, skipped and missing files', async () => {
+  await withDirAsync(async (dir) => {
     mkdirSync(join(dir, '.github', 'workflows'), { recursive: true })
     const benign = join(dir, '.github', 'workflows', 'a.yml')
     const skipped = join(dir, '.github', 'workflows', 'b.yml')
     writeFileSync(benign, 'steps:\n  - run: true\n')
     writeFileSync(skipped, '- uses: actions/checkout@v4\n# verify-skip: github_action_unpinned\n')
-    const done = ds(['verify-sweep', benign, skipped, join(dir, 'absent.yml')], dir, '', { DOSSIER_VERIFY_CACHE_ONLY: '1' })
-    assert.equal(done.status, 0)
+    const done = await ds(['verify-sweep', benign, skipped, join(dir, 'absent.yml')], dir, '', { DOSSIER_VERIFY_CACHE_ONLY: '1' })
+    assert.equal(done.code, 0)
     assert.equal(done.stdout, '')
   })
 })
 
-test('verify-edit reads the cache under the root it is given', () => {
-  withDir((root) => {
-    withDir((elsewhere) => {
+test('verify-edit reads the cache under the root it is given', async () => {
+  await withDirAsync(async (root) => {
+    await withDirAsync(async (elsewhere) => {
       seedCache(root, 'https://api.github.com/repos/actions/checkout/git/refs/tags/v4', { object: { sha: 'abc1234def' } })
       const input = JSON.stringify({ file_path: '.github/workflows/ci.yml', content: 'uses: actions/checkout@v4\n' })
-      const done = ds(['verify-edit', root], elsewhere, input)
-      assert.equal(done.status, 0)
+      const done = await ds(['verify-edit', root], elsewhere, input)
+      assert.equal(done.code, 0)
       const hits = JSON.parse(done.stdout) as { key: string; line: string }[]
       assert.deepEqual(hits, [
         {
@@ -296,26 +285,26 @@ test('verify-edit reads the cache under the root it is given', () => {
   })
 })
 
-test('verify-edit prints nothing for benign content or a dossier path', () => {
-  withDir((root) => {
+test('verify-edit prints nothing for benign content or a dossier path', async () => {
+  await withDirAsync(async (root) => {
     for (const edit of [
       { file_path: '.github/workflows/ci.yml', content: 'run: true\n' },
       { file_path: '.scratchpad/dossier/x/notes.yml', content: 'uses: actions/checkout@v4\n' },
     ]) {
-      const done = ds(['verify-edit', root], root, JSON.stringify(edit))
-      assert.equal(done.status, 0)
+      const done = await ds(['verify-edit', root], root, JSON.stringify(edit))
+      assert.equal(done.code, 0)
       assert.equal(done.stdout, '')
     }
   })
 })
 
-test('resolve-pins prints usage without a spec and an error object for a bad one', () => {
-  withDir((dir) => {
-    const bare = ds(['resolve-pins'], dir)
-    assert.equal(bare.status, 2)
+test('resolve-pins prints usage without a spec and an error object for a bad one', async () => {
+  await withDirAsync(async (dir) => {
+    const bare = await ds(['resolve-pins'], dir)
+    assert.equal(bare.code, 2)
     assert.match(bare.stderr, /usage: ds resolve-pins/)
-    const done = ds(['resolve-pins', 'nocolonspec', 'npm:react'], dir, '', { DOSSIER_VERIFY_CACHE_ONLY: '1' })
-    assert.equal(done.status, 0)
+    const done = await ds(['resolve-pins', 'nocolonspec', 'npm:react'], dir, '', { DOSSIER_VERIFY_CACHE_ONLY: '1' })
+    assert.equal(done.code, 0)
     assert.equal(
       done.stdout,
       '{"spec": "nocolonspec", "error": "bad spec (want <ecosystem>:<pkg> or eol:<slug>)"}\n{"spec": "npm:react", "latest": null, "offline": true}\n',

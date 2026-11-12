@@ -1,12 +1,11 @@
 import assert from 'node:assert/strict'
-import { spawnSync } from 'node:child_process'
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'vitest'
+import { ds } from './inproc.ts'
 import { handoff } from '../engine/handoff.ts'
 
-const DS = join(import.meta.dirname, '..', 'cli', 'ds')
 const STAMP = '2026-11-11 14:30'
 const GOAL = [
   '/goal ds:build --auto printed DONE or PAUSE for demo, and §S records a matching auto-stop or PAUSE line stamped at or after 2026-11-11 14:30.',
@@ -98,18 +97,18 @@ test('a ledger with no rows is not read as done', () => {
   assert.deepEqual(handoff(ledger(), 'demo', STAMP), ['operator: §T has no rows'])
 })
 
-test('the cli prints the lines for a dossier and exits 1 on a missing ledger', () => {
+test('the cli prints the lines for a dossier and exits 1 on a missing ledger', async () => {
   const root = mkdtempSync(join(tmpdir(), 'handoff-'))
   try {
     const dir = join(root, '2026-11-11-demo')
     mkdirSync(dir)
     writeFileSync(join(dir, 'DOSSIER.md'), ledger('| T1 | . | H | Push main | — | — | v |'))
-    const ok = spawnSync(DS, ['handoff', dir], { encoding: 'utf8' })
-    assert.equal(ok.status, 0)
+    const ok = await ds(process.cwd(), ['handoff', dir])
+    assert.equal(ok.code, 0)
     assert.equal(ok.stdout, 'operator: T1 Push main\n')
-    const missing = spawnSync(DS, ['handoff', join(root, 'nope')], { encoding: 'utf8' })
-    assert.equal(missing.status, 1)
-    assert.equal(spawnSync(DS, ['handoff'], { encoding: 'utf8' }).status, 64)
+    const missing = await ds(process.cwd(), ['handoff', join(root, 'nope')])
+    assert.equal(missing.code, 1)
+    assert.equal((await ds(process.cwd(), ['handoff'])).code, 64)
   } finally {
     rmSync(root, { recursive: true, force: true })
   }
