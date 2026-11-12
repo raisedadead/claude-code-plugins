@@ -108,7 +108,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | `skill-smith` lint  | `FAIL` / `WARN` lines; exit 1 if any `FAIL`                                                   | code — `lint-skill`                                                          |
 | `tdd-cycle` slice   | red, green and full-suite exit codes                                                          | code — `run_slice.sh`                                                        |
 | conflict route      | exit 0 on marker count and pass count                                                         | code — `verify-clean`                                                        |
-| `flaky-test-audit`  | per-test rate; anything between 0 and 1 is flaky                                              | code — computed rate                                                         |
+| flake route         | per-test rate; anything between 0 and 1 is flaky                                              | code — `flake-runner`                                                        |
 | `tiger-style` check | `TIGER: CLEAN <n> file(s)[, <m> skipped]`, `BLOCK <n>` or `NAG <n>`; exit 0/1/2               | code — `tiger-check`                                                         |
 | `ds:converge`       | `CONVERGE: MET <n>/<n>`, `UNMET <n> of <m>` or `PARSE — <why>`; exit 0/1/2                    | code — `cli/ds converge`                                                     |
 | `ds handoff` goal   | `/goal §S of <slug> records a ds:build PAUSE or auto-stop line stamped after <second>.`      | model-judgment — the `/goal` judge reads the transcript, where `ds s-append` prints the line |

@@ -23,7 +23,7 @@
     {
       "name": "whetstone",
       "source": "./plugins/whetstone",
-      "description": "Engineering-craft skills: red-green TDD, flaky-test audit, diagnosis, doubt review, grilling, a merge check, grounded research reports, HTML reports, skill linting and a staged-diff column budget. TDD, flaky-test audit, the merge check, skill lint, column budget and HTML report end in a script's exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment. Auto-composed by the dossier plugin at its phase gates when both are installed — fully functional standalone.",
+      "description": "Engineering-craft skills: red-green TDD, a flaky-test rate, diagnosis, doubt review, grilling, a merge check, grounded research reports, HTML reports, skill linting and a staged-diff column budget. TDD, the flaky-test rate, the merge check, skill lint, column budget and HTML report end in a script's exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment. Auto-composed by the dossier plugin at its phase gates when both are installed — fully functional standalone.",
       "category": "workflow",
       "keywords": ["tdd", "testing", "code-review", "git", "skills"],
       "license": "ISC",

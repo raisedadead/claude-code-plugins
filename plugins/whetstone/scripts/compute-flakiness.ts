@@ -33,20 +33,6 @@ export function computeRates(results: Record<string, unknown>): Record<string, R
   return rates
 }
 
-export function quarantine(rates: Record<string, Rate>): Record<string, number> {
-  return Object.fromEntries(
-    Object.entries(rates)
-      .filter(([, rate]) => rate.flaky)
-      .map(([test, rate]) => [test, rate.rate]),
-  )
-}
-
-export function newFlags(current: Record<string, number>, baseline: Record<string, unknown>): string[] {
-  return Object.keys(current)
-    .filter((test) => !Object.hasOwn(baseline, test))
-    .sort(byCodePoint)
-}
-
 function fixed2(value: number): string {
   const eighths = value * 8
   if (Object.is(value, -0)) return '-0.00'

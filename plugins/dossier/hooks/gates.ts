@@ -29,13 +29,7 @@ export const BUILTINS = new Set(['code-review', 'review', 'security-review', 'si
 const CLOSE = 'dossier:close'
 const GRILLING = new Set(['mattpocock-skills:grilling', 'grilling'])
 const EMPTY_CELL = new Set(['', '—', '-'])
-export const WHETSTONE = new Set([
-  'whetstone:doubt-pass',
-  'whetstone:flaky-test-audit',
-  'whetstone:skill-smith',
-  'whetstone:tdd-cycle',
-  'whetstone:tiger-style',
-])
+export const WHETSTONE = new Set(['whetstone:doubt-pass', 'whetstone:skill-smith', 'whetstone:tdd-cycle', 'whetstone:tiger-style'])
 
 async function invariantGate(io: Io, root: string, filePath: string, chunks: string[]): Promise<Verdict> {
   if ((await io.env('DOSSIER_INVARIANT_GUARD')) === 'off') return {}

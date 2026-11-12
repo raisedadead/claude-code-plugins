@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'claude-code/testing'
-import { computeRates, InputError, newFlags, quarantine, reportLines } from '../scripts/compute-flakiness.ts'
+import { computeRates, InputError, reportLines } from '../scripts/compute-flakiness.ts'
 
 describe('compute-flakiness', () => {
   test('flags only mixed outcomes as flaky', () => {
@@ -12,13 +12,6 @@ describe('compute-flakiness', () => {
     expect(rates.t_fail?.flaky).toBe(false)
     expect(rates.t_flaky?.flaky).toBe(true)
     expect(rates.t_flaky?.rate).toBe(0.4)
-  })
-
-  test('quarantines the flaky tests and names the new ones', () => {
-    const q = quarantine(computeRates({ a: { runs: 4, fails: 1 }, b: { runs: 4, fails: 0 } }))
-    expect(q).toEqual({ a: 0.25 })
-    expect(newFlags(q, {})).toEqual(['a'])
-    expect(newFlags(q, { a: 0.25 })).toEqual([])
   })
 
   test('treats zero runs as rate 0 and reads integer-like counts', () => {

@@ -154,7 +154,6 @@ def is_typed(text: str) -> bool:
 SCRIPT_SKILLS = {
     "tiger-check": "whetstone:tiger-style",
     "lint-skill": "whetstone:skill-smith",
-    "flake-runner": "whetstone:flaky-test-audit",
     "run-slice": "whetstone:tdd-cycle",
     "html-report": "whetstone:html-report",
 }

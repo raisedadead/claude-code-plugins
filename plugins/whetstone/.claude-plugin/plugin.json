@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "whetstone",
-  "description": "Engineering-craft skills: red-green TDD, flaky-test audit, diagnosis, doubt review, grilling, a merge check, research reports with grounded claims, HTML reports, skill linting and a column budget. TDD, flaky-test audit, the merge check, skill lint, column budget and HTML report end in a script's exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment.",
+  "description": "Engineering-craft skills: red-green TDD, a flaky-test rate, diagnosis, doubt review, grilling, a merge check, research reports with grounded claims, HTML reports, skill linting and a column budget. TDD, the flaky-test rate, the merge check, skill lint, column budget and HTML report end in a script's exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment.",
   "author": {
     "name": "Mrugesh Mohapatra",
     "email": "noreply@mrugesh.dev",

@@ -77,7 +77,7 @@ Rate = `fails/runs` from the results.json it writes (`{"<name>": {"runs": N, "fa
 
 - `rate=1.0` — fails on every observed run: reproducible, proceed to step 5. Label it OBSERVED-deterministic — N=5 can miss a low-probability flake, so this is a triage read rather than a proof.
 - `rate=0.0` — passes every time: the bug is unreproduced; revisit step 4 scope (the "if it passes, it isn't characterised" rule).
-- `0<r<1` — FLAKY rather than a bug. An invariant for nondeterminism is noise, so this branch mints no §V. Write the closed §B row now — atomic write, step 6's template with closed values: `| B<N> | <bug-label> | nondeterminism (rate=<r>, n runs) | — (quarantine via whetstone:flaky-test-audit) | — (flaky, no fix) |` — then jump to step 9 close-out. Point the operator at `whetstone:flaky-test-audit` for the quarantine flow, which runs outside backprop so this ledger stays the only driver.
+- `0<r<1` — FLAKY rather than a bug. An invariant for nondeterminism is noise, so this branch mints no §V. Write the closed §B row now — atomic write, step 6's template with closed values: `| B<N> | <bug-label> | nondeterminism (rate=<r>, n runs) | — (quarantine) | — (flaky, no fix) |` — then jump to step 9 close-out. Tell the operator to quarantine the test with the framework's skip marker and a tracking issue; the quarantine runs outside backprop so this ledger stays the only driver.
 
 Append §S: `ds:backprop <B> flake=<rate> runs=<n>` (the resume table keys on it).
 

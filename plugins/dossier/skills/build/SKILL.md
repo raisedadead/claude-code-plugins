@@ -132,7 +132,7 @@ If `verify` is shell predicate: run after work, must exit 0. If `verify` is `—
 Tests failing with an unclear root cause: **spawn a `dossier-scout` subagent** with the mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>", and let its report guide the fix.
 
 A failure that implies a missing invariant: run `ds:backprop`, which registers the invariant first and greens the symptom under it. Any test failure that is a bug, not this task's new RED, gets the same hand-off: name `ds:backprop <bug>` before the fix, so the bug can leave an invariant behind.
-A test that fails and then passes on a rerun with no change is a flake signal. With whetstone installed, hand it to `whetstone:flaky-test-audit` for a computed rate before any fix.
+A test that fails and then passes on a rerun with no change is a flake signal. When `flake-runner` is on `PATH` (whetstone `bin/`), measure it before any fix: `FLAKE_TEST_NAME=<test-id> flake-runner 10 "$(mktemp -d)/results.json" <test-command>` prints `FLAKY <fails>/<runs> <rate> <test-id>` for a rate between 0 and 1. A flaky test is a `ds:backprop` FLAKY branch, not a fix in this task.
 
 ### 6.2. DELEGATE (a `route=delegate` row)
 

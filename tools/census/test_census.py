@@ -597,10 +597,7 @@ def test_a_script_counts_as_use_only_where_it_runs_as_a_command() -> None:
         '"$D"/bin/lint-skill skills/x': {"whetstone:skill-smith"},
         "bash plugins/x/scripts/run_slice.sh red t": {"whetstone:tdd-cycle"},
         "verify-clean . 3 printf 5": set(),
-        "X=1 run_slice.sh red pytest; flake-runner 5 t": {
-            "whetstone:tdd-cycle",
-            "whetstone:flaky-test-audit",
-        },
+        "X=1 run_slice.sh red pytest; flake-runner 5 t": {"whetstone:tdd-cycle"},
         "if true; then html-report a.md; fi": {"whetstone:html-report"},
         'bun "$p/skills/skill-smith/scripts/lint-skill-cli.ts" a': {
             "whetstone:skill-smith"

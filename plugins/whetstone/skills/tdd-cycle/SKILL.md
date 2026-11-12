@@ -44,6 +44,14 @@ Before the first assertion, name the **seam**: the public boundary you test thro
 
 1. **Next slice** — one seam, one test, one implementation per cycle. Repeat from RED.
 
+A test that fails, then passes on a rerun with no change, is a flake signal. Measure it before any fix:
+
+```bash
+FLAKE_TEST_NAME=<test-id> flake-runner 10 "$(mktemp -d)/results.json" <test-command>
+```
+
+It prints `FLAKY <fails>/<runs> <rate> <test-id>` when the rate is between 0 and 1. A flaky test gets the framework's skip marker and a tracking issue, not a code fix in this slice.
+
 ## Refactor is a separate pass
 
 Once GREEN and the suite passes, the slice is done. Cleanup and design improvement go to a review/simplify step, so a failure during red-green means exactly one thing.
