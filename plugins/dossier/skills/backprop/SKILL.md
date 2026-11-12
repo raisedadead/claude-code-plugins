@@ -73,7 +73,7 @@ Run the failing test N times (default 5) before characterising:
 flake-runner 5 "$(mktemp -d)/results.json" <test-command...>
 ```
 
-Rate = `fails/runs` from the results.json it writes (`{"<name>": {"runs": N, "fails": F}}`). Route:
+It prints one line, `<fails>/<runs> <rate> <name>`, prefixed `FLAKY` when the rate is between 0 and 1. Route on the rate:
 
 - `rate=1.0` — fails on every observed run: reproducible, proceed to step 5. Label it OBSERVED-deterministic — N=5 can miss a low-probability flake, so this is a triage read rather than a proof.
 - `rate=0.0` — passes every time: the bug is unreproduced; revisit step 4 scope (the "if it passes, it isn't characterised" rule).

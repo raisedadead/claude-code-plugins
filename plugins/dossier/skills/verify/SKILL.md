@@ -30,7 +30,7 @@ No pattern lock-in: the model classifies an arbitrary freshness claim and routes
    - **CLI flag / subcommand** → vendor docs (search official site)
    - **API endpoint / schema** → vendor docs / OpenAPI spec
    - **AI model identifier** → vendor deprecation page (OpenAI/Anthropic/Google/Mistral/Meta)
-   - **Framework / library API** → official docs (search) or release notes
+   - **Framework / library API** → official docs; for a claim that something changed in a version, its release notes
    - **License / SPDX identifier** → `spdx.org/licenses/`
    - **Standard / RFC** → ietf.org / w3.org
    - **Anything else freshness-sensitive** → WebSearch first, then WebFetch the top primary source.
