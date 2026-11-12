@@ -588,7 +588,7 @@ function guardCandidates(root: string, filePath: string): string[] {
   const raw = resolve(filePath)
   const rawRoot = resolve(root)
   const real = existingRealPath(raw)
-  const inside = [rootRelative(raw, rawRoot), rootRelative(real, existingRealPath(rawRoot))]
+  const inside: (string | undefined)[] = [rootRelative(raw, rawRoot), rootRelative(real, existingRealPath(rawRoot))]
   if (!inside.some((path) => path !== undefined)) {
     const top = gitLine(['-C', nearestDir(raw), 'rev-parse', '--show-toplevel'])?.trim()
     if (top) inside.push(rootRelative(raw, top), rootRelative(real, existingRealPath(top)))
