@@ -2,10 +2,7 @@ import { DELAYED, type Row, taskRows } from './progress.ts'
 import { JOINED, STAMP, statusSection, trim } from './ledger.ts'
 
 function goalLines(slug: string, stamp: string): string[] {
-  return [
-    `/goal ds:build --auto printed DONE or PAUSE for ${slug}, and §S records a matching auto-stop or PAUSE line stamped at or after ${stamp}.`,
-    '/dossier:build --auto',
-  ]
+  return [`/goal §S of ${slug} records a ds:build PAUSE or auto-stop line stamped after ${stamp}.`, '/dossier:build --auto']
 }
 
 const named =

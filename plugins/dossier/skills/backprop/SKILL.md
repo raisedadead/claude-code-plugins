@@ -52,7 +52,7 @@ Before any hypothesis, have a feedback loop: one command, already run, that goes
 Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; this holds for every §S append in this skill):
 
 ```
-<YYYY-MM-DD HH:MM> ds:backprop <B-or-pending> START loop=<command>
+<YYYY-MM-DD HH:MM:SS> ds:backprop <B-or-pending> START loop=<command>
 ```
 
 Define:
@@ -105,7 +105,7 @@ test(<scope>): repro <bug-label>
 Append §S:
 
 ```
-<YYYY-MM-DD HH:MM> ds:backprop B<N> test=<sha>
+<YYYY-MM-DD HH:MM:SS> ds:backprop B<N> test=<sha>
 ```
 
 A non-testable bug (docs drift, infra config) skips the test commit; note `invariant added` = `— (non-testable)` in §B.
@@ -121,7 +121,7 @@ Atomic write of DOSSIER.md with the new §B row:
 Append §S:
 
 ```
-<YYYY-MM-DD HH:MM> ds:backprop B<N> §B=B<N>
+<YYYY-MM-DD HH:MM:SS> ds:backprop B<N> §B=B<N>
 ```
 
 ### 7. INVARIANT DECISION
@@ -145,7 +145,7 @@ Update the §B `invariant added` column to `V<N>`. Atomic write.
 Append §S:
 
 ```
-<YYYY-MM-DD HH:MM> ds:backprop B<N> §V=V<N>
+<YYYY-MM-DD HH:MM:SS> ds:backprop B<N> §V=V<N>
 ```
 
 NO → §B `invariant added` stays `—`, and §S notes `§V=skipped:one-off`.
@@ -173,7 +173,7 @@ fix(<scope>): <imperative summary>
 Append §S:
 
 ```
-<YYYY-MM-DD HH:MM> ds:backprop B<N> fix=<sha>
+<YYYY-MM-DD HH:MM:SS> ds:backprop B<N> fix=<sha>
 ```
 
 Update the §B `fix cite` column to `<sha>`. Atomic write.
@@ -183,7 +183,7 @@ Update the §B `fix cite` column to `<sha>`. Atomic write.
 Append §S:
 
 ```
-<YYYY-MM-DD HH:MM> ds:backprop B<N> DONE
+<YYYY-MM-DD HH:MM:SS> ds:backprop B<N> DONE
 ```
 
 Release the lock. Regen INDEX (the B count changed).

@@ -174,12 +174,12 @@ test('row-flip does not touch a T-row outside the task section', async () => {
   assert.ok(readFileSync(file, 'utf8').includes('fabricated-root-cause'), 'flip must not touch a T-row outside §T (section scope)')
 })
 
-test('s-append stamps the entry, places it in the status section with blank lines, and honours DS_TS_SECONDS', async () => {
+test('s-append stamps the entry to the second and places it in the status section with blank lines', async () => {
   const dir = join(tmp, 'append')
   const file = makeFixture(dir)
 
   succeeded(await run(['s-append', dir, 'ds:build T3 START']))
-  assert.match(readFileSync(file, 'utf8'), /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2} ds:build T3 START$/m, 'append entry missing or no timestamp')
+  assert.match(readFileSync(file, 'utf8'), /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ds:build T3 START$/m, 'append entry missing or no timestamp')
 
   const lines = readFileSync(file, 'utf8').split('\n')
   const seed = lineNumber(lines, /ds:new — created/)
@@ -189,13 +189,6 @@ test('s-append stamps the entry, places it in the status section with blank line
 
   assert.equal(lines[added - 2], '', 'no blank line before §S entry')
   assert.equal(lines[added], '', 'no blank line after §S entry')
-
-  succeeded(await run(['s-append', dir, 'ds:build T3 DONE'], { DS_TS_SECONDS: '1' }))
-  assert.match(
-    readFileSync(file, 'utf8'),
-    /^[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} ds:build T3 DONE$/m,
-    'DS_TS_SECONDS did not produce second-granular ts',
-  )
 
   const bare = join(tmp, 'no-z')
   mkdirSync(bare, { recursive: true })

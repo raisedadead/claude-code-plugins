@@ -111,6 +111,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | `flaky-test-audit`  | per-test rate; anything between 0 and 1 is flaky                                              | code — computed rate                                                         |
 | `tiger-style` check | `TIGER: CLEAN <n> file(s)[, <m> skipped]`, `BLOCK <n>` or `NAG <n>`; exit 0/1/2               | code — `tiger-check`                                                         |
 | `ds:converge`       | `CONVERGE: MET <n>/<n>`, `UNMET <n> of <m>` or `PARSE — <why>`; exit 0/1/2                    | code — `cli/ds converge`                                                     |
+| `ds handoff` goal   | `/goal §S of <slug> records a ds:build PAUSE or auto-stop line stamped after <second>.`      | model-judgment — the `/goal` judge reads the transcript, where `ds s-append` prints the line |
 | `ds converge --baseline` | `BASELINE: OK <n> fail; guards <ids>` or `FAIL <ids>`; exit 0/1, 2 on PARSE              | code for the run; model-judgment for which rows are `guard`                  |
 | `ds close`          | `✗` lines refuse with exit 1; `⚠` lines are advisory; `ready` on `--plan`                     | code — `cli/ds close`                                                        |
 | `ds assert-grill`   | exit 0 complete, 1 no artifact, 2 open decision or open fork child, 3 unconfirmed, 4 consumed | code — `cli/ds assert-grill`                                                 |

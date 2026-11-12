@@ -122,7 +122,7 @@ function dossierFile(dir: string): string {
 function readDossier(verb: string, dir: string): [string, string] {
   const file = dossierFile(dir)
   if (!isFile(file)) refuse(verb, `not found: ${file}`)
-  return [file, migrate(readFileSync(file, 'utf8'), stamp(new Date(), process.env.DS_TS_SECONDS === '1')).text]
+  return [file, migrate(readFileSync(file, 'utf8'), stamp(new Date(), true)).text]
 }
 
 function subdirs(parent: string): string[] {
@@ -174,17 +174,18 @@ function rowFlipVerb(args: string[]): number {
   return 0
 }
 
-function sAppendTo(dir: string, event: string): void {
+function sAppendTo(dir: string, event: string): string {
   const [file, text] = readDossier('s-append', dir)
-  const entry = `${stamp(new Date(), process.env.DS_TS_SECONDS === '1')} ${event}`
+  const entry = `${stamp(new Date(), true)} ${event}`
   atomicWrite(file, sAppend(text, entry))
+  return entry
 }
 
 function sAppendVerb(args: string[]): number {
   const dir = required('s-append', args[0], 'ds s-append <dossier-dir> <event-text...>')
   const event = args.slice(1).join(' ')
   if (!event) refuse('s-append', 'empty event text')
-  sAppendTo(dir, event)
+  console.log(sAppendTo(dir, event))
   return 0
 }
 
@@ -415,7 +416,7 @@ function migrateVerb(args: string[]): number {
   if (holder) refuse('migrate', `${dir} locked by ${holder} — rerun when it finishes`)
   const file = dossierFile(dir)
   if (!isFile(file)) refuse('migrate', `not found: ${file}`)
-  const result = migrate(readFileSync(file, 'utf8'), stamp(new Date(), process.env.DS_TS_SECONDS === '1'))
+  const result = migrate(readFileSync(file, 'utf8'), stamp(new Date(), true))
   if (!result.applied.length) return 0
   atomicWrite(file, result.text)
   console.log(`migrated ${dir}: ${result.applied.join(', ')}`)
@@ -805,7 +806,7 @@ function handoffVerb(args: string[]): number {
     return 1
   }
   const slug = basename(resolve(dir)).replace(DATE_PREFIX, '')
-  console.log(handoff(readFileSync(file, 'utf8'), slug, stamp(new Date())).join('\n'))
+  console.log(handoff(readFileSync(file, 'utf8'), slug, stamp(new Date(), true)).join('\n'))
   return 0
 }
 

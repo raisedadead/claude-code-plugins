@@ -156,7 +156,7 @@ _(empty — populate when first contract lands)_
 
 <!-- Each entry is its own paragraph (blank lines before AND after). Per FORMAT.md §11. -->
 
-<YYYY-MM-DD HH:MM> ds:new — created slug=<slug>
+<YYYY-MM-DD HH:MM:SS> ds:new — created slug=<slug>
 
 ## Closeout
 
@@ -200,7 +200,7 @@ Run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds regen-index` to append the new dossier to `.
 Append as its own paragraph (blank line before AND after — per FORMAT.md §11):
 
 ```
-<YYYY-MM-DD HH:MM> ds:new — DONE slug=<slug> dir=<dir>
+<YYYY-MM-DD HH:MM:SS> ds:new — DONE slug=<slug> dir=<dir>
 ```
 
 ### 7. Report

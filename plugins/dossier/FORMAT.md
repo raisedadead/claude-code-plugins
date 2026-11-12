@@ -271,7 +271,7 @@ Vm.X: stale §X (last refresh >30min ago) **warns** before `ds:build` task-flip.
 Append-only timeline. Every skill op emits one or more lines. Format:
 
 ```
-<YYYY-MM-DD HH:MM> <skill> <target> <event> [<detail>]
+<YYYY-MM-DD HH:MM:SS> <skill> <target> <event> [<detail>]
 ```
 
 **Formatter-resistant rule (critical):** every §S entry MUST be its own paragraph (blank line before AND after). Without this, markdown formatters like prettier will merge consecutive lines into a single paragraph, breaking the per-line append/parse semantics and rendering §S unparseable by `ds regen-index` and `ds session-start`. The parser tolerates joined entries (substring matching) but skill writers MUST emit blank-line-separated entries.
@@ -302,7 +302,7 @@ Examples (note the blank lines between entries):
 
 Format rules:
 
-- Timestamp = minute-granular `YYYY-MM-DD HH:MM`. Override to seconds via env `DS_TS_SECONDS=1` (concurrent-write disambiguation).
+- Timestamp = `YYYY-MM-DD HH:MM:SS`, as `ds s-append` writes it. Readers also accept the minute form `YYYY-MM-DD HH:MM` that ledgers written before 2026-11-12 carry. The `/goal` line from `ds handoff` names a stop line stamped after the second it was printed.
 - `<skill>` = `ds:<verb>`.
 - `<target>` = `T<N>`, `B<N>`, `V<N>`, or `—` for non-targeted ops.
 - `<event>` ∈ `{START, DONE, commit=<sha>, §<X>=<status>, §X=stale-confirmed, drift=<n>, lock=<acquired|released>, paused reason=<text>, resumed, abandoned reason=<text>, PAUSE reason=<class>:<detail>, auto-stop=<reason>}`, plus the gate-outcome forms a skill emits for its own composed routes (`tiger=`, `doubt=`, `review=`, `pin=`, `conflict=`, `skill-lint=`, `verify_clean=`, `converge=`, `ci=`, `operator=`). The brace set is closed; the gate-outcome forms are not — a new composed route may add one, and `<skill>`/`<target>`/timestamp still bind.
@@ -455,7 +455,7 @@ The verbs of `${CLAUDE_PLUGIN_ROOT}/cli/ds` in the table below own the common DO
 | `ds z-write`      | §Z closeout block (`complete`/`successor`/`abandoned`)     | `ds z-write <dir> <kind> <value> "<summary>" "<cites>"` |
 | `ds migrate`      | legacy shapes, one §S line per migration step              | `ds migrate <dossier-dir>`                              |
 
-- `ds s-append` **prepends the timestamp itself** (honors `DS_TS_SECONDS`) and guarantees the §11 blank-line rule. Pass only the text *after* the timestamp — `ds:build T3 START`, never `2026-… ds:build T3 START`.
+- `ds s-append` **prepends the timestamp itself**, to the second, guarantees the §11 blank-line rule, and prints the line it wrote. The `/goal` judge reads only the transcript, so that printed line is its evidence for a stop line (a silent append was ruled unmet in a live probe on 2026-11-12). Pass only the text *after* the timestamp — `ds:build T3 START`, never `2026-… ds:build T3 START`.
 - `ds row-flip` matches the row by trimmed `id` cell **within §T only**, rewrites only the `state` (and optional `cite`) cells, exits non-zero if the id is absent from §T, if it matches more than one §T row, if the state is not one of `. ~ x ! ?`, if the id is a `B<N>` (§B has no state column — use `ds:backprop`), or if a `-> x` flip would leave the row without a `cite` (Vm.3).
 - `ds x-refresh` matches the §X row by trimmed `repo` cell, runs the git probes against `<repo-path>`, rewrites `branch`/`ahead`/`tag`/`pushed`, leaves the operator-owned `notes` cell untouched, exits non-zero if the repo label is absent or the path is not a git repo. `ahead=no-upstream` + `pushed=no` when the branch has no `origin/` tracking ref.
 - `ds header-state` rewrites only the `<state>` token on the header metadata line (the 2nd backtick-wrapped field), validates `<state>` ∈ `live|done|paused`, exits non-zero if the metadata line is absent. The sole writer of the header state — `ds:close` and the `ds:status` pause/resume actions both route through it.

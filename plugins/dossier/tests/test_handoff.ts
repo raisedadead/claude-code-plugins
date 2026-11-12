@@ -6,11 +6,8 @@ import { test } from 'vitest'
 import { ds } from './inproc.ts'
 import { handoff } from '../engine/handoff.ts'
 
-const STAMP = '2026-11-11 14:30'
-const GOAL = [
-  '/goal ds:build --auto printed DONE or PAUSE for demo, and §S records a matching auto-stop or PAUSE line stamped at or after 2026-11-11 14:30.',
-  '/dossier:build --auto',
-]
+const STAMP = '2026-11-11 14:30:05'
+const GOAL = ['/goal §S of demo records a ds:build PAUSE or auto-stop line stamped after 2026-11-11 14:30:05.', '/dossier:build --auto']
 
 function ledger(...rows: string[]): string {
   return ['## Tasks', '| id | state | who | task | needs | cite | verify |', '|----|-------|-----|------|-------|------|--------|', ...rows].join('\n')

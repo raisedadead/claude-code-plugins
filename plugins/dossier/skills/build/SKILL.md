@@ -70,7 +70,7 @@ Read §S grep `ds:build <T-id>`. Identify last event:
 If state still `.`: flip to `~`. Atomic write. Append §S as its own paragraph (blank line before AND after — per FORMAT.md §11; applies to every §S append in this skill):
 
 ```
-<YYYY-MM-DD HH:MM> ds:build <T-id> START
+<YYYY-MM-DD HH:MM:SS> ds:build <T-id> START
 ```
 
 **TaskList mirror:** if a TaskList task exists whose subject starts with `<T-id>` (hydrated by `ds:status`), `TaskUpdate` it to `in_progress`. Keeps the operator's watch surface live. Skip silently if absent.
@@ -130,7 +130,6 @@ If `verify` is shell predicate: run after work, must exit 0. If `verify` is `—
 Tests failing with an unclear root cause: **spawn a `dossier-scout` subagent** with the mission "root-cause this failure: <test-name>, repo=<repo>, last-passing=<sha>", and let its report guide the fix.
 
 A failure that implies a missing invariant: run `ds:backprop`, which registers the invariant first and greens the symptom under it. Any test failure that is a bug, not this task's new RED, gets the same hand-off: name `ds:backprop <bug>` before the fix, so the bug can leave an invariant behind.
-
 A test that fails and then passes on a rerun with no change is a flake signal. With whetstone installed, hand it to `whetstone:flaky-test-audit` for a computed rate before any fix.
 
 ### 6.2. DELEGATE (a `route=delegate` row)
@@ -211,7 +210,7 @@ Then `git commit` with subject pattern:
 Capture SHA. Append §S:
 
 ```
-<YYYY-MM-DD HH:MM> ds:build <T-id> commit=<sha>
+<YYYY-MM-DD HH:MM:SS> ds:build <T-id> commit=<sha>
 ```
 
 If commit hooks fail: a hook failure is a signal about the change, so investigate the root cause, fix it, and retry the same commit — never `--no-verify` past it. One flag disarms every gate the step just ran, and nothing this plugin ships denies it.
@@ -227,7 +226,7 @@ Multi-repo path-resolution sweep before the loop: parallel Bash calls. The per-r
 Append §S (one entry summarising the sweep). Emit `§X=refreshed` **only if every repo refreshed cleanly**; if any repo was unreachable or only partially refreshed, emit `§X=partial` instead so the stale guard (8a) fires before the flip:
 
 ```
-<YYYY-MM-DD HH:MM> ds:build <T-id> §X=refreshed
+<YYYY-MM-DD HH:MM:SS> ds:build <T-id> §X=refreshed
 ```
 
 ### 8a. Vm.X STALE GUARD
@@ -248,7 +247,7 @@ Skip guard entirely if step 8 emitted `§X=refreshed` (all repos clean) within t
 State `~` → `x`. Update `cite` column with commit SHA. Atomic write. Append §S:
 
 ```
-<YYYY-MM-DD HH:MM> ds:build <T-id> DONE → x cite=<sha>
+<YYYY-MM-DD HH:MM:SS> ds:build <T-id> DONE → x cite=<sha>
 ```
 
 **TaskList mirror:** `TaskUpdate` the `<T-id>` task to `completed`, when step 5 found one.
@@ -300,15 +299,17 @@ Drives the §T ledger to completion without per-task operator approval. The oper
 1. A PAUSE condition (below) holds → §S `ds:build <id> PAUSE reason=<class>:<detail>`, print `PAUSE: <reason>`, release lock, print the hand-off below, stop.
 1. Else run steps 5–12 verbatim (full covenant + TaskList mirror), then print `CONTINUE` (more `.` remain) or `DONE`.
 
-**Hand-off.** Run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds handoff <dir>` and print its lines verbatim as the last lines of the turn. It computes them from §T: the `/goal` and `/dossier:build --auto` lines when an agent row can run after the operator's next step (each `after:` line names that step), else the operator's step (`operator:`, `answer:`) or `close:` when every row is `x`. A push row whose latest §S line is a `ci` PAUSE gets `ci: <id> <detail>` in place of its `after:` or `operator:` line. The goal condition carries the current time, so §S lines from earlier runs cannot satisfy it. After `DONE`, when no goal is active, the output holds a `/goal` line and the `ProposeGoal` tool is present, also call it with that condition. After a `PAUSE` the operator answers first, so only print the lines.
+**Hand-off.** Run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds handoff <dir>` and print its lines verbatim as the last lines of the turn. It computes them from §T: the `/goal` and `/dossier:build --auto` lines when an agent row can run after the operator's next step (each `after:` line names that step), else the operator's step (`operator:`, `answer:`) or `close:` when every row is `x`. A push row whose latest §S line is a `ci` PAUSE gets `ci: <id> <detail>` in place of its `after:` or `operator:` line. The goal condition carries the current time to the second, so §S lines from earlier runs cannot satisfy it. After `DONE`, when no goal is active, the output holds a `/goal` line and the `ProposeGoal` tool is present, also call it with that condition. After a `PAUSE` the operator answers first, so only print the lines.
 
 **CI watch after a push.** For each §X repo the push row names: the SHA is `git -C <repo-path> rev-parse @{u}`, the commit the push sent, and the GitHub name is `gh repo view <url> --json nameWithOwner --jq .nameWithOwner` with `<url>` from `git -C <repo-path> remote get-url origin`. List every run with `gh run list --repo <repo> --commit <sha> --json databaseId,status,conclusion,url`; while the list is empty, list again for up to 60 s. Watch each run with `gh run watch <id> --repo <repo> --exit-status` in the foreground, then read the verdict from `gh run view <id> --repo <repo> --json status,conclusion,url`. The watch's exit code alone is no verdict: a Bash timeout also exits non-zero. A run whose `status` is not yet `completed` gets another watch. Every `conclusion` `success`, `skipped` or `neutral` → flip. Any other conclusion → PAUSE `ci:<url>`. Still no run after 60 s → §S `ds:build <id> ci=none` and flip. `gh` absent or failing → PAUSE `ci:gh-unavailable`.
 
 **Driver — native `/goal`.** A fresh evaluator keeps the turn going until done. Start `--auto` by setting it yourself: when no goal is active and the `ProposeGoal` tool is present, call it with the condition of the `/goal` line that `ds handoff <dir>` prints:
 
 ```
-ds:build --auto printed DONE or PAUSE for <slug>, and §S records a matching auto-stop or PAUSE line stamped after <YYYY-MM-DD HH:MM>.
+§S of <slug> records a ds:build PAUSE or auto-stop line stamped after <YYYY-MM-DD HH:MM:SS>.
 ```
+
+The judge reads the transcript and no files, so it sees a stop line only when a tool result prints it: write every PAUSE and auto-stop line with `ds s-append`, which prints the line it wrote. Whether the judge rules the condition met is model-judgment.
 
 `ask_user` stays at its default (`true`): the operator approves the goal once, then the loop needs no further turn from them. `ProposeGoal` absent → print the two lines of `ds handoff` that the operator types, in this order: `/goal <condition>` first, then `/dossier:build --auto`. Continue the loop in this turn. Proposing the goal is model-judgment; the evaluator that holds it is the harness.
 
