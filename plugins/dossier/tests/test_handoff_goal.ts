@@ -75,8 +75,52 @@ test('the goal is met by a stop line s-append prints after the handoff', async (
   assert.ok(satisfies(condition, stop), `${condition}\n${stop}`)
 })
 
+async function lines(...events: string[]): Promise<string[]> {
+  for (const event of events) assert.equal((await ds(dir, ['s-append', dir, event])).code, 0)
+  const done = await ds(dir, ['handoff', dir])
+  assert.equal(done.code, 0, done.stderr)
+  return done.stdout.trim().split('\n')
+}
+
+const isGoal = (line: string): boolean => line.startsWith('/goal ')
+
+test('an agent row paused on a non-CI reason names the reason and gets no goal', async () => {
+  for (const state of ['.', '~']) {
+    ledger(['| T1 | x | A | a | — | c | v |', `| T2 | ${state} | A | b | T1 | — | v |`])
+    const out = await lines('ds:build T2 PAUSE reason=push:not pushed')
+    assert.ok(!out.some(isGoal), out.join('\n'))
+    const answer = out.filter((line) => line.startsWith('answer: T2 '))
+    assert.equal(answer.length, 1, out.join('\n'))
+    assert.ok(answer[0]?.includes('push:not pushed'), out.join('\n'))
+  }
+})
+
+test('a paused row beside a runnable agent row keeps the goal', async () => {
+  ledger(['| T1 | . | A | a | — | — | v |', '| T2 | . | A | b | — | — | v |'])
+  const out = await lines('ds:build T2 PAUSE reason=ambiguous:two readings')
+  assert.ok(
+    out.some((line) => line.startsWith('answer: T2 ') && line.includes('ambiguous:two readings')),
+    out.join('\n'),
+  )
+  assert.ok(out.some(isGoal), out.join('\n'))
+})
+
+test('a pause on a done row, or one followed by a later event, adds no answer line', async () => {
+  ledger(['| T1 | x | A | a | — | c | v |', '| T2 | ~ | A | b | T1 | — | v |'])
+  const out = await lines('ds:build T1 PAUSE reason=push:main', 'ds:build T2 PAUSE reason=push:main', 'ds:build T2 START')
+  assert.ok(!out.some((line) => line.startsWith('answer:')), out.join('\n'))
+  assert.ok(out.some(isGoal), out.join('\n'))
+})
+
+test('a blocked row with a pause gets one answer line', async () => {
+  ledger(['| T1 | ! | A | a | — | — | v |'])
+  const out = await lines('ds:build T1 PAUSE reason=blocked:needs ops review')
+  assert.equal(out.filter((line) => line.startsWith('answer: T1 ')).length, 1, out.join('\n'))
+  assert.ok(!out.some(isGoal), out.join('\n'))
+})
+
 test('the goal is not met by a stop line from before the handoff or by a non-stop line', async () => {
-  ledger(['| T1 | . | A | a | — | — | v |'], ['2026-11-12 09:05:00 ds:build T1 PAUSE reason=push:main'])
+  ledger(['| T1 | x | A | a | — | c | v |', '| T2 | . | A | b | T1 | — | v |'], ['2026-11-12 09:05:00 ds:build T1 PAUSE reason=push:main'])
   const condition = await goal()
   assert.ok(!satisfies(condition, '2026-11-12 09:05:00 ds:build T1 PAUSE reason=push:main'), condition)
   await sleep(1100)
