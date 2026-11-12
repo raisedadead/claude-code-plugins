@@ -18,14 +18,14 @@ Creates `.scratchpad/dossier/<YYYY-MM-DD>-<slug>/DOSSIER.md` per `${CLAUDE_PLUGI
 
 ### 0. Helpers
 
-The §S DONE line (step 6) appends via `"${CLAUDE_PLUGIN_ROOT}"/cli/ds s-append <dir> "<event>"` (FORMAT.md §15) — pass the text **after** the timestamp, which the script prepends. The initial scaffold is a full Write (new file).
+§S lines append via `"${CLAUDE_PLUGIN_ROOT}"/cli/ds s-append <dir> "<event>"` (FORMAT.md §15) — pass the text **after** the timestamp, which the script prepends; `ds new-finish` (step 5) writes the DONE line. The initial scaffold is a full Write (new file).
 
 ### 1. Validate slug + path
 
 - Slug matches `^[a-z0-9][a-z0-9-]{0,29}$`. Anything else is refused with an explanation.
 - Run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds root` and compute `dir=<root>/.scratchpad/dossier/<date>-<slug>/` from the path it prints. Every `.scratchpad/` path below is under that root. In a linked worktree with no ledger yet, the root is the primary checkout, so removing the worktree cannot delete the ledger.
 - Collision check: `dir` exists **or `.scratchpad/dossier/_archive/<date>-<slug>/` exists** (a same-day close+reopen) → ask the operator to bump to `<slug>-2`, `<slug>-3`, etc. Checking `_archive/` too avoids two INDEX rows keyed to one slug (Vm.1).
-- Ignore check: in a git work tree, `git -C <root> check-ignore -q .scratchpad/` exiting 1 means the ledger will show as untracked and a `git add -A` would commit it; any exit other than 0 or 1 means the check could not run, so say that. Carry the result into the step-7 report with the per-clone fix — append `.scratchpad/` to the file `git -C <root> rev-parse --git-path info/exclude` names — and leave the choice to the operator; some repos track `.scratchpad/` on purpose.
+- Ignore check: in a git work tree, `git -C <root> check-ignore -q .scratchpad/` exiting 1 means the ledger will show as untracked and a `git add -A` would commit it; any exit other than 0 or 1 means the check could not run, so say that. Carry the result into the step-6 report with the per-clone fix — append `.scratchpad/` to the file `git -C <root> rev-parse --git-path info/exclude` names — and leave the choice to the operator; some repos track `.scratchpad/` on purpose.
 
 ### 1.5. Grill gate (conditional)
 
@@ -81,7 +81,7 @@ These fold into the single atomic step-3 Write — no extra commit, no TDD cycle
 
 ### 2.6. Subtraction pass (ungrilled wave only)
 
-Runs when step 1.5 exited 1 or 4 — no grill fed this wave, so no set audit or subtraction pass has seen it — and whetstone is installed. Spawn the subtraction pass (whetstone `doubt-pass`, "Subtraction pass": its template, its model rule) on the draft §G, §C and §T as the artifact, with §G as the contract. One cycle. Show each cut to the operator and ask which to take; a cut never edits a §C bullet the operator gave without that answer. Hold the `SUBTRACT:` line and append it to §S after step 3 as `ds:new — subtract=<verdict>`. Without whetstone, skip it and say so in the step-7 report.
+Runs when step 1.5 exited 1 or 4 — no grill fed this wave, so no set audit or subtraction pass has seen it — and whetstone is installed. Spawn the subtraction pass (whetstone `doubt-pass`, "Subtraction pass": its template, its model rule) on the draft §G, §C and §T as the artifact, with §G as the contract. One cycle. Show each cut to the operator and ask which to take; a cut never edits a §C bullet the operator gave without that answer. Hold the `SUBTRACT:` line and append it to §S after step 3 as `ds:new — subtract=<verdict>`. Without whetstone, skip it and say so in the step-6 report.
 
 ### 2.7. Write the contract
 
@@ -97,7 +97,7 @@ A done-when command reads source and repo state only. It does not read a deploye
 
 A §T row marked `route=delegate` adds the done-when row `` `<plugin>/cli/ds delegation-check <dossier-dir>` `` with `exit 0 guard` (it passes before any row is built), so `ds:converge` checks each delegated row's review and rebuild lines.
 
-In the tracked home, commit the contract after the step-3.6 baseline and before the first task — the `UserPromptSubmit` hook counts budget from the commit that added the contract.
+In the tracked home, commit the contract after the step-3.7 sign-off and before the first task — the `UserPromptSubmit` hook counts budget from the commit that added the contract.
 
 ### 3. Scaffold DOSSIER.md
 
@@ -173,7 +173,7 @@ Before touching INDEX or §S, confirm the write landed intact:
 "${CLAUDE_PLUGIN_ROOT}"/cli/ds assert-scaffold "<dir>"
 ```
 
-It exits 1 naming any missing `§`-section (or the title line) — deterministic, so nobody eyeballs the Write output. On failure the INDEX regen and the §S DONE line (step 6) both wait: report the missing sections, re-run the step-3 Write to repair, then re-assert. Mirrors the post-move assertion `ds:close` runs via `ds archive-move`. Exit 69 (no Node.js 22.18+) or 70 (internal error) means the assertion did not run: report its stderr line and stop before step 6.
+It exits 1 naming any missing `§`-section (or the title line) — deterministic, so nobody eyeballs the Write output. On failure step 5 waits: report the missing sections, re-run the step-3 Write to repair, then re-assert. Mirrors the post-move assertion `ds:close` runs via `ds archive-move`. Exit 69 (no Node.js 22.18+) or 70 (internal error) means the assertion did not run: report its stderr line and stop before step 5.
 
 ### 3.6. Baseline the contract
 
@@ -183,7 +183,24 @@ A row that passes before the work cannot judge the work. Run every row once, now
 "${CLAUDE_PLUGIN_ROOT}"/cli/ds converge --baseline <contract-path>
 ```
 
-`BASELINE: OK` (exit 0) appends `ds:converge — baseline OK …` to §S; then commit the contract (tracked home). `BASELINE: FAIL <ids>` (exit 1) appends `ds:converge — baseline FAIL <ids>` to §S (nothing is written when no live wave owns the contract) and names each row that passed or did not run (exit 124, 126 or 127), or each `guard` row that failed: rewrite the row so it fails until the work lands (a script the wave has not written yet: `test -f tools/x.sh && bash tools/x.sh`), or, for a row that must stay green throughout (a full CI run), end its expect cell with `guard` (`exit 0 guard`), then rerun. Which row is a guard is model-judgment; the baseline line lists every guard so the operator sees them. `CONVERGE: PARSE` (exit 2) is a contract to fix first.
+`BASELINE: OK` (exit 0) appends `ds:converge — baseline OK …` to §S; then go to step 3.7. `BASELINE: FAIL <ids>` (exit 1) appends `ds:converge — baseline FAIL <ids>` to §S (nothing is written when no live wave owns the contract) and names each row that passed or did not run (exit 124, 126 or 127), or each `guard` row that failed: rewrite the row so it fails until the work lands (a script the wave has not written yet: `test -f tools/x.sh && bash tools/x.sh`), or, for a row that must stay green throughout (a full CI run), end its expect cell with `guard` (`exit 0 guard`), then rerun. Which row is a guard is model-judgment; the baseline line lists every guard so the operator sees them. `CONVERGE: PARSE` (exit 2) is a contract to fix first.
+
+### 3.7. Sign off the design
+
+The sign-off judges the design before any build, from a notes file and the lines it cites, so it reads nothing else.
+
+1. Write the design to `<root>/.scratchpad/tmp/<date>-<slug>/design-notes.md`: the goal in the operator's words, each claim about current code with its `path:N` cite, a `## done-when` table in the contract's shape (a row that must stay green ends its expect cell with `guard`), and one `REMOVES: <name>` line per skill, file or command the wave deletes or renames.
+1. Run the computed checks until they pass:
+
+   ```bash
+   "${CLAUDE_PLUGIN_ROOT}"/cli/ds design-check <notes> <repo>
+   ```
+
+   `DESIGN: OK` (exit 0) writes `<notes minus .md>-evidence.md` with every cited line. `DESIGN: FAIL <n>` (exit 1) names each cite that does not resolve, each check that passes today or did not run, and each file that names a `REMOVES:` item and is not in the notes: fix the notes and run it again. `DESIGN: PARSE` (exit 2) is a notes file to fix first.
+1. With `signoff` in the session's agent list, spawn one `signoff` agent. Its mission names the notes file, the evidence file and the repo, and tells it to judge from those two files alone. Without it, the verdict is `skipped-absent`.
+1. Append §S `ds:new signoff=<PASS|CHANGES|skipped-absent> notes=<notes>`. On `CHANGES`, fix each `missing:` line once, re-run step 2, and ask for one re-check; a second `CHANGES` goes to the operator with both lists.
+
+Then commit the contract (tracked home). Whether the sign-off is sound is model-judgment; that the line exists is code: step 5 exits 1 without it.
 
 ### 4. Initial §X refresh
 
@@ -191,27 +208,21 @@ For each repo row added in step 2, run `git status -sb`, `git rev-list --count <
 
 A path that is missing or is not a git tree keeps placeholders plus the note `_(repo not found — verify path)_`.
 
-### 5. Regen INDEX
+### 5. Finish
 
-Run `"${CLAUDE_PLUGIN_ROOT}"/cli/ds regen-index` to append the new dossier to `.scratchpad/INDEX.md`.
-
-### 6. Append §S DONE
-
-Append as its own paragraph (blank line before AND after — per FORMAT.md §11):
-
-```
-<YYYY-MM-DD HH:MM:SS> ds:new — DONE slug=<slug> dir=<dir>
+```bash
+"${CLAUDE_PLUGIN_ROOT}"/cli/ds new-finish <dir>
 ```
 
-### 7. Report
+It exits 1 naming the missing line when §S has no `ds:new signoff=` line: run step 3.7. Otherwise it regenerates `.scratchpad/INDEX.md`, appends `ds:new — DONE slug=<slug> dir=<dir>` to §S, prints the `ds handoff` lines and exits 0.
 
-One-line summary:
+### 6. Report
 
 ```
 ds:new <slug> → .scratchpad/dossier/<date>-<slug>/DOSSIER.md
 §X: <N> repos seeded
 next:
-<each line of "${CLAUDE_PLUGIN_ROOT}"/cli/ds handoff <dir>, verbatim>
+<each handoff line step 5 printed, verbatim>
 ```
 
 Add `.scratchpad/ is not gitignored here` plus the fix when step 1's ignore check fired.

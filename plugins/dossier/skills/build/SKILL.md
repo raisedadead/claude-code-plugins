@@ -148,6 +148,7 @@ Run every git command in this step from the repo root; the `.` pathspec covers o
    Task: <§T task text>
    Verify: <the verify cell's command, or the check of the §V row it names>
    Invariants: <each touched §V row with its check>
+   Design: <the notes= path from §S `ds:new signoff=`; omit this line when §S has none>
    Rules: change only the files this task needs. Leave the commit to me, and
    leave .scratchpad/ and DOSSIER.md as they are. Add no comment that tracks a phase, a step or a task id.
    Now: write the failing test and run it.
@@ -172,7 +173,8 @@ Spawn one `dossier-reviewer` subagent (`Agent` tool, `subagent_type: dossier:dos
 - the §T row (task text) + its §V `check` / `verify` predicate,
 - the staged diff (`git diff --staged` restricted to the files this task touched; for a delegated row, the whole staged diff),
 - the captured test output (the GREEN proof from step 6),
-- the repo path.
+- the repo path,
+- the wave's design notes: the `notes=` path from the §S `ds:new signoff=` line, when §S has one; with no such line the mission names no design file.
 
 Read its verdict line:
 
