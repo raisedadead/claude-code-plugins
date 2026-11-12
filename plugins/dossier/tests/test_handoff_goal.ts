@@ -105,6 +105,27 @@ test('a paused row beside a runnable agent row keeps the goal', async () => {
   assert.ok(out.some(isGoal), out.join('\n'))
 })
 
+test('a paused row is named before the operator step that the next agent row waits on', async () => {
+  ledger(['| T1 | . | A | a | — | — | v |', '| T2 | . | H | Push main | — | — | v |', '| T3 | . | A | c | T2 | — | v |'])
+  const out = await lines('ds:build T1 PAUSE reason=push:main')
+  assert.ok(
+    out.some((line) => line.startsWith('answer: T1 ')),
+    out.join('\n'),
+  )
+  assert.ok(
+    out.some((line) => line.startsWith('after: T2 ')),
+    out.join('\n'),
+  )
+  assert.ok(out.some(isGoal), out.join('\n'))
+})
+
+test('a budget pause leaves the row to resume under a goal', async () => {
+  ledger(['| T1 | x | A | a | — | c | v |', '| T2 | ~ | A | b | T1 | — | v |'])
+  const out = await lines('ds:build T2 PAUSE reason=budget:context full')
+  assert.ok(!out.some((line) => line.startsWith('answer:')), out.join('\n'))
+  assert.ok(out.some(isGoal), out.join('\n'))
+})
+
 test('a pause on a done row, or one followed by a later event, adds no answer line', async () => {
   ledger(['| T1 | x | A | a | — | c | v |', '| T2 | ~ | A | b | T1 | — | v |'])
   const out = await lines('ds:build T1 PAUSE reason=push:main', 'ds:build T2 PAUSE reason=push:main', 'ds:build T2 START')

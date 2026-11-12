@@ -584,10 +584,16 @@ function nearestDir(path: string): string {
   return dir
 }
 
+const REPO_PINS = new Set(['GIT_DIR', 'GIT_COMMON_DIR', 'GIT_WORK_TREE'])
+
+function repoLine(dir: string, args: string[]): string | undefined {
+  const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !REPO_PINS.has(name)))
+  const done = spawnSync('git', ['-C', dir, ...args], { encoding: 'utf8', timeout: GIT_TIMEOUT_MS, env })
+  return done.status === 0 ? done.stdout : undefined
+}
+
 function commonDir(dir: string): string | undefined {
-  const common = gitLine(['-C', dir, ...GIT_DIRS])
-    ?.trim()
-    .split('\n')[1]
+  const common = repoLine(dir, GIT_DIRS)?.trim().split('\n')[1]
   return common ? existingRealPath(common) : undefined
 }
 
@@ -595,13 +601,13 @@ function guardCandidates(root: string, filePath: string): string[] | undefined {
   if (!isAbsolute(filePath)) return [filePath]
   const raw = resolve(filePath)
   const rawRoot = resolve(root)
-  const real = existingRealPath(raw)
+  const real = existingRealPath(filePath)
   const inside: (string | undefined)[] = [rootRelative(raw, rawRoot), rootRelative(real, existingRealPath(rawRoot))]
   if (!inside.some((path) => path !== undefined)) {
-    const near = nearestDir(raw)
+    const near = nearestDir(real)
     const shared = commonDir(near)
     if (shared === undefined || shared !== commonDir(rawRoot)) return undefined
-    const top = gitLine(['-C', near, 'rev-parse', '--show-toplevel'])?.trim()
+    const top = repoLine(near, ['rev-parse', '--show-toplevel'])?.trim()
     if (top) inside.push(rootRelative(raw, top), rootRelative(real, existingRealPath(top)))
   }
   const relative = inside.filter((path): path is string => path !== undefined)

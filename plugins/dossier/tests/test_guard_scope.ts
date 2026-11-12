@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, test } from 'vitest'
 import { ds, tempRoot } from './inproc.ts'
@@ -39,10 +39,24 @@ function registry(paths?: string[]): void {
   writeFileSync(join(project, '.scratchpad', 'dossier', '.invariant-guards.json'), JSON.stringify([entry]))
 }
 
-async function check(file: string): Promise<number> {
+async function check(file: string, env: Record<string, string> = {}): Promise<number> {
   const payload = JSON.stringify({ file_path: file, chunks: ['x = eval(y)'] })
-  return (await ds(base, ['invariant-check', project], ISOLATED, payload)).code
+  return (await ds(base, ['invariant-check', project], { ...ISOLATED, ...env }, payload)).code
 }
+
+test('a GIT_DIR in the environment does not pull an unrelated repo into scope', async () => {
+  registry(['*'])
+  const other = repo('other')
+  assert.equal(await check(join(other, 'src', 'app.py'), { GIT_DIR: join(project, '.git') }), 0)
+})
+
+test('a path that reaches the root through a symlink and a .. segment is still checked', async () => {
+  registry(['src/*.py'])
+  const out = join(base, 'out')
+  mkdirSync(out)
+  symlinkSync(join(project, 'src'), join(out, 'link'))
+  assert.equal(await check(`${out}/link/../src/app.py`), 1)
+})
 
 test('a root-relative glob does not reach a file in an unrelated repo', async () => {
   registry(['src/*.py'])

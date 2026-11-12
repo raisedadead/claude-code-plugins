@@ -13,6 +13,7 @@ const named =
 const BUILD_ENTRY = new RegExp(`^${STAMP} ds:build (\\S+) (.*)$`)
 const PAUSE = /^PAUSE reason=(.+)$/
 const CI = /^ci:(.+)$/
+const NO_ANSWER = /^(ci|budget):/
 
 function pauses(text: string): Map<string, string> {
   const latest = new Map<string, string>()
@@ -40,7 +41,11 @@ export function handoff(text: string, slug: string, stamp: string): string[] {
       const run = ciRun(row.id)
       return run === undefined ? named(label)(row) : `ci: ${row.id} ${run}`
     }
-  const held = rows.filter(({ id, who, state }) => who === 'A' && state !== 'x' && reasons.has(id) && ciRun(id) === undefined)
+  const waits = (id: string): boolean => {
+    const reason = reasons.get(id)
+    return reason !== undefined && !NO_ANSWER.test(reason)
+  }
+  const held = rows.filter(({ id, who, state }) => who === 'A' && state !== 'x' && waits(id))
   const heldIds = new Set(held.map(({ id }) => id))
   const answers = held.map(({ id }) => `answer: ${id} PAUSE ${reasons.get(id)}`)
   const done = new Set(rows.filter(({ state }) => state === 'x').map(({ id }) => id))
