@@ -1,12 +1,9 @@
 import assert from 'node:assert/strict'
-import { execFile } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { promisify } from 'node:util'
 import { ds } from './inproc.ts'
-
-const execFileAsync = promisify(execFile)
 
 export const DS = join(import.meta.dirname, '..', 'cli', 'ds')
 export const SLUG = '2026-10-09-wave'
@@ -20,14 +17,10 @@ export async function run(file: string, args: string[], cwd?: string, env?: Reco
     const done = await ds(cwd ?? process.cwd(), args.slice(1), env)
     return { status: done.code, stdout: done.stdout, stderr: done.stderr }
   }
-  try {
-    const { stdout, stderr } = await execFileAsync(file, args, { cwd, encoding: 'utf8', env: env && { ...process.env, ...env } })
-    return { status: 0, stdout, stderr }
-  } catch (error) {
-    const failed = error as { code?: unknown; stdout?: string; stderr?: string }
-    if (typeof failed.code !== 'number') throw error
-    return { status: failed.code, stdout: failed.stdout ?? '', stderr: failed.stderr ?? '' }
-  }
+  const done = spawnSync(file, args, { cwd, encoding: 'utf8', env: env && { ...process.env, ...env } })
+  if (done.error) throw done.error
+  if (done.status === null) throw new Error(`${file} ${args.join(' ')} ended on ${done.signal}`)
+  return { status: done.status, stdout: done.stdout, stderr: done.stderr }
 }
 
 export async function must(file: string, args: string[], cwd?: string, env?: Record<string, string>): Promise<string> {
