@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeEach, test } from 'vitest'
 import { rootRelative } from '../engine/guards.ts'
@@ -170,12 +171,16 @@ test('invariant-check: a guard glob that starts with / matches when written with
   assert.deepEqual(await evalEdit(link, join(link, 'src', 'app.py')), DENIED)
 })
 
-test('invariant-check: a root-relative guard glob matches a path whose case differs from the root on a case-insensitive disk', async ({ skip }) => {
-  const upper = root.toUpperCase()
-  if (upper === root || !existsSync(upper)) skip()
-  registry([{ ...EVAL_GUARD, paths: ['src/*.py'] }])
-  assert.deepEqual(await evalEdit(root, join(upper, 'src', 'app.py')), DENIED)
-})
+const caseInsensitiveTmp = existsSync(tmpdir().toUpperCase()) && tmpdir().toUpperCase() !== tmpdir()
+
+test.skipIf(!caseInsensitiveTmp)(
+  'invariant-check: a root-relative guard glob matches a path whose case differs from the root on a case-insensitive disk',
+  async () => {
+    const upper = root.toUpperCase()
+    registry([{ ...EVAL_GUARD, paths: ['src/*.py'] }])
+    assert.deepEqual(await evalEdit(root, join(upper, 'src', 'app.py')), DENIED)
+  },
+)
 
 test('invariant-check: an edit in a linked worktree matches a root-relative guard glob through the hook root lookup', async () => {
   registry([{ ...EVAL_GUARD, paths: ['src/*.py'] }])
