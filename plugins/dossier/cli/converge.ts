@@ -172,10 +172,12 @@ function owner(root: string, contract: string, from: string): string | undefined
   return slug && join(root, '.scratchpad', 'dossier', slug)
 }
 
-type Outcome = { ident: string; guard: boolean; ok: boolean }
+type Outcome = { ident: string; guard: boolean; ok: boolean; ran: boolean }
+
+const NOT_RUN = new Set([124, 126, 127])
 
 function baseline(outcomes: Outcome[], append: Append, contract: string, from: string): number {
-  const wrong = outcomes.filter(({ guard, ok }) => ok !== guard).map(({ ident }) => ident)
+  const wrong = outcomes.filter(({ guard, ok, ran }) => (guard ? !ok : ok || !ran)).map(({ ident }) => ident)
   const guards = outcomes.filter(({ guard }) => guard).map(({ ident }) => ident)
   const verdict = wrong.length ? `FAIL ${wrong.join(',')}` : `OK ${outcomes.length - guards.length} fail; guards ${guards.join(',') || 'none'}`
   const dir = owner(process.env.DOSSIER_LEDGER_ROOT || from, contract, from)
@@ -215,7 +217,7 @@ export function convergeVerb(argv: string[], append: Append = () => {}): number 
     const bare = command.slice(1, -1)
     const result = run(bare, root, level)
     const ok = result.code === expectedExit(expect)
-    outcomes.push({ ident, guard: isGuard(expect), ok })
+    outcomes.push({ ident, guard: isGuard(expect), ok, ran: !NOT_RUN.has(result.code) })
     const got = ok ? '' : `; got exit ${result.code}`
     let line = `  ${ok ? 'MET  ' : 'UNMET'} ${ident}. ${bare}  [${expect}${got}]`
     const why = ok ? '' : detail(result.err)

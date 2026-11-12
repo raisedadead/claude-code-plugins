@@ -131,3 +131,41 @@ test('an untracked contract gets a did-not-run line', async () => {
     assert.equal(lines(result, '·').filter((line) => line.includes('did not run')).length, 1, result.stdout)
   })
 })
+
+const baselineLine = (verdict: string): string => `2026-11-12 09:30 ds:converge — baseline ${verdict}`
+
+function replaceBaseline(root: string, replacement: string[]): void {
+  const ledger = join(root, '.scratchpad', 'dossier', SLUG, 'DOSSIER.md')
+  const kept = readFileSync(ledger, 'utf8').replace(/^.*ds:converge — baseline.*\n\n?/m, '')
+  writeFileSync(ledger, kept.replace('## Closeout', `${replacement.map((line) => `${line}\n\n`).join('')}## Closeout`))
+}
+
+test('a latest baseline line that is a FAIL gets a warning that does not block', async () => {
+  await within(true, async ({ root, close }) => {
+    replaceBaseline(root, [baselineLine('FAIL 1')])
+    const result = await close()
+    assert.equal(result.status, 0, result.stdout)
+    assert.equal(lines(result, '⚠').filter((line) => line.includes('baseline')).length, 1, result.stdout)
+  })
+})
+
+test('a FAIL baseline line followed by an OK one gets no warning', async () => {
+  await within(true, async ({ root, close }) => {
+    replaceBaseline(root, [baselineLine('FAIL 1'), baselineLine('OK 1 fail; guards none')])
+    const result = await close()
+    assert.equal(result.status, 0, result.stdout)
+    assert.deepEqual(
+      lines(result, '⚠').filter((line) => line.includes('baseline')),
+      [],
+    )
+  })
+})
+
+test('a tracked contract that no commit adds yet gets a not-committed line', async () => {
+  await within(true, async ({ root, close }) => {
+    git(root, 'update-ref', '-d', 'refs/heads/main')
+    const result = await close()
+    assert.equal(result.status, 0, result.stdout)
+    assert.equal(lines(result, '·').filter((line) => line.includes('the contract is not committed')).length, 1, result.stdout)
+  })
+})

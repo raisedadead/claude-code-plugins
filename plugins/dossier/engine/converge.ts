@@ -66,7 +66,8 @@ export function shlexWords(text: string): string[] | undefined {
   return words
 }
 
-export const PIPE_HINT = 'a | in a grep -E, egrep, grep -P or rg pattern means "or"; match a literal pipe with [|], written [\\|] in the table'
+export const PIPE_HINT =
+  'a | in a grep -E, egrep, grep -P or rg pattern means "or"; match a literal pipe with [|], written [\\|] in the table; for or, use grep -e A -e B'
 
 function shellSegments(text: string): string[][] {
   const segments: string[][] = [[]]

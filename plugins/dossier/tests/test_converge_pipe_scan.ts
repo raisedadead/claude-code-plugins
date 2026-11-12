@@ -34,7 +34,7 @@ async function refusedBeforeRun(root: string, searches: string[]): Promise<void>
   for (const search of searches) {
     const result = await converge(root, [`\`touch ${ran}\` | exit 0`, `${search} | exit 1`])
     assert.equal(result.status, 2, `${search}\n${result.stdout}`)
-    assert.match(verdict(result), /^CONVERGE: PARSE — criterion 2 .*\[\|\]/, `${search}\n${result.stdout}`)
+    assert.match(verdict(result), /^CONVERGE: PARSE — criterion 2 .*\[\|\].*grep -e A -e B/, `${search}\n${result.stdout}`)
   }
   assert.ok(!existsSync(ran), 'a command ran before the refusal')
 }

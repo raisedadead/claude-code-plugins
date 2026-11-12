@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test } from 'vitest'
 import { splitLines, strip } from '../engine/text.ts'
@@ -53,6 +54,37 @@ function lint(dir: string): string[] {
   }
   return findings
 }
+
+function withSkills(skills: Record<string, string>, body: (dir: string) => void): void {
+  const dir = mkdtempSync(join(tmpdir(), 'ds-routing-'))
+  try {
+    for (const [name, description] of Object.entries(skills)) {
+      mkdirSync(join(dir, name))
+      writeFileSync(join(dir, name, 'SKILL.md'), `---\nname: ${name}\ndescription: ${description}\n---\n\nbody\n`)
+    }
+    body(dir)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
+}
+
+test('distinct trigger phrases lint clean', () => {
+  withSkills({ alpha: 'Do alpha. Invoke when the user says "alpha", "a1".', beta: 'Do beta. Invoke when the user says "beta", "b1".' }, (dir) =>
+    assert.deepEqual(lint(dir), []),
+  )
+})
+
+test('a phrase two skills claim is a collision', () => {
+  withSkills({ alpha: 'Alpha. Invoke when the user says "shared", "a1".', beta: 'Beta. Invoke when the user says "shared", "b1".' }, (dir) =>
+    assert.deepEqual(lint(dir), ['FAIL trigger-phrase collision: "shared" claimed by alpha, beta']),
+  )
+})
+
+test('a description with no trigger clause fails', () => {
+  withSkills({ gamma: 'Does gamma things with no trigger clause.' }, (dir) =>
+    assert.deepEqual(lint(dir), ["FAIL gamma: description has no 'Invoke when' / 'Use when' trigger clause"]),
+  )
+})
 
 test('the shipped skill descriptions lint clean', () => {
   assert.deepEqual(lint(SKILLS), [])

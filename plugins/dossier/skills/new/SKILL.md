@@ -183,7 +183,7 @@ A row that passes before the work cannot judge the work. Run every row once, now
 "${CLAUDE_PLUGIN_ROOT}"/cli/ds converge --baseline <contract-path>
 ```
 
-`BASELINE: OK` (exit 0) appends `ds:converge — baseline OK …` to §S; then commit the contract (tracked home). `BASELINE: FAIL <ids>` (exit 1) names each row that passed, or each `guard` row that failed: rewrite the row so it fails until the work lands, or, for a row that must stay green throughout (a full CI run), end its expect cell with `guard` (`exit 0 guard`), then rerun. Which row is a guard is model-judgment; the baseline line lists every guard so the operator sees them. `CONVERGE: PARSE` (exit 2) is a contract to fix first.
+`BASELINE: OK` (exit 0) appends `ds:converge — baseline OK …` to §S; then commit the contract (tracked home). `BASELINE: FAIL <ids>` (exit 1) appends `ds:converge — baseline FAIL <ids>` to §S (nothing is written when no live wave owns the contract) and names each row that passed or did not run (exit 124, 126 or 127), or each `guard` row that failed: rewrite the row so it fails until the work lands (a script the wave has not written yet: `test -f tools/x.sh && bash tools/x.sh`), or, for a row that must stay green throughout (a full CI run), end its expect cell with `guard` (`exit 0 guard`), then rerun. Which row is a guard is model-judgment; the baseline line lists every guard so the operator sees them. `CONVERGE: PARSE` (exit 2) is a contract to fix first.
 
 ### 4. Initial §X refresh
 

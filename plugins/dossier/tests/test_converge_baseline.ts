@@ -72,6 +72,31 @@ test('rows that fail and a passing guard make a clean baseline that lists the gu
   })
 })
 
+test('a row whose command did not run fails the baseline', async () => {
+  await withWave(['`false` | exit 0', '`sleeep 1` | exit 0'], async (root, path, status) => {
+    const result = await ds(root, ['converge', '--baseline', path])
+    assert.equal(result.status, 1, result.stdout)
+    assert.match(last(result, 'BASELINE:'), /^BASELINE: FAIL 2$/, result.stdout)
+    assert.match(status()[0] ?? '', / ds:converge — baseline FAIL 2$/)
+  })
+})
+
+test('a row that runs and exits 1 keeps the baseline clean', async () => {
+  await withWave(['`false` | exit 0', '`sh -c "exit 1"` | exit 0'], async (root, path) => {
+    const result = await ds(root, ['converge', '--baseline', path])
+    assert.equal(result.status, 0, result.stdout)
+    assert.match(last(result, 'BASELINE:'), /^BASELINE: OK 2 fail; guards none$/, result.stdout)
+  })
+})
+
+test('a relative contract path still finds the live wave and writes the status line', async () => {
+  await withWave(['`false` | exit 0'], async (root, _path, status) => {
+    const result = await ds(root, ['converge', '--baseline', `.dossier/${SLUG}.md`])
+    assert.equal(result.status, 0, result.stdout)
+    assert.match(status()[0] ?? '', / ds:converge — baseline OK 1 fail; guards none$/)
+  })
+})
+
 test('a normal run judges a guard row by its exit code', async () => {
   await withWave(['`true` | exit 0 guard', '`false` | exit 0 guard'], async (root, path, status) => {
     const result = await ds(root, ['converge', path])

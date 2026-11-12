@@ -75,7 +75,7 @@ test('s-append prints the line it wrote, stamped to the second', async () => {
   assert.ok(readFileSync(join(dir, 'DOSSIER.md'), 'utf8').split('\n').includes(printed), printed)
 })
 
-test('the goal is met by a stop line s-append prints after the handoff', async () => {
+test('a stop line s-append prints after the handoff is stamped after the goal second', async () => {
   ledger(['| T1 | . | A | a | — | — | v |'])
   const condition = await goal()
   assert.ok(condition.includes('demo'), condition)
@@ -104,6 +104,18 @@ test('an agent row paused on a non-CI reason names the reason and gets no goal',
     assert.equal(answer.length, 1, out.join('\n'))
     assert.ok(answer[0]?.includes('push:not pushed'), out.join('\n'))
   }
+})
+
+test('an agent row paused on a CI reason is listed as paused, gets no answer line and keeps the goal', async () => {
+  ledger(['| T1 | x | A | a | — | c | v |', '| T2 | ~ | A | b | T1 | — | v |'])
+  const out = await lines('ds:build T2 PAUSE reason=ci:run 42')
+  assert.deepEqual(
+    out.filter((line) => !isGoal(line) && !line.startsWith('/dossier:build')),
+    ['paused: T2 b'],
+    out.join('\n'),
+  )
+  assert.equal(out.filter(isGoal).length, 1, out.join('\n'))
+  assert.ok(out.includes('/dossier:build --auto'), out.join('\n'))
 })
 
 test('a paused row beside a runnable agent row keeps the goal', async () => {
@@ -151,7 +163,7 @@ test('a blocked row with a pause gets one answer line', async () => {
   assert.ok(!out.some(isGoal), out.join('\n'))
 })
 
-test('the goal is not met by a stop line from before the handoff or by a non-stop line', async () => {
+test('a stop line stamped before the goal second, or a START line, fails the stamp and order check', async () => {
   ledger(['| T1 | x | A | a | — | c | v |', '| T2 | . | A | b | T1 | — | v |'], ['2026-11-12 09:05:00 ds:build T1 PAUSE reason=push:main'])
   const condition = await goal()
   assert.ok(!satisfies(condition, '2026-11-12 09:05:00 ds:build T1 PAUSE reason=push:main'), condition)
