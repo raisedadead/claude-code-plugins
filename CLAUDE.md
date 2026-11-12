@@ -28,7 +28,7 @@ Probe the invocation the code makes, not the one the sentence resembles. A docst
 
 ## Tests
 
-Before you ask the operator to push, run `bash tools/ci.sh all` and read its last line. It is the list CI runs, at CI's versions; a `CI: FAIL` line names each failed step.
+Before you ask the operator to push, run `bash tools/ci.sh all` and read its last line. It is the list CI runs, at CI's versions, except `node-tests`, which `CI_STEPS=node-tests bash tools/ci.sh all` runs; a `CI: FAIL` line names each failed step.
 
 Tests guard invariants that would silently break. They do not assert that documentation contains a phrase. Every gate wants two tests: one proving it fires, one proving it does not false-positive.
 
