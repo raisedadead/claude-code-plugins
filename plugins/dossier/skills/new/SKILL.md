@@ -54,7 +54,7 @@ Ask one block at a time, tersely, no preamble:
 1. **§G goal** — one-line outcome, then up to 5 scope bullets (IN / NOT IN).
 1. **§C constraints** — locked decisions, stack notes. Bullets, ≤10.
 1. **§X repos** — each repo this dossier touches, as `<org>/<name>` or an absolute path. Operator-provided; no git-remote magic.
-1. **Initial §T tasks** (optional) — T1..Tn now, or later via `ds:build`. Give a row `who=H` only after the agent tried to prove it in a scratch fixture (a throwaway directory, an isolated tmux socket, a disposable session) and could not. When the operator must walk a dashboard or set credentials for that row, name `whetstone:wizard` in its task text; with whetstone installed, it writes the walk-through script. A re-check that waits on a date gets its own row with a `T<n>+<k>d` need, so `ds close --carry` carries it; a row that joins it to work done now holds the wave open until the date.
+1. **Initial §T tasks** (optional) — T1..Tn now, or later via `ds:build`. Give a row `who=H` only after the agent tried to prove it in a scratch fixture (a throwaway directory, an isolated tmux socket, a disposable session) and could not. A re-check that waits on a date gets its own row with a `T<n>+<k>d` need, so `ds close --carry` carries it; a row that joins it to work done now holds the wave open until the date.
 
 **A wide refactor is sequenced expand–contract.** One mechanical change whose blast radius breaks many call sites at once (rename a column, retype a shared symbol) cannot land green as one task. Expand first: add the new form beside the old. Then migrate the call sites in batches, one task each, each `needs` the expand. Contract last: delete the old form in a task that `needs` every batch.
 

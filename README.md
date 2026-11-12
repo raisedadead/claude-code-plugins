@@ -65,7 +65,7 @@ The home is the repo's choice. `mkdir .dossier` opts into tracked contracts at `
 | `/whetstone:html-report`      | exit 1 on a diagram that does not parse       |
 | `/whetstone:research-report`  | every claim gets a verdict or `UNRULED`       |
 
-The other whetstone skills are methods with no computed gate: `grill`, `diagnose`, `prototype`, `wizard`, `domain-modeling` and `codebase-design`. They are adapted from [mattpocock/skills](https://github.com/mattpocock/skills) under its MIT licence; [THIRD_PARTY_NOTICES.md](./plugins/whetstone/THIRD_PARTY_NOTICES.md) lists each file. whetstone also ships the `whetstone-scout` and `whetstone-grounder` agents and the `verify-claims` workflow.
+The other whetstone skills are methods with no computed gate: `grill`, `diagnose`, `prototype`, `domain-modeling` and `codebase-design`. They are adapted from [mattpocock/skills](https://github.com/mattpocock/skills) under its MIT licence; [THIRD_PARTY_NOTICES.md](./plugins/whetstone/THIRD_PARTY_NOTICES.md) lists each file. whetstone also ships the `whetstone-scout` and `whetstone-grounder` agents and the `verify-claims` workflow.
 
 whetstone also ships its scripts as commands on the Bash tool's `PATH` while it is enabled, which is how dossier's composed routes reach them in any project: `run-slice`, `lint-skill`, `flake-runner`, `tiger-check <repo>` (column budget of the lines a commit adds), `claim-check <path>...` (prose asserting enforcement that names nothing checkable) and `html-report <report.md> <report.html>`.
 

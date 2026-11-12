@@ -8,7 +8,6 @@ These files are copied or adapted from [mattpocock/skills](https://github.com/ma
 | `skills/grill/reference/questionnaire.md` | `skills/productivity/to-questionnaire/SKILL.md` |
 | `skills/diagnose/` | `skills/engineering/diagnosing-bugs/` |
 | `skills/prototype/` | `skills/engineering/prototype/` |
-| `skills/wizard/` | `skills/engineering/wizard/` |
 | `skills/domain-modeling/` | `skills/engineering/domain-modeling/` |
 | `skills/codebase-design/` | `skills/engineering/codebase-design/` |
 | `skills/codebase-design/reference/architecture-review.md` | `skills/engineering/improve-codebase-architecture/SKILL.md` |
