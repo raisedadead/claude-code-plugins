@@ -74,7 +74,7 @@ Inside a dossier build run with `--review`, the `dossier-reviewer` agent reads t
 
 Four TIGER_STYLE rules are absent on purpose, so their absence does not read as an oversight:
 
-- **Assert the negative space, as a testing rule** — already carried by the repo's testing standard: `run_slice.sh` fails a slice whose test passed on its first run, and every gate is required to ship a positive and a negative test. That is the same rule enforced one level up, at the test rather than at the function.
+- **Assert the negative space, as a testing rule** — already carried by the repo's testing standard: `run-slice` fails a slice whose test passed on its first run, and every gate is required to ship a positive and a negative test. That is the same rule enforced one level up, at the test rather than at the function.
 - **Zero technical debt** — a caught bug becomes a recorded, testable invariant through the dossier plugin's backprop verb. `ds:status --drift` runs those checks when asked, and only a high-recurrence class is promoted to a write-time guard; nothing runs them on every commit by itself. Denying `TODO` / `FIXME` markers at write time is a personal coding standard and belongs in an operator's own harness, not shipped to everyone who installs a plugin.
 - **Say why in comments** — same reason. Comment policy is one person's taste; a plugin that ships it imposes it.
 - **Static allocation, no recursion** — TIGER_STYLE was written for a database in Zig. These rules do not translate to Python, bash and markdown, and pretending otherwise would be cargo cult.

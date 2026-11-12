@@ -26,13 +26,13 @@ Spend disproportionate effort here. **Be aggressive. Be creative. Refuse to give
 1. **Failing test** at whatever seam reaches the bug: unit, integration, e2e.
 2. **Curl / HTTP script** against a running dev server.
 3. **CLI invocation** with a fixture input, diffing stdout against a known-good snapshot.
-4. **Headless browser script** (Playwright / Puppeteer) that drives the UI and asserts on DOM/console/network.
+4. **Headless browser script** (Playwright) that drives the UI and asserts on DOM/console/network.
 5. **Replay a captured trace.** Save a real network request / payload / event log to disk; replay it through the code path in isolation.
 6. **Throwaway harness.** Spin up a minimal subset of the system (one service, mocked deps) that exercises the bug code path with a single function call.
 7. **Property / fuzz loop.** If the bug is "sometimes wrong output", run 1000 random inputs and look for the failure mode.
 8. **Bisection harness.** If the bug appeared between two known states (commit, dataset, version), automate "boot at state X, check, repeat" so you can `git bisect run` it.
 9. **Differential loop.** Run the same input through old-version vs new-version (or two configs) and diff outputs.
-10. **HITL bash script.** Last resort. If a human must click, drive _them_ with `scripts/hitl-loop.template.sh` so the loop is still structured. Captured output feeds back to you.
+10. **Human-in-the-loop script.** Last resort. If a human must click, drive _them_ with a copy of `scripts/hitl-loop.template.ts`: edit the `step` and `capture` calls in `main()`, then run `node <copy>.ts`, so the loop is still structured. Each captured value prints as `KEY=VALUE` for you to read. `capture` echoes its answer to the terminal, so capture observations and leave signing in to a `step`.
 
 Build the right feedback loop, and the bug is 90% fixed.
 
@@ -61,7 +61,7 @@ Phase 1 is done when the loop is **tight** and **red-capable**: you can name **o
 - [ ] **Red-capable**: it drives the actual bug code path and asserts the **user's exact symptom**, so it can go red on this bug and green once fixed. Not "runs without erroring"; it must be able to _catch this specific bug_.
 - [ ] **Deterministic**: same verdict every run (flaky bugs: a pinned, high reproduction rate, per above).
 - [ ] **Fast**: seconds, not minutes.
-- [ ] **Agent-runnable**: you can run it unattended; a human in the loop only via `scripts/hitl-loop.template.sh`.
+- [ ] **Agent-runnable**: you can run it unattended; a human in the loop only via `scripts/hitl-loop.template.ts`.
 
 If you catch yourself reading code to build a theory before this command exists, **stop: jumping straight to a hypothesis is the exact failure this skill prevents.** No red-capable command, no Phase 2.
 
