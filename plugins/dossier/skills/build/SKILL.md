@@ -107,7 +107,7 @@ When present:
 A slice is the run of §T rows that one design covers. `ds:new` step 3.7 signs off the first slice. This step runs on the first row of each later slice: a row whose build needs a design (a new interface, contract, schema or data shape, or more than 5 files) that no earlier sign-off covers. Which row starts a slice is model-judgment.
 
 1. Write the slice's design to `<root>/.scratchpad/tmp/<date>-<slug>/design-notes-<T-id>.md`, in the shape of `ds:new` step 3.7 item 1.
-1. Run `ds:new` step 3.7 items 2 and 3 on it: `ds design-check`, then the `signoff` agent, with the findings file `signoff-findings-<T-id>.md`.
+1. Run `ds:new` step 3.7 items 2 and 3 on it: `ds design-check`, then the `evidence` agent, or the `signoff` agent when the session has no `evidence` agent, with the findings file `signoff-findings-<T-id>.md`.
 1. Append §S `ds:build <T-id> signoff=<PASS|CHANGES|skipped-absent> notes=<path>`. Report each `note:` line as a follow-up. On `CHANGES`, fix each `block:` line once and ask for one re-check; a second `CHANGES` is a PAUSE (`review`) with both lists.
 
 ### 6. WORK (TDD)
