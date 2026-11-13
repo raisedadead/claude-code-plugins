@@ -27,7 +27,21 @@ function run(args: unknown, agent: Agent): Promise<Result> {
 
 const FINDING: Finding = { file: 'run.ts', line: 3, severity: 'blocker', problem: 'shell injection', fix: 'use execFileSync' }
 
-test('runs every lens and every refute pass on the whetstone reviewer, with a spec lens only when a spec is given', async () => {
+test('starts one refute pass for each finding, and diffs a base ref against the merge base', async () => {
+  const calls: Options[] = []
+  const prompts: string[] = []
+  await run({ baseRef: 'main' }, async (prompt, options) => {
+    calls.push(options)
+    prompts.push(prompt)
+    if (options.label === 'review:slop' || options.label === 'review:tests') return { findings: [FINDING] }
+    return options.label?.startsWith('review:') ? { findings: [] } : { real: true, why: 'x' }
+  })
+  assert.equal(calls.filter((call) => call.label?.startsWith('verify:')).length, 2)
+  assert.ok(calls.every((call) => call.agentType === 'whetstone:whetstone-reviewer'))
+  assert.ok(prompts.every((prompt) => prompt.includes('diff main...HEAD')))
+})
+
+test('runs every lens on the whetstone reviewer, with a spec lens only when a spec is given', async () => {
   const calls: Options[] = []
   const agent: Agent = async (_prompt, options) => {
     calls.push(options)

@@ -6,7 +6,8 @@ const REVIEW_LINE_AGENTS = new Set(['reviewer', PLUGIN_REVIEWER])
 const VERDICT_AGENTS = new Set([...BULLET_AGENTS, ...REVIEW_LINE_AGENTS])
 const GRAMMAR = /^(DOUBT: FAILURES|DOUBT: NO FAILURE FOUND|NO FAILURE FOUND|REVIEW: PASS|REVIEW: CHANGES|SUBTRACT: NOTHING TO CUT|SUBTRACT: [1-9]\d* CUTS?)$/
 const REVIEWER = /^REVIEW: (clean|[1-9]\d* findings?)(?=$|[\s(;])/
-const PATH_FINDING = /^\S+:\d+: (blocker|major|minor|note): \S/
+const PATH_FINDING = /^\S+:\d+(-\d+)?: (blocker|major|minor|note): \S/
+const BULLET = /^[-*] /
 const CAVEATS = /^#{1,6}\s*Caveats\b/i
 const MAX_FINDINGS = 20
 const MAX_FINDING_CHARS = 200
@@ -46,7 +47,7 @@ export function verdictLines(text: string, agent?: unknown): string[] {
 }
 
 function capped(findings: string[]): string[] {
-  return findings.slice(0, MAX_FINDINGS).map((finding) => finding.slice(0, MAX_FINDING_CHARS))
+  return findings.slice(0, MAX_FINDINGS).map((finding) => Array.from(finding).slice(0, MAX_FINDING_CHARS).join(''))
 }
 
 function bulletsAfterVerdict(lines: string[]): string[] {
@@ -54,12 +55,16 @@ function bulletsAfterVerdict(lines: string[]): string[] {
   if (start < 0) return []
   const rest = lines.slice(start + 1)
   const end = rest.findIndex((line) => CAVEATS.test(line))
-  return (end < 0 ? rest : rest.slice(0, end)).filter((line) => line.startsWith('- ')).map((line) => line.slice(2).trim())
+  return (end < 0 ? rest : rest.slice(0, end)).filter((line) => BULLET.test(line)).map((line) => line.slice(2).trim())
+}
+
+function pathLine(line: string): string {
+  return line.replace(BULLET, '').replace(/^`([^`]+)`/, '$1')
 }
 
 export function findingLines(text: string, agent?: unknown): string[] {
   const lines = splitLines(text).map((line) => line.trim())
-  if (agent === PLUGIN_REVIEWER) return capped(lines.filter((line) => PATH_FINDING.test(line)))
+  if (agent === PLUGIN_REVIEWER) return capped(lines.map(pathLine).filter((line) => PATH_FINDING.test(line)))
   if (typeof agent === 'string' && BULLET_AGENTS.has(agent)) return capped(bulletsAfterVerdict(lines))
   return []
 }

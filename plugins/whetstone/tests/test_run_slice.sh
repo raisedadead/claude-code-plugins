@@ -49,6 +49,7 @@ grep -q 'did not run' "$ERR" || fail "red --expect with a command that did not r
 
 expect_exit 2 "red --expect with no pattern" red --expect
 expect_exit 2 "red --expect with an empty pattern" red --expect '' false
+expect_exit 2 "red --expect with a pattern that is not an ERE" red --expect '(' sh -c 'echo "boom (x"; exit 1'
 expect_exit 2 "green --expect" green --expect boom true
 expect_exit 2 "full --expect" full --expect boom true
 

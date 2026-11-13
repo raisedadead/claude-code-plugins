@@ -31,6 +31,11 @@ describe('lint-skill', () => {
     )
   })
 
+  test('fails a value that opens and ends with a quote but closes it early', () => {
+    const text = skill('name: new\ndescription: Starts it. Use when the user asks to start.\nargument-hint: "<a>" | "<b>"')
+    expect(has(lintSkill(text, 'new', []), (f) => f.startsWith('FAIL') && f.includes(`argument-hint (opens with '"')`))).toBe(true)
+  })
+
   test('passes the same value inside single quotes', () => {
     const text = skill(`name: new\ndescription: Starts it. Use when the user asks to start.\nargument-hint: '"<goal sentence>" | <slug>'`)
     expect(lintSkill(text, 'new', [])).toEqual([])

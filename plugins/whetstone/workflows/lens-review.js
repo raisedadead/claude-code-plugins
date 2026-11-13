@@ -25,7 +25,7 @@ const baseRef = input.baseRef || ''
 const spec = input.spec || ''
 const SPEC_SCOPE = `\nSPEC: ${spec}. Read it yourself: a file with Read, an issue URL with \`gh issue view <url>\`, another URL with \`curl -sL <url>\`.`
 const diffCmd = baseRef
-  ? `git -C ${repo} diff ${baseRef} && git -C ${repo} log --oneline ${baseRef}..HEAD`
+  ? `git -C ${repo} diff ${baseRef}...HEAD && git -C ${repo} diff HEAD && git -C ${repo} log --oneline ${baseRef}..HEAD`
   : `git -C ${repo} diff HEAD && git -C ${repo} status --short`
 
 const SCOPE = `DIFF UNDER REVIEW: run \`${diffCmd}\` yourself to obtain it. Repo: ${repo}.

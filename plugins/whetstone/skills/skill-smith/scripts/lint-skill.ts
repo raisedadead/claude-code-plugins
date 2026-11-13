@@ -11,9 +11,15 @@ const LINE_BUDGET = 500
 const LINE_WARN = 400
 const DESC_MAX = 1024
 
+function closesOnlyAtEnd(quote: string, inner: string): boolean {
+  return quote === '"' ? !/(^|[^\\])"/.test(inner) : !inner.replaceAll("''", '').includes("'")
+}
+
 function unquoted(value: string): string {
-  const quoted = value.length >= 2 && value[0] === value[value.length - 1] && `"'`.includes(value[0] ?? '')
-  return quoted ? value.slice(1, -1) : value
+  const quote = value[0] ?? ''
+  const inner = value.slice(1, -1)
+  const quoted = value.length >= 2 && quote === value[value.length - 1] && `"'`.includes(quote) && closesOnlyAtEnd(quote, inner)
+  return quoted ? inner : value
 }
 
 function field(frontmatter: string, key: string): string {

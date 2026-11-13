@@ -13,6 +13,12 @@ if [[ "${1:-}" == '--expect' ]]; then
 	fi
 	EXPECT="$2"
 	shift 2
+	pattern_rc=0
+	grep -Eq -- "${EXPECT}" </dev/null 2>/dev/null || pattern_rc=$?
+	if [[ "${pattern_rc}" -eq 2 ]]; then
+		printf 'run_slice: --expect %s is not a valid ERE\n%s\n' "${EXPECT}" "${USAGE}" >&2
+		exit 2
+	fi
 fi
 
 [[ $# -ge 1 ]] || {

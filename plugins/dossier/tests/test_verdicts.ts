@@ -68,6 +68,20 @@ test('plugin reviewer findings are its path:line lines, not its prose', () => {
   assert.deepEqual(findingLines(text, REVIEWER), ['run.ts:3: blocker: shell injection. Use execFileSync.', 'src/a.ts:10: note: old gap.'])
 })
 
+test('a plugin reviewer finding is read as a bullet, in backticks or with a line range', () => {
+  const text = '- a.ts:3: major: x.\n`b.ts:4`: minor: y.\n* c.ts:5-7: note: z.\nREVIEW: 3 findings\n'
+  assert.deepEqual(findingLines(text, REVIEWER), ['a.ts:3: major: x.', 'b.ts:4: minor: y.', 'c.ts:5-7: note: z.'])
+})
+
+test('a doubter finding is read from a star bullet too', () => {
+  assert.deepEqual(findingLines('DOUBT: FAILURES\n* a → b\n', DOUBTER), ['a → b'])
+})
+
+test('the 200-character cut never splits a character', () => {
+  const kept = findingLines(`DOUBT: FAILURES\n- ${'x'.repeat(199)}\u{1F600}yyy\n`, DOUBTER)[0]
+  assert.equal(kept, `${'x'.repeat(199)}\u{1F600}`)
+})
+
 test('the rig reviewer, another agent and a reply with no verdict log no findings', () => {
   assert.deepEqual(findingLines('a.ts:3: major: x. y.\nREVIEW: 1 finding (1 major)\n', 'reviewer'), [])
   assert.deepEqual(findingLines('DOUBT: FAILURES\n- a → b\n', 'general-purpose'), [])
