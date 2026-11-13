@@ -824,6 +824,36 @@ def verdict_log(lines) -> dict[str, dict[str, int]]:
     return {kind: dict(counter) for kind, counter in counts.items()}
 
 
+FINDING_PATH = re.compile(r"^\S+:\d+: ")
+
+
+def finding_key(finding: str) -> str:
+    return " ".join(FINDING_PATH.sub("", finding).lower().split())
+
+
+def recurring_findings(lines) -> dict[str, dict[str, int]]:
+    counts: dict[str, collections.Counter] = collections.defaultdict(
+        collections.Counter
+    )
+    for line in lines:
+        try:
+            record = json.loads(line)
+        except (ValueError, TypeError):
+            continue
+        if not isinstance(record, dict):
+            continue
+        findings = record.get("findings")
+        if not isinstance(findings, list):
+            continue
+        keys = {finding_key(item) for item in findings if isinstance(item, str)}
+        counts[str(record.get("agent_type"))].update(keys)
+    return {
+        kind: {key: count for key, count in counter.items() if count >= 2}
+        for kind, counter in counts.items()
+        if any(count >= 2 for count in counter.values())
+    }
+
+
 def report(title: str, counter: collections.Counter, limit: int | None = None) -> None:
     print(f"\n## {title}  (total {sum(counter.values())})")
     for key, count in counter.most_common(limit):
@@ -898,19 +928,21 @@ def census_missed() -> None:
 
 def census_verdict_log() -> None:
     paths = sys.argv[2:] or [".scratchpad/dossier/.verdicts.jsonl"]
-    total: dict[str, collections.Counter] = collections.defaultdict(collections.Counter)
+    lines: list[str] = []
     for name in paths:
         path = Path(name)
-        lines = path.read_text(encoding="utf-8").splitlines() if path.is_file() else []
-        for kind, counts in verdict_log(lines).items():
-            total[kind].update(counts)
+        if path.is_file():
+            lines.extend(path.read_text(encoding="utf-8").splitlines())
     print(
         f"source: {', '.join(paths)}, written by the dossier SubagentStop hook. "
         "A FINDING: line counts once per judged finding, every other line once "
-        "per stop."
+        "per stop. A recurring finding is one that 2 or more stops logged, "
+        "matched without its path:line, case or spacing."
     )
-    for kind, counter in total.items():
-        report(kind, counter)
+    for kind, counts in verdict_log(lines).items():
+        report(kind, collections.Counter(counts))
+    for kind, counts in recurring_findings(lines).items():
+        report(f"recurring findings: {kind}", collections.Counter(counts))
 
 
 STATUS_LINE = re.compile(

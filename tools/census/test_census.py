@@ -330,6 +330,43 @@ def test_the_verdict_log_counts_verdicts_misses_and_empty_messages() -> None:
     }
 
 
+def test_recurring_findings_count_rows_that_share_a_finding() -> None:
+    lines = [
+        '{"agent_type": "whetstone:whetstone-doubter", "findings": ["No  Rollback → data loss", "x"]}',
+        '{"agent_type": "whetstone:whetstone-doubter", "findings": ["no rollback → data loss"]}',
+        '{"agent_type": "whetstone:whetstone-doubter", "verdicts": ["DOUBT: FAILURES"]}',
+        '{"agent_type": "whetstone:whetstone-reviewer", "findings": ["a.ts:3: major: shell injection"]}',
+        '{"agent_type": "whetstone:whetstone-reviewer", "findings": ["b.ts:9: major: shell injection"]}',
+        '{"agent_type": "whetstone:whetstone-reviewer", "findings": ["c.ts:1: note: once"]}',
+        "not json",
+    ]
+    assert census.recurring_findings(lines) == {
+        "whetstone:whetstone-doubter": {"no rollback → data loss": 2},
+        "whetstone:whetstone-reviewer": {"major: shell injection": 2},
+    }
+
+
+def test_the_verdict_log_report_prints_recurring_findings() -> None:
+    import contextlib
+    import io
+    import tempfile
+
+    row = '{"agent_type": "whetstone:whetstone-doubter", "verdicts": ["DOUBT: FAILURES"], "findings": ["no rollback"]}'
+    out = io.StringIO()
+    argv = sys.argv
+    with tempfile.TemporaryDirectory() as root:
+        log = Path(root) / "verdicts.jsonl"
+        log.write_text(f"{row}\n{row}\n", encoding="utf-8")
+        sys.argv = ["census.py", "verdict-log", str(log)]
+        try:
+            with contextlib.redirect_stdout(out):
+                census.census_verdict_log()
+        finally:
+            sys.argv = argv
+    assert "recurring findings: whetstone:whetstone-doubter" in out.getvalue()
+    assert "no rollback" in out.getvalue()
+
+
 IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
 
 
