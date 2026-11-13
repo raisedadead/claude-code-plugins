@@ -23,4 +23,33 @@ if "$SLICE" full false 2>/dev/null; then fail "full with a failing suite must ex
 if "$SLICE" bogus true 2>/dev/null; then fail "unknown phase must exit non-zero"; fi
 if "$SLICE" red 2>/dev/null; then fail "no command must exit non-zero"; fi
 
+OUT="$(mktemp)"
+ERR="$(mktemp)"
+trap 'rm -f "$OUT" "$ERR"' EXIT
+
+expect_exit() {
+	local want="$1" name="$2"
+	shift 2
+	local rc=0
+	"$SLICE" "$@" >"$OUT" 2>"$ERR" || rc=$?
+	[[ "${rc}" -eq "${want}" ]] || fail "${name}: want exit ${want}, got ${rc}"
+}
+
+expect_exit 0 "red --expect with a matching failure" red --expect boom sh -c 'echo boom; exit 1'
+grep -q boom "$OUT" || fail "red --expect must still print the test output"
+
+expect_exit 1 "red --expect with another failure" red --expect boom sh -c 'echo other; exit 1'
+grep -q 'does not match --expect' "$ERR" || fail "red --expect with another failure must say the output does not match"
+
+expect_exit 1 "red --expect with a passing test" red --expect boom sh -c 'echo boom; exit 0'
+grep -q PASSED "$ERR" || fail "red --expect with a passing test must say it PASSED"
+
+expect_exit 1 "red --expect with a command that did not run" red --expect boom /nonexistent/command
+grep -q 'did not run' "$ERR" || fail "red --expect with a command that did not run must say so"
+
+expect_exit 2 "red --expect with no pattern" red --expect
+expect_exit 2 "red --expect with an empty pattern" red --expect '' false
+expect_exit 2 "green --expect" green --expect boom true
+expect_exit 2 "full --expect" full --expect boom true
+
 printf 'ok\n'

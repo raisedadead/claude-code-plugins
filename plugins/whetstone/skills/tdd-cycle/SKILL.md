@@ -21,10 +21,10 @@ Before the first assertion, name the **seam**: the public boundary you test thro
 1. **RED — write one failing test.** Then prove it fails for the right reason:
 
    ```bash
-   run-slice red <test-command>
+   run-slice red --expect '<text the failure must print>' <test-command>
    ```
 
-   `run-slice red` exits non-zero when the test *passed* — a test that never failed characterises nothing. Check the test against `reference/anti-patterns.md` and `reference/examples.md` before running it; mock only where `reference/mocking.md` allows.
+   `run-slice red` exits non-zero when the test *passed* — a test that never failed characterises nothing. With `--expect`, it also exits non-zero when the output does not match the pattern (an extended regex), so a failure from a typo or a missing import does not count as RED. Check the test against `reference/anti-patterns.md` and `reference/examples.md` before running it; mock only where `reference/mocking.md` allows.
 
 1. **GREEN — minimum code to pass:**
 
