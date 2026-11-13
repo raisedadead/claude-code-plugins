@@ -2,6 +2,8 @@
 
 Wave-scoped engineering workflow. One resumable `DOSSIER.md` drives a wave of work — tasks, bugs, invariants, cross-repo state, evidence log — with in-session quality gates.
 
+Under managed settings or a Team or Enterprise `/login`, Claude Code's built-in guard `sec-default` does not run these gates. The skills and `cli/ds` still work.
+
 Docs live at the repository root, which is not shipped to the install path — these are absolute so they resolve from the plugin cache too:
 
 - [README](https://github.com/raisedadead/claude-code-plugins/blob/main/README.md) — install, commands, gates, configuration

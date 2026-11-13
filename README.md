@@ -81,6 +81,8 @@ whetstone also ships its scripts as commands on the Bash tool's `PATH` while it 
 
 In-session hooks. The four write-time gates — the header and marker guards (one row and one switch below), the invariant guard and freshness verify — scope themselves to projects that opted in — with no `.scratchpad/dossier/` directory they do nothing — and inside such a repo they cover ad-hoc edits too, not just work driven by a command. The fake-impl backstop is the exception on both counts: it runs at Stop rather than at write time, and it is keyed to its env var alone, so once you set that it applies in any repo. Gate strength matches signal strength — see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
+Under managed settings, `managed-mcp.json` or a Team or Enterprise `/login`, Claude Code's built-in guard `sec-default` does not run a user-installed mod's `classic.*` hooks, so no gate in either plugin runs. `/plugin` shows a note on the plugin. See RESEARCH.md F46.
+
 | Gate                   | Default | Toggle                               | What it catches                                                                                                                                                     |
 | ---------------------- | ------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **marker guard**       | on      | `DOSSIER_MARKER_GUARD=off`           | Phase and audit-id markers leaking into source; bad state tokens in a ledger.                                                                                       |
