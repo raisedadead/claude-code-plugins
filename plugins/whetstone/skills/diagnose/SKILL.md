@@ -127,6 +127,8 @@ If a correct seam exists:
 4. Watch it pass.
 5. Re-run the Phase 1 feedback loop against the original (un-minimised) scenario.
 
+**Stop after 2 failed fixes for one bug.** Tell the user, then go back to Phase 3. Add "the design is wrong" to the ranked hypotheses, with its prediction, and rank it again with the others.
+
 ## Phase 6: Cleanup
 
 Required before declaring done:
