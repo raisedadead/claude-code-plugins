@@ -54,6 +54,7 @@ Read §S grep `ds:build <T-id>`. Identify last event:
 | (no entries)               | full run from step 5                                                 |
 | `START`                    | step 5 (re-run safe)                                                 |
 | `delegate=`                | a clean tree (item 1's check) goes to step 6.2 item 2; otherwise, after `red=skipped-green` or with a `—` verify cell, item 4; otherwise item 3 on the builder's test |
+| `signoff=`                 | step 5.7 item 3's re-check after `CHANGES`; otherwise step 6         |
 | `red=skipped-green`        | step 6.2 item 2, the `—` mission, with a fresh builder               |
 | `red=`                     | step 6.2 item 3, the GREEN half, with a fresh builder                |
 | `rebuild=1`                | step 6.2 item 4 on the tree as it stands                             |
@@ -100,6 +101,14 @@ When present:
 1. Append §S: `ds:build <T-id> doubt=<FAILURES:<n>-actionable | clean>`.
 
 **One doubt cycle max per task** — in-build doubt is a gate, not the full doubt-pass loop; a contested design after one cycle escalates instead of looping. Zero actionable findings = report exactly that, in those words (doubt-theater guard): the doubter found nothing actionable.
+
+### 5.7. SLICE SIGN-OFF (first row of a later slice)
+
+A slice is the run of §T rows that one design covers. `ds:new` step 3.7 signs off the first slice. This step runs on the first row of each later slice: a row whose build needs a design (a new interface, contract, schema or data shape, or more than 5 files) that no earlier sign-off covers. Which row starts a slice is model-judgment.
+
+1. Write the slice's design to `<root>/.scratchpad/tmp/<date>-<slug>/design-notes-<T-id>.md`, in the shape of `ds:new` step 3.7 item 1.
+1. Run `ds:new` step 3.7 items 2 and 3 on it: `ds design-check`, then the `signoff` agent, with the findings file `signoff-findings-<T-id>.md`.
+1. Append §S `ds:build <T-id> signoff=<PASS|CHANGES|skipped-absent> notes=<path>`. Report each `note:` line as a follow-up. On `CHANGES`, fix each `block:` line once and ask for one re-check; a second `CHANGES` is a PAUSE (`review`) with both lists.
 
 ### 6. WORK (TDD)
 
@@ -148,7 +157,7 @@ Run every git command in this step from the repo root; the `.` pathspec covers o
    Task: <§T task text>
    Verify: <the verify cell's command, or the check of the §V row it names>
    Invariants: <each touched §V row with its check>
-   Design: <the notes= path from §S `ds:new signoff=`; omit this line when §S has none>
+   Design: <the notes= path of the newest §S line that holds `signoff=`; omit this line when §S has none>
    Rules: change only the files this task needs. Leave the commit to me, and
    leave .scratchpad/ and DOSSIER.md as they are. Add no comment that tracks a phase, a step or a task id.
    Now: write the failing test and run it.
@@ -174,7 +183,7 @@ Spawn one `dossier-reviewer` subagent (`Agent` tool, `subagent_type: dossier:dos
 - the staged diff (`git diff --staged` restricted to the files this task touched; for a delegated row, the whole staged diff),
 - the captured test output (the GREEN proof from step 6),
 - the repo path,
-- the wave's design notes: the `notes=` path from the §S `ds:new signoff=` line, when §S has one; with no such line the mission names no design file.
+- the slice's design notes: the `notes=` path of the newest §S line that holds `signoff=` (step 5.7 or `ds:new` step 3.7); with no such line the mission names no design file.
 
 Read its verdict line:
 

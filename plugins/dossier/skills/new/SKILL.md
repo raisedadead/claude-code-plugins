@@ -187,9 +187,9 @@ A row that passes before the work cannot judge the work. Run every row once, now
 
 ### 3.7. Sign off the design
 
-The sign-off judges the design before any build, from a notes file and the lines it cites, so it reads nothing else.
+The sign-off judges the design before any build, from a notes file and the lines it cites, so it reads nothing else. One design covers one slice. This step signs off the wave's first slice. `ds:build` step 5.7 signs off each later slice before its build.
 
-1. Write the design to `<root>/.scratchpad/tmp/<date>-<slug>/design-notes.md`: the goal in the operator's words, each claim about current code with its `path:N` cite, a `## done-when` table in the contract's shape (a row that must stay green ends its expect cell with `guard`), and one `REMOVES: <name>` line per skill, file or command the wave deletes or renames.
+1. Write the first slice's design to `<root>/.scratchpad/tmp/<date>-<slug>/design-notes.md`: the goal in the operator's words, each claim about current code with its `path:N` cite, a `## done-when` table in the contract's shape (a row that must stay green ends its expect cell with `guard`), and one `REMOVES: <name>` line per skill, file or command the wave deletes or renames.
 1. Run the computed checks until they pass:
 
    ```bash
@@ -197,8 +197,8 @@ The sign-off judges the design before any build, from a notes file and the lines
    ```
 
    `DESIGN: OK` (exit 0) writes `<notes minus .md>-evidence.md` with every cited line. `DESIGN: FAIL <n>` (exit 1) names each cite that does not resolve, each check that passes today or did not run, and each file that names a `REMOVES:` item and is not in the notes: fix the notes and run it again. `DESIGN: PARSE` (exit 2) is a notes file to fix first.
-1. With `signoff` in the session's agent list, spawn one `signoff` agent. The plugin does not ship it: it is the operator's own agent (ADAPTERS.md). Put the full text of the notes file and the evidence file in its mission, because the agent may have no read tool, and name a separate findings file, `<root>/.scratchpad/tmp/<date>-<slug>/signoff-findings.md`. It writes one `missing: <what>, at <file:line or section>` or `evidence missing: <fact>, at <file:line>` line per finding there and ends its reply with `SIGNOFF: PASS` or `SIGNOFF: CHANGES`. Without the agent, the verdict is `skipped-absent`.
-1. Append §S `ds:new signoff=<PASS|CHANGES|skipped-absent> notes=<notes>`, where `<notes>` is the design notes path from item 1, never the findings file: `ds:build` hands it to the builder and the reviewer as the design. On `CHANGES`, fix each `missing:` line once, re-run item 2 (`ds design-check`), and ask for one re-check; a second `CHANGES` goes to the operator with both lists.
+1. With `signoff` in the session's agent list, spawn one `signoff` agent. The plugin does not ship it: it is the operator's own agent (ADAPTERS.md). Put the full text of the notes file and the evidence file in its mission, because the agent may have no read tool, and name a separate findings file, `<root>/.scratchpad/tmp/<date>-<slug>/signoff-findings.md`. It writes one line per finding there: `block:` or `note:`, then `missing: <what>, at <file:line or section>` or `evidence missing: <fact>, at <file:line>`. A `block:` finding makes the build wrong or unsafe; every other finding is a `note:`. The reply ends with `SIGNOFF: PASS` when no line is `block:`, else `SIGNOFF: CHANGES`. Without the agent, the verdict is `skipped-absent`.
+1. Append §S `ds:new signoff=<PASS|CHANGES|skipped-absent> notes=<notes>`, where `<notes>` is the design notes path from item 1, never the findings file: `ds:build` hands it to the builder and the reviewer as the design. Put each `note:` line in the step-6 report as a follow-up. On `CHANGES`, fix each `block:` line once, re-run item 2 (`ds design-check`), and ask for one re-check; a second `CHANGES` goes to the operator with both lists.
 
 Then commit the contract (tracked home). Whether the sign-off is sound is model-judgment; that the line exists is code: step 5 exits 1 without it.
 
@@ -225,6 +225,7 @@ It exits 1 naming the missing line when §S has no `ds:new signoff=` line: run s
 ```
 ds:new <slug> → .scratchpad/dossier/<date>-<slug>/DOSSIER.md
 §X: <N> repos seeded
+follow-ups: <each sign-off note: line, or none>
 next:
 <each handoff line step 5 printed, verbatim>
 ```
