@@ -13,6 +13,7 @@ These files are copied or adapted from [mattpocock/skills](https://github.com/ma
 | `skills/codebase-design/reference/architecture-review.md` | `skills/engineering/improve-codebase-architecture/SKILL.md` |
 | `skills/skill-smith/reference/writing-for-agents.md`, `skill-mechanics.md` | `skills/productivity/writing-for-agents/` |
 | `skills/tdd-cycle/reference/mocking.md`, `examples.md` | `skills/engineering/tdd/mocking.md`, `tests.md` |
+| `workflows/lens-review.js` (the smell list) | `skills/engineering/code-review/SKILL.md` |
 
 The upstream licence applies to those files:
 
