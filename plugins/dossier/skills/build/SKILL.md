@@ -108,7 +108,7 @@ A slice is the run of §T rows that one design covers. `ds:new` step 3.7 signs o
 
 1. Write the slice's design to `<root>/.scratchpad/tmp/<date>-<slug>/design-notes-<T-id>.md`, in the shape of `ds:new` step 3.7 item 1.
 1. Run `ds:new` step 3.7 items 2 and 3 on it: `ds design-check`, then the `evidence` agent, or the `signoff` agent when the session has no `evidence` agent, with the findings file `signoff-findings-<T-id>.md`.
-1. Append §S `ds:build <T-id> signoff=<PASS|CHANGES|skipped-absent> notes=<path>`. Report each `note:` line as a follow-up. On `CHANGES`, fix each `block:` line once and ask for one re-check; a second `CHANGES` is a PAUSE (`review`) with both lists.
+1. Append §S `ds:build <T-id> signoff=<PASS|CHANGES|skipped-absent> rows=<the slice's T-ids, comma-separated> notes=<path>`. Report each `note:` line as a follow-up. On `CHANGES`, fix each `block:` line once and ask for one re-check; a second `CHANGES` is a PAUSE (`review`) with both lists.
 
 ### 6. WORK (TDD)
 
@@ -157,7 +157,7 @@ Run every git command in this step from the repo root; the `.` pathspec covers o
    Task: <§T task text>
    Verify: <the verify cell's command, or the check of the §V row it names>
    Invariants: <each touched §V row with its check>
-   Design: <the notes= path of the newest §S line that holds `signoff=`; omit this line when §S has none>
+   Design: <the notes= path of the §S `signoff=` line whose rows= names this row, else of the `ds:new signoff=` line; omit this line when §S has neither>
    Rules: change only the files this task needs. Leave the commit to me, and
    leave .scratchpad/ and DOSSIER.md as they are. Add no comment that tracks a phase, a step or a task id.
    Now: write the failing test and run it.
@@ -183,7 +183,7 @@ Spawn one `dossier-reviewer` subagent (`Agent` tool, `subagent_type: dossier:dos
 - the staged diff (`git diff --staged` restricted to the files this task touched; for a delegated row, the whole staged diff),
 - the captured test output (the GREEN proof from step 6),
 - the repo path,
-- the slice's design notes: the `notes=` path of the newest §S line that holds `signoff=` (step 5.7 or `ds:new` step 3.7); with no such line the mission names no design file.
+- the slice's design notes: the `notes=` path of the §S `signoff=` line whose `rows=` names this row (step 5.7), else of the `ds:new signoff=` line (`ds:new` step 3.7); with neither, the mission names no design file.
 
 Read its verdict line:
 
@@ -339,7 +339,7 @@ An operator-written goal such as "finish the dossier" cannot pass an open `who=H
 | `destructive`       | task implies delete/drop/migrate/force, schema change, files outside §X repos, or a rebase/cherry-pick conflict hit mid-WORK (§6 conflict route)                                                                  |
 | `push`              | any `git push` / network-mutating op — stop and hand back; never auto-push                                                                                                                                        |
 | `retries-exhausted` | test still RED after 2 fix attempts + one auto-`ds:backprop`                                                                                                                                                      |
-| `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5)                                                                                                                                |
+| `review`            | `--review` set and `dossier-reviewer` returns `CHANGES` after one fix cycle (§6.5), or a second slice sign-off returns `CHANGES` (§5.7)                                                                          |
 | `tiger`             | `tiger-check` exit 1 (§7 tiger route) — an added line exceeds a limit the repo itself declared. Exit 2 is advisory and never pauses                                                                               |
 | `x-stale`           | the Vm.X §X-stale guard (§8a) would prompt — the operator answers it                                                                                                                                              |
 | `ci`                | a CI run on a pushed commit ends in a conclusion other than `success`, or `gh` cannot list the runs (CI watch above)                                                                                             |
