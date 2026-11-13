@@ -24,6 +24,18 @@ describe('lint-skill', () => {
     expect(has(lintSkill(text, 'ship', []), (f) => f.startsWith('FAIL') && f.includes('YAML-safe'))).toBe(true)
   })
 
+  test('fails an unquoted value that opens with a quote it does not close at the end', () => {
+    const text = skill('name: new\ndescription: Starts it. Use when the user asks to start.\nargument-hint: "<goal sentence>" | <slug>')
+    expect(lintSkill(text, 'new', [])).toContain(
+      `FAIL new: frontmatter value is not YAML-safe unquoted — argument-hint (opens with '"'). Wrap it in single quotes; the host drops every field when the block fails to parse.`,
+    )
+  })
+
+  test('passes the same value inside single quotes', () => {
+    const text = skill(`name: new\ndescription: Starts it. Use when the user asks to start.\nargument-hint: '"<goal sentence>" | <slug>'`)
+    expect(lintSkill(text, 'new', [])).toEqual([])
+  })
+
   test('passes quoted values and a plain pipe', () => {
     const quoted = skill("name: quoted\ndescription: 'Does it. Use when the user says \"bug: <x>\".'\nargument-hint: '[--preview] | --all'")
     const piped = skill('name: build\ndescription: Builds. Use when the user asks to build.\nargument-hint: <T-id> | --next | --auto')

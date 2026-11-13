@@ -5,7 +5,7 @@ const FIRST_PERSON = unicodeRegex("\\bI\\b|\\bI'")
 const TRIGGER_MARKERS = ['use when', 'invoke when']
 const TRIGGER_START = new RegExp(`\\b(?:${TRIGGER_MARKERS.join('|')})\\b`)
 const QUOTE_OR_STOP = /"([^"]+)"|\.(?=\s|$)/g
-const YAML_INDICATORS = '[]{}*&!%@`>|'
+const YAML_INDICATORS = '[]{}*&!%@`>|"\''
 const BLOCK_SCALAR = /^[|>][1-9+-]{0,2}$/
 const LINE_BUDGET = 500
 const LINE_WARN = 400

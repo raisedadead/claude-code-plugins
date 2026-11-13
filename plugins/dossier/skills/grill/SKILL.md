@@ -1,7 +1,7 @@
 ---
 name: grill
 description: Define-phase interrogation before ds:new, from a goal sentence. Facts get looked up and cited; operator decisions get asked, serial while an answer adds or removes groups, batched once none does; "discuss more" forks a decision into sub-decisions. Stops when the frontier is empty, the decision set survives an audit (when whetstone is installed) AND the operator confirms; output feeds §G + §C so ds:new never re-asks. Invoke when the user says "grill me" / "ds:grill", when ds:new gets a goal with an open decision, or for any design interview in a repo with `.scratchpad/dossier/`. Mid-build questions inside ds:build stay with ds:build.
-argument-hint: "<goal sentence>" | --resume <slug>
+argument-hint: '"<goal sentence>" | --resume <slug>'
 ---
 
 # ds:grill — interrogate before you scaffold
