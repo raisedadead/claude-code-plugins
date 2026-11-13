@@ -35,7 +35,7 @@ import { migrate } from '../engine/migrate.ts'
 import { firstWorktree, GIT_DIRS, linkedPrimary, WORKTREES } from '../engine/root.ts'
 import { sessionReport } from '../engine/session.ts'
 import { splitLines, strip } from '../engine/text.ts'
-import { isVerdictAgent, structuredVerdicts, verdictLines } from '../engine/verdicts.ts'
+import { findingLines, isVerdictAgent, structuredFindings, structuredVerdicts, verdictLines } from '../engine/verdicts.ts'
 import {
   hasRepo,
   headerState,
@@ -763,16 +763,18 @@ function verdictLogVerb(args: string[]): number {
     ts: new Date().toISOString(),
     agent_type: stop.agent_type,
     agent_id: typeof stop.agent_id === 'string' ? stop.agent_id : null,
-    verdicts: stopVerdicts(stop),
+    ...stopRecord(stop),
   }
   appendFileSync(join(dossiers, '.verdicts.jsonl'), `${JSON.stringify(record)}\n`)
   return 0
 }
 
-function stopVerdicts(stop: Record<string, unknown>): string[] | null {
-  const message = stop.last_assistant_message
-  if (typeof message === 'string') return verdictLines(message, stop.agent_type)
-  return transcriptVerdicts(stop.agent_transcript_path)
+function stopRecord(stop: Record<string, unknown>): { verdicts: string[] | null; findings: string[] } {
+  const { last_assistant_message: message, agent_type: agent } = stop
+  if (typeof message === 'string') return { verdicts: verdictLines(message, agent), findings: findingLines(message, agent) }
+  const output = lastStructuredOutput(stop.agent_transcript_path)
+  if (output === undefined) return { verdicts: null, findings: [] }
+  return { verdicts: structuredVerdicts(output.input), findings: structuredFindings(output.input, agent) }
 }
 
 function isStructuredOutput(block: unknown): boolean {
@@ -781,13 +783,13 @@ function isStructuredOutput(block: unknown): boolean {
   return type === 'tool_use' && name === 'StructuredOutput'
 }
 
-function transcriptVerdicts(path: unknown): string[] | null {
-  if (typeof path !== 'string') return null
+function lastStructuredOutput(path: unknown): { input?: unknown } | undefined {
+  if (typeof path !== 'string') return undefined
   let text: string
   try {
     text = readFileSync(path, 'utf8')
   } catch {
-    return null
+    return undefined
   }
   const calls = splitLines(text).flatMap((line) => {
     try {
@@ -798,8 +800,7 @@ function transcriptVerdicts(path: unknown): string[] | null {
       return []
     }
   })
-  const last = calls.at(-1) as { input?: unknown } | undefined
-  return last === undefined ? null : structuredVerdicts(last.input)
+  return calls.at(-1) as { input?: unknown } | undefined
 }
 
 function delegationCheckVerb(args: string[]): number {

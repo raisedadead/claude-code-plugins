@@ -119,6 +119,35 @@ test('verdict-log reads a structured-output verdict from the agent transcript', 
   })
 })
 
+test('verdict-log keeps the findings of each stop beside its verdict', async () => {
+  await withRoot(async (root) => {
+    const structured = (agent_type: string, name: string) => {
+      const path = join(root, `${name}.jsonl`)
+      const input = { findings: [{ file: 'a.ts', line: 3, severity: 'major', problem: 'x', fix: 'y' }] }
+      writeFileSync(path, `${JSON.stringify({ message: { content: [{ type: 'tool_use', name: 'StructuredOutput', input }] } })}\n`)
+      return { agent_type, agent_transcript_path: path }
+    }
+    const stops = [
+      { agent_type: 'whetstone:whetstone-doubter', last_assistant_message: 'DOUBT: FAILURES\n- a → b\n## Caveats\n- c' },
+      structured('whetstone:whetstone-reviewer', 'plugin'),
+      structured('reviewer', 'rig'),
+    ]
+    for (const stop of stops) assert.equal((await logVerdict(root, stop)).code, 0)
+    const records = readFileSync(join(root, '.scratchpad', 'dossier', '.verdicts.jsonl'), 'utf8')
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>)
+    assert.deepEqual(
+      records.map(({ verdicts, findings }) => ({ verdicts, findings })),
+      [
+        { verdicts: ['DOUBT: FAILURES'], findings: ['a → b'] },
+        { verdicts: ['REVIEW: 1 finding'], findings: ['a.ts:3: major: x'] },
+        { verdicts: ['REVIEW: 1 finding'], findings: [] },
+      ],
+    )
+  })
+})
+
 test('verdict-log writes nothing for another agent, outside a dossier project, or on a bad payload', async () => {
   await withRoot(async (root) => {
     assert.equal((await logVerdict(root, { agent_type: 'general-purpose', last_assistant_message: 'REVIEW: PASS' })).code, 0)
