@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { changedPaths, clean, commitsIn, conflicted, fixupTarget, globMatch, mergeBase, overlaps, worktreeOf } from '../engine/branch.ts'
+import { changedPaths, clean, commitsIn, conflicted, fixupTarget, globMatch, mergeBase, onRemote, overlaps, worktreeOf } from '../engine/branch.ts'
 import { checks, type Commit as Planned, commits, edges, header, lint, planHash, section, setHeader } from '../engine/plan.ts'
 import { formatRow } from '../engine/rows.ts'
 import { git, gitTry, Refusal } from '../engine/sh.ts'
@@ -169,7 +169,13 @@ export function cmdIntegrate(cwd: string, args: Args): string {
   const laneTree = worktreeOf(cwd, lane)
   const mainTree = worktreeOf(cwd, main)
   if (!laneTree || !mainTree) throw new Refusal(`both ${main} and ${lane} must be checked out in a worktree`)
-  const rebased = gitTry(laneTree, 'rebase', main)
+  const behind = gitTry(laneTree, 'merge-base', '--is-ancestor', main, lane).code !== 0
+  const pushed = behind ? commitsIn(laneTree, `${main}..${lane}`).filter((c) => onRemote(laneTree, c.sha)) : []
+  if (pushed.length)
+    throw new Refusal(
+      `${lane} has pushed commits that a rebase would rewrite: ${pushed.map((c) => c.sha.slice(0, 7)).join(' ')}\nMerge ${main} into ${lane} by hand, or plan the rest as new commits`,
+    )
+  const rebased = behind ? gitTry(laneTree, 'rebase', main) : { code: 0, out: '', err: '' }
   if (rebased.code !== 0) {
     const paths = conflicted(laneTree)
     log(dossier, `integrate ${lane} CONFLICT ${paths.join(' ')}`)

@@ -57,6 +57,27 @@ test('integrate stops on a conflict and names the path', () => {
   assert.equal(worktreeOf(cwd, 'nope'), undefined)
 })
 
+test('integrate leaves a pushed lane alone, and fast-forwards a lane already on top', () => {
+  const cwd = repo()
+  checkedPlan(cwd)
+  ds(cwd, 'anchors')
+  const lane = join(dirname(cwd), 'lane')
+  sh(cwd, `git worktree add -q -b demo-lane-2 ${lane} demo`)
+  file(join(lane, 'lib/c.ts'), 'lane\n')
+  sh(lane, 'git add . && git commit -qm "fixup! feat(c): add the c module"')
+  const remote = join(dirname(cwd), 'remote.git')
+  sh(cwd, `git init -q --bare ${remote} && git remote add origin ${remote} && git push -q origin demo-lane-2`)
+  const ahead = ds(cwd, 'integrate', 'demo-lane-2')
+  assert.equal(ahead.code, 0, ahead.err)
+  file(join(cwd, 'src/b.ts'), 'b\n')
+  sh(cwd, 'git add . && git commit -qm "fixup! feat(b): add the b module"')
+  file(join(lane, 'lib/d.ts'), 'd\n')
+  sh(lane, 'git add . && git commit -qm "fixup! feat(c): add the c module" && git push -q origin demo-lane-2')
+  const refused = ds(cwd, 'integrate', 'demo-lane-2')
+  assert.equal(refused.code, 1)
+  assert.match(refused.err, /demo-lane-2 has pushed commits that a rebase would rewrite/)
+})
+
 test('close carries the notes of moved rows and refuses an archive name that is taken', () => {
   const cwd = repo()
   const path = planned(cwd)
