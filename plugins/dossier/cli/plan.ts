@@ -70,6 +70,7 @@ function logFor(root: string, file: string, line: string): void {
 
 export function cmdAdd(cwd: string, args: Args): string {
   const title = args._.join(' ').trim()
+  if (!title || /^<[^>]*>$/.test(title)) throw new Refusal('ds add needs a title: ds add "<title>" [--who A|H] [--state s] [--tail t] [--register]', 2)
   const root = ledgerRoot(cwd)
   const state = (flag(args, 'state') ?? 'next') as State
   if (!STATES.includes(state)) throw new Refusal(`state must be one of ${STATES.join(', ')}`, 2)

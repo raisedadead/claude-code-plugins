@@ -1,6 +1,7 @@
 import { Refusal } from '../engine/sh.ts'
 import { cmdAnchors, cmdDone, cmdIntegrate, cmdLanes, cmdMission, cmdNext, cmdVerify } from './build.ts'
 import { cmdCi, cmdHandoff } from './handoff.ts'
+import { cmdMigrate } from './migrate.ts'
 import { type Args, cmdAdd, cmdCheck, cmdLint, cmdLog, cmdNew, cmdPackPlan, cmdPath, cmdRecordPlan, cmdSet, cmdTriage } from './plan.ts'
 import { cmdClose, cmdPackReview, cmdRecordReview, cmdShape, cmdShipArgs } from './ship.ts'
 
@@ -30,6 +31,10 @@ export const COMMANDS: Record<string, Command> = {
   close: { run: cmdClose, usage: 'close "<one line>"  close the dossier and move it to _archive' },
   handoff: { run: cmdHandoff, usage: 'handoff  the next step for this dossier, one line per step' },
   ci: { run: cmdCi, usage: 'ci  wait for the CI runs of the pushed commit (exit 1: a run failed)' },
+  migrate: {
+    run: cmdMigrate,
+    usage: 'migrate [--dry-run]  once per repo: old register, LATER.md, INDEX.md and old dossiers to O rows, with .pre-migrate.md backups',
+  },
   path: { run: cmdPath, usage: 'path  the live dossier folder' },
 }
 

@@ -134,7 +134,13 @@ function sleep(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
 }
 
-export function takeId(root: string): string {
+export function nextIds(root: string, count: number, floor = 1): string[] {
+  const stored = Number(readOr(join(stateDir(), 'next-id'), '0').trim()) || 0
+  const first = Math.max(stored, highestId(root) + 1, floor)
+  return Array.from({ length: count }, (_, i) => `O${first + i}`)
+}
+
+export function takeIds(root: string, count: number, floor = 1): string[] {
   const dir = stateDir()
   mkdirSync(dir, { recursive: true })
   const lock = join(dir, 'next-id.lock')
@@ -150,12 +156,15 @@ export function takeId(root: string): string {
   }
   if (!held) throw new Refusal(`the ID counter is locked; remove ${lock} if no ds command is running`)
   try {
-    const file = join(dir, 'next-id')
-    const stored = Number(readOr(file, '0').trim()) || 0
-    const id = Math.max(stored, highestId(root) + 1, 1)
-    write(file, String(id + 1))
-    return `O${id}`
+    const ids = nextIds(root, count, floor)
+    const last = ids.length ? idNumber(ids[ids.length - 1] ?? 'O0') : Math.max(Number(readOr(join(dir, 'next-id'), '0').trim()) || 0, floor) - 1
+    write(join(dir, 'next-id'), String(Math.max(last + 1, floor)))
+    return ids
   } finally {
     rmdirSync(lock)
   }
+}
+
+export function takeId(root: string): string {
+  return takeIds(root, 1)[0] ?? 'O1'
 }

@@ -34,6 +34,7 @@ test('add and set refuse a row out of shape, and set finds rows in the register'
   const cwd = repo()
   assert.match(ds(cwd, 'add', 'Fix', 'T4', 'again', '--register').err, /another ID/)
   assert.match(ds(cwd, 'add', 'Later', '--state', 'later', '--register').err, /needs a tail/)
+  for (const empty of [[], ['<title>']]) assert.match(ds(cwd, 'add', ...empty, '--who', 'H', '--register').err, /needs a title/)
   ds(cwd, 'add', 'Later', '--state', 'later', '--tail', 'until 2027-01-01', '--register')
   assert.equal(ds(cwd, 'set', 'O1', 'drop', 'no longer needed').out, '- O1 drop A Later · no longer needed')
   assert.match(ds(cwd, 'set', 'O9', 'done', 'x').err, /no row O9/)
