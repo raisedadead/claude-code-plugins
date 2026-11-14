@@ -12,4 +12,4 @@ This plugin is built for one operator's Claude Code rig, and is not meant for an
 | `ds` on PATH | every skill | the chezmoi shim `~/.bin/ds` |
 | The ID counter `~/.local/state/ds/next-id` | `ds add` | this plugin |
 
-The commands need Node 22.18 or later and git. `ds triage` uses `gh` to check `after pr` triggers, and skips them when `gh` fails.
+The commands need Node 22.18 or later and git. `ds triage` uses `gh` to check `after pr` triggers, and skips them when `gh` fails. `ds ci` needs `gh`, and exits 2 when `gh` fails (`tests/test_handoff.ts`).

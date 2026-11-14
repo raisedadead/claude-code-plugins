@@ -120,17 +120,24 @@ export function runChecks(
 ): { ok: boolean; text: string } {
   const found = checks(read(dossier.file))
   if (found.errors.length) throw new Refusal(found.errors.join('\n'))
+  const done = new Set(
+    rowsOf(dossier)
+      .filter((r) => r.state === 'done')
+      .map((r) => r.id),
+  )
   const tree = workTree(cwd)
   const out: string[] = []
   let ok = true
   for (const check of found.checks.filter(only ?? (() => true))) {
-    const done = run(['bash', '-c', check.command], tree, { timeoutMs: 600_000 })
-    const passed = done.code === check.expect
-    const good = baseline && !check.guard ? !passed : passed
+    const ran = run(['bash', '-c', check.command], tree, { timeoutMs: 600_000 })
+    const passed = ran.code === check.expect
+    const built = check.rows.length > 0 && check.rows.every((id) => done.has(id))
+    const stays = check.guard || built
+    const good = baseline && !stays ? !passed : passed
     if (!good) ok = false
-    const want = baseline && !check.guard ? `anything but exit ${check.expect}` : `exit ${check.expect}`
-    out.push(`${good ? 'OK' : 'FAIL'} ${check.name}${check.guard ? ' (guard)' : ''}: exit ${done.code}, want ${want}`)
-    const tail = `${done.out}${done.err}`.trim().split('\n').slice(-5).join('\n')
+    const want = baseline && !stays ? `anything but exit ${check.expect}` : `exit ${check.expect}`
+    out.push(`${good ? 'OK' : 'FAIL'} ${check.name}${check.guard ? ' (guard)' : built ? ' (built)' : ''}: exit ${ran.code}, want ${want}`)
+    const tail = `${ran.out}${ran.err}`.trim().split('\n').slice(-5).join('\n')
     if (!good && tail) out.push(tail.replace(/^/gm, '  '))
   }
   return { ok, text: out.join('\n') }

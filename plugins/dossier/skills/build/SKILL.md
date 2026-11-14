@@ -20,4 +20,4 @@ The build runs in a `team-lead` agent, not in the main session. Spawn it once pe
 6. When a lane is done: `ds integrate <lane>`. On a conflict, the `committer` resolves it.
 7. Go back to step 3.
 
-A row with no code, such as a decision, is closed with `ds done <id> --cite "<decision>"`. Each hand-back names the row and the dossier path, since the main session may have been cleared.
+A row with no code, such as a decision, is closed with `ds done <id> --cite "<decision>"`. Each hand-back names the row and the dossier path, since the main session may have been cleared, and ends with the lines `ds handoff` prints.

@@ -62,8 +62,8 @@ checked: <plan hash, or ->
 - **Header**: `ds` sets `state` (`plan`, `build`, `ship`, `done`) and `checked`. `ds close` adds `closed:`.
 - **Goal**: the operator's words, quoted.
 - **Scope**: `- in: <text>` and `- out: <text>`.
-- **Decisions**: `1. <question> — <answer> · <YYYY-MM-DD>`, then `confirmed: "<the operator's words>"`. An answer of `?` is open.
-- **Checks**: a table `| name | command | expect | guard | rows |`. The command is in backticks, with `\|` for a pipe. `expect` is `exit <n>`. `guard` is `yes` or `no`. `rows` names the rows the check proves.
+- **Decisions**: `1. <question> — <answer> · <YYYY-MM-DD>`, then `confirmed: "<the operator's words>"`. An answer of `?` is open. A decision split on "discuss more" is answered `split into <n>, <m>`, and its parts are new numbered decisions. A decision that waits on someone outside the room is answered `waits on <who>: <questionnaire path>`, with a `wait` row for it.
+- **Checks**: a table `| name | command | expect | guard | rows |`. The command is in backticks, with `\|` for a pipe. `expect` is `exit <n>`. `guard` is `yes` or `no`. `rows` names the rows the check proves. `ds check --baseline` wants each check to fail, except a guard and a check whose rows are all `done`, which must pass.
 - **Edge cases**: `- <case> → <row IDs or check names>`.
 - **Commits**: a table `| subject | rows | paths |`. Paths are globs (`*`, `**`, or a folder ending in `/`). A subject is a Conventional Commits subject of at most 50 characters, and no subject is the start of another.
 - **Rows**: the row list.
