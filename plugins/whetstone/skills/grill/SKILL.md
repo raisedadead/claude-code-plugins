@@ -5,7 +5,7 @@ description: Interview the user about a plan, a design or a decision until every
 
 # grill — settle every decision before the work starts
 
-In a repository with `.scratchpad/dossier/`, use `dossier:grill` instead: it writes the same interview to a ledger that `ds:new` reads.
+In a repository with `.scratchpad/dossier/`, use `/dossier:plan`: it runs this interview and writes the answers into the plan.
 
 Map the request as a **design tree**: each decision branches into the decisions that depend on it. The **frontier** is every decision whose prerequisites are settled — the questions you can ask now without a guess at an answer you have not heard.
 
@@ -13,7 +13,7 @@ Map the request as a **design tree**: each decision branches into the decisions 
 
 1. **Find the facts yourself.** A question the repository, the tools or the web can answer is a fact, not a decision. Look it up, or send a subagent for a long search, and ask the other questions while it runs. Only the questions that depend on that fact wait. Done when each open node is a fact with its source or a decision for the user.
 1. **Ask the frontier in one round.** Ask it as one decision block, in the format below, then wait for the answers. Number the decisions across groups and rounds, so a reply reads "2b, 3c". Put the recommended option first, labelled `Recommended:`. It names what backs it: the `path:line`, the command or the URL you probed. A taste call says so. Every option states what it changes or costs.
-1. **Recompute the frontier.** Each answer settles nodes and unblocks others. A decision that depends on an open one rides in the block with a "Skip if" note. When its answer adds or removes whole groups, it goes to a later round. When an answer changes a premise, re-derive each earlier recommendation that rested on it and ask again the ones that change.
+1. **Recompute the frontier.** Each answer settles nodes and unblocks others. A decision that depends on an open one rides in the block with a "Skip if" note. When its answer adds or removes whole groups, it goes to a later round. When an answer changes a premise, re-derive each earlier recommendation that rested on it and ask again the ones that change. "Discuss more" on a decision splits it into the decisions it hides; ask them as new numbered decisions.
 1. **Audit the set.** Before the last round closes, read the decisions together against the constraints the user stated. Two decisions that conflict, or a decision that breaks a constraint, go back to the user as a new question.
 1. **Stop on an empty frontier and a confirmation.** Every branch is visited and nothing is silently assumed. Summarise the decisions, one line each, and act only after the user confirms the summary.
 
