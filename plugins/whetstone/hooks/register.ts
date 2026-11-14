@@ -39,21 +39,8 @@ async function skillLintReminder($: EngineInterface, path: string): Promise<stri
   return `skill-smith lint for ${path}:\n${lines.join('\n')}\nReminder only, never blocking; whetstone:skill-smith holds the rubric.`
 }
 
-const MAX_SHOWN = 10
-const MAX_REASON_CHARS = 2000
-
-function claimReason(reply: string): string | undefined {
-  const flagged = flaggedUnits(reply).map(([number, unit]) => `line ${number}: "${unit}"`)
-  if (!flagged.length) return undefined
-  const shown = flagged.slice(0, MAX_SHOWN)
-  if (flagged.length > MAX_SHOWN) shown.push(`… and ${flagged.length - MAX_SHOWN} more`)
-  const body = [...shown.join('\n')].slice(0, MAX_REASON_CHARS).join('')
-  return (
-    'Unbacked claim in the reply:\n' +
-    `${body}\n` +
-    'Name the exit code, cite the source, or label it advisory / model-judgment / opt-in — or drop the blocks / enforces / gates / denies / prevents / refuses verb.\n' +
-    'Then send the whole reply again with the fix. In focus mode the operator sees only your last message.'
-  )
+export function claimCountKey(at: Date = new Date()): string {
+  return `claims:${at.toISOString().slice(0, 10)}`
 }
 
 export const register: Register = (on) => {
@@ -70,8 +57,10 @@ export const register: Register = (on) => {
   on('classic.Stop', async ($, e, next) => {
     const result = await next(e)
     if (e.stop_hook_active) return result
-    const reason = claimReason(e.last_assistant_message ?? '')
-    if (!reason) return result
-    return { ...result, additionalContext: [...(result.additionalContext ?? []), reason] }
+    const count = flaggedUnits(e.last_assistant_message ?? '').length
+    if (!count) return result
+    const key = claimCountKey()
+    await $.store.set(key, (Number(await $.store.get(key)) || 0) + count).catch(() => undefined)
+    return result
   })
 }

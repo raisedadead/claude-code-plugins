@@ -2,52 +2,43 @@ import { describe, expect, test } from 'claude-code/testing'
 
 const UNBACKED = 'Done. The hook blocks the write.'
 const BACKED = 'Done. The hook blocks the write and exits 2.'
+const KEY = `claims:${new Date().toISOString().slice(0, 10)}`
 
-const REASON =
-  'Unbacked claim in the reply:\n' +
-  'line 1: "The hook blocks the write."\n' +
-  'Name the exit code, cite the source, or label it advisory / model-judgment / opt-in — or drop the blocks / enforces / gates / denies / prevents / refuses verb.\n' +
-  'Then send the whole reply again with the fix. In focus mode the operator sees only your last message.'
+function memory(on: Parameters<Parameters<typeof test>[1]>[1]): Map<string, unknown> {
+  const store = new Map<string, unknown>()
+  on('store.get', async (_, e) => ({ value: store.get(e.key) }))
+  on('store.set', async (_, e) => {
+    store.set(e.key, e.value)
+    return { value: undefined }
+  })
+  return store
+}
 
-describe('claim gate on Stop', () => {
-  test('sends an unbacked claim back as context and does not block', async ($, on) => {
+describe('claim count on Stop', () => {
+  test('counts an unbacked claim and sends nothing back', async ($, on) => {
+    const store = memory(on)
     on('classic.Stop', async () => ({}))
     const result = await $.classic.Stop({ stop_hook_active: false, last_assistant_message: UNBACKED })
-    expect(result.additionalContext).toEqual([REASON])
+    expect(result.additionalContext).toBeUndefined()
     expect(result.block).toBeUndefined()
+    await $.classic.Stop({ stop_hook_active: false, last_assistant_message: UNBACKED })
+    expect(store.get(KEY)).toBe(2)
   })
 
-  test('lets a backed reply stop', async ($, on) => {
+  test('counts nothing for a backed reply, an empty reply or a continued stop', async ($, on) => {
+    const store = memory(on)
     on('classic.Stop', async () => ({}))
-    const result = await $.classic.Stop({ stop_hook_active: false, last_assistant_message: BACKED })
-    expect(result.additionalContext).toBeUndefined()
+    await $.classic.Stop({ stop_hook_active: false, last_assistant_message: BACKED })
+    await $.classic.Stop({ stop_hook_active: false })
+    await $.classic.Stop({ stop_hook_active: true, last_assistant_message: UNBACKED })
+    expect(store.get(KEY)).toBeUndefined()
   })
 
-  test('stays silent on a continued stop', async ($, on) => {
-    on('classic.Stop', async () => ({}))
-    const result = await $.classic.Stop({ stop_hook_active: true, last_assistant_message: UNBACKED })
-    expect(result.additionalContext).toBeUndefined()
-  })
-
-  test('lets a reply with no text stop', async ($, on) => {
-    on('classic.Stop', async () => ({}))
-    expect((await $.classic.Stop({ stop_hook_active: false })).additionalContext).toBeUndefined()
-    expect((await $.classic.Stop({ stop_hook_active: false, last_assistant_message: '  \n' })).additionalContext).toBeUndefined()
-  })
-
-  test('keeps a block and context from beneath and adds its own reason', async ($, on) => {
+  test('keeps a block and context from beneath', async ($, on) => {
+    memory(on)
     on('classic.Stop', async () => ({ block: 'review the diff', additionalContext: ['rig note'] }))
     const result = await $.classic.Stop({ stop_hook_active: false, last_assistant_message: UNBACKED })
     expect(result.block).toBe('review the diff')
-    expect(result.additionalContext).toEqual(['rig note', REASON])
-  })
-
-  test('shows ten flagged lines and counts the rest', async ($, on) => {
-    on('classic.Stop', async () => ({}))
-    const reply = Array.from({ length: 12 }, (_, i) => `The hook blocks write ${i}.`).join('\n')
-    const result = await $.classic.Stop({ stop_hook_active: false, last_assistant_message: reply })
-    const lines = (result.additionalContext?.[0] ?? '').split('\n')
-    expect(lines[10]).toBe('line 10: "The hook blocks write 9."')
-    expect(lines[11]).toBe('… and 2 more')
+    expect(result.additionalContext).toEqual(['rig note'])
   })
 })
