@@ -2,25 +2,6 @@
 
 Loaded on demand. The procedure lives in `../SKILL.md`; this file is the lookup detail (kept out of the always-resident skill body to save tokens).
 
-## PreToolUse hook coverage
-
-Matches `Edit | Write`, but it is **gated on the repo**: the mod scans nothing unless `<session cwd>/.scratchpad/dossier` is a directory. The same payload that emits a finding inside a dossier repo emits nothing outside one, so existing files in a plain repo carry unexamined claims — that gap is what `ds:status --drift` (`ds verify-sweep`) is for, and what `/dossier:verify` on demand covers, having no such gate. Advisory in both cases: a finding is an `additionalContext` nudge, never a block.
-
-Patterns in `engine/verify.ts`, catalog in `engine/verify-authorities.ts` (140 EOL aliases, 34 Docker images, 31 AI models, 7 package registries).
-
-| Class                     | Authority                                    | Examples caught                                                |
-| ------------------------- | -------------------------------------------- | -------------------------------------------------------------- |
-| Language / runtime EOL    | endoflife.date                               | `Node 18`, `Python 3.8`, `Ruby 2.7`, `Go 1.18`, `PHP 7.4`      |
-| OS / distro EOL           | endoflife.date                               | `Ubuntu 18.04`, `Debian 9`, `CentOS 7`, `Alpine 3.10`          |
-| Database EOL              | endoflife.date                               | `Postgres 11`, `MySQL 5.7`, `Redis 5`, `MongoDB 4`             |
-| Container image EOL       | endoflife.date via image alias               | `FROM node:18-alpine`, `image: postgres:11`, `nginx:1.18-slim` |
-| GitHub Action pinning     | GitHub git refs API                          | `uses: actions/checkout@v4` → flag + resolved SHA              |
-| k8s deprecated apiVersion | k8s deprecation guide (15-entry static map)  | `apiVersion: extensions/v1beta1` → networking.k8s.io/v1        |
-| npm package outdated      | npmjs registry                               | `"react": "16.0.0"` (≥2 majors behind)                         |
-| PyPI / pyproject outdated | pypi.org JSON                                | `django==2.2.0`                                                |
-| Cargo / RubyGems / Go mod | crates.io / rubygems / go proxy              | `serde = "0.1.0"`, `gem 'rails', '5.0'`, `require foo v0.1.0`  |
-| AI model deprecation      | OpenAI / Anthropic / Google deprecation docs | `model="gpt-3.5-turbo-0613"`, `claude-2.1`, `gemini-1.0-pro`   |
-
 ## Authority cheatsheet (raw-JSON paths)
 
 Trust raw JSON. Use `curl -s <url>` (raw bytes) for JSON endpoints, never `WebFetch` (it summarizes and can hallucinate). Prefer `gh api` over WebFetch on github.com.
@@ -45,12 +26,3 @@ Trust raw JSON. Use `curl -s <url>` (raw bytes) for JSON endpoints, never `WebFe
 | Google AI model lifecycle | https://ai.google.dev/gemini-api/docs/models                                                                         |
 | SPDX licenses             | https://spdx.org/licenses/                                                                                           |
 | Docker Hub image tag      | `curl -s "https://registry.hub.docker.com/v2/repositories/library/<image>/tags/?page_size=10"`                       |
-
-## Adding a new authority / alias
-
-Append a row to one of these maps — no code change, pure data:
-
-- `engine/verify-authorities.ts` `EOL_ALIAS_TO_SLUG` — a new endoflife.date product.
-- `engine/verify-authorities.ts` `PKG_REGISTRY` — a new package ecosystem.
-- `engine/verify-authorities.ts` `DOCKER_IMAGE_TO_SLUG` — a new official Docker image.
-- `engine/verify-authorities.ts` `AI_MODEL_DEPRECATED` — a new sunset model.

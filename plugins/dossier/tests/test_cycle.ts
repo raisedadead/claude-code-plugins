@@ -1,0 +1,159 @@
+import assert from 'node:assert/strict'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { test } from 'vitest'
+import { checkedPlan, ds, file, planned, repo, sh } from './kit.ts'
+
+function build(cwd: string, path: string, subject: string, body = 'x'): void {
+  mkdirSync(dirname(join(cwd, path)), { recursive: true })
+  writeFileSync(join(cwd, path), `${body}\n`)
+  sh(cwd, `git add ${path} && git commit -qm "fixup! ${subject}"`)
+}
+
+test('a dossier runs from plan to close with commands only', () => {
+  const cwd = repo()
+  const path = checkedPlan(cwd)
+  assert.equal(ds(cwd, 'anchors').code, 0)
+  assert.equal(sh(cwd, 'git log --format=%s main..HEAD'), 'feat(c): add the c module\nfeat(b): add the b module')
+  assert.equal(ds(cwd, 'next').out, '- O1 next A Add the b module')
+  const mission = ds(cwd, 'mission', 'O1').out
+  assert.match(file(mission), /git commit -m "fixup! feat\(b\): add the b module"/)
+  assert.match(file(mission), /Row: - O1 now A/)
+  assert.match(file(mission), /Keep it short\./)
+  build(cwd, 'src/b.ts', 'feat(b): add the b module')
+  assert.equal(ds(cwd, 'verify', 'O1').code, 0)
+  assert.match(ds(cwd, 'done', 'O1').out, /^- O1 done A Add the b module · [0-9a-f]{7}$/)
+  ds(cwd, 'mission', 'O2')
+  build(cwd, 'lib/c.ts', 'feat(c): add the c module')
+  assert.equal(ds(cwd, 'verify', 'O2').code, 0)
+  ds(cwd, 'done', 'O2')
+  const next = ds(cwd, 'next')
+  assert.equal(next.code, 3)
+  assert.match(next.err, /O3 wait H Approve the PR/)
+  assert.equal(ds(cwd, 'check').code, 0)
+  const pack = ds(cwd, 'pack', 'review').out
+  assert.match(file(pack), /\+x/)
+  const findings = join(dirname(path), 'review.md')
+  file(findings, 'VERDICT: PASS\n')
+  assert.equal(ds(cwd, 'record', 'review', findings).code, 0)
+  const tree = sh(cwd, 'git rev-parse HEAD^{tree}')
+  assert.equal(ds(cwd, 'shape').code, 0)
+  assert.equal(sh(cwd, 'git rev-parse HEAD^{tree}'), tree)
+  assert.equal(sh(cwd, 'git log --format=%s%b main..HEAD'), 'feat(c): add the c module\nfeat(b): add the b module')
+  assert.match(ds(cwd, 'shape').out, /already shaped/)
+  sh(cwd, 'git remote add origin git@github.com:me/demo.git')
+  assert.deepEqual(JSON.parse(ds(cwd, 'ship-args').out), { repo: 'me/demo', branch: 'demo', base: 'main', title: 'feat(b): add the b module' })
+  const closed = ds(cwd, 'close', 'built b and c')
+  assert.equal(closed.code, 0, closed.err)
+  assert.ok(existsSync(join(cwd, '.scratchpad/dossier/_archive/2026-11-14-demo/DOSSIER.md')))
+  assert.match(file(join(cwd, '.scratchpad/OPEN-WORK.md')), /^- O3 wait H Approve the PR$/m)
+  assert.match(closed.out, /O3 Approve the PR/)
+})
+
+test('anchors wait for a baseline and a passing plan check of the current text', () => {
+  const cwd = repo()
+  const path = planned(cwd)
+  assert.match(ds(cwd, 'anchors').err, /check --baseline/)
+  const findings = join(dirname(path), 'f.md')
+  file(findings, 'VERDICT: PASS\n')
+  for (const step of [
+    ['check', '--baseline'],
+    ['pack', 'plan'],
+    ['record', 'plan', findings],
+  ])
+    assert.equal(ds(cwd, ...step).code, 0)
+  file(path, file(path).replace('"add b"', '"add b now"'))
+  ds(cwd, 'check', '--baseline')
+  assert.match(ds(cwd, 'anchors').err, /no passing plan check/)
+})
+
+test('a baseline fails when a check already passes, and passes when a guard fails nothing', () => {
+  const cwd = repo()
+  planned(cwd)
+  writeFileSync(join(cwd, 'src/b.ts'), 'x\n')
+  const done = ds(cwd, 'check', '--baseline')
+  assert.equal(done.code, 1)
+  assert.match(done.err, /FAIL b-exists: exit 0, want anything but exit 0/)
+})
+
+test('the second CHANGES from the plan check goes to the operator', () => {
+  const cwd = repo()
+  const path = planned(cwd)
+  ds(cwd, 'check', '--baseline')
+  const findings = join(dirname(path), 'f.md')
+  file(findings, 'block: x\nVERDICT: CHANGES\n')
+  assert.equal(ds(cwd, 'record', 'plan', findings).code, 1)
+  assert.equal(ds(cwd, 'record', 'plan', findings).code, 3)
+  file(findings, 'no verdict here\n')
+  assert.match(ds(cwd, 'record', 'plan', findings).err, /no line VERDICT/)
+})
+
+test('verify refuses work outside the planned paths, a stray commit and uncommitted changes', () => {
+  const cwd = repo()
+  checkedPlan(cwd)
+  ds(cwd, 'anchors')
+  build(cwd, 'src/b.ts', 'feat(b): add the b module')
+  assert.equal(ds(cwd, 'verify', 'O1').code, 0)
+  build(cwd, 'src/other.ts', 'feat(b): add the b module')
+  assert.match(ds(cwd, 'verify', 'O1').err, /changes src\/other.ts, outside the paths/)
+  sh(cwd, 'git reset -q --hard HEAD~1 && echo y > src/b.ts && git commit -qam "wip"')
+  assert.match(ds(cwd, 'verify', 'O1').err, /"wip" is not a planned commit/)
+  sh(cwd, 'git reset -q --hard HEAD~1 && echo z > src/b.ts')
+  assert.match(ds(cwd, 'verify', 'O1').err, /uncommitted changes/)
+  assert.match(ds(cwd, 'done', 'O1').err, /run ds verify O1 first/)
+  assert.match(ds(cwd, 'done', 'O3', '--cite', 'approved').out, /O3 done H Approve the PR · approved/)
+})
+
+test('shape refuses a planned commit with no work and a commit that is not planned', () => {
+  const cwd = repo()
+  checkedPlan(cwd)
+  ds(cwd, 'anchors')
+  build(cwd, 'src/b.ts', 'feat(b): add the b module')
+  assert.match(ds(cwd, 'shape').err, /"feat\(c\): add the c module" has no work/)
+  build(cwd, 'lib/c.ts', 'feat(c): add the c module')
+  sh(cwd, 'echo q > src/q.ts && git add src/q.ts && git commit -qm "chore: stray"')
+  assert.match(ds(cwd, 'shape').err, /"chore: stray" is not a planned commit/)
+})
+
+test('shape leaves pushed commits alone and refuses a fixup of one', () => {
+  const cwd = repo()
+  checkedPlan(cwd)
+  ds(cwd, 'anchors')
+  build(cwd, 'src/b.ts', 'feat(b): add the b module')
+  build(cwd, 'lib/c.ts', 'feat(c): add the c module')
+  assert.equal(ds(cwd, 'shape').code, 0)
+  const remote = join(dirname(cwd), 'remote.git')
+  sh(cwd, `git init -q --bare ${remote} && git remote add origin ${remote} && git push -q origin demo`)
+  build(cwd, 'src/b.ts', 'feat(b): add the b module', 'y')
+  assert.match(ds(cwd, 'shape').err, /already pushed/)
+})
+
+test('lanes split planned commits by paths and integrate brings a lane back', () => {
+  const cwd = repo()
+  const path = checkedPlan(cwd)
+  assert.equal(ds(cwd, 'lanes').out, 'demo-lane-1:\n- feat(b): add the b module (O1)\ndemo-lane-2:\n- feat(c): add the c module (O2)')
+  file(path, file(path).replace('| O2 | lib/** |', '| O2 | src/** |'))
+  assert.equal(ds(cwd, 'lanes').out.split('\n')[0], 'demo-lane-1:')
+  assert.equal(ds(cwd, 'lanes').out.split('\n').length, 3)
+  file(path, file(path).replace('| O2 | src/** |', '| O2 | lib/** |'))
+  ds(cwd, 'anchors')
+  const lane = join(dirname(cwd), 'lane')
+  sh(cwd, `git worktree add -q -b demo-lane-2 ${lane} demo`)
+  build(lane, 'lib/c.ts', 'feat(c): add the c module')
+  assert.equal(ds(lane, 'verify', 'O2').code, 0)
+  build(cwd, 'src/b.ts', 'feat(b): add the b module')
+  const done = ds(cwd, 'integrate', 'demo-lane-2')
+  assert.equal(done.code, 0, done.err)
+  assert.equal(sh(cwd, 'git log --format=%s -1'), 'fixup! feat(c): add the c module')
+  assert.match(ds(cwd, 'integrate', 'other').err, /usage/)
+})
+
+test('close refuses open rows and new picks its next folder name', () => {
+  const cwd = repo()
+  planned(cwd)
+  assert.match(ds(cwd, 'close', 'stop').err, /open rows/)
+  assert.match(ds(cwd, 'new', 'demo', '--dossier', 'x').out, /2026-11-14-demo-2/)
+  assert.match(ds(cwd, 'next').err, /more than one live dossier/)
+  assert.equal(ds(cwd, 'next', '--dossier', 'demo').out, '- O1 next A Add the b module')
+  assert.match(ds(cwd, 'new', 'Bad Slug').err, /usage/)
+})

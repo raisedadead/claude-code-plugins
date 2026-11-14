@@ -24,32 +24,13 @@
 
 ## survivors
 
-Every prohibition left in the three files, with the reason it stays. Criterion 4 holds this table and the files to the same count, so a prohibition that is added back without a row here fails the wave.
+Every prohibition left in the two files, with the reason it stays. Criterion 4 holds this table and the files to the same count, so a prohibition that is added back without a row here fails the wave.
 
 Three reasons qualify. **fact** — the sentence describes what the system does, and the negative is the accurate description; rewriting it positively would destroy information. **guarded** — the action is irreversible or a hook returns a non-zero exit on it, so F28's carve-out for hard guardrails applies, and the row is paired with a positive in the same sentence. **hatch** — a single named flag disarms a gate the surrounding step depends on, and the positive form has nothing to attach to: "retry the commit" does not tell a reader which one-word bypass to leave alone. The flag gets named and closed, after the positive.
 
 | file     | phrase                                                   | why     |
 | -------- | -------------------------------------------------------- | ------- |
-| build    | `--doubt` alone never activates the gate                 | fact    |
-| build    | never `--no-verify` past a failing commit hook           | hatch   |
-| build    | `Warn:` / `Nit:` never block the commit                  | fact    |
-| build    | measure after `git add`, never before                    | guarded |
-| build    | a check that never ran                                   | fact    |
-| build    | `lib-x-refresh.sh` never touches the notes cell          | fact    |
-| build    | §X was never refreshed                                   | fact    |
-| build    | a gate the operator never turns on (D7's failure mode)   | fact    |
-| build    | `push` PAUSE — never auto-push                           | guarded |
-| build    | exit 2 is advisory and never pauses                      | fact    |
-| build    | rails: push stays the operator's, never automatic        | guarded |
-| build    | under `--auto` this never self-triggers                  | fact    |
-| reviewer | never the parent reasoning transcript                    | fact    |
-| reviewer | an artifact, never a conversation                        | fact    |
-| reviewer | `Nit:` — optional polish. Never blocks.                  | fact    |
-| reviewer | its patterns never match a bare `// Phase N`             | fact    |
-| reviewer | smells are never a hard block                            | fact    |
-| reviewer | the states that must never occur                         | fact    |
-| reviewer | code-shape findings never block on their own             | fact    |
-| reviewer | never computed                                           | fact    |
+| build    | the planned commits whose paths do not overlap           | fact    |
 | claude   | tests do not assert that documentation contains a phrase | fact    |
 
 ## what changes

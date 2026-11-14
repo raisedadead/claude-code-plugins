@@ -3,7 +3,7 @@ set -euo pipefail
 
 apostrophe=$'\xe2\x80\x99'
 pattern="\\bnever\\b|\\bdo not\\b|\\bdon.t\\b|\\bdon${apostrophe}t\\b|\\bmust not\\b"
-files=(plugins/dossier/skills/build/SKILL.md plugins/dossier/agents/dossier-reviewer.md CLAUDE.md)
+files=(plugins/dossier/skills/build/SKILL.md CLAUDE.md)
 
 count() { { grep -oiE "$pattern" "$@" || true; } | wc -l | tr -d ' '; }
 
@@ -16,10 +16,6 @@ done
 
 [[ "$(count plugins/dossier/skills/build/SKILL.md)" -le 13 ]] || {
 	printf 'RAILS: build/SKILL.md is over 13\n' >&2
-	exit 1
-}
-[[ "$(count plugins/dossier/agents/dossier-reviewer.md)" -le 9 ]] || {
-	printf 'RAILS: dossier-reviewer.md is over 9\n' >&2
 	exit 1
 }
 [[ "$(count CLAUDE.md)" -le 1 ]] || {

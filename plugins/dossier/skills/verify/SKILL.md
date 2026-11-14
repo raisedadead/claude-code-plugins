@@ -1,22 +1,14 @@
 ---
 name: verify
-description: Empirical fact-check for freshness-sensitive claims — versions, EOLs, package latest, GitHub Action SHAs, k8s apiVersions, AI model deprecations, image tags, or anything the model's training cutoff may have staled. Primary sources only. Auto-fires as a PreToolUse hook on Edit/Write, but only in a repo with a `.scratchpad/dossier/` directory; `/dossier:verify` on demand works anywhere. Invoke when user says "verify", "fact-check", "is this current", "/dossier:verify", "double check", or when reviewing freshness claims.
+description: Empirical fact-check for freshness-sensitive claims — versions, EOLs, package latest, GitHub Action SHAs, k8s apiVersions, AI model deprecations, image tags, or anything the model's training cutoff may have staled. Primary sources only. Runs on demand, anywhere. Invoke when user says "verify", "fact-check", "is this current", "/dossier:verify", "double check", or when reviewing freshness claims.
 argument-hint: '[claim or topic; empty = fact-check previous response]'
 ---
 
 # ds:verify — empirical freshness check
 
-Two surfaces, one rule: **read the primary source's raw bytes.**
+One rule: **read the primary source's raw bytes.**
 
-## Surface 1 — PreToolUse hook (auto)
-
-Wired in the mod, `hooks/register.ts`. Fires on `Edit | Write`, and only in a repo that has a `.scratchpad/dossier/` directory — elsewhere it does not scan. Scans content against the pattern registry in `engine/verify.ts` and the authority catalog in `engine/verify-authorities.ts` (140+ aliases, 34 Docker images, 31 AI models). Covers language/runtime/OS/distro/database EOL, container-image EOL, GitHub Action SHA pinning, k8s deprecated apiVersions, npm/PyPI/Cargo/RubyGems/Go-mod outdated packages, and AI-model deprecation. Full coverage matrix + per-source cheatsheet → [`references/authorities.md`](references/authorities.md).
-
-Non-blocking by design — a finding is `additionalContext` only. Per-session dedup, held in the mod; a hot reload of the plugin resets it. The hook reads the cache only and never fetches. Operator escape: `# verify-skip: <ruleName>` anywhere in the written content.
-
-Cache at `<project root>/.scratchpad/.verify-cache/` (24h TTL on registries, 30d on resolved SHAs). Offline = silent skip.
-
-## Surface 2 — `/dossier:verify [<topic>]` (manual, generic)
+## `/dossier:verify [<topic>]`
 
 No pattern lock-in: the model classifies an arbitrary freshness claim and routes it to the right primary source.
 
@@ -79,19 +71,6 @@ wrong: Node 20 LTS · right: current LTS = v24 (Krypton) + v22 (Jod). v20 EOL 20
 - **Copyright years change when the operator asks for it** — see operator MEMORY.md.
 - **Answer from the source you pulled.** Anything that came from memory instead is `Unverifiable`, whatever it looks like.
 
-## Authority cheatsheet + extending the catalog
+## Authority cheatsheet
 
-Per-source raw-JSON `curl` / `gh api` paths, and how to add a new authority (pure data, no code change) → [`references/authorities.md`](references/authorities.md).
-
-## Composition
-
-- **With `ds:status --drift`**: the drift audit runs `ds verify-sweep` on touched files automatically; findings fold into 🟡 warnings.
-- **With `ds:build`**: the PreToolUse hook is active inside the build (a live wave means the `.scratchpad/dossier/` gate passes), so no explicit invocation is needed. It skips dossier paths themselves — `.scratchpad/` and `DOSSIER.md` — so ledger writes stay unscanned.
-- **With `ds:backprop`**: when a bug's root cause is "stale claim baked into code", the backprop fix adds the missing alias to `engine/verify-authorities.ts` so recurrence is caught at write time.
-
-## Cite
-
-- `engine/verify-authorities.ts` — alias maps + registry definitions
-- `engine/verify.ts` — check functions and the pattern registry
-- `hooks/gates.ts` `verifyGate` — PreToolUse advisory
-- `cli/verify.ts` — HTTP cache, `ds verify-sweep` (used by ds:status --drift), `ds verify-edit`, `ds resolve-pins`
+Per-source raw-JSON `curl` / `gh api` paths → [`references/authorities.md`](references/authorities.md).

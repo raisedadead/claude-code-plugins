@@ -1,18 +1,9 @@
 # dossier
 
-Wave-scoped engineering workflow. One resumable `DOSSIER.md` drives a wave of work — tasks, bugs, invariants, cross-repo state, evidence log — with in-session quality gates.
+One plan file per piece of work, and a `ds` command for every step that gives the same result each time. A model does only the judgement: the questions, the plan text, the code, the review and the conflicts.
 
-Under managed settings or a Team or Enterprise `/login`, Claude Code's built-in guard `sec-default` does not run these gates. The skills and `cli/ds` still work.
+- Skills: `/dossier:plan`, `/dossier:build`, `/dossier:ship`, `/dossier:close`, plus `/dossier:backprop` and `/dossier:verify`.
+- Hook: at session start, after `/clear` and on resume, `ds triage` lists what is waiting. It does not run after compaction.
+- Commands: `ds help`. File shapes: [`FORMAT.md`](FORMAT.md).
 
-Docs live at the repository root, which is not shipped to the install path — these are absolute so they resolve from the plugin cache too:
-
-- [README](https://github.com/raisedadead/claude-code-plugins/blob/main/README.md) — install, commands, gates, configuration
-- [ARCHITECTURE.md](https://github.com/raisedadead/claude-code-plugins/blob/main/ARCHITECTURE.md) — priorities, tenets, enforcement map, testing standard
-- [RESEARCH.md](https://github.com/raisedadead/claude-code-plugins/blob/main/RESEARCH.md) — decisions and their rejected alternatives
-- [INSPIRATIONS.md](https://github.com/raisedadead/claude-code-plugins/blob/main/INSPIRATIONS.md) — sources we borrow from, what we refused, when we last looked
-
-Local to this plugin:
-
-- [FORMAT.md](./FORMAT.md) — ledger encoding spec
-- [ADAPTERS.md](./ADAPTERS.md) — host-environment detection and composition routes
-- [CHANGELOG.md](./CHANGELOG.md)
+The plugin is built for one operator's rig. It names the rig's agent roles (`team-lead`, `builder`, `plan-checker`, `reviewer`, `committer`, `gatherer`) and keeps its ID counter under `~/.local/state/ds/`. See [`ADAPTERS.md`](ADAPTERS.md).
