@@ -5,7 +5,7 @@ set -euo pipefail
 source "$(dirname "$0")/pre_push_lib.sh"
 
 mkdir -p "$TMP/rails/plugins/dossier/skills/build" "$TMP/rails/.dossier"
-printf 'Write the test first.\n' | tee "$TMP/rails/plugins/dossier/skills/build/SKILL.md" "$TMP/rails/CLAUDE.md" >/dev/null
+printf 'Write the test first.\n' | tee "$TMP/rails/plugins/dossier/skills/build/SKILL.md" "$TMP/rails/plugins/dossier/skills/build/loop.md" "$TMP/rails/CLAUDE.md" >/dev/null
 printf '## survivors\n\n## what changes\n' >"$TMP/rails/.dossier/2026-08-02-positive-rails.md"
 (cd "$TMP/rails" && bash "$ROOT/tools/rails_ceiling.sh") ||
 	fail "the rails check refused files with no negation and a contract with no survivor"

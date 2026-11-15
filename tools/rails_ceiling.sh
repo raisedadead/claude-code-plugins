@@ -3,7 +3,7 @@ set -euo pipefail
 
 apostrophe=$'\xe2\x80\x99'
 pattern="\\bnever\\b|\\bdo not\\b|\\bdon.t\\b|\\bdon${apostrophe}t\\b|\\bmust not\\b"
-files=(plugins/dossier/skills/build/SKILL.md CLAUDE.md)
+files=(plugins/dossier/skills/build/SKILL.md plugins/dossier/skills/build/loop.md CLAUDE.md)
 
 count() { { grep -oiE "$pattern" "$@" || true; } | wc -l | tr -d ' '; }
 
