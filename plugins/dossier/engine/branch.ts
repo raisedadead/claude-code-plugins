@@ -1,6 +1,6 @@
-import { appendFileSync, existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { git, gitTry, lines, Refusal, run } from './sh.ts'
+import { git, gitTry, lines, Refusal } from './sh.ts'
 
 export type Commit = { sha: string; subject: string; body: string }
 export type Review = { time: string; branch: string; base: string; head: string; tree: string; patch: string; verdict: string; findings: string }
@@ -38,12 +38,6 @@ export function clean(cwd: string): boolean {
 
 export function tree(cwd: string, rev = 'HEAD'): string {
   return git(cwd, 'rev-parse', `${rev}^{tree}`)
-}
-
-export function patchId(cwd: string, from: string): string {
-  const diff = run(['git', 'diff', `${from}..HEAD`], cwd).out
-  if (!diff.trim()) return ''
-  return (run(['git', 'patch-id', '--stable'], cwd, { input: diff }).out.split(' ')[0] ?? '').trim()
 }
 
 export function onRemote(cwd: string, sha: string): boolean {
@@ -109,8 +103,4 @@ export function reviews(cwd: string): Review[] {
         return []
       }
     })
-}
-
-export function addReview(cwd: string, review: Review): void {
-  appendFileSync(reviewsFile(cwd), `${JSON.stringify(review)}\n`)
 }

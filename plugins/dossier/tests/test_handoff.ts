@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, test } from 'vitest'
-import { checkedPlan, ds, file, planned, repo, sh } from './kit.ts'
+import { checkedPlan, ds, file, planned, recordReview, repo, sh } from './kit.ts'
 
 const PATH = process.env.PATH
 
@@ -32,10 +32,8 @@ function subtracted(cwd: string): void {
   ds(cwd, 'log', 'subtract: SUBTRACT: NOTHING TO CUT; took none')
 }
 
-function review(cwd: string, path: string, verdict: string): void {
-  const findings = join(dirname(path), 'review.md')
-  file(findings, `VERDICT: ${verdict}\n`)
-  ds(cwd, 'record', 'review', findings)
+function review(cwd: string, _path: string, verdict: string): void {
+  recordReview(cwd, verdict)
 }
 
 function pushed(cwd: string): string {

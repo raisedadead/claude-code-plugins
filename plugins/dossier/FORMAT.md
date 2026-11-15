@@ -20,7 +20,7 @@ Every shape here is read by a `ds` command. `ds lint` checks the plan file, and 
     └── _archive/                closed dossiers
 ```
 
-The ledger lives in the main checkout. A `ds` command run in a linked worktree reads and writes the main checkout's `.scratchpad/`. The review record is `$(git rev-parse --git-common-dir)/reviews.jsonl`, which every worktree of the repo shares.
+The ledger lives in the main checkout. A `ds` command run in a linked worktree reads and writes the main checkout's `.scratchpad/`. The review record is `$(git rev-parse --git-common-dir)/reviews.jsonl`, which every worktree of the repo shares. The rig's hook writes it when a reviewer ends. `ds` only reads it.
 
 ## Rows
 

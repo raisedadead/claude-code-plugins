@@ -1,7 +1,8 @@
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { main } from '../cli/dispatch.ts'
+import { type Review, reviewsFile, tree } from '../engine/branch.ts'
 import { run } from '../engine/sh.ts'
 
 export type Result = { code: number; out: string; err: string }
@@ -121,4 +122,21 @@ export function checkedPlan(cwd: string): string {
     if (done.code !== 0) throw new Error(`${step.join(' ')}: ${done.err}`)
   }
   return path
+}
+
+// Stands in for the rig, which writes one review record when a reviewer ends.
+export function recordReview(cwd: string, verdict: string, extra: Partial<Review> = {}): Review {
+  const review: Review = {
+    time: '2026-11-15 09:00',
+    branch: sh(cwd, 'git rev-parse --abbrev-ref HEAD'),
+    base: 'main',
+    head: sh(cwd, 'git rev-parse HEAD'),
+    tree: tree(cwd),
+    patch: '',
+    verdict,
+    findings: '',
+    ...extra,
+  }
+  appendFileSync(reviewsFile(cwd), `${JSON.stringify(review)}\n`)
+  return review
 }

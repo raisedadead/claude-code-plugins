@@ -24,7 +24,7 @@ One piece of work is one plan file: `.scratchpad/dossier/<date>-<slug>/DOSSIER.m
 
 **A step that gives the same result each time it runs is a `ds` command.** A model does only the judgement: the questions, the plan text, the code, the review and the conflicts. The cycle is plan, plan check, anchors, one builder per row, one review of the branch, shape, push, close. The commands exit 1 and do nothing when the step before them has not passed: `ds anchors` needs a baseline and a passing plan check of the current plan text, `ds done` needs a passing `ds verify`, and `ds shape` refuses when the files would change.
 
-**The review is tied to the tree.** `ds record review` stores the verdict with the tree hash and the patch ID in `$(git rev-parse --git-common-dir)/reviews.jsonl`. Shaping rewrites the commits but not the files, so the review still holds after it. The operator's rig reads the record at push.
+**The review is tied to the tree.** The rig's hook writes the verdict with the tree hash and the patch ID in `$(git rev-parse --git-common-dir)/reviews.jsonl` when a reviewer ends. `ds` only reads it. Shaping rewrites the commits but not the files, so the review still holds after it. The operator's rig reads the record at push.
 
 **The plugin names the rig's roles and ships no agents.** The `team-lead`, `builder`, `plan-checker`, `reviewer`, `committer` and `gatherer` agents live in the operator's rig, which also holds each role's tools and write scope (`plugins/dossier/ADAPTERS.md`).
 

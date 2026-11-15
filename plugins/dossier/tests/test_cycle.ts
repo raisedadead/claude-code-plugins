@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { test } from 'vitest'
-import { checkedPlan, ds, file, planned, repo, sh } from './kit.ts'
+import { checkedPlan, ds, file, planned, recordReview, repo, sh } from './kit.ts'
 
 function build(cwd: string, path: string, subject: string, body = 'x'): void {
   mkdirSync(dirname(join(cwd, path)), { recursive: true })
@@ -12,7 +12,7 @@ function build(cwd: string, path: string, subject: string, body = 'x'): void {
 
 test('a dossier runs from plan to close with commands only', () => {
   const cwd = repo()
-  const path = checkedPlan(cwd)
+  checkedPlan(cwd)
   assert.equal(ds(cwd, 'anchors').code, 0)
   assert.equal(sh(cwd, 'git log --format=%s main..HEAD'), 'feat(c): add the c module\nfeat(b): add the b module')
   assert.equal(ds(cwd, 'next').out, '- O1 next A Add the b module')
@@ -33,9 +33,7 @@ test('a dossier runs from plan to close with commands only', () => {
   assert.equal(ds(cwd, 'check').code, 0)
   const pack = ds(cwd, 'pack', 'review').out
   assert.match(file(pack), /\+x/)
-  const findings = join(dirname(path), 'review.md')
-  file(findings, 'VERDICT: PASS\n')
-  assert.equal(ds(cwd, 'record', 'review', findings).code, 0)
+  recordReview(cwd, 'PASS')
   const tree = sh(cwd, 'git rev-parse HEAD^{tree}')
   assert.equal(ds(cwd, 'shape').code, 0)
   assert.equal(sh(cwd, 'git rev-parse HEAD^{tree}'), tree)

@@ -24,7 +24,7 @@ export const COMMANDS: Record<string, Command> = {
   done: { run: cmdDone, usage: 'done <id> [--cite "<decision>"]  mark a verified row done' },
   integrate: { run: cmdIntegrate, usage: 'integrate <lane>  rebase a lane onto the dossier branch' },
   'pack review': { run: cmdPackReview, usage: 'pack review [--full] [--base b]  one file for the reviewer' },
-  'record review': { run: cmdRecordReview, usage: 'record review <findings> [--base b]  store the verdict with the tree hash' },
+  'record review': { run: cmdRecordReview, usage: 'record review <findings>  log the verdict; a PASS sets state ship' },
   shape: { run: cmdShape, usage: 'shape  fold fixup! commits into the planned commits' },
   'ship-args': { run: cmdShipArgs, usage: 'ship-args  repo, branch, base and PR title as JSON' },
   close: { run: cmdClose, usage: 'close "<one line>"  close the dossier and move it to _archive' },

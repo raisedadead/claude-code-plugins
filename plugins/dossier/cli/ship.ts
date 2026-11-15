@@ -1,19 +1,6 @@
 import { existsSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
-import {
-  addReview,
-  changedPaths,
-  clean,
-  commitsIn,
-  conflicted,
-  defaultBase,
-  fixupTarget,
-  mergeBase,
-  onRemote,
-  patchId,
-  reviews,
-  tree as treeOf,
-} from '../engine/branch.ts'
+import { changedPaths, clean, commitsIn, conflicted, defaultBase, fixupTarget, mergeBase, onRemote, reviews, tree as treeOf } from '../engine/branch.ts'
 import { checks, commits, edges, header, replaceSection, rows, section, setHeader, setRow } from '../engine/plan.ts'
 import { formatRow } from '../engine/rows.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
@@ -82,26 +69,12 @@ export function cmdRecordReview(cwd: string, args: Args): string {
   if (!path || !existsSync(path)) throw new Refusal('usage: ds record review <findings file>', 2)
   const verdict = verdictOf(read(path))
   const dossier = optionalDossier(cwd, args)
-  const tree = workTree(cwd)
-  const base = baseOf(cwd, args, dossier)
-  const from = mergeBase(tree, base)
-  const review = {
-    time: now(),
-    branch: currentBranch(tree),
-    base,
-    head: git(tree, 'rev-parse', 'HEAD'),
-    tree: treeOf(tree),
-    patch: patchId(tree, from),
-    verdict,
-    findings: path,
-  }
-  addReview(tree, review)
   if (dossier) {
-    log(dossier, `record review ${verdict} ${review.tree.slice(0, 12)} ${path}`)
+    log(dossier, `record review ${verdict} ${treeOf(workTree(cwd)).slice(0, 12)} ${path}`)
     if (verdict === 'PASS') write(dossier.file, setHeader(read(dossier.file), 'state', 'ship'))
   }
-  if (verdict === 'CHANGES') throw new Refusal(`REVIEW: CHANGES recorded; turn the accepted findings into rows: ${path}`)
-  return `REVIEW: PASS recorded for tree ${review.tree.slice(0, 12)}`
+  if (verdict === 'CHANGES') throw new Refusal(`REVIEW: CHANGES; turn the accepted findings into rows: ${path}`)
+  return dossier ? 'REVIEW: PASS; state is ship' : 'REVIEW: PASS'
 }
 
 export function cmdShape(cwd: string, args: Args): string {
