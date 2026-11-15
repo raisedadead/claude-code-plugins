@@ -95,7 +95,12 @@ export function render(view: Triage): string {
     out.push(`${title}:`)
     for (const f of flags) out.push(`- ${f.id} ${f.title} (${f.where}; ${f.why})`)
   }
-  group('Waits on the operator', view.wait)
+  const paused = (f: Flag): boolean => /^paused(:|\s|$)/i.test(f.why)
+  group(
+    'Waits on the operator',
+    view.wait.filter((f) => !paused(f)),
+  )
+  group('Paused', view.wait.filter(paused))
   group('Deferred and now due', view.due)
   group('In progress with no recent work', view.stale)
   group('Out of shape', view.shape)
