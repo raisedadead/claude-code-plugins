@@ -4,7 +4,7 @@ import { type Row, scanRows } from './rows.ts'
 export const SECTIONS = ['Goal', 'Scope', 'Decisions', 'Checks', 'Edge cases', 'Commits', 'Rows', 'Notes'] as const
 export type Section = (typeof SECTIONS)[number]
 export const CHECKED_SECTIONS: Section[] = ['Goal', 'Scope', 'Decisions', 'Checks', 'Edge cases', 'Commits']
-export const HEADER_KEYS = ['state', 'branch', 'base', 'pr', 'checked'] as const
+export const HEADER_KEYS = ['state', 'branch', 'base', 'pr', 'checked', 'row'] as const
 export type PlanState = 'plan' | 'build' | 'ship' | 'done'
 
 export type Check = { name: string; command: string; expect: number; guard: boolean; rows: string[] }
@@ -14,7 +14,7 @@ export type Edge = { text: string; refs: string[] }
 export const SUBJECT = /^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([^)]*\))?!?: \S/
 export const SUBJECT_MAX = 50
 
-export function template(slug: string, branch: string, base: string): string {
+export function template(slug: string, branch: string, base: string, id: string): string {
   return [
     `# ${slug}`,
     '',
@@ -23,6 +23,7 @@ export function template(slug: string, branch: string, base: string): string {
     `base: ${base}`,
     'pr: ',
     'checked: -',
+    `row: ${id}`,
     '',
     '## Goal',
     '',

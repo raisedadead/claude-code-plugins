@@ -39,9 +39,14 @@ export function cmdNew(cwd: string, args: Args): string {
   for (let n = 2; taken.includes(name); n += 1) name = `${today()}-${slug}-${n}`
   const dir = join(dossierHome(root), name)
   const branch = flag(args, 'branch') ?? slug
-  write(join(dir, 'DOSSIER.md'), template(slug, branch, flag(args, 'base') ?? defaultBase(cwd)))
+  const id = takeId(root)
+  write(join(dir, 'DOSSIER.md'), template(slug, branch, flag(args, 'base') ?? defaultBase(cwd), id))
+  write(
+    registerFile(root),
+    appendRow(readOr(registerFile(root), REGISTER_HEAD), formatRow({ id, state: 'next', who: 'A', title: `dossier ${name}`, tail: '' })),
+  )
   const dossier = { dir, name, slug, file: join(dir, 'DOSSIER.md') }
-  log(dossier, `new ${slug} branch ${branch}`)
+  log(dossier, `new ${slug} branch ${branch} row ${id}`)
   return `${dossier.file}`
 }
 

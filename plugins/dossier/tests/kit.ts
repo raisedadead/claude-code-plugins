@@ -101,6 +101,7 @@ Keep it short.
 `
 
 export function planned(cwd: string): string {
+  file(join(process.env.DS_STATE_DIR ?? '', 'next-id'), '100')
   const path = ds(cwd, 'new', 'demo').out
   file(path, PLAN)
   return path
