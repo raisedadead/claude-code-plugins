@@ -68,14 +68,14 @@ These are the TIGER_STYLE rules that need a reader. **Nothing enforces them.** T
 
 Treat this list the way `skill-smith` treats its reference checklists: the exit code is the gate, the checklist is the judgement, and the two are never described as the same thing.
 
-Inside a dossier build run with `--review`, the `dossier-reviewer` agent reads the diff against this same list. That does not make it a gate: its findings on these four rules are capped at `Warn:`, which cannot block a commit, and `--review` is opt-in — it auto-fires only for destructive-class tasks, a category that has nothing to do with code shape. A second reader is worth having. It is not enforcement.
+Inside a dossier build run, the review step reads the diff against this same list. That does not make it a gate: its findings on these four rules are capped at `Warn:`, which cannot block a commit, and `--review` is opt-in — it auto-fires only for destructive-class tasks, a category that has nothing to do with code shape. A second reader is worth having. It is not enforcement.
 
 ## What is deliberately not here
 
 Four TIGER_STYLE rules are absent on purpose, so their absence does not read as an oversight:
 
 - **Assert the negative space, as a testing rule** — already carried by the repo's testing standard: `run-slice` fails a slice whose test passed on its first run, and every gate is required to ship a positive and a negative test. That is the same rule enforced one level up, at the test rather than at the function.
-- **Zero technical debt** — a caught bug becomes a recorded, testable invariant through the dossier plugin's backprop verb. `ds:status --drift` runs those checks when asked, and only a high-recurrence class is promoted to a write-time guard; nothing runs them on every commit by itself. Denying `TODO` / `FIXME` markers at write time is a personal coding standard and belongs in an operator's own harness, not shipped to everyone who installs a plugin.
+- **Zero technical debt** — a caught bug becomes a recorded, testable invariant through the dossier plugin's backprop verb. Only a high-recurrence class is promoted to a write-time guard; nothing runs them on every commit by itself. Denying `TODO` / `FIXME` markers at write time is a personal coding standard and belongs in an operator's own harness, not shipped to everyone who installs a plugin.
 - **Say why in comments** — same reason. Comment policy is one person's taste; a plugin that ships it imposes it.
 - **Static allocation, no recursion** — TIGER_STYLE was written for a database in Zig. These rules do not translate to Python, bash and markdown, and pretending otherwise would be cargo cult.
 
@@ -94,4 +94,4 @@ Done = `tiger-check` exits 0 or 2 **and** you have read the diff against the man
 
 ## Dossier breadcrumb
 
-In a repo with a live dossier ledger, record a non-clean verdict as one `§S` line through the dossier plugin's append tooling — `tiger=block@<n>` or `tiger=nag@<n>`. A clean run writes nothing; a log that records every uneventful pass buries the events that matter. No dossier → skip, no-op: this skill ships no hooks and needs no dossier to run.
+In a repo with a live dossier ledger, record a non-clean verdict as one line with `ds log` — `tiger=block@<n>` or `tiger=nag@<n>`. A clean run writes nothing; a log that records every uneventful pass buries the events that matter. No dossier → skip, no-op: this skill ships no hooks and needs no dossier to run.

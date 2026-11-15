@@ -62,4 +62,4 @@ Each slice: `run-slice red` exited 0 (the test genuinely failed first), then `ru
 
 ## Dossier breadcrumb
 
-In a repo with a live dossier ledger, record the verdict as one §S line through the dossier plugin's append tooling (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip: this skill ships no hooks and no dossier dependency.
+In a repo with a live dossier ledger, record the verdict as one line with `ds log` (the host session reminds when applicable; the first live row is the current dossier). No dossier → skip: this skill ships no hooks and no dossier dependency.

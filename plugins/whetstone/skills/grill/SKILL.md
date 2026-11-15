@@ -47,6 +47,6 @@ When a decision needs someone outside the conversation, write a questionnaire fo
 | claim                                       | enforced by                                              |
 | ------------------------------------------- | -------------------------------------------------------- |
 | a fact is looked up, not asked              | model-judgment — no script tells a fact from a decision  |
-| a recommendation names what backs it        | model-judgment — `ds grill-add` exits 64 on a missing `probe=`; this skill has no such check |
+| a recommendation names what backs it        | model-judgment — this skill has no check for it |
 | the frontier is empty                       | model-judgment — no fixed tree exists to check against   |
 | the user confirmed                          | model-judgment — the confirmation is the user's own text |

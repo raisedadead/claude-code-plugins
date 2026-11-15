@@ -1,6 +1,6 @@
 # whetstone
 
-Engineering-craft skills that sharpen the edge before you cut. TDD, the `verify-clean` merge check, skill lint, column budget and HTML report end in a script's exit code, so "done" is a checkable fact. The `flake-runner` flaky-test rate is computed and printed, and sets no exit code. Doubt review and the research verdicts are model-judgment. The method skills — `grill`, `diagnose`, `prototype`, `domain-modeling`, `codebase-design` — have no computed gate.
+Engineering-craft skills that sharpen the edge before you cut. TDD, skill lint, column budget and HTML report end in a script's exit code, so "done" is a checkable fact. The `flake-runner` flaky-test rate is computed and printed, and sets no exit code. Doubt review and the research verdicts are model-judgment. The method skills — `grill`, `diagnose`, `prototype`, `domain-modeling`, `codebase-design` — have no computed gate.
 
 Under managed settings or a Team or Enterprise `/login`, Claude Code's built-in guard `sec-default` does not run the skill lint reminder or the claim gate. The skills and `bin/` commands still work.
 
