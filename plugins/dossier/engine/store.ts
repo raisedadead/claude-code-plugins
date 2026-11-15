@@ -23,6 +23,7 @@ export const REGISTER_HEAD = [
   '- `drop`: the work is cancelled.',
   '- `A` is an agent. `H` is the operator.',
   '- A paused item is `wait H`. Its tail starts with `paused`.',
+  '- A `later` row needs a tail: `until <YYYY-MM-DD>`, `after <dossier-slug>` or `after pr <owner/repo>#<n>`.',
   '- The line of a dossier is the line whose ID the `row:` field of its DOSSIER.md header names.',
   '- To make a new ID by hand, use one more than the highest O number in this file and in every DOSSIER.md under `.scratchpad/dossier/`, live or archived.',
   '',
