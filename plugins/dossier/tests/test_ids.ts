@@ -60,7 +60,7 @@ test('ds add after ds new takes the next number', () => {
 test('row: survives ds anchors', () => {
   const cwd = repo()
   const path = checkedPlan(cwd)
-  file(path, file(path).replace('state: plan\n', 'state: plan\nrow: O77\n'))
+  file(path, file(path).replace('row: O100\n', 'row: O77\n'))
   assert.equal(ds(cwd, 'anchors').code, 0)
   assert.equal(header(file(path)).row, 'O77')
 })

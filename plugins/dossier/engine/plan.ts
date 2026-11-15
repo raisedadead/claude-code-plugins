@@ -194,6 +194,7 @@ export function lint(text: string): string[] {
   const errors: string[] = []
   const head = header(text)
   for (const key of ['state', 'branch', 'base']) if (!head[key]) errors.push(`header: ${key} is empty`)
+  if (!/^O\d+$/.test(head.row ?? '')) errors.push('header: row')
   if (head.pr) errors.push(...subjectErrors(head.pr).map((e) => `PR title: ${e}`))
   else errors.push('header: pr (the PR title) is empty')
   for (const name of SECTIONS) if (!sectionRange(text, name)) errors.push(`section ## ${name} is missing`)

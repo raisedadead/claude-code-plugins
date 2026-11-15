@@ -7,6 +7,11 @@ test('a full plan lints clean', () => {
   assert.deepEqual(lint(PLAN), [])
 })
 
+test('lint requires the row header', () => {
+  assert.ok(lint(PLAN.replace(/^row: .*\n/m, '')).includes('header: row'))
+  assert.ok(!lint(PLAN).some((e) => e.startsWith('header:')))
+})
+
 test('lint names each gap in a plan', () => {
   const cases: [string, string, RegExp][] = [
     ['pr: feat(b): add the b module', 'pr: Add b.', /PR title: .*not a Conventional/],
