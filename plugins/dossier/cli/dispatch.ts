@@ -10,7 +10,7 @@ export const COMMANDS: Record<string, Command> = {
   triage: { run: cmdTriage, usage: 'triage [--json]  rows that wait on you, due deferred rows, stale and out-of-shape rows, live dossiers' },
   new: { run: cmdNew, usage: 'new <slug> [--branch b] [--base b]  folder, plan file, branch name, worklog' },
   add: { run: cmdAdd, usage: 'add "<title>" [--who A|H] [--state s] [--tail t] [--register]  a row with the next O number' },
-  set: { run: cmdSet, usage: 'set <id> <state> [tail]  change a row state' },
+  set: { run: cmdSet, usage: 'set <id> <state> [tail] [--who A|H]  change a row state' },
   log: { run: cmdLog, usage: 'log "<note>"  a line in the worklog' },
   lint: { run: cmdLint, usage: 'lint  check the plan file' },
   check: { run: cmdCheck, usage: 'check [--baseline]  run the checks; with --baseline each non-guard check must fail' },

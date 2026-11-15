@@ -14,7 +14,7 @@ import {
   reviews,
   tree as treeOf,
 } from '../engine/branch.ts'
-import { checks, commits, edges, header, replaceSection, rows, section, setHeader } from '../engine/plan.ts'
+import { checks, commits, edges, header, replaceSection, rows, section, setHeader, setRow } from '../engine/plan.ts'
 import { formatRow } from '../engine/rows.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
 import {
@@ -186,10 +186,14 @@ export function cmdClose(cwd: string, args: Args): string {
   const target = join(dossierHome(root), '_archive', dossier.name)
   if (existsSync(target)) throw new Refusal(`${target} already exists`)
   const carry = all.filter((r) => r.state === 'wait' || r.state === 'later')
-  if (carry.length) {
-    let register = readOr(registerFile(root), REGISTER_HEAD)
+  const own = header(text).row
+  const registerText = readOr(registerFile(root), REGISTER_HEAD)
+  const ownRow = own ? rows(registerText).rows.find((r) => r.id === own) : undefined
+  if (carry.length || ownRow) {
+    let register = registerText
+    if (ownRow) register = setRow(register, ownRow, formatRow({ ...ownRow, state: 'done', tail: line }))
     const body = section(register, 'Rows')
-    register = replaceSection(register, 'Rows', [body, ...carry.map(formatRow)].filter(Boolean).join('\n'))
+    if (carry.length) register = replaceSection(register, 'Rows', [body, ...carry.map(formatRow)].filter(Boolean).join('\n'))
     const notes = section(text, 'Notes').split(/^(?=### )/m)
     const moved = notes.filter((block) => carry.some((r) => block.startsWith(`### ${r.id}\n`)))
     if (moved.length) register = replaceSection(register, 'Notes', [section(register, 'Notes'), ...moved.map((b) => b.trim())].filter(Boolean).join('\n\n'))

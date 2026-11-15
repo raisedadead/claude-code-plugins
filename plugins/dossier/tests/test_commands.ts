@@ -144,3 +144,35 @@ test('the command line entry prints help to stdout and an unknown command to std
   assert.equal(main(['help'], '/'), 0)
   assert.equal(main(['nope'], '/'), 2)
 })
+
+test('set --who changes who a row waits on (I5)', () => {
+  const cwd = repo()
+  file(join(cwd, '.scratchpad/OPEN-WORK.md'), '# Open work\n\n## Rows\n\n- O7 next A t\n')
+  assert.equal(ds(cwd, 'set', 'O7', 'wait', 'paused: x', '--who', 'H').out, '- O7 wait H t · paused: x')
+  assert.match(file(join(cwd, '.scratchpad/OPEN-WORK.md')), /^- O7 wait H t · paused: x$/m)
+  assert.equal(ds(cwd, 'set', 'O7', 'wait', '--who', 'Z').code, 2)
+})
+
+test('close sets the dossier row to done in the register (I6)', () => {
+  const cwd = repo()
+  const path = planned(cwd)
+  file(path, PLAN_NO_OPEN(file(path)).replace(/^state:/m, 'row: O100\nstate:'))
+  assert.match(file(join(cwd, '.scratchpad/OPEN-WORK.md')), /^- O100 next A dossier /m)
+  const closed = ds(cwd, 'close', 'all built')
+  assert.equal(closed.code, 0, closed.err)
+  assert.match(file(join(cwd, '.scratchpad/OPEN-WORK.md')), /^- O100 done A dossier 2026-11-14-demo · all built$/m)
+})
+
+test('close leaves the register alone for a dossier with no row key', () => {
+  const cwd = repo()
+  const path = planned(cwd)
+  file(path, PLAN_NO_OPEN(file(path)))
+  assert.equal(ds(cwd, 'close', 'all built').code, 0)
+  assert.match(file(join(cwd, '.scratchpad/OPEN-WORK.md')), /^- O100 next A dossier 2026-11-14-demo$/m)
+})
+
+function PLAN_NO_OPEN(text: string): string {
+  return text
+    .replace('- O1 next A Add the b module\n- O2 next A Add the c module', '- O1 drop A Add the b module · x\n- O2 drop A Add the c module · x')
+    .replace(/^row: .*\n/m, '')
+}

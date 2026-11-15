@@ -90,10 +90,11 @@ export function cmdAdd(cwd: string, args: Args): string {
   return formatRow(row)
 }
 
-export function setState(root: string, id: string, state: State, tail?: string): string {
+export function setState(root: string, id: string, state: State, tail?: string, who?: string): string {
   if (!STATES.includes(state)) throw new Refusal(`state must be one of ${STATES.join(', ')}`, 2)
+  if (who !== undefined && who !== 'A' && who !== 'H') throw new Refusal('who must be A or H', 2)
   const { file, row } = findRow(root, id)
-  const next = checked({ ...row, state, tail: tail ?? (state === row.state ? row.tail : '') })
+  const next = checked({ ...row, state, who: (who as Who | undefined) ?? row.who, tail: tail ?? (state === row.state ? row.tail : '') })
   write(file, setRow(read(file), row, formatRow(next)))
   logFor(root, file, `set ${formatRow(next).slice(2)}`)
   return formatRow(next)
@@ -102,7 +103,7 @@ export function setState(root: string, id: string, state: State, tail?: string):
 export function cmdSet(cwd: string, args: Args): string {
   const [id = '', state = '', ...tail] = args._
   if (!/^O\d+$/.test(id)) throw new Refusal('usage: ds set <O-id> <state> [tail]', 2)
-  return setState(ledgerRoot(cwd), id, state as State, tail.length ? tail.join(' ') : undefined)
+  return setState(ledgerRoot(cwd), id, state as State, tail.length ? tail.join(' ') : undefined, flag(args, 'who'))
 }
 
 export function cmdLog(cwd: string, args: Args): string {
