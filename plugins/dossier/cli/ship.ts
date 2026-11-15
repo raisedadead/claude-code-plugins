@@ -34,7 +34,7 @@ import {
   write,
 } from '../engine/store.ts'
 import { render, triage, writeLaterView } from '../engine/triage.ts'
-import { type Args, dossierOf, flag, runChecks, verdictOf } from './plan.ts'
+import { type Args, dossierOf, flag, guard, runChecks, verdictOf } from './plan.ts'
 
 function optionalDossier(cwd: string, args: Args): Dossier | undefined {
   try {
@@ -106,6 +106,7 @@ export function cmdRecordReview(cwd: string, args: Args): string {
 
 export function cmdShape(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
+  guard(cwd, dossier)
   const text = read(dossier.file)
   const head = header(text)
   const tree = workTree(cwd)

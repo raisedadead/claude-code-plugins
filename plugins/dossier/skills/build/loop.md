@@ -18,4 +18,6 @@ You read this file as the team lead. Follow the steps in order. The mission name
 
 A row with no code, such as a decision, is closed with `ds done <id> --cite "<decision>"`.
 
+If a ds command exits 3, the dossier waits on the operator. Report its output and stop.
+
 Each report names the row and the dossier path. End each report with the lines that `ds handoff` prints.

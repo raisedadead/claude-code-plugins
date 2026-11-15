@@ -4,7 +4,7 @@ import { checks, type Commit as Planned, commits, edges, header, lint, planHash,
 import { formatRow } from '../engine/rows.ts'
 import { git, gitTry, Refusal } from '../engine/sh.ts'
 import { currentBranch, type Dossier, ledgerRoot, log, read, workTree, worklog, write } from '../engine/store.ts'
-import { type Args, dossierOf, rowsOf, runChecks, setState } from './plan.ts'
+import { type Args, dossierOf, guard, rowsOf, runChecks, setState, startLine } from './plan.ts'
 
 function plannedFor(dossier: Dossier, id: string): Planned {
   const found = commits(read(dossier.file)).find((c) => c.rows.includes(id))
@@ -14,6 +14,7 @@ function plannedFor(dossier: Dossier, id: string): Planned {
 
 export function cmdAnchors(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
+  guard(cwd, dossier)
   const text = read(dossier.file)
   const errors = lint(text)
   if (errors.length) throw new Refusal(`run ds lint first: ${errors.length} problems`)
@@ -35,6 +36,7 @@ export function cmdAnchors(cwd: string, args: Args): string {
     git(tree, 'commit', '--allow-empty', '-m', commit.subject)
     made.push(commit.subject)
   }
+  startLine(cwd, dossier, 'anchors')
   write(dossier.file, setHeader(read(dossier.file), 'state', 'build'))
   log(dossier, `anchors ${made.length} made on ${branch}`)
   return made.length ? made.map((s) => `anchor: ${s}`).join('\n') : 'anchors: all present'
@@ -60,7 +62,9 @@ export function cmdLanes(cwd: string, args: Args): string {
 }
 
 export function cmdNext(cwd: string, args: Args): string {
-  const all = rowsOf(dossierOf(cwd, args))
+  const dossier = dossierOf(cwd, args)
+  guard(cwd, dossier)
+  const all = rowsOf(dossier)
   const next = all.find((r) => r.who === 'A' && r.state === 'now') ?? all.find((r) => r.who === 'A' && r.state === 'next')
   if (next) return formatRow(next)
   const waiting = all.filter((r) => r.state === 'wait' || (r.who === 'H' && r.state === 'next'))
@@ -70,12 +74,14 @@ export function cmdNext(cwd: string, args: Args): string {
 
 export function cmdMission(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
+  guard(cwd, dossier)
   const id = args._[0] ?? ''
   const text = read(dossier.file)
   const found = rowsOf(dossier).find((r) => r.id === id)
   if (!found) throw new Refusal(`no row ${id} in ${dossier.slug}`)
   const planned = plannedFor(dossier, id)
   if (found.state === 'next') setState(ledgerRoot(cwd), id, 'now')
+  startLine(cwd, dossier, 'mission')
   const row = { ...found, state: found.state === 'next' ? ('now' as const) : found.state }
   const own = checks(text).checks.filter((c) => c.guard || c.rows.includes(id))
   const names = new Set(own.map((c) => c.name))
@@ -113,6 +119,7 @@ export function cmdMission(cwd: string, args: Args): string {
 
 export function cmdVerify(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
+  guard(cwd, dossier)
   const id = args._[0] ?? ''
   const text = read(dossier.file)
   const planned = plannedFor(dossier, id)
@@ -146,6 +153,7 @@ export function cmdDone(cwd: string, args: Args): string {
   const id = args._[0] ?? ''
   const cite = typeof args.flags.cite === 'string' ? args.flags.cite : undefined
   if (cite) return setState(ledgerRoot(cwd), id, 'done', cite)
+  guard(cwd, dossier)
   const last = [...worklog(dossier)].reverse().find((line) => line.includes(` verify ${id} `))
   if (!last?.includes(' PASS ')) throw new Refusal(`run ds verify ${id} first, or give --cite "<decision>" for a row with no code`)
   const tree = workTree(cwd)
@@ -163,6 +171,7 @@ function headerOfText(dossier: Dossier): Record<string, string> {
 
 export function cmdIntegrate(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
+  guard(cwd, dossier)
   const lane = args._[0] ?? ''
   const main = headerOfText(dossier).branch ?? ''
   if (!lane.startsWith(`${main}-lane-`)) throw new Refusal(`usage: ds integrate <${main}-lane-N>`, 2)

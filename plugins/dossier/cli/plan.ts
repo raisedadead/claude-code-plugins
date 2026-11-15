@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { defaultBase, globMatch } from '../engine/branch.ts'
-import { appendRow, checks, commits, lint, planHash, rows, setHeader, setRow, template } from '../engine/plan.ts'
+import { appendRow, checks, commits, header, lint, planHash, rows, setHeader, setRow, template } from '../engine/plan.ts'
 import { formatRow, type Row, type State, STATES, scanRows, shapeErrors, type Who } from '../engine/rows.ts'
 import { git, lines, Refusal, run } from '../engine/sh.ts'
 import {
@@ -71,6 +71,30 @@ function checked(row: Row): Row {
 function logFor(root: string, file: string, line: string): void {
   const dossier = liveDossiers(root).find((d) => d.file === file)
   if (dossier) log(dossier, line)
+}
+
+export function ownLine(root: string, dossier: Dossier): Row | undefined {
+  const own = header(read(dossier.file)).row
+  if (!own) return undefined
+  return rows(readOr(registerFile(root), REGISTER_HEAD)).rows.find((r) => r.id === own)
+}
+
+export function guard(cwd: string, dossier: Dossier): void {
+  const line = ownLine(ledgerRoot(cwd), dossier)
+  if (!line || line.state === 'now' || line.state === 'next') return
+  throw new Refusal(
+    `${dossier.slug} waits on the operator: its line ${line.id} is ${line.state}${line.tail ? ` (${line.tail})` : ''}. The operator resumes it with: ds set ${line.id} next --who A`,
+    3,
+  )
+}
+
+export function startLine(cwd: string, dossier: Dossier, verb: string): void {
+  const root = ledgerRoot(cwd)
+  const line = ownLine(root, dossier)
+  if (!line || line.state !== 'next') return
+  const register = readOr(registerFile(root), REGISTER_HEAD)
+  write(registerFile(root), setRow(register, line, formatRow({ ...line, state: 'now' })))
+  log(dossier, `${verb} ${line.id} next->now`)
 }
 
 export function cmdAdd(cwd: string, args: Args): string {
