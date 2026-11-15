@@ -20,7 +20,7 @@ Composition depth, not fusion. Merging them has been proposed and rejected twice
 
 ## Ledger model
 
-One piece of work is one plan file: `.scratchpad/dossier/<date>-<slug>/DOSSIER.md`. Rows outside a live dossier live in `.scratchpad/OPEN-WORK.md`. Every row has one shape and one ID, `O<N>`, from one counter shared across repos. The shapes are in [`plugins/dossier/FORMAT.md`](./plugins/dossier/FORMAT.md).
+One piece of work is one plan file: `.scratchpad/dossier/<date>-<slug>/DOSSIER.md`. The register of all work is `.scratchpad/OPEN-WORK.md`. It has one line for each dossier and each loose row. Every row has one shape and one ID, `O<N>`, from one counter shared across repos. The shapes are in [`plugins/dossier/FORMAT.md`](./plugins/dossier/FORMAT.md).
 
 **A step that gives the same result each time it runs is a `ds` command.** A model does only the judgement: the questions, the plan text, the code, the review and the conflicts. The cycle is plan, plan check, anchors, one builder per row, one review of the branch, shape, push, close. The commands exit 1 and do nothing when the step before them has not passed: `ds anchors` needs a baseline and a passing plan check of the current plan text, `ds done` needs a passing `ds verify`, and `ds shape` refuses when the files would change.
 

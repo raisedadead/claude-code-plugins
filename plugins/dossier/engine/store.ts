@@ -8,7 +8,29 @@ import { gitTry, Refusal } from './sh.ts'
 export type Dossier = { dir: string; name: string; slug: string; file: string }
 
 export const DATE = /^\d{4}-\d{2}-\d{2}-/
-export const REGISTER_HEAD = '# Open work\n\nRows outside a live dossier. Edit rows with `ds add` and `ds set`.\n\n## Rows\n\n## Notes\n'
+export const REGISTER_HEAD = [
+  '# Open work',
+  '',
+  'This file is the register of all work. Each row is one line:',
+  '',
+  '`- O<N> <now|next|wait|later|done|drop> <A|H> <title> · <tail>`',
+  '',
+  '- `now`: the work is in progress.',
+  '- `next`: the work is ready to start.',
+  '- `wait`: the work waits for a person or an event.',
+  '- `later`: the work is not planned yet.',
+  '- `done`: the work is finished.',
+  '- `drop`: the work is cancelled.',
+  '- `A` is an agent. `H` is the operator.',
+  '- A paused item is `wait H`. Its tail starts with `paused`.',
+  '- The line of a dossier is the line whose ID the `row:` field of its DOSSIER.md header names.',
+  '- To make a new ID by hand, use one more than the highest O number in this file and in every DOSSIER.md under `.scratchpad/dossier/`, live or archived.',
+  '',
+  '## Rows',
+  '',
+  '## Notes',
+  '',
+].join('\n')
 
 export function today(): string {
   return (process.env.DS_TODAY ?? new Date().toISOString()).slice(0, 10)

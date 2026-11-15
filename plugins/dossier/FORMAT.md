@@ -6,7 +6,7 @@ Every shape here is read by a `ds` command. `ds lint` checks the plan file, and 
 
 ```
 .scratchpad/
-├── OPEN-WORK.md                 rows outside a live dossier
+├── OPEN-WORK.md                 the register of all work: one line for each dossier and each loose row
 ├── LATER.md                     a view of the later rows, written by ds triage
 └── dossier/
     ├── <YYYY-MM-DD>-<slug>/
@@ -44,6 +44,7 @@ The ledger lives in the main checkout. A `ds` command run in a linked worktree r
 # <slug>
 
 state: plan
+row: O<N>
 branch: <branch>
 base: main
 pr: <PR title>
@@ -59,7 +60,7 @@ checked: <plan hash, or ->
 ## Notes
 ```
 
-- **Header**: `ds` sets `state` (`plan`, `build`, `ship`, `done`) and `checked`. `ds close` adds `closed:`.
+- **Header**: `row:` names the ID of the dossier's line in the register. `ds` sets `state` (`plan`, `build`, `ship`, `done`) and `checked`. `ds close` adds `closed:`.
 - **Goal**: the operator's words, quoted.
 - **Scope**: `- in: <text>` and `- out: <text>`.
 - **Decisions**: `1. <question> — <answer> · <YYYY-MM-DD>`, then `confirmed: "<the operator's words>"`. An answer of `?` is open. A decision split on "discuss more" is answered `split into <n>, <m>`, and its parts are new numbered decisions. A decision that waits on someone outside the room is answered `waits on <who>: <questionnaire path>`, with a `wait` row for it.
