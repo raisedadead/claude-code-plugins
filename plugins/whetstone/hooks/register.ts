@@ -1,6 +1,5 @@
 import type { EngineInterface, Register } from 'claude-code'
 import { lintSkill, sharedTriggers } from '../skills/skill-smith/scripts/lint-skill.ts'
-import { flaggedUnits } from './claim-check.ts'
 
 const SKILL_FILE = /^(.*)\/skills\/([^/]+)\/SKILL\.md$/
 
@@ -39,10 +38,6 @@ async function skillLintReminder($: EngineInterface, path: string): Promise<stri
   return `skill-smith lint for ${path}:\n${lines.join('\n')}\nReminder only, never blocking; whetstone:skill-smith holds the rubric.`
 }
 
-export function claimCountKey(at: Date = new Date()): string {
-  return `claims:${at.toISOString().slice(0, 10)}`
-}
-
 export const register: Register = (on) => {
   on('classic.PostToolUse', async ($, e, next) => {
     const result = await next(e)
@@ -52,15 +47,5 @@ export const register: Register = (on) => {
     const context = await skillLintReminder($, path)
     if (!context) return result
     return { ...result, additionalContext: [...(result.additionalContext ?? []), context] }
-  })
-
-  on('classic.Stop', async ($, e, next) => {
-    const result = await next(e)
-    if (e.stop_hook_active) return result
-    const count = flaggedUnits(e.last_assistant_message ?? '').length
-    if (!count) return result
-    const key = claimCountKey()
-    await $.store.set(key, (Number(await $.store.get(key)) || 0) + count).catch(() => undefined)
-    return result
   })
 }
