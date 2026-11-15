@@ -21,7 +21,7 @@ import {
   worklog,
   write,
 } from '../engine/store.ts'
-import { render, triage, writeLaterView } from '../engine/triage.ts'
+import { render, renderStart, triage, writeLaterView } from '../engine/triage.ts'
 
 export type Args = { _: string[]; flags: Record<string, string | true> }
 export const flag = (args: Args, name: string): string | undefined => {
@@ -265,7 +265,7 @@ export function cmdTriage(cwd: string, args: Args): string {
   const view = triage(root)
   if (args.flags.json) return JSON.stringify(view)
   writeLaterView(root)
-  return render(view)
+  return args.flags.start ? renderStart(view) : render(view)
 }
 
 export function cmdPath(cwd: string, args: Args): string {

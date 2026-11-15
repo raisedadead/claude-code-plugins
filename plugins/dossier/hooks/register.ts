@@ -9,7 +9,7 @@ export const register: Register = (on) => {
     if (e.source === 'compact') return result
     let done: { exitCode: number; stdout: string }
     try {
-      done = await $.process.run(['sh', `${$.plugin.root}/cli/ds`, 'triage'], { cwd: e.cwd, timeoutMs: TRIAGE_TIMEOUT_MS })
+      done = await $.process.run(['sh', `${$.plugin.root}/cli/ds`, 'triage', '--start'], { cwd: e.cwd, timeoutMs: TRIAGE_TIMEOUT_MS })
     } catch {
       return result
     }

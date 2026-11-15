@@ -88,13 +88,24 @@ export function writeLaterView(root: string): boolean {
   return true
 }
 
+function groupOf(out: string[], title: string, flags: Flag[]): void {
+  if (!flags.length) return
+  out.push(`${title}:`)
+  for (const f of flags) out.push(`- ${f.id} ${f.title} (${f.where}; ${f.why})`)
+}
+
+export function renderStart(view: Triage): string {
+  const out: string[] = []
+  groupOf(out, 'Deferred and now due', view.due)
+  groupOf(out, 'Out of shape', view.shape)
+  const changed = view.live.filter((d) => d.replan)
+  if (changed.length) out.push('Plan changed since its check:', ...changed.map((d) => `- ${d.slug}`))
+  return out.join('\n')
+}
+
 export function render(view: Triage): string {
   const out: string[] = []
-  const group = (title: string, flags: Flag[]): void => {
-    if (!flags.length) return
-    out.push(`${title}:`)
-    for (const f of flags) out.push(`- ${f.id} ${f.title} (${f.where}; ${f.why})`)
-  }
+  const group = (title: string, flags: Flag[]): void => groupOf(out, title, flags)
   const paused = (f: Flag): boolean => /^paused(:|\s|$)/i.test(f.why)
   group(
     'Waits on the operator',

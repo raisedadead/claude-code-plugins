@@ -7,7 +7,11 @@ import { cmdClose, cmdPackReview, cmdRecordReview, cmdShape, cmdShipArgs } from 
 type Command = { run: (cwd: string, args: Args) => string; usage: string }
 
 export const COMMANDS: Record<string, Command> = {
-  triage: { run: cmdTriage, usage: 'triage [--json]  rows that wait on you, due deferred rows, stale and out-of-shape rows, live dossiers' },
+  triage: {
+    run: cmdTriage,
+    usage:
+      'triage [--json] [--start]  rows that wait on you, due deferred rows, stale and out-of-shape rows, live dossiers; --start prints only due rows, out-of-shape rows and changed plans',
+  },
   new: { run: cmdNew, usage: 'new <slug> [--branch b] [--base b]  folder, plan file, branch name, worklog' },
   add: { run: cmdAdd, usage: 'add "<title>" [--who A|H] [--state s] [--tail t] [--register]  a row with the next O number' },
   set: { run: cmdSet, usage: 'set <id> <state> [tail] [--who A|H]  change a row state' },
