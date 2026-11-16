@@ -7,7 +7,7 @@ This plugin is built for one operator's Claude Code rig, and is not meant for an
 | Agent roles `plan-checker`, `reviewer`, `gatherer` | `/dossier:plan`, `/dossier:ship`, `/dossier:backprop` | the rig's agent files |
 | `wt switch --create` for lane worktrees | `/dossier:build` | worktrunk's `wt` |
 | The ship tool, which pushes and opens the PR behind one card | `/dossier:ship` | the rig's `mcp__rig__ship` |
-| The hook that writes `reviews.jsonl` when a reviewer ends. `ds` only reads it. The push check reads it too | `/dossier:ship` | the rig (`approval.ts`) |
+| The hook that writes `reviews.jsonl` when a reviewer ends. `ds` only reads it | `/dossier:ship` | the rig (`reviewlog.ts`) |
 | `ds` on PATH | every skill | the chezmoi shim `~/.bin/ds` |
 | The ID counter `~/.local/state/ds/next-id` | `ds add` | this plugin |
 
