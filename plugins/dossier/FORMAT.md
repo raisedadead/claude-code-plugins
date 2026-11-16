@@ -12,7 +12,7 @@ Every shape here is read by a `ds` command. `ds lint` checks the plan file, and 
     ├── <YYYY-MM-DD>-<slug>/
     │   ├── DOSSIER.md           the plan
     │   ├── worklog.md           one line per ds command; notes through ds log
-    │   ├── missions/O<N>.md     builder task files, from ds mission
+    │   ├── missions/O<N>.md     task files, from ds mission
     │   ├── pack-plan.md         from ds pack plan
     │   ├── pack-review.md       from ds pack review
     │   ├── baseline.txt         from ds check --baseline

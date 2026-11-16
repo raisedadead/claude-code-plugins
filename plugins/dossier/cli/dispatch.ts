@@ -23,7 +23,7 @@ export const COMMANDS: Record<string, Command> = {
   anchors: { run: cmdAnchors, usage: 'anchors  one empty commit per planned commit, on the dossier branch' },
   lanes: { run: cmdLanes, usage: 'lanes [--json]  planned commits grouped by paths that do not overlap' },
   next: { run: cmdNext, usage: 'next  the next agent row (exit 3: waits on you; exit 4: none left)' },
-  mission: { run: cmdMission, usage: 'mission <id>  the builder task file for a row' },
+  mission: { run: cmdMission, usage: 'mission <id>  the task file for a row' },
   verify: { run: cmdVerify, usage: 'verify <id>  the row checks, guard checks, commit form and planned paths' },
   done: { run: cmdDone, usage: 'done <id> [--cite "<decision>"]  mark a verified row done' },
   integrate: { run: cmdIntegrate, usage: 'integrate <lane>  rebase a lane onto the dossier branch' },
