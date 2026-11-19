@@ -35,6 +35,18 @@ test('a pack for another review agent starts from the last record of that agent'
   assert.match(file(ds(cwd, 'pack', 'review', '--base', 'main').out), /\+two/, 'the reviewer has not seen it')
 })
 
+test('a record from a whetstone helper counts for its role, and one from another plugin does not', () => {
+  const cwd = repo()
+  sh(cwd, 'git switch -qc topic && echo one > src/one.ts && git add . && git commit -qm "feat: one"')
+  recordReview(cwd, 'PASS', { agent: 'other:reviewer' })
+  assert.match(file(ds(cwd, 'pack', 'review', '--base', 'main').out), /\+one/)
+  recordReview(cwd, 'PASS', { agent: 'whetstone:reviewer' })
+  assert.doesNotMatch(file(ds(cwd, 'pack', 'review', '--base', 'main').out), /\+one/)
+  recordReview(cwd, 'PASS', { agent: 'whetstone:security-reviewer' })
+  assert.doesNotMatch(file(ds(cwd, 'pack', 'review', '--base', 'main', '--agent', 'security-reviewer').out), /\+one/)
+  assert.doesNotMatch(file(ds(cwd, 'pack', 'review', '--base', 'main', '--agent', 'whetstone:security-reviewer').out), /\+one/)
+})
+
 test('help lists every command and an unknown command fails', () => {
   assert.match(ds('/', 'help').out, /ds record review <findings>/)
   assert.equal(ds('/', 'nope').code, 2)
