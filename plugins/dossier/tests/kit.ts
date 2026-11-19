@@ -17,6 +17,7 @@ export function repo(): string {
   const root = mkdtempSync(join(tmpdir(), 'ds-'))
   process.env.DS_STATE_DIR = join(root, 'state')
   process.env.DS_TODAY = '2026-11-14'
+  process.env.DS_NOW = '2026-11-14 00:00'
   process.env.DS_NO_NETWORK = '1'
   delete process.env.DS_DOSSIER
   delete process.env.DS_ROOT

@@ -41,7 +41,7 @@ test('triage flags a row in progress with no recent worklog line, and a plan cha
   ds(cwd, 'set', 'O1', 'now')
   assert.doesNotMatch(ds(cwd, 'triage').out, /In progress/)
   process.env.DS_TODAY = '2026-11-20'
-  assert.match(ds(cwd, 'triage').out, /In progress with no recent work:\n- O1 Add the b module \(demo; no worklog line since 20\d\d-\d\d-\d\d\)/)
+  assert.match(ds(cwd, 'triage').out, /In progress with no recent work:\n- O1 Add the b module \(demo; no worklog line since 2026-11-14\)/)
   process.env.DS_TODAY = '2026-11-14'
   file(path, file(path).replace('state: plan', 'state: build'))
   assert.match(ds(cwd, 'triage').out, /the plan changed since its check/)
