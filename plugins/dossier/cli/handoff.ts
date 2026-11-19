@@ -1,4 +1,4 @@
-import { commitsIn, fixupTarget, reviews } from '../engine/branch.ts'
+import { commitsIn, fixupTarget, REVIEWER, reviewedBy, reviews } from '../engine/branch.ts'
 import { header, lint, planHash } from '../engine/plan.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
 import { type Dossier, log, read, workTree, worklog } from '../engine/store.ts'
@@ -42,7 +42,7 @@ function shipStep(cwd: string, dossier: Dossier, head: Record<string, string>, o
   const tip = revOf(cwd, `refs/heads/${branch}`)
   if (!tip) return `next: /dossier:build — no branch ${branch} yet`
   const tree = git(cwd, 'rev-parse', `${tip}^{tree}`)
-  const passed = reviews(cwd).some((r) => r.branch === branch && r.tree === tree && r.verdict === 'PASS')
+  const passed = reviews(cwd).some((r) => r.branch === branch && r.tree === tree && r.verdict === 'PASS' && reviewedBy(r, REVIEWER))
   if (!passed) return 'next: /dossier:ship — review the branch'
   const from = gitTry(cwd, 'merge-base', base, tip).out.trim()
   const fixups = from ? commitsIn(cwd, `${from}..${tip}`).filter((c) => fixupTarget(c.subject)).length : 0

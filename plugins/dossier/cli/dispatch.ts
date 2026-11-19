@@ -27,7 +27,7 @@ export const COMMANDS: Record<string, Command> = {
   verify: { run: cmdVerify, usage: 'verify <id>  the row checks, guard checks, commit form and planned paths' },
   done: { run: cmdDone, usage: 'done <id> [--cite "<decision>"]  mark a verified row done' },
   integrate: { run: cmdIntegrate, usage: 'integrate <lane>  rebase a lane onto the dossier branch' },
-  'pack review': { run: cmdPackReview, usage: 'pack review [--full] [--base b]  one file for the reviewer' },
+  'pack review': { run: cmdPackReview, usage: 'pack review [--full] [--base b] [--agent a]  one file for the reviewer' },
   'record review': { run: cmdRecordReview, usage: 'record review <findings>  log the verdict; a PASS sets state ship' },
   shape: { run: cmdShape, usage: 'shape  fold fixup! commits into the planned commits' },
   'ship-args': { run: cmdShipArgs, usage: 'ship-args  repo, branch, base and PR title as JSON' },
@@ -37,7 +37,7 @@ export const COMMANDS: Record<string, Command> = {
   path: { run: cmdPath, usage: 'path  the live dossier folder' },
 }
 
-const VALUE_FLAGS = new Set(['dossier', 'who', 'state', 'tail', 'branch', 'base', 'cite'])
+const VALUE_FLAGS = new Set(['dossier', 'who', 'state', 'tail', 'branch', 'base', 'cite', 'agent'])
 
 export function parse(argv: string[]): Args {
   const args: Args = { _: [], flags: {} }

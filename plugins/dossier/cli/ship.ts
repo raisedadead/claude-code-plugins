@@ -1,6 +1,19 @@
 import { existsSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
-import { changedPaths, clean, commitsIn, conflicted, defaultBase, fixupTarget, mergeBase, onRemote, reviews, tree as treeOf } from '../engine/branch.ts'
+import {
+  changedPaths,
+  clean,
+  commitsIn,
+  conflicted,
+  defaultBase,
+  fixupTarget,
+  mergeBase,
+  onRemote,
+  REVIEWER,
+  reviewedBy,
+  reviews,
+  tree as treeOf,
+} from '../engine/branch.ts'
 import { checks, commits, edges, header, replaceSection, rows, section, setHeader, setRow } from '../engine/plan.ts'
 import { formatRow } from '../engine/rows.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
@@ -42,8 +55,9 @@ export function cmdPackReview(cwd: string, args: Args): string {
   const base = baseOf(cwd, args, dossier)
   const branch = currentBranch(tree)
   const from = mergeBase(tree, base)
+  const agent = flag(args, 'agent') ?? REVIEWER
   const last = reviews(tree)
-    .filter((r) => r.branch === branch)
+    .filter((r) => r.branch === branch && reviewedBy(r, agent))
     .pop()
   const since = !args.flags.full && last && gitTry(tree, 'cat-file', '-e', last.tree).code === 0 ? last.tree : undefined
   const diff = git(tree, 'diff', since ?? from, 'HEAD')

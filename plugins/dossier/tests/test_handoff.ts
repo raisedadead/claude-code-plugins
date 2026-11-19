@@ -123,6 +123,8 @@ test('a built branch walks review, shape, push, CI and close', () => {
   assert.equal(ds(cwd, 'handoff').out, 'operator: O3 Approve the PR\nnext: /dossier:ship — review the branch')
   review(cwd, path, 'CHANGES')
   assert.match(ds(cwd, 'handoff').out, /review the branch$/)
+  recordReview(cwd, 'PASS', { agent: 'security-reviewer' })
+  assert.match(ds(cwd, 'handoff').out, /review the branch$/)
   review(cwd, path, 'PASS')
   assert.match(ds(cwd, 'handoff').out, /ds shape folds 2 fixup! commits$/)
   ds(cwd, 'shape')

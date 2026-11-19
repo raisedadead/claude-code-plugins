@@ -3,7 +3,21 @@ import { join } from 'node:path'
 import { git, gitTry, lines, Refusal } from './sh.ts'
 
 export type Commit = { sha: string; subject: string; body: string }
-export type Review = { time: string; branch: string; base: string; head: string; tree: string; patch: string; verdict: string; findings: string }
+export type Review = {
+  time: string
+  agent?: string
+  branch: string
+  base: string
+  head: string
+  tree: string
+  patch: string
+  verdict: string
+  findings: string
+}
+
+export const REVIEWER = 'reviewer'
+
+export const reviewedBy = (review: Review, agent: string): boolean => (review.agent ?? REVIEWER) === agent
 
 const FIXUP = /^fixup! /
 

@@ -20,6 +20,21 @@ test('after a recorded review, the next pack shows only the new change', () => {
   assert.equal(ds(cwd, 'record', 'review', findings).code, 1)
 })
 
+test('a pack for another review agent starts from the last record of that agent', () => {
+  const cwd = repo()
+  sh(cwd, 'git switch -qc topic && echo one > src/one.ts && git add . && git commit -qm "feat: one"')
+  recordReview(cwd, 'PASS', { agent: 'reviewer' })
+  assert.doesNotMatch(file(ds(cwd, 'pack', 'review', '--base', 'main').out), /\+one/)
+  assert.match(file(ds(cwd, 'pack', 'review', '--base', 'main', '--agent', 'security-reviewer').out), /\+one/)
+  recordReview(cwd, 'PASS', { agent: 'security-reviewer' })
+  sh(cwd, 'echo two > src/two.ts && git add . && git commit -qm "feat: two"')
+  const next = file(ds(cwd, 'pack', 'review', '--base', 'main', '--agent', 'security-reviewer').out)
+  assert.match(next, /\+two/)
+  assert.doesNotMatch(next, /\+one/)
+  recordReview(cwd, 'PASS', { agent: 'security-reviewer' })
+  assert.match(file(ds(cwd, 'pack', 'review', '--base', 'main').out), /\+two/, 'the reviewer has not seen it')
+})
+
 test('help lists every command and an unknown command fails', () => {
   assert.match(ds('/', 'help').out, /ds record review <findings>/)
   assert.equal(ds('/', 'nope').code, 2)
