@@ -59,7 +59,7 @@ Verdict vocabulary (4 values + Unverifiable):
 For Outdated / Incorrect / Deprecated rows, append one line below the table per row:
 
 ```
-wrong: Node 20 LTS · right: current LTS = v24 (Krypton) + v22 (Jod). v20 EOL 2026-04-30.
+wrong: Node 20 LTS · right: <LTS majors from jq on endoflife.date/api/v1/products/nodejs> · <EOL date of the claimed line>
 ```
 
 ## Hard rules
@@ -68,7 +68,7 @@ wrong: Node 20 LTS · right: current LTS = v24 (Krypton) + v22 (Jod). v20 EOL 20
 - **Cite the authority URL in every row.** A verdict carries its source.
 - **Quote the exact text or field you compared**, so the comparison reproduces.
 - **Authority unreachable → `Unverifiable`, naming the URL that failed.**
-- **Copyright years change when the operator asks for it** — see operator MEMORY.md.
+- **Copyright years change only when the operator asks for it.**
 - **Answer from the source you pulled.** Anything that came from memory instead is `Unverifiable`, whatever it looks like.
 
 ## Authority cheatsheet

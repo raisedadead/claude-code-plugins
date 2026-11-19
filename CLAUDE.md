@@ -16,7 +16,7 @@ Honesty > Recoverability > Leverage, in that order. Use it to settle conflicts r
 
 Describe every gate as the thing it actually is. An opt-in gate, a default-off gate and an advisory nag each get named as such; a verdict parsed from a model is model-judgment, and computation is what a script returns. `claim-check` exits 1 on a sentence that claims enforcement while naming neither an exit code nor one of those labels.
 
-`blocks`, `enforces` and `gates` are claims about runtime, and a doc cannot prove one. Run the thing and read the exit code before writing the verb. This rule was already on this page when the class recurred three times in one wave; all three shipped, each found by a reviewer and none by a test.
+`blocks`, `enforces` and `gates` are claims about runtime, and a doc cannot prove one. Run the thing and read the exit code before writing the verb.
 
 The shape to watch is **right behaviour, wrong stated reason** — a correct `--cached` read justified by a false claim about what `git diff HEAD` does. Nothing the claim predicted ever failed, so no test could catch it, and it read as authoritative through three reviews. When you write down *why* a thing is done, that sentence needs a probe too. See F25.
 
