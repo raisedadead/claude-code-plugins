@@ -47,6 +47,7 @@ COMMAND_NAME = re.compile(r"<command-name>([^<]+)</command-name>")
 VERDICT_GRAMMAR = {
     "dossier:dossier-reviewer": re.compile(r"REVIEW: (PASS|CHANGES)"),
     "reviewer": re.compile(r"REVIEW: (PASS|CHANGES|clean|\d+ findings?)"),
+    "whetstone:reviewer": re.compile(r"REVIEW: (PASS|CHANGES|clean|\d+ findings?)"),
     "whetstone:whetstone-doubter": re.compile(r"(DOUBT: FAILURES|NO FAILURE FOUND)"),
 }
 OPERATOR_PUSHBACK = re.compile(

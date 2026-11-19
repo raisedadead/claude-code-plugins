@@ -26,7 +26,7 @@ One piece of work is one plan file: `.scratchpad/dossier/<date>-<slug>/DOSSIER.m
 
 **The review is tied to the tree.** The rig's hook writes the verdict with the tree hash and the patch ID in `$(git rev-parse --git-common-dir)/reviews.jsonl` when a reviewer ends. `ds` only reads it. Shaping rewrites the commits but not the files, so the review still holds after it.
 
-**The plugin names the rig's roles and ships no agents.** The main session builds. The `plan-checker`, `reviewer` and `gatherer` agents live in the operator's rig, which also holds each role's tools and write scope (`plugins/dossier/ADAPTERS.md`).
+**The plugin names the whetstone helpers and ships no agents.** The main session builds. The `whetstone:plan-checker`, `whetstone:reviewer` and `whetstone:gatherer` agents ship in whetstone with their tools. The operator's rig holds them to a read-only shell and scratch-only writes, and writes the review record (`plugins/dossier/ADAPTERS.md`).
 
 ## Priorities
 

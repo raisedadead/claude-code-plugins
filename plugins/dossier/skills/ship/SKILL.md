@@ -6,7 +6,7 @@ description: Review the dossier branch once, fold the fixup commits into the pla
 # ds:ship
 
 1. `ds check` must print `CHECK: OK`.
-2. `ds pack review` writes the review pack. Spawn one `reviewer` agent with its path. It writes a findings file that ends `VERDICT: PASS` or `VERDICT: CHANGES`. When the kernel orders a second review agent for the change, run `ds pack review --agent <its type>` for that agent: the pack then starts from the last record of that type.
+2. `ds pack review` writes the review pack. Spawn one `whetstone:reviewer` agent with its path. It writes a findings file that ends `VERDICT: PASS` or `VERDICT: CHANGES`. When the kernel orders a second review agent for the change, run `ds pack review --agent <its type>` for that agent: the pack then starts from the last record of that type.
 3. `ds record review <findings>`. It logs the verdict in the worklog. On PASS it sets `state: ship`. The rig's hook writes the review record when the reviewer ends.
    - On CHANGES: add one row per accepted finding with `ds add`, plan its commit, build it with `/dossier:build`, and come back to step 1. When a review record exists, the next pack holds only the change since that review.
 4. Run `ds shape`. It folds each `fixup!` commit into its planned commit. It refuses if the files would change.

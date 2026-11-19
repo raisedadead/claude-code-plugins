@@ -4,7 +4,8 @@ This plugin is built for one operator's Claude Code rig, and is not meant for an
 
 | Part | Used by | Where it lives |
 | --- | --- | --- |
-| Agent roles `plan-checker`, `reviewer`, `gatherer` | `/dossier:plan`, `/dossier:ship`, `/dossier:backprop` | the rig's agent files |
+| Agents `whetstone:plan-checker`, `whetstone:reviewer`, `whetstone:gatherer` | `/dossier:plan`, `/dossier:ship`, `/dossier:backprop` | the whetstone plugin |
+| The read-only shell and scratch-only writes of those agents, which ship with `Bash` and `Write` | every spawn of them | the rig (`validators.ts`, from dot_claude ff36c41) |
 | `wt switch --create` for lane worktrees | `/dossier:build` | worktrunk's `wt` |
 | The ship tool, which pushes and opens the PR behind one card | `/dossier:ship` | the rig's `mcp__rig__ship` |
 | The hook that writes `reviews.jsonl` when a reviewer ends. `ds` only reads it | `/dossier:ship` | the rig (`reviewlog.ts`) |
