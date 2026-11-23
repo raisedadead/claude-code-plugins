@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { appendFileSync, mkdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { test } from 'vitest'
 import { reviews, reviewsFile, worktreeOf } from '../engine/branch.ts'
 import { checkedPlan, ds, file, planned, repo, sh } from './kit.ts'
@@ -37,13 +37,14 @@ test('the plan pack names the file of the plan checker, with a name the host let
   const path = planned(cwd)
   ds(cwd, 'check', '--baseline')
   const first = join(dirname(path), 'plan-check-1.md')
-  assert.ok(file(ds(cwd, 'pack', 'plan').out).includes(`\nWrite your findings to this file: ${first}\n`))
-  assert.ok(file(ds(cwd, 'pack', 'plan').out).includes(`\nWrite your findings to this file: ${first}\n`), 'a second pack with no record keeps the number')
+  const named = (): string => /^Plan checker: write your findings to this file: (.+)$/m.exec(file(ds(cwd, 'pack', 'plan').out))?.[1] ?? ''
+  assert.equal(named(), first)
+  assert.equal(named(), first, 'a second pack with no record keeps the number')
   file(first, 'Checks: block: x\nVERDICT: CHANGES\n')
   assert.equal(ds(cwd, 'record', 'plan', first).code, 1)
-  assert.ok(file(ds(cwd, 'pack', 'plan').out).includes(`\nWrite your findings to this file: ${join(dirname(path), 'plan-check-2.md')}\n`))
-  assert.doesNotMatch('plan-check-1.md', HOST_REFUSES)
-  assert.match('findings-plan-1.md', HOST_REFUSES)
+  assert.equal(named(), join(dirname(path), 'plan-check-2.md'))
+  assert.doesNotMatch(basename(named()), HOST_REFUSES)
+  assert.match('findings-plan-1.md', HOST_REFUSES, 'the pattern does refuse the name that sessions picked')
 })
 
 test('ship-args names the worktree that holds the dossier branch, as the ship tool wants it', () => {

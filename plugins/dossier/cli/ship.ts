@@ -11,6 +11,7 @@ import {
   onRemote,
   REVIEWER,
   reviewedBy,
+  role,
   reviews,
   sameBranch,
   tree as treeOf,
@@ -67,7 +68,7 @@ export function cmdPackReview(cwd: string, args: Args): string {
   const diff = git(tree, 'diff', since ?? from, 'HEAD')
   const reviewed = `REVIEWED: ${tree} ${branch} ${base}..${git(tree, 'rev-parse', 'HEAD')}`
   const out = dossier ? join(dossier.dir, 'pack-review.md') : join(scratch(ledgerRoot(cwd)), 'tmp', `pack-review-${branch.replace(/\//g, '-')}.md`)
-  const findings = join(dirname(out), `${agent.replace(/^.*:/, '').replace(/[^\w-]/g, '-')}-${git(tree, 'rev-parse', '--short=7', 'HEAD')}.md`)
+  const findings = join(dirname(out), `${role(agent).replace(/[^\w-]/g, '-')}-${git(tree, 'rev-parse', '--short=7', 'HEAD')}.md`)
   const parts = [`# Review pack: ${branch}`, '', `Write your findings to this file: ${findings}`, 'Copy the next line into it as it is.', '', reviewed, '']
   parts.push('End the file with one line: VERDICT: PASS or VERDICT: CHANGES.', '')
   if (dossier) {

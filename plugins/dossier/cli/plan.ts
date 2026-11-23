@@ -226,7 +226,7 @@ export function cmdPackPlan(cwd: string, args: Args): string {
   const pack = [
     `# Plan check pack: ${dossier.slug}`,
     '',
-    `Write your findings to this file: ${join(dossier.dir, `plan-check-${worklog(dossier).filter((line) => RECORD.test(line)).length + 1}.md`)}`,
+    `Plan checker: write your findings to this file: ${join(dossier.dir, `plan-check-${worklog(dossier).filter((line) => RECORD.test(line)).length + 1}.md`)}`,
     'End it with one line: VERDICT: PASS or VERDICT: CHANGES.',
     '',
     '## Plan',

@@ -17,7 +17,7 @@ export type Review = {
 
 export const REVIEWER = 'reviewer'
 
-const role = (agent: string): string => agent.replace(/^whetstone:/, '')
+export const role = (agent: string): string => agent.replace(/^whetstone:/, '')
 
 export const reviewedBy = (review: Review, agent: string): boolean => role(review.agent ?? REVIEWER) === role(agent)
 

@@ -16,6 +16,11 @@ test('after a recorded review, the next pack shows only the new change', () => {
     `\nWrite your findings to this file: ${join(dirname(pack), `${agent}-${sh(cwd, 'git rev-parse --short=7 HEAD')}.md`)}\n`
   assert.ok(file(pack).includes(named('reviewer')))
   assert.ok(file(ds(cwd, 'pack', 'review', '--base', 'main', '--agent', 'whetstone:security-reviewer').out).includes(named('security-reviewer')))
+  assert.ok(
+    file(ds(cwd, 'pack', 'review', '--base', 'main', '--agent', 'other:reviewer').out).includes(named('other-reviewer')),
+    'another plugin keeps its own file',
+  )
+  assert.ok(file(ds(cwd, 'pack', 'review', '--base', 'main', '--agent', '../../x').out).includes(named('------x')), 'an agent name adds no path part')
   const RIG_REVIEWED = /^[ \t*_>`-]*REVIEWED:[ \t]*(\/.*?)[ \t]+(\S+)[ \t]+(\S+?)\.\.(\S+?)[ \t`*_]*$/gm
   const [line = []] = [...file(pack).matchAll(RIG_REVIEWED)]
   assert.deepEqual(line.slice(1), [sh(cwd, 'git rev-parse --show-toplevel'), 'topic', 'main', sh(cwd, 'git rev-parse HEAD')])
