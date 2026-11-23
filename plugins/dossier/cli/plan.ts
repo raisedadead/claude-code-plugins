@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { defaultBase, globMatch } from '../engine/branch.ts'
-import { appendRow, checks, commits, header, lint, planHash, rows, setHeader, setRow, template } from '../engine/plan.ts'
+import { appendRow, type Check, checks, commits, header, lint, planHash, rows, setHeader, setRow, template } from '../engine/plan.ts'
 import { formatRow, type Row, type State, STATES, scanRows, shapeErrors, type Who } from '../engine/rows.ts'
 import { git, lines, Refusal, run } from '../engine/sh.ts'
 import {
@@ -164,14 +164,28 @@ export function runChecks(
     const passed = ran.code === check.expect
     const built = check.rows.length > 0 && check.rows.every((id) => done.has(id))
     const stays = check.guard || built
-    const good = baseline && !stays ? !passed : passed
-    if (!good) ok = false
+    const onTree = baseline && !stays ? !passed : passed
     const want = baseline && !stays ? `anything but exit ${check.expect}` : `exit ${check.expect}`
-    out.push(`${good ? 'OK' : 'FAIL'} ${check.name}${check.guard ? ' (guard)' : built ? ' (built)' : ''}: exit ${ran.code}, want ${want}`)
-    const tail = `${ran.out}${ran.err}`.trim().split('\n').slice(-5).join('\n')
+    const sample = baseline && !built ? sampleRun(dossier, check) : undefined
+    const good = onTree && (sample?.good ?? true)
+    if (!good) ok = false
+    out.push(`${good ? 'OK' : 'FAIL'} ${check.name}${check.guard ? ' (guard)' : built ? ' (built)' : ''}: exit ${ran.code}, want ${want}${sample?.note ?? ''}`)
+    const shown = onTree ? (sample?.tail ?? '') : `${ran.out}${ran.err}`
+    const tail = shown.trim().split('\n').slice(-5).join('\n')
     if (!good && tail) out.push(tail.replace(/^/gm, '  '))
   }
   return { ok, text: out.join('\n') }
+}
+
+type Sample = { good: boolean; note: string; tail: string }
+
+function sampleRun(dossier: Dossier, check: Check): Sample {
+  const dir = join(dossier.dir, 'samples', check.name)
+  if (!/^[\w-][\w.-]*$/.test(check.name) || !existsSync(dir)) return { good: true, note: '; no sample', tail: '' }
+  const ran = run(['bash', '-c', check.command], dir, { timeoutMs: 600_000, env: { GIT_CEILING_DIRECTORIES: dirname(dir) } })
+  const passed = ran.code === check.expect
+  const want = check.guard ? `anything but exit ${check.expect}` : `exit ${check.expect}`
+  return { good: check.guard ? !passed : passed, note: `; sample: exit ${ran.code}, want ${want}`, tail: `${ran.out}${ran.err}` }
 }
 
 export function cmdCheck(cwd: string, args: Args): string {

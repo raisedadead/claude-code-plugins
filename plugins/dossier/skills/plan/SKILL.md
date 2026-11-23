@@ -18,7 +18,7 @@ You are the Chief of Staff. You ask the questions and write the plan text. The `
      - A decision only someone outside the room can answer: write the `whetstone:grill` questionnaire to `questionnaire-<n>.md` in the dossier folder (`ds path`), answer the decision `waits on <who>: <questionnaire path>`, and add a row for it with `ds add "<title>" --who H --state wait`.
      - Then add `confirmed: "<the operator's words>"`.
    - **Rows**: add each with `ds add "<title>"`, never by hand, before any section names it. Put row detail under `## Notes` as `### O<N>`.
-   - **Checks**: each check is a command that fails today and passes when the work is done. A guard check passes today and must stay green.
+   - **Checks**: each check is a command that fails today and passes when the work is done. A guard check passes today and must stay green. For a check that reads files of the tree, write its sample: the files as the finished work leaves them, under `samples/<check name>/` in the dossier folder (`ds path`). For a guard, the sample holds the fault it must catch. `ds check --baseline` runs each check on its sample.
    - **Edge cases**: `- <case> → <row or check>`.
    - **Commits**: the planned commits, with subject, rows and paths. Plan few commits, and keep each one whole.
 2. Run `ds lint` until it prints `LINT: OK`.

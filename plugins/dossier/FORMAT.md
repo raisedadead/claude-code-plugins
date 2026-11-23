@@ -16,7 +16,8 @@ Every shape here is read by a `ds` command. `ds lint` checks the plan file, and 
     │   ├── pack-plan.md         from ds pack plan
     │   ├── pack-review.md       from ds pack review
     │   ├── baseline.txt         from ds check --baseline
-    │   └── check.txt            from ds check
+    │   ├── check.txt            from ds check
+    │   └── samples/<check>/     the other input of a check, read by ds check --baseline
     └── _archive/                closed dossiers
 ```
 
@@ -65,6 +66,7 @@ checked: <plan hash, or ->
 - **Scope**: `- in: <text>` and `- out: <text>`.
 - **Decisions**: `1. <question> — <answer> · <YYYY-MM-DD>`, then `confirmed: "<the operator's words>"`. An answer of `?` is open. A decision split on "discuss more" is answered `split into <n>, <m>`, and its parts are new numbered decisions. A decision that waits on someone outside the room is answered `waits on <who>: <questionnaire path>`, with a `wait` row for it.
 - **Checks**: a table `| name | command | expect | guard | rows |`. The command is in backticks, with `\|` for a pipe. `expect` is `exit <n>`. `guard` is `yes` or `no`. `rows` names the rows the check proves. `ds check --baseline` wants each check to fail, except a guard and a check whose rows are all `done`, which must pass.
+- **Samples**: a folder `samples/<check name>/` holds the files that give a check its other result. `ds check --baseline` runs the check there too, with that folder as the working folder: a check that fails on the tree must exit with its expected code on the sample, and a guard must not. A check with no folder prints `no sample`. A check that reads a live host or an absolute path has no sample.
 - **Edge cases**: `- <case> → <row IDs or check names>`.
 - **Commits**: a table `| subject | rows | paths |`. Paths are globs (`*`, `**`, or a folder ending in `/`). A subject is a Conventional Commits subject of at most 50 characters, and no subject is the start of another.
 - **Rows**: the row list.

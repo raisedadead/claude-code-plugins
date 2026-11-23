@@ -17,7 +17,10 @@ export const COMMANDS: Record<string, Command> = {
   set: { run: cmdSet, usage: 'set <id> <state> [tail] [--who A|H]  change a row state' },
   log: { run: cmdLog, usage: 'log "<note>"  a line in the worklog' },
   lint: { run: cmdLint, usage: 'lint  check the plan file' },
-  check: { run: cmdCheck, usage: 'check [--baseline]  run the checks; with --baseline each non-guard check must fail' },
+  check: {
+    run: cmdCheck,
+    usage: 'check [--baseline]  run the checks; with --baseline each non-guard check must fail, and each check with a samples/<name>/ folder runs there too',
+  },
   'pack plan': { run: cmdPackPlan, usage: 'pack plan  one file for the plan checker' },
   'record plan': { run: cmdRecordPlan, usage: 'record plan <findings>  store the plan check verdict' },
   anchors: { run: cmdAnchors, usage: 'anchors  one empty commit per planned commit, on the dossier branch' },
