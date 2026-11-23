@@ -34,10 +34,10 @@ export const COMMANDS: Record<string, Command> = {
   'pack review': { run: cmdPackReview, usage: 'pack review [--full] [--base b] [--agent a]  one file for the reviewer' },
   'record review': { run: cmdRecordReview, usage: 'record review <findings>  log the verdict; a PASS sets state ship' },
   shape: { run: cmdShape, usage: 'shape  fold fixup! commits into the planned commits' },
-  'ship-args': { run: cmdShipArgs, usage: 'ship-args  repo, branch, base and PR title as JSON' },
+  'ship-args': { run: cmdShipArgs, usage: 'ship-args  the worktree path, branch, base and PR title as JSON' },
   close: { run: cmdClose, usage: 'close "<one line>"  close the dossier and move it to _archive' },
   handoff: { run: cmdHandoff, usage: 'handoff  the next step for this dossier, one line per step' },
-  ci: { run: cmdCi, usage: 'ci  wait for the CI runs of the pushed commit (exit 1: a run failed)' },
+  ci: { run: cmdCi, usage: 'ci  wait for the CI runs of the branch tip, pushed on the branch or on the base (exit 1: a run failed)' },
   path: { run: cmdPath, usage: 'path  the live dossier folder' },
 }
 

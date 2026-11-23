@@ -6,9 +6,15 @@ import { ds, file, planned, recordReview, repo, sh } from './kit.ts'
 
 test('after a recorded review, the next pack shows only the new change', () => {
   const cwd = repo()
+  const empty = ds(cwd, 'pack', 'review', '--base', 'main')
+  assert.equal(empty.code, 1)
+  assert.match(empty.err, /main has no commit past main\. Run ds pack review in the worktree of the branch/)
   sh(cwd, 'git switch -qc topic && echo one > src/one.ts && git add . && git commit -qm "feat: one"')
   const pack = ds(cwd, 'pack', 'review', '--base', 'main').out
   assert.match(file(pack), /\+one/)
+  const RIG_REVIEWED = /^[ \t*_>`-]*REVIEWED:[ \t]*(\/.*?)[ \t]+(\S+)[ \t]+(\S+?)\.\.(\S+?)[ \t`*_]*$/gm
+  const [line = []] = [...file(pack).matchAll(RIG_REVIEWED)]
+  assert.deepEqual(line.slice(1), [sh(cwd, 'git rev-parse --show-toplevel'), 'topic', 'main', sh(cwd, 'git rev-parse HEAD')])
   recordReview(cwd, 'PASS')
   sh(cwd, 'echo two > src/two.ts && git add . && git commit -qm "feat: two"')
   const next = file(ds(cwd, 'pack', 'review', '--base', 'main').out)

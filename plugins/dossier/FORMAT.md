@@ -63,7 +63,7 @@ checked: <plan hash, or ->
 ## Notes
 ```
 
-- **Header**: `row:` is required. It names the ID of the dossier's line in the register, as `O<N>`. `ds lint` reports `header: row` when it is missing or has a different shape. `ds` sets `state` (`plan`, `build`, `ship`, `done`) and `checked`. `ds close` adds `closed:`.
+- **Header**: `row:` is required. It names the ID of the dossier's line in the register, as `O<N>`. `ds lint` reports `header: row` when it is missing or has a different shape. `ds` sets `state` (`plan`, `build`, `ship`, `done`) and `checked`. `ds close` adds `closed:`. When the ship tool renames the branch from `<type>/cc-<session>-<topic>` to `<type>/<topic>`, the next `ds` command writes the new name to `branch:` and logs it.
 - **Goal**: the operator's words, quoted.
 - **Scope**: `- in: <text>` and `- out: <text>`.
 - **Decisions**: `1. <question> — <answer> · <YYYY-MM-DD>`, then `confirmed: "<the operator's words>"`. An answer of `?` is open. A decision split on "discuss more" is answered `split into <n>, <m>`, and its parts are new numbered decisions. A decision that waits on someone outside the room is answered `waits on <who>: <questionnaire path>`, with a `wait` row for it.

@@ -22,6 +22,18 @@ const role = (agent: string): string => agent.replace(/^whetstone:/, '')
 export const reviewedBy = (review: Review, agent: string): boolean => role(review.agent ?? REVIEWER) === role(agent)
 
 const FIXUP = /^fixup! /
+const SESSION_NAME = /^([^/]+)\/cc-[0-9a-f]{6}-(.+)$/
+
+export function shippedName(branch: string): string {
+  const [, type, topic] = SESSION_NAME.exec(branch) ?? []
+  return type && topic ? `${type}/${topic}` : branch
+}
+
+export const sameBranch = (recorded: string, branch: string): boolean => recorded === branch || shippedName(recorded) === branch
+
+export function landedOn(cwd: string, sha: string, ref: string): boolean {
+  return gitTry(cwd, 'merge-base', '--is-ancestor', sha, ref).code === 0
+}
 
 export function commitsIn(cwd: string, range: string): Commit[] {
   const out = git(cwd, 'log', '--reverse', '-z', '--format=%H%x1f%s%x1f%b', range)

@@ -10,3 +10,4 @@ argument-hint: '"<one line>"'
 2. Write one line that says what the dossier delivered.
 3. `ds close "<that line>"`. It refuses open rows. It moves the rows that wait or are deferred to `OPEN-WORK.md` with the same IDs, writes the line, moves the folder to `_archive/` and prints triage.
 4. Settle each row that the triage lists.
+5. After a ship, remove the dossier worktree and each lane worktree with the rig's worktree tool. A dossier that stopped keeps its worktrees until the operator asks.

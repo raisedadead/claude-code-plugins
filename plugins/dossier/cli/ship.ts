@@ -12,7 +12,9 @@ import {
   REVIEWER,
   reviewedBy,
   reviews,
+  sameBranch,
   tree as treeOf,
+  worktreeOf,
 } from '../engine/branch.ts'
 import { checks, commits, edges, header, replaceSection, rows, section, setHeader, setRow } from '../engine/plan.ts'
 import { formatRow } from '../engine/rows.ts'
@@ -55,13 +57,17 @@ export function cmdPackReview(cwd: string, args: Args): string {
   const base = baseOf(cwd, args, dossier)
   const branch = currentBranch(tree)
   const from = mergeBase(tree, base)
+  if (from === git(tree, 'rev-parse', 'HEAD'))
+    throw new Refusal(`nothing to review: ${branch || 'HEAD'} has no commit past ${base}. Run ds pack review in the worktree of the branch`)
   const agent = flag(args, 'agent') ?? REVIEWER
   const last = reviews(tree)
-    .filter((r) => r.branch === branch && reviewedBy(r, agent))
+    .filter((r) => sameBranch(r.branch, branch) && reviewedBy(r, agent))
     .pop()
   const since = !args.flags.full && last && gitTry(tree, 'cat-file', '-e', last.tree).code === 0 ? last.tree : undefined
   const diff = git(tree, 'diff', since ?? from, 'HEAD')
-  const parts = [`# Review pack: ${branch}`, '', 'End your findings file with one line: VERDICT: PASS or VERDICT: CHANGES.', '']
+  const reviewed = `REVIEWED: ${tree} ${branch} ${base}..${git(tree, 'rev-parse', 'HEAD')}`
+  const parts = [`# Review pack: ${branch}`, '', 'Copy the next line into your findings file as it is.', '', reviewed, '']
+  parts.push('End your findings file with one line: VERDICT: PASS or VERDICT: CHANGES.', '')
   if (dossier) {
     const text = read(dossier.file)
     const result = runChecks(cwd, dossier, false)
@@ -162,9 +168,8 @@ export function cmdShape(cwd: string, args: Args): string {
 export function cmdShipArgs(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
   const head = header(read(dossier.file))
-  const url = git(workTree(cwd), 'remote', 'get-url', 'origin')
-  const repo = /[:/]([^/:]+\/[^/]+?)(?:\.git)?$/.exec(url)?.[1] ?? url
-  return JSON.stringify({ repo, branch: head.branch, base: head.base, title: head.pr })
+  const tree = workTree(cwd)
+  return JSON.stringify({ repo: worktreeOf(tree, head.branch ?? '') ?? tree, branch: head.branch, base: head.base, title: head.pr })
 }
 
 export function cmdClose(cwd: string, args: Args): string {

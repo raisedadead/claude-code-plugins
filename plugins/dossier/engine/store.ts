@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
-import { header } from './plan.ts'
+import { shippedName } from './branch.ts'
+import { header, setHeader } from './plan.ts'
 import { idNumber } from './rows.ts'
 import { gitTry, Refusal } from './sh.ts'
 
@@ -99,9 +100,21 @@ export function currentBranch(cwd: string): string {
   return done.code === 0 ? done.out.trim() : ''
 }
 
+function followShipRename(cwd: string, dossier: Dossier): void {
+  const text = read(dossier.file)
+  const own = header(text).branch ?? ''
+  const next = shippedName(own)
+  if (next === own || gitTry(cwd, 'rev-parse', '--verify', '--quiet', `refs/heads/${own}`).code === 0) return
+  const moves = gitTry(cwd, 'reflog', 'show', '--format=%gs', `refs/heads/${next}`).out.split('\n')
+  if (!moves.includes(`Branch: renamed refs/heads/${own} to refs/heads/${next}`)) return
+  write(dossier.file, setHeader(text, 'branch', next))
+  log(dossier, `branch ${own} -> ${next}`)
+}
+
 export function resolveDossier(cwd: string, wanted?: string): Dossier {
   const root = ledgerRoot(cwd)
   const live = liveDossiers(root)
+  for (const dossier of live) followShipRename(cwd, dossier)
   const pick = wanted ?? process.env.DS_DOSSIER
   if (pick) {
     const found = live.find((d) => d.name === pick || d.slug === pick)

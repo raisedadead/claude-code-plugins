@@ -30,6 +30,17 @@ test('the plan pack holds each cited line, and names a missing file', () => {
   assert.match(ds(cwd, 'record', 'plan').err, /usage/)
 })
 
+test('ship-args names the worktree that holds the dossier branch, as the ship tool wants it', () => {
+  const cwd = repo()
+  checkedPlan(cwd)
+  const lane = join(dirname(cwd), 'built')
+  sh(cwd, `git worktree add -q -b demo ${lane} main`)
+  const args = JSON.parse(ds(cwd, 'ship-args').out)
+  assert.equal(args.repo, sh(lane, 'git rev-parse --show-toplevel'))
+  assert.match(args.repo, /^\//)
+  assert.deepEqual(Object.keys(args), ['repo', 'branch', 'base', 'title'])
+})
+
 test('lanes print as JSON with their branch names', () => {
   const cwd = repo()
   checkedPlan(cwd)

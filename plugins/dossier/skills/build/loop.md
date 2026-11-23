@@ -2,11 +2,11 @@
 
 Follow the steps in order. The plan header gives the dossier branch and its base.
 
-1. Make the dossier worktree. From the repo, run `wt switch --create <dossier branch> --base <base>`. `git worktree list` prints its path. Run every `ds` command below from inside a worktree of this repo. `ds` finds the dossier from any of them. Never build in the main checkout.
-2. In the dossier worktree, run `ds anchors` once. It makes one empty commit for each planned commit. It refuses a plan with no passing check.
-3. Run `ds lanes`. It groups the planned commits whose paths are apart. The first lane builds in the dossier worktree. For each other lane, run `wt switch --create <lane branch> --base <dossier branch>`.
+1. Make the dossier worktree. From the repo, run `wt switch --create <dossier branch> --base <base> --no-cd`. `git worktree list` prints its path. The session stays in the main checkout: run each `ds` command below as `cd <worktree path> && ds ...`. `ds` finds the dossier from any worktree of this repo. Never build in the main checkout.
+2. In the dossier worktree, run `ds anchors` once. It makes one empty commit for each planned commit. It refuses a plan that is not checked for its current text.
+3. Run `ds lanes`. It groups the planned commits whose paths are apart. The first lane builds in the dossier worktree. For each other lane, run `wt switch --create <lane branch> --base <dossier branch> --no-cd`.
 4. Run `ds next`. It prints the next row.
-   - Exit 3: a row waits on the operator. Report it and stop.
+   - Exit 3: a row waits on the operator. Release each `wait` row whose tail names a row that is done with `ds set <id> next`, and run `ds next` again. Else report it and stop.
    - Exit 4: no row is left. Run `ds check` in the dossier worktree. Then report that the dossier is ready to ship.
 5. In the row's lane worktree, run `ds mission <id>`. It writes the task file. Read it and make the change it names, in that worktree and only in its paths. Commit with the exact command in the task file: `git commit -m "fixup! <subject>"`.
 6. In the same worktree, run `ds verify <id>`.
@@ -20,4 +20,4 @@ A row with no code, such as a decision, is closed with `ds done <id> --cite "<de
 
 If a ds command exits 3, the dossier waits on the operator. Report its output and stop.
 
-Each report names the row and the dossier path. End each report with the lines that `ds handoff` prints.
+Each report names the row and the dossier path. End each report with the lines that `ds handoff` prints. Put the `operator:` lines on one card that says what the operator does.

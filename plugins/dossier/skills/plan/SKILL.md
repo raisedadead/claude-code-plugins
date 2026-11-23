@@ -10,7 +10,7 @@ You are the Chief of Staff. You ask the questions and write the plan text. The `
 
 ## Steps
 
-1. `ds new <slug>` prints the plan file. Fill it in this order. `FORMAT.md` in this plugin has the exact shape.
+1. `ds new <slug> --branch <branch>` prints the plan file. The branch is the name the kernel's worktree rule gives this session and topic; the build makes its worktree under that name. Fill the file in this order. `FORMAT.md` in this plugin has the exact shape.
    - **Goal**: the operator's words, quoted.
    - **Scope**: one `- in:` line and one `- out:` line.
    - **Decisions**: grill the operator with the `whetstone:grill` method: decision blocks, the recommendation first, a later round for an answer that adds or removes questions, and a fresh ask when an answer changes a premise. Look up each fact with a `whetstone:gatherer` agent. Write one numbered line per decision, `<question> — <answer> · <date>`.
@@ -33,6 +33,6 @@ You are the Chief of Staff. You ask the questions and write the plan text. The `
    - A plan gets one plan check. Offer or recommend no other; the operator can order one. A changed Goal or Scope is a new plan: `ds amend` exits 1 on it, and steps 4 and 5 run again.
 6. The subtraction pass: show its cuts to the operator in one decision block, and take only the cuts the operator picks. Then `ds log "subtract: <its first line>; took <cut numbers or none>"`; without Whetstone, `ds log "subtract: skipped, no Whetstone"`. Until that line is in the worklog, `ds handoff` asks for the cuts. A taken cut changes the plan: run `ds lint`, `ds check --baseline` and `ds amend <notes file>`, where the notes file names the cuts taken.
 
-End the turn with the lines `ds handoff` prints.
+End the turn with the lines `ds handoff` prints. Put the `operator:` lines on one card that says what the operator does.
 
 Discovery is the long part of the work. Leave no guess in the plan: a surprise that a review finds later is a gap in this step.

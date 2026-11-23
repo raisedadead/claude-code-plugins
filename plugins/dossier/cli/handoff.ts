@@ -1,4 +1,4 @@
-import { commitsIn, fixupTarget, REVIEWER, reviewedBy, reviews } from '../engine/branch.ts'
+import { commitsIn, fixupTarget, landedOn, REVIEWER, reviewedBy, reviews, sameBranch } from '../engine/branch.ts'
 import { header, lint, planHash } from '../engine/plan.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
 import { type Dossier, log, read, workTree, worklog } from '../engine/store.ts'
@@ -41,13 +41,15 @@ function shipStep(cwd: string, dossier: Dossier, head: Record<string, string>, o
   const tip = revOf(cwd, `refs/heads/${branch}`)
   if (!tip) return `next: /dossier:build — no branch ${branch} yet`
   const tree = git(cwd, 'rev-parse', `${tip}^{tree}`)
-  const passed = reviews(cwd).some((r) => r.branch === branch && r.tree === tree && r.verdict === 'PASS' && reviewedBy(r, REVIEWER))
+  const passed = reviews(cwd).some((r) => sameBranch(r.branch, branch) && r.tree === tree && r.verdict === 'PASS' && reviewedBy(r, REVIEWER))
   if (!passed) return 'next: /dossier:ship — review the branch'
   const from = gitTry(cwd, 'merge-base', base, tip).out.trim()
   const fixups = from ? commitsIn(cwd, `${from}..${tip}`).filter((c) => fixupTarget(c.subject)).length : 0
   if (fixups) return `next: /dossier:ship — ds shape folds ${fixups} fixup! commits`
   const ci = ciLine(dossier, tip)
-  if (!ci && revOf(cwd, `refs/remotes/${remoteOf(cwd, branch)}/${branch}`) !== tip) return `operator: push ${branch} and open the PR`
+  const remote = remoteOf(cwd, branch)
+  const out = revOf(cwd, `refs/remotes/${remote}/${branch}`) === tip || landedOn(cwd, tip, `refs/remotes/${remote}/${base}`)
+  if (!ci && !out) return `next: /dossier:ship — land ${branch}`
   if (!ci) return 'next: ds ci'
   if (/ ci start /.test(ci)) return `next: ds ci — started ${ci.split(' ').slice(1, 3).join(' ')} UTC; run it again if it stopped`
   if (/ ci FAIL /.test(ci)) return `ci: ${ci.split(` ${tip} `)[1] ?? ''}`.trimEnd()
@@ -83,13 +85,15 @@ type Run = { databaseId: number; name: string; status: string; conclusion: strin
 
 export function cmdCi(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
-  const branch = header(read(dossier.file)).branch ?? ''
+  const head = header(read(dossier.file))
+  const branch = head.branch ?? ''
   const tree = workTree(cwd)
   const remote = remoteOf(tree, branch)
-  const tip = revOf(tree, `refs/heads/${branch}`)
-  const sha = revOf(tree, `refs/remotes/${remote}/${branch}`)
-  if (!tip || !sha) throw new Refusal(`${branch} is not pushed to ${remote}; push it first`, 2)
-  if (sha !== tip) throw new Refusal(`${branch} has commits that are not pushed; push them first`, 2)
+  const sha = revOf(tree, `refs/heads/${branch}`)
+  const pushed = revOf(tree, `refs/remotes/${remote}/${branch}`)
+  const landed = sha !== undefined && landedOn(tree, sha, `refs/remotes/${remote}/${head.base ?? 'main'}`)
+  if (!sha || (!landed && !pushed)) throw new Refusal(`${branch} is not pushed to ${remote}; push it first`, 2)
+  if (!landed && pushed !== sha) throw new Refusal(`${branch} has commits that are not pushed; push them first`, 2)
   const url = git(tree, 'remote', 'get-url', remote)
   const repo = /[:/]([^/:]+\/[^/]+?)(?:\.git)?$/.exec(url)?.[1] ?? url
   const appear = seconds('DS_CI_APPEAR', 60)
