@@ -31,4 +31,4 @@ Write the findings file, then reply with its path and its last line. One line pe
 - Your shell runs read tools only; a refusal names the list.
 - Each finding holds its proof: the `path:line` you read, or the command you ran and its output. The author rules on each finding from that proof, and a finding you cannot cite is not a finding.
 - No praise, and no style notes.
-- Write only the findings file, at an absolute path under the scratch path.
+- Write only the findings file, at an absolute path under the scratch path: the file the pack names, else the path the mission gives. The host refuses a file name that starts with `report`, `summary`, `findings` or `analysis`; for such a path, write `check-<name>` in its folder and reply with that path.
