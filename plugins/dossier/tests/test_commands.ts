@@ -5,6 +5,8 @@ import { test } from 'vitest'
 import { reviews, reviewsFile, worktreeOf } from '../engine/branch.ts'
 import { checkedPlan, ds, file, planned, repo, sh } from './kit.ts'
 
+const HOST_REFUSES = /^(report|summary|findings|analysis).*\.md$/i
+
 test('log, path and lint report on the live dossier', () => {
   const cwd = repo()
   const path = planned(cwd)
@@ -28,6 +30,20 @@ test('the plan pack holds each cited line, and names a missing file', () => {
   assert.match(pack, /### gone\/x.ts:3\n\n\(no such file\)/)
   assert.match(pack, /## Files in the planned paths\n\n- lib\/old.ts$/m)
   assert.match(ds(cwd, 'record', 'plan').err, /usage/)
+})
+
+test('the plan pack names the file of the plan checker, with a name the host lets a helper write and a new number after each recorded check', () => {
+  const cwd = repo()
+  const path = planned(cwd)
+  ds(cwd, 'check', '--baseline')
+  const first = join(dirname(path), 'plan-check-1.md')
+  assert.ok(file(ds(cwd, 'pack', 'plan').out).includes(`\nWrite your findings to this file: ${first}\n`))
+  assert.ok(file(ds(cwd, 'pack', 'plan').out).includes(`\nWrite your findings to this file: ${first}\n`), 'a second pack with no record keeps the number')
+  file(first, 'Checks: block: x\nVERDICT: CHANGES\n')
+  assert.equal(ds(cwd, 'record', 'plan', first).code, 1)
+  assert.ok(file(ds(cwd, 'pack', 'plan').out).includes(`\nWrite your findings to this file: ${join(dirname(path), 'plan-check-2.md')}\n`))
+  assert.doesNotMatch('plan-check-1.md', HOST_REFUSES)
+  assert.match('findings-plan-1.md', HOST_REFUSES)
 })
 
 test('ship-args names the worktree that holds the dossier branch, as the ship tool wants it', () => {

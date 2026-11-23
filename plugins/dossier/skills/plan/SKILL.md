@@ -32,7 +32,7 @@ Discovery is the long part of the work, and it comes before the plan text. A sur
    - **Commits**: the planned commits, with subject, rows and paths. Plan few commits, and keep each one whole.
 2. Run `ds lint` until it prints `LINT: OK`.
 3. Run `ds check --baseline` until it prints `BASELINE: OK`.
-4. Run `ds pack plan`. In one message, spawn one `whetstone:plan-checker` agent with the pack path, and, on the first check only, the subtraction pass: `whetstone:whetstone-doubter` with the subtraction mission of `whetstone:doubt-pass`, the pack as the artifact, Goal and Scope as the contract, and `model` set to this session's model family. The plan checker writes a findings file that ends `VERDICT: PASS` or `VERDICT: CHANGES`.
+4. Run `ds pack plan`. In one message, spawn one `whetstone:plan-checker` agent with the pack path, and, on the first check only, the subtraction pass: `whetstone:whetstone-doubter` with the subtraction mission of `whetstone:doubt-pass`, the pack as the artifact, Goal and Scope as the contract, and `model` set to this session's model family. The pack names the findings file. The plan checker writes it, and it ends `VERDICT: PASS` or `VERDICT: CHANGES`.
 5. Run `ds record plan <findings>`.
    - Exit 0: the plan check passed.
    - Exit 1: the checker asked for changes. The checker's job is to doubt. Your job is to rule on each finding, not to take it on its word. Write one line per finding in a rulings file in the dossier folder:

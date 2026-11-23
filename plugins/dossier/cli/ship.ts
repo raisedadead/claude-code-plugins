@@ -1,5 +1,5 @@
 import { existsSync, renameSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import {
   changedPaths,
   clean,
@@ -66,8 +66,10 @@ export function cmdPackReview(cwd: string, args: Args): string {
   const since = !args.flags.full && last && gitTry(tree, 'cat-file', '-e', last.tree).code === 0 ? last.tree : undefined
   const diff = git(tree, 'diff', since ?? from, 'HEAD')
   const reviewed = `REVIEWED: ${tree} ${branch} ${base}..${git(tree, 'rev-parse', 'HEAD')}`
-  const parts = [`# Review pack: ${branch}`, '', 'Copy the next line into your findings file as it is.', '', reviewed, '']
-  parts.push('End your findings file with one line: VERDICT: PASS or VERDICT: CHANGES.', '')
+  const out = dossier ? join(dossier.dir, 'pack-review.md') : join(scratch(ledgerRoot(cwd)), 'tmp', `pack-review-${branch.replace(/\//g, '-')}.md`)
+  const findings = join(dirname(out), `${agent.replace(/^.*:/, '').replace(/[^\w-]/g, '-')}-${git(tree, 'rev-parse', '--short=7', 'HEAD')}.md`)
+  const parts = [`# Review pack: ${branch}`, '', `Write your findings to this file: ${findings}`, 'Copy the next line into it as it is.', '', reviewed, '']
+  parts.push('End the file with one line: VERDICT: PASS or VERDICT: CHANGES.', '')
   if (dossier) {
     const text = read(dossier.file)
     const result = runChecks(cwd, dossier, false)
@@ -83,7 +85,6 @@ export function cmdPackReview(cwd: string, args: Args): string {
     if (rulings) parts.push('## Rulings on the findings', '', rulings.trim(), '')
   }
   parts.push(`## Diff ${since ? `since the last review (${since.slice(0, 7)})` : `from ${base}`}`, '', '```diff', diff, '```')
-  const out = dossier ? join(dossier.dir, 'pack-review.md') : join(scratch(ledgerRoot(cwd)), 'tmp', `pack-review-${branch.replace(/\//g, '-')}.md`)
   write(out, parts.join('\n'))
   if (dossier) log(dossier, `pack review ${since ? 'since ' + since.slice(0, 7) : 'full'}`)
   return out

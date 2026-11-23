@@ -14,9 +14,11 @@ Every shape here is read by a `ds` command. `ds lint` checks the plan file, and 
     │   ├── worklog.md           one line per ds command; notes through ds log
     │   ├── missions/O<N>.md     task files, from ds mission
     │   ├── pack-plan.md         from ds pack plan
+    │   ├── plan-check-<N>.md    the findings of plan check N, at the path that pack-plan.md names
     │   ├── checked-plan.md      the plan text the plan checker read, from ds record plan
     │   ├── rulings.md           the rulings on the plan check, from ds amend
     │   ├── pack-review.md       from ds pack review
+    │   ├── <agent>-<sha>.md     the findings of a review, at the path that pack-review.md names
     │   ├── baseline.txt         from ds check --baseline
     │   ├── check.txt            from ds check
     │   └── samples/<check>/     the other input of a check, read by ds check --baseline

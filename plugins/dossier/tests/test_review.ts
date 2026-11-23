@@ -12,6 +12,10 @@ test('after a recorded review, the next pack shows only the new change', () => {
   sh(cwd, 'git switch -qc topic && echo one > src/one.ts && git add . && git commit -qm "feat: one"')
   const pack = ds(cwd, 'pack', 'review', '--base', 'main').out
   assert.match(file(pack), /\+one/)
+  const named = (agent: string): string =>
+    `\nWrite your findings to this file: ${join(dirname(pack), `${agent}-${sh(cwd, 'git rev-parse --short=7 HEAD')}.md`)}\n`
+  assert.ok(file(pack).includes(named('reviewer')))
+  assert.ok(file(ds(cwd, 'pack', 'review', '--base', 'main', '--agent', 'whetstone:security-reviewer').out).includes(named('security-reviewer')))
   const RIG_REVIEWED = /^[ \t*_>`-]*REVIEWED:[ \t]*(\/.*?)[ \t]+(\S+)[ \t]+(\S+?)\.\.(\S+?)[ \t`*_]*$/gm
   const [line = []] = [...file(pack).matchAll(RIG_REVIEWED)]
   assert.deepEqual(line.slice(1), [sh(cwd, 'git rev-parse --show-toplevel'), 'topic', 'main', sh(cwd, 'git rev-parse HEAD')])
