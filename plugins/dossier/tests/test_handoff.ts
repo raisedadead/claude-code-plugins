@@ -47,6 +47,7 @@ function gh(answers: string[], code = 0): string {
   const dir = mkdtempSync(join(tmpdir(), 'ds-gh-'))
   answers.forEach((answer, i) => writeFileSync(join(dir, `answer.${i}`), answer))
   const script = `#!/bin/sh
+[ "$1" = --first-run ] && exit 0
 echo "$*" >> ${dir}/calls
 n=$(cat ${dir}/n 2>/dev/null || echo 0)
 f=${dir}/answer.$n
@@ -56,6 +57,7 @@ exit ${code}
 `
   writeFileSync(join(dir, 'gh'), script)
   chmodSync(join(dir, 'gh'), 0o755)
+  sh(dir, './gh --first-run')
   process.env.PATH = `${dir}:${PATH}`
   return dir
 }
