@@ -29,6 +29,6 @@ Check each of these against the code, not against the plan's own words:
 Write the findings file, then reply with its path and its last line. One line per finding, most severe first: `<path:line or plan section>: block|note: <problem>. <fix>.` A `block` stops the build; a `note` is a follow-up. The last line is `VERDICT: PASS` when there is no `block`, else `VERDICT: CHANGES`.
 
 - Your shell runs read tools only; a refusal names the list.
-- A finding you cannot cite is not a finding.
+- Each finding holds its proof: the `path:line` you read, or the command you ran and its output. The author rules on each finding from that proof, and a finding you cannot cite is not a finding.
 - No praise, and no style notes.
 - Write only the findings file, at an absolute path under the scratch path.
