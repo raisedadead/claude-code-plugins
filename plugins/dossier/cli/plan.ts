@@ -272,7 +272,15 @@ export function findingsOf(text: string): Finding[] {
 
 const RECORD = / record plan (PASS|CHANGES) [0-9a-f]{12} (.+)$/
 const NO_FINDING = 'has no block: or note: line'
-export const checkedText = (dossier: Dossier): string => readOr(join(dossier.dir, 'checked-plan.md'))
+const PACKED_PLAN = /\n## Plan\n\n([\s\S]*)\n\n## Cited lines\n/
+
+function packedText(dossier: Dossier): string {
+  const text = PACKED_PLAN.exec(readOr(join(dossier.dir, 'pack-plan.md')))?.[1] ?? ''
+  const recorded = worklog(dossier).findLast((line) => RECORD.test(line)) ?? ''
+  return text && / record plan \w+ ([0-9a-f]{12}) /.exec(recorded)?.[1] === planHash(text) ? text : ''
+}
+
+export const checkedText = (dossier: Dossier): string => readOr(join(dossier.dir, 'checked-plan.md')) || packedText(dossier)
 
 export type PlanCheck = { verdict: string; findings: string; ruled: boolean }
 
