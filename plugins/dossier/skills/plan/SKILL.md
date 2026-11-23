@@ -26,9 +26,12 @@ You are the Chief of Staff. You ask the questions and write the plan text. The `
 4. Run `ds pack plan`. In one message, spawn one `whetstone:plan-checker` agent with the pack path, and, on the first check only, the subtraction pass: `whetstone:whetstone-doubter` with the subtraction mission of `whetstone:doubt-pass`, the pack as the artifact, Goal and Scope as the contract, and `model` set to this session's model family. The plan checker writes a findings file that ends `VERDICT: PASS` or `VERDICT: CHANGES`.
 5. Run `ds record plan <findings>`.
    - Exit 0: the plan check passed.
-   - Exit 1: change the plan for each finding, then repeat steps 2 to 5.
-   - Exit 3: this was the second CHANGES. Show the findings to the operator and stop.
-6. The subtraction pass: show its cuts to the operator in one decision block, and take only the cuts the operator picks. Then `ds log "subtract: <its first line>; took <cut numbers or none>"`; without Whetstone, `ds log "subtract: skipped, no Whetstone"`. Until that line is in the worklog, `ds handoff` asks for the cuts. A taken cut changes the plan, so repeat steps 2 to 5 without the subtraction pass.
+   - Exit 1: the checker asked for changes. The checker's job is to doubt. Your job is to rule on each finding, not to take it on its word. Write one line per finding in a rulings file in the dossier folder:
+     - `block <n>: fixed: <the change, and the run or path:line that shows it works>`, or `block <n>: refused: <the run or path:line that shows the plan is right>`. Run the proof first.
+     - `note <n>: taken: <the wrong result or the failed step>` only when, without the change, the build delivers a wrong result or a step that cannot be undone fails. Else `note <n>: row O<id>` for a follow-up row from `ds add`, or `note <n>: dropped: <reason>`.
+     - Then run `ds lint`, `ds check --baseline` and `ds amend <rulings file>`. `ds amend` exits 1 until each finding has a ruling, the lint is clean and the baseline of this text is green.
+   - A plan gets one plan check. Offer or recommend no other; the operator can order one. A changed Goal or Scope is a new plan: `ds amend` exits 1 on it, and steps 4 and 5 run again.
+6. The subtraction pass: show its cuts to the operator in one decision block, and take only the cuts the operator picks. Then `ds log "subtract: <its first line>; took <cut numbers or none>"`; without Whetstone, `ds log "subtract: skipped, no Whetstone"`. Until that line is in the worklog, `ds handoff` asks for the cuts. A taken cut changes the plan: run `ds lint`, `ds check --baseline` and `ds amend <notes file>`, where the notes file names the cuts taken.
 
 End the turn with the lines `ds handoff` prints.
 

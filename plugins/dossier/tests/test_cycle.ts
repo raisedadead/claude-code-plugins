@@ -33,6 +33,7 @@ test('a dossier runs from plan to close with commands only', () => {
   assert.equal(ds(cwd, 'check').code, 0)
   const pack = ds(cwd, 'pack', 'review').out
   assert.match(file(pack), /\+x/)
+  assert.doesNotMatch(file(pack), /## Plan check findings|## Rulings/)
   recordReview(cwd, 'PASS')
   const tree = sh(cwd, 'git rev-parse HEAD^{tree}')
   assert.equal(ds(cwd, 'shape').code, 0)
@@ -62,7 +63,7 @@ test('anchors wait for a baseline and a passing plan check of the current text',
     assert.equal(ds(cwd, ...step).code, 0)
   file(path, file(path).replace('"add b"', '"add b now"'))
   ds(cwd, 'check', '--baseline')
-  assert.match(ds(cwd, 'anchors').err, /no passing plan check/)
+  assert.match(ds(cwd, 'anchors').err, /not checked for its current text/)
 })
 
 test('a baseline fails when a check already passes, and passes when a guard fails nothing', () => {
@@ -74,16 +75,143 @@ test('a baseline fails when a check already passes, and passes when a guard fail
   assert.match(done.err, /FAIL b-exists: exit 0, want anything but exit 0/)
 })
 
-test('the second CHANGES from the plan check goes to the operator', () => {
-  const cwd = repo()
+const FINDINGS = [
+  'pack-plan.md:44 (b-exists) vs :59: block: the check passes on an empty file. Fix: grep for the export.',
+  'Checks c-exists: block: lib is not in Scope. Fix: add it.',
+  'Notes O1: note: the note says short. The block: label here is prose.',
+  'src/a.ts:1: note: a is exported twice.',
+  'docs: note: no doc names b.',
+  'VERDICT: CHANGES',
+  '',
+].join('\n')
+
+const RULINGS = [
+  '- block 1: fixed: `grep -q export src/b.ts` exits 1 on an empty sample',
+  '- block 2: refused: Scope line 2 names lib/',
+  '- note 1: dropped: a matter of wording',
+  '- note 2: taken: the export is what ships',
+  '- note 3: row O3',
+  '',
+].join('\n')
+
+function changes(cwd: string): { path: string; findings: string; rulings: string } {
   const path = planned(cwd)
-  ds(cwd, 'check', '--baseline')
   const findings = join(dirname(path), 'f.md')
-  file(findings, 'block: x\nVERDICT: CHANGES\n')
+  const rulings = join(dirname(path), 'r.md')
+  file(findings, FINDINGS)
+  ds(cwd, 'check', '--baseline')
+  ds(cwd, 'pack', 'plan')
+  return { path, findings, rulings }
+}
+
+test('a CHANGES verdict asks for a ruling on each finding, and a second record is one more check, not a stop', () => {
+  const cwd = repo()
+  const { path, findings } = changes(cwd)
+  const first = ds(cwd, 'record', 'plan', findings)
+  assert.equal(first.code, 1)
+  assert.match(first.err, /PLAN CHECK: CHANGES, 2 block and 3 note lines\. Rule on each one, then run ds amend <rulings file>/)
+  assert.match(
+    first.err,
+    /\nblock 1: pack-plan\.md:44 .*\nblock 2: Checks c-exists: .*\nnote 1: Notes O1: .*\nnote 2: .*\nnote 3: docs: note: no doc names b\.$/,
+  )
+  assert.equal(file(join(dirname(path), 'checked-plan.md')), file(path))
   assert.equal(ds(cwd, 'record', 'plan', findings).code, 1)
-  assert.equal(ds(cwd, 'record', 'plan', findings).code, 3)
   file(findings, 'no verdict here\n')
   assert.match(ds(cwd, 'record', 'plan', findings).err, /no line VERDICT/)
+})
+
+test('a finding line can start with a list marker or a bold label, and a CHANGES file with no finding line is refused', () => {
+  const cwd = repo()
+  const { path, findings, rulings } = changes(cwd)
+  file(findings, '- block: one\n1. **note**: two\n**block:** three\n  * src/a.ts:1: note: four\nThe note: five is prose.\nVERDICT: CHANGES\n')
+  assert.match(ds(cwd, 'record', 'plan', findings).err, /PLAN CHECK: CHANGES, 2 block and 2 note lines\./)
+  file(findings, 'The plan has faults.\nVERDICT: CHANGES\n')
+  file(rulings, '\n')
+  assert.match(ds(cwd, 'amend', rulings).err, /has no block: or note: line; run ds pack plan and a fresh plan check/)
+  const log = join(dirname(path), 'worklog.md')
+  const before = file(log)
+  const none = ds(cwd, 'record', 'plan', findings)
+  assert.equal(none.code, 1)
+  assert.match(none.err, /says CHANGES and has no block: or note: line/)
+  assert.equal(file(log), before)
+})
+
+test('amend takes a ruling for each finding and then stamps the plan', () => {
+  const cwd = repo()
+  const { path, findings, rulings } = changes(cwd)
+  assert.equal(ds(cwd, 'amend').code, 2)
+  file(rulings, RULINGS)
+  assert.match(ds(cwd, 'amend', rulings).err, /no plan check yet/)
+  ds(cwd, 'record', 'plan', findings)
+  file(
+    rulings,
+    RULINGS.replace('- block 2: refused: Scope line 2 names lib/\n', '').replace('row O3', 'row O77').replace('taken: the export is what ships', 'taken'),
+  )
+  const short = ds(cwd, 'amend', rulings)
+  assert.equal(short.code, 1)
+  assert.match(short.err, /no ruling for: block 2, note 2, note 3\./)
+  assert.match(short.err, /block <n>: fixed\|refused: <what shows it>/)
+  file(rulings, RULINGS)
+  const done = ds(cwd, 'amend', rulings)
+  assert.equal(done.code, 0, done.err)
+  assert.match(done.out, /^PLAN: amended [0-9a-f]{12}$/)
+  assert.match(file(path), /^checked: [0-9a-f]{12}$/m)
+  assert.match(file(join(dirname(path), 'rulings.md')), /block 2: refused: Scope line 2 names lib\//)
+  assert.match(ds(cwd, 'amend', rulings).out, /nothing to amend/)
+  assert.equal(ds(cwd, 'anchors').code, 0)
+  const pack = file(ds(cwd, 'pack', 'review').out)
+  assert.match(pack, /## Plan check findings\n\n- block 1: pack-plan\.md:44 .*\n- block 2: .*\n- note 1: /)
+  assert.match(pack, /## Rulings on the findings\n[\s\S]*block 2: refused: Scope line 2 names lib\//)
+})
+
+test('amend wants a clean lint, a baseline of the current text, and the Goal and Scope that the checker read', () => {
+  const cwd = repo()
+  const { path, findings, rulings } = changes(cwd)
+  ds(cwd, 'record', 'plan', findings)
+  file(rulings, RULINGS)
+  file(path, file(path).replace('| b-exists | `test -f src/b.ts`', '| b-exists | `grep -q export src/b.ts`'))
+  assert.match(ds(cwd, 'amend', rulings).err, /run ds check --baseline on this plan first/)
+  ds(cwd, 'check', '--baseline')
+  file(path, file(path).replace('## Commits', '## Commitz'))
+  assert.match(ds(cwd, 'amend', rulings).err, /run ds lint first/)
+  file(path, file(path).replace('## Commitz', '## Commits').replace('- out: everything else', '- out: nothing'))
+  ds(cwd, 'check', '--baseline')
+  assert.match(ds(cwd, 'amend', rulings).err, /the Scope changed since the plan check; run ds pack plan and a fresh plan check/)
+  file(path, file(path).replace('- out: nothing', '- out: everything else'))
+  ds(cwd, 'check', '--baseline')
+  sh(cwd, `rm ${findings}`)
+  assert.match(ds(cwd, 'amend', rulings).err, /the findings file .* is gone/)
+  file(findings, FINDINGS)
+  assert.equal(ds(cwd, 'amend', rulings).code, 0)
+})
+
+test('amend reads a findings path of an older worklog from the main checkout, and refuses a plan with no kept text', () => {
+  const cwd = repo()
+  const { path, findings, rulings } = changes(cwd)
+  ds(cwd, 'record', 'plan', findings)
+  file(rulings, RULINGS)
+  const log = join(dirname(path), 'worklog.md')
+  file(log, file(log).replace(findings, '.scratchpad/dossier/2026-11-14-demo/f.md'))
+  const lane = join(dirname(cwd), 'lane')
+  sh(cwd, `git worktree add -q -b other ${lane} main`)
+  sh(cwd, `rm ${join(dirname(path), 'checked-plan.md')}`)
+  assert.match(ds(lane, 'amend', rulings, '--dossier', 'demo').err, /checked before ds kept the checked text/)
+  file(join(dirname(path), 'checked-plan.md'), file(path))
+  const done = ds(lane, 'amend', rulings, '--dossier', 'demo')
+  assert.equal(done.code, 0, done.err)
+})
+
+test('after a PASS, an edit of the plan is amended with a note of what changed', () => {
+  const cwd = repo()
+  const path = checkedPlan(cwd)
+  const notes = join(dirname(path), 'n.md')
+  file(path, file(path).replace('| b-exists | `test -f src/b.ts`', '| b-exists | `test -s src/b.ts`'))
+  ds(cwd, 'check', '--baseline')
+  file(notes, '\n')
+  assert.match(ds(cwd, 'amend', notes).err, /say what changed and why/)
+  file(notes, 'b-exists now wants a file that is not empty\n')
+  assert.equal(ds(cwd, 'amend', notes).code, 0)
+  assert.equal(ds(cwd, 'anchors').code, 0)
 })
 
 test('verify refuses work outside the planned paths, a stray commit and uncommitted changes', () => {

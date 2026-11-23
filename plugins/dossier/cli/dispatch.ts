@@ -1,7 +1,7 @@
 import { Refusal } from '../engine/sh.ts'
 import { cmdAnchors, cmdDone, cmdIntegrate, cmdLanes, cmdMission, cmdNext, cmdVerify } from './build.ts'
 import { cmdCi, cmdHandoff } from './handoff.ts'
-import { type Args, cmdAdd, cmdCheck, cmdLint, cmdLog, cmdNew, cmdPackPlan, cmdPath, cmdRecordPlan, cmdSet, cmdTriage } from './plan.ts'
+import { type Args, cmdAdd, cmdAmend, cmdCheck, cmdLint, cmdLog, cmdNew, cmdPackPlan, cmdPath, cmdRecordPlan, cmdSet, cmdTriage } from './plan.ts'
 import { cmdClose, cmdPackReview, cmdRecordReview, cmdShape, cmdShipArgs } from './ship.ts'
 
 type Command = { run: (cwd: string, args: Args) => string; usage: string }
@@ -22,7 +22,8 @@ export const COMMANDS: Record<string, Command> = {
     usage: 'check [--baseline]  run the checks; with --baseline each non-guard check must fail, and each check with a samples/<name>/ folder runs there too',
   },
   'pack plan': { run: cmdPackPlan, usage: 'pack plan  one file for the plan checker' },
-  'record plan': { run: cmdRecordPlan, usage: 'record plan <findings>  store the plan check verdict' },
+  'record plan': { run: cmdRecordPlan, usage: 'record plan <findings>  store the plan check verdict and the checked text (exit 1: CHANGES)' },
+  amend: { run: cmdAmend, usage: 'amend <rulings>  check the plan again by code after a ruling on each finding, or after an edit' },
   anchors: { run: cmdAnchors, usage: 'anchors  one empty commit per planned commit, on the dossier branch' },
   lanes: { run: cmdLanes, usage: 'lanes [--json]  planned commits grouped by paths that do not overlap' },
   next: { run: cmdNext, usage: 'next  the next agent row (exit 3: waits on you; exit 4: none left)' },

@@ -14,6 +14,8 @@ Every shape here is read by a `ds` command. `ds lint` checks the plan file, and 
     │   ├── worklog.md           one line per ds command; notes through ds log
     │   ├── missions/O<N>.md     task files, from ds mission
     │   ├── pack-plan.md         from ds pack plan
+    │   ├── checked-plan.md      the plan text the plan checker read, from ds record plan
+    │   ├── rulings.md           the rulings on the plan check, from ds amend
     │   ├── pack-review.md       from ds pack review
     │   ├── baseline.txt         from ds check --baseline
     │   ├── check.txt            from ds check
@@ -72,7 +74,9 @@ checked: <plan hash, or ->
 - **Rows**: the row list.
 - **Notes**: free text, one `### O<N>` block per row that needs detail.
 
-The plan hash covers Goal, Scope, Decisions, Checks, Edge cases and Commits. A change to those sections after the plan check shows in `ds triage` until a new check passes. A new row needs no new check.
+The plan hash covers Goal, Scope, Decisions, Checks, Edge cases and Commits. A change to those sections after the plan check shows in `ds triage` until `ds amend` passes. A new row needs no new check.
+
+A plan gets one plan check. `ds record plan` keeps the checked text in `checked-plan.md`. After a `CHANGES` verdict, the author writes a rulings file with one line per finding, numbered in the order of the findings file: `block <n>: fixed: <what shows it>` or `block <n>: refused: <what shows it>`, and `note <n>: taken: <why>`, `note <n>: row O<id>` or `note <n>: dropped: <reason>`. A finding is a line whose first label is `block:` or `note:`; `ds record plan` prints each one with its number and refuses a `CHANGES` file with none. `ds amend <rulings file>` exits 1 unless each finding has a ruling, the lint is clean, the baseline of the current text is green, and the Goal and Scope equal the checked text. It then sets `checked` and adds the rulings to `rulings.md`. After a `PASS`, `ds amend <notes file>` does the same for a later edit, with a note of what changed. A changed Goal or Scope needs a fresh plan check.
 
 ## Verdicts
 

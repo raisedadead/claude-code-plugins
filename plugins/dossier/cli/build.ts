@@ -21,7 +21,7 @@ export function cmdAnchors(cwd: string, args: Args): string {
   const head = header(text)
   const hash = planHash(text)
   if (!worklog(dossier).some((line) => line.endsWith(`check --baseline OK ${hash}`))) throw new Refusal('run ds check --baseline on this plan first')
-  if (head.checked !== hash) throw new Refusal('the plan has no passing plan check for its current text; run ds pack plan and record a check')
+  if (head.checked !== hash) throw new Refusal('the plan is not checked for its current text; ds handoff names the next step')
   const tree = workTree(cwd)
   const branch = head.branch ?? ''
   if (currentBranch(tree) !== branch) {

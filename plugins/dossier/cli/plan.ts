@@ -1,7 +1,7 @@
 import { existsSync, readdirSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { defaultBase, globMatch } from '../engine/branch.ts'
-import { appendRow, type Check, checks, commits, header, lint, planHash, rows, setHeader, setRow, template } from '../engine/plan.ts'
+import { appendRow, type Check, checks, commits, header, lint, planHash, rows, section, setHeader, setRow, template } from '../engine/plan.ts'
 import { formatRow, type Row, type State, STATES, scanRows, shapeErrors, type Who } from '../engine/rows.ts'
 import { git, lines, Refusal, run } from '../engine/sh.ts'
 import {
@@ -10,6 +10,7 @@ import {
   ledgerRoot,
   liveDossiers,
   log,
+  now,
   read,
   readOr,
   REGISTER_HEAD,
@@ -257,21 +258,101 @@ export function verdictOf(findings: string): 'PASS' | 'CHANGES' {
   return found[1] as 'PASS' | 'CHANGES'
 }
 
+export type Finding = { kind: 'block' | 'note'; n: number; line: string }
+
+export function findingsOf(text: string): Finding[] {
+  const count = { block: 0, note: 0 }
+  const out: Finding[] = []
+  for (const line of text.split('\n')) {
+    const kind = /^\s*(?:(?:[-*]|\d+[.)])\s+)?(?:.*?:\s*)?\*{0,2}(block|note)\*{0,2}:\*{0,2}\s/.exec(line)?.[1] as Finding['kind'] | undefined
+    if (kind) out.push({ kind, n: (count[kind] += 1), line: line.trim() })
+  }
+  return out
+}
+
+const RECORD = / record plan (PASS|CHANGES) [0-9a-f]{12} (.+)$/
+const NO_FINDING = 'has no block: or note: line'
+export const checkedText = (dossier: Dossier): string => readOr(join(dossier.dir, 'checked-plan.md'))
+
+export type PlanCheck = { verdict: string; findings: string; ruled: boolean }
+
+export function lastPlanCheck(cwd: string, dossier: Dossier): PlanCheck | undefined {
+  const lines = worklog(dossier)
+  const at = lines.findLastIndex((line) => RECORD.test(line))
+  const [, verdict = '', path = ''] = RECORD.exec(lines[at] ?? '') ?? []
+  if (!verdict) return undefined
+  const ruled = verdict === 'PASS' || lines.slice(at).some((line) => / amend [0-9a-f]{12} /.test(line))
+  return { verdict, findings: isAbsolute(path) ? path : join(ledgerRoot(cwd), path), ruled }
+}
+
+export function scopeMoved(dossier: Dossier, text: string): 'Goal' | 'Scope' | undefined {
+  const before = checkedText(dossier)
+  return (['Goal', 'Scope'] as const).find((name) => before !== '' && section(before, name) !== section(text, name))
+}
+
 export function cmdRecordPlan(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
-  const path = args._[0]
+  const path = args._[0] ? resolve(cwd, args._[0]) : ''
   if (!path || !existsSync(path)) throw new Refusal('usage: ds record plan <findings file>', 2)
-  const verdict = verdictOf(read(path))
+  const findings = read(path)
+  const verdict = verdictOf(findings)
+  const found = findingsOf(findings)
+  if (verdict === 'CHANGES' && !found.length)
+    throw new Refusal(`the findings file says CHANGES and ${NO_FINDING}; each finding is one line "<path>:<line>: block: <text>" or "... note: <text>"`)
   const text = read(dossier.file)
   const hash = planHash(text)
   log(dossier, `record plan ${verdict} ${hash} ${path}`)
+  write(join(dossier.dir, 'checked-plan.md'), text)
   if (verdict === 'PASS') {
     write(dossier.file, setHeader(text, 'checked', hash))
     return `PLAN CHECK: PASS ${hash}`
   }
-  const changes = worklog(dossier).filter((line) => / record plan CHANGES /.test(line)).length
-  if (changes >= 2) throw new Refusal(`PLAN CHECK: CHANGES, the second one; take the findings to the operator: ${path}`, 3)
-  throw new Refusal(`PLAN CHECK: CHANGES; change the plan, then run ds check --baseline, ds pack plan and a fresh check: ${path}`)
+  const count = (kind: Finding['kind']) => found.filter((f) => f.kind === kind).length
+  const head = `PLAN CHECK: CHANGES, ${count('block')} block and ${count('note')} note lines. Rule on each one, then run ds amend <rulings file>: ${path}`
+  throw new Refusal([head, ...found.map((f) => `${f.kind} ${f.n}: ${f.line}`)].join('\n'))
+}
+
+const RULING_FORM = '"block <n>: fixed|refused: <what shows it>" or "note <n>: taken: <why>|row O<id>|dropped: <reason>"'
+
+function unruled(root: string, findings: Finding[], rulings: string): string[] {
+  const ruled = (f: Finding): boolean => {
+    const found = new RegExp(`^\\s*(?:[-*]\\s*)?${f.kind} ${f.n}: (fixed: \\S|refused: \\S|taken: \\S|dropped: \\S|row (O\\d+)\\b)`, 'm').exec(rulings)
+    if (!found) return false
+    const verb = (found[1] ?? '').split(/[: ]/)[0] ?? ''
+    if (!(f.kind === 'block' ? ['fixed', 'refused'] : ['taken', 'dropped', 'row']).includes(verb)) return false
+    return !found[2] || rowFiles(root).some((file) => scanRows(read(file)).rows.some((row) => row.id === found[2]))
+  }
+  return findings.filter((f) => !ruled(f)).map((f) => `${f.kind} ${f.n}`)
+}
+
+export function cmdAmend(cwd: string, args: Args): string {
+  const dossier = dossierOf(cwd, args)
+  const path = args._[0] ? resolve(cwd, args._[0]) : ''
+  if (!path || !existsSync(path)) throw new Refusal('usage: ds amend <rulings file>', 2)
+  const rulings = read(path)
+  const text = read(dossier.file)
+  const problems = lint(text).length
+  if (problems) throw new Refusal(`run ds lint first: ${problems} problems`)
+  const last = lastPlanCheck(cwd, dossier)
+  if (!last) throw new Refusal('no plan check yet: run ds pack plan, get the plan check, then ds record plan')
+  const hash = planHash(text)
+  if (header(text).checked === hash) return `PLAN: checked ${hash}, nothing to amend`
+  if (!checkedText(dossier)) throw new Refusal('this plan was checked before ds kept the checked text; run ds pack plan and a fresh plan check')
+  const moved = scopeMoved(dossier, text)
+  if (moved) throw new Refusal(`the ${moved} changed since the plan check; run ds pack plan and a fresh plan check`)
+  if (!worklog(dossier).some((line) => line.endsWith(`check --baseline OK ${hash}`))) throw new Refusal('run ds check --baseline on this plan first')
+  if (!last.ruled) {
+    if (!existsSync(last.findings)) throw new Refusal(`the findings file ${last.findings} is gone; run ds pack plan and a fresh plan check`)
+    const found = findingsOf(read(last.findings))
+    if (!found.length) throw new Refusal(`the findings file ${last.findings} ${NO_FINDING}; run ds pack plan and a fresh plan check`)
+    const open = unruled(ledgerRoot(cwd), found, rulings)
+    if (open.length) throw new Refusal(`no ruling for: ${open.join(', ')}. Each finding needs one line: ${RULING_FORM}`)
+  } else if (!rulings.trim()) throw new Refusal('the notes file is empty; say what changed and why')
+  const kept = join(dossier.dir, 'rulings.md')
+  write(kept, `${readOr(kept, `# Rulings: ${dossier.slug}\n`).trimEnd()}\n\n## ${now()} ${hash}\n\n${rulings.trim()}`)
+  write(dossier.file, setHeader(text, 'checked', hash))
+  log(dossier, `amend ${hash} ${path}`)
+  return `PLAN: amended ${hash}`
 }
 
 export function cmdTriage(cwd: string, args: Args): string {

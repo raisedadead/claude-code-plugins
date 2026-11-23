@@ -34,7 +34,7 @@ import {
   write,
 } from '../engine/store.ts'
 import { render, triage, writeLaterView } from '../engine/triage.ts'
-import { type Args, dossierOf, flag, guard, runChecks, verdictOf } from './plan.ts'
+import { type Args, dossierOf, findingsOf, flag, guard, lastPlanCheck, runChecks, verdictOf } from './plan.ts'
 
 function optionalDossier(cwd: string, args: Args): Dossier | undefined {
   try {
@@ -70,6 +70,11 @@ export function cmdPackReview(cwd: string, args: Args): string {
     parts.push('## Invariants (guard checks)', '', ...(guards.length ? guards.map((c) => `- ${c.name}: \`${c.command}\``) : ['None.']), '')
     parts.push('## Edge cases', '', ...edges(text).map((e) => `- ${e.text} → ${e.refs.join(' ')}`), '')
     parts.push('## Check output', '', '```', result.text, '```', '')
+    const last = lastPlanCheck(cwd, dossier)
+    if (last?.verdict === 'CHANGES' && existsSync(last.findings))
+      parts.push('## Plan check findings', '', ...findingsOf(read(last.findings)).map((f) => `- ${f.kind} ${f.n}: ${f.line}`), '')
+    const rulings = readOr(join(dossier.dir, 'rulings.md'))
+    if (rulings) parts.push('## Rulings on the findings', '', rulings.trim(), '')
   }
   parts.push(`## Diff ${since ? `since the last review (${since.slice(0, 7)})` : `from ${base}`}`, '', '```diff', diff, '```')
   const out = dossier ? join(dossier.dir, 'pack-review.md') : join(scratch(ledgerRoot(cwd)), 'tmp', `pack-review-${branch.replace(/\//g, '-')}.md`)

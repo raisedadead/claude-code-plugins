@@ -2,7 +2,7 @@ import { commitsIn, fixupTarget, REVIEWER, reviewedBy, reviews } from '../engine
 import { header, lint, planHash } from '../engine/plan.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
 import { type Dossier, log, read, workTree, worklog } from '../engine/store.ts'
-import { type Args, dossierOf, rowsOf } from './plan.ts'
+import { type Args, checkedText, dossierOf, lastPlanCheck, rowsOf, scopeMoved } from './plan.ts'
 
 const GREEN = new Set(['success', 'skipped', 'neutral'])
 
@@ -11,19 +11,18 @@ function revOf(cwd: string, rev: string): string | undefined {
   return done.code === 0 ? done.out.trim() : undefined
 }
 
-function planStep(dossier: Dossier, text: string): string {
+function planStep(cwd: string, dossier: Dossier, text: string): string {
   const problems = lint(text).length
   if (problems) return `next: /dossier:plan — ds lint has ${problems} problems`
   const hash = planHash(text)
   const lines = worklog(dossier)
   if (!lines.some((line) => line.endsWith(`check --baseline OK ${hash}`))) return 'next: /dossier:plan — run ds check --baseline'
-  const recorded = lines.filter((line) => line.includes(' record plan ')).pop()
-  const changes = lines.filter((line) => / record plan CHANGES /.test(line)).length
-  if (recorded?.includes(` record plan CHANGES ${hash} `)) {
-    const findings = recorded.split(' ').pop()
-    return changes >= 2 ? `operator: the plan check said CHANGES twice; read ${findings}` : `next: /dossier:plan — change the plan for ${findings}`
-  }
-  return 'next: /dossier:plan — ds pack plan and a fresh plan check'
+  const last = lastPlanCheck(cwd, dossier)
+  if (!last) return 'next: /dossier:plan — ds pack plan and the plan check'
+  if (!checkedText(dossier)) return 'next: /dossier:plan — ds kept no checked text of this plan: ds pack plan and a fresh plan check'
+  if (scopeMoved(dossier, text)) return 'next: /dossier:plan — the Goal or the Scope changed: ds pack plan and a fresh plan check'
+  if (!last.ruled) return `next: /dossier:plan — rule on each finding of ${last.findings}, then ds amend <rulings file>`
+  return 'next: /dossier:plan — the plan changed after its check: ds amend <notes file>'
 }
 
 function remoteOf(cwd: string, branch: string): string {
@@ -59,7 +58,7 @@ export function cmdHandoff(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
   const text = read(dossier.file)
   const head = header(text)
-  if (head.checked !== planHash(text)) return planStep(dossier, text)
+  if (head.checked !== planHash(text)) return planStep(cwd, dossier, text)
   if (head.state === 'plan' && !worklog(dossier).some((line) => line.includes(' subtract: ')))
     return 'operator: pick the subtraction cuts; then ds log "subtract: ..."'
   const all = rowsOf(dossier)
