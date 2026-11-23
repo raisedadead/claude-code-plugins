@@ -4,17 +4,23 @@ Living document. Read it before changing anything under `plugins/`. Update it wh
 
 Companion: [`RESEARCH.md`](./RESEARCH.md) holds decisions with their rejected alternatives, facts with a shelf life, and open strides. This file holds what we believe now; that one holds why, and what is still owed. Neither is a history — see its "Collapse, don't stack" rule.
 
+## The tenet
+
+**"Get the job done right the first time, so less effort is spent in verification."** (the operator, 2026-11-12)
+
+Every rule below serves that sentence. A change that adds a round of checking, a question or a gate has to show the job it gets right the first time; one that only moves effort into verification goes the wrong way.
+
 ## What this solves
 
 An agent will happily report success it cannot demonstrate. These two plugins exist to make "done" a checkable fact rather than a claim: a wave of work is tracked in one resumable ledger, and every gate along the way ends in an exit code, a computed number, or a verdict line that is honestly labelled as a judgment.
 
-Built by one operator for their own projects. The operator's conventions are the defaults — that is what makes these plugins opinionated rather than generic — but what ships works without the operator's harness: integrations with personal tooling live in that harness, not here (D26). A capability that helps in a consuming project is in scope; a file left behind in that project is not. Behave everywhere; leave nothing behind.
+Built by one operator for their own projects. The operator's conventions are the defaults — that is what makes these plugins opinionated rather than generic. whetstone works without the operator's rig. dossier is built for that rig: it names the rig's parts and does not fall back when one is missing (D26, `plugins/dossier/ADAPTERS.md`). A capability that helps in a consuming project is in scope; a file left behind in that project is not. Behave everywhere; leave nothing behind.
 
 ## The pair
 
-`dossier` runs a piece of work from one plan file. `whetstone` is the craft — grill and doubt before code, red/green and diagnose during, `verify-clean` on conflict, lint after authoring — plus the research and HTML reports that carry evidence to a human reader (D49, D50).
+`dossier` runs a piece of work from one plan file. `whetstone` is the craft — grill and doubt before code, red/green and diagnose during, lint after authoring — plus the research and HTML reports that carry evidence to a human reader (D49, D50).
 
-They are designed to be installed together and used together. They are also independent: either works alone, every composition route detects its sibling and skips when absent, and neither declares the other as a dependency. That independence is a hard invariant, not a nicety — `whetstone` stays independently publishable.
+They are designed to be installed together and used together, and neither manifest declares the other as a dependency. `whetstone` works alone, and that is a hard invariant, not a nicety: it stays independently publishable. `dossier` names whetstone's agents for the plan check, the review and the lookups, and has no other route to them (D26).
 
 Composition depth, not fusion. Merging them has been proposed and rejected twice.
 
@@ -22,7 +28,9 @@ Composition depth, not fusion. Merging them has been proposed and rejected twice
 
 One piece of work is one plan file: `.scratchpad/dossier/<date>-<slug>/DOSSIER.md`. The register of all work is `.scratchpad/OPEN-WORK.md`. It has one line for each dossier and each loose row. Every row has one shape and one ID, `O<N>`, from one counter shared across repos. The shapes are in [`plugins/dossier/FORMAT.md`](./plugins/dossier/FORMAT.md).
 
-**A step that gives the same result each time it runs is a `ds` command.** A model does only the judgement: the questions, the plan text, the code, the review and the conflicts. The cycle is plan, plan check, anchors, one row at a time in the main session, one review of the branch, shape, push, close. The commands exit 1 and do nothing when the step before them has not passed: `ds anchors` needs a baseline and a passing plan check of the current plan text, `ds done` needs a passing `ds verify`, and `ds shape` refuses when the files would change.
+**A step that gives the same result each time it runs is a `ds` command.** A model does only the judgement: the questions, the plan text, the code, the review and the conflicts. The cycle is plan, one plan check, anchors, one row at a time in the main session, one review of the branch, shape, the landing, close. The commands exit 1 and do nothing when the step before them has not passed: `ds anchors` needs a baseline and a plan that is checked for its current text, `ds done` needs a passing `ds verify`, and `ds shape` exits 1 when the files would change.
+
+**The checker doubts, and the author rules.** A plan check is paid to find faults, so a finding is a claim with its proof, not an order. On `CHANGES` the author rules on each finding with a run or a `path:line`: a block is fixed or refused, a note is taken, made a row or dropped. `ds amend` exits 1 until each finding has a ruling, the lint is clean, the baseline of the new text is green, and the Goal and Scope are the checked ones; then it marks the plan checked, with no second model round. The branch review reads the findings and the rulings. A changed Goal or Scope is a new plan and gets a fresh check.
 
 **The review is tied to the tree.** The rig's hook writes the verdict with the tree hash and the patch ID in `$(git rev-parse --git-common-dir)/reviews.jsonl` when a reviewer ends. `ds` only reads it. Shaping rewrites the commits but not the files, so the review still holds after it.
 
@@ -38,7 +46,7 @@ Borrowed from TigerBeetle's TIGER_STYLE, which opens by declaring "safety, perfo
 - **Recoverability** — the ledger must survive a crash, a compaction, and a lost session. Steps that buy resumability are paid for without argument.
 - **Leverage** — operator output per unit of ceremony. Fewer verbs, less typing, no new operator surface without a fight.
 
-This ordering is descriptive, not aspirational. Seven of the eight recorded conflicts in `RESEARCH.md` resolve under it. The eighth does not, which is what the next rule is for.
+This ordering is descriptive, not aspirational. It does not say how hard a gate may push, which is what the next rule is for.
 
 ## Enforcement strength matches evidence strength
 
@@ -55,7 +63,7 @@ Orthogonal to the ordering above — no priority ranking explains why one hook h
 
 A gate that blocks on a signal it cannot back will be disabled by the operator within a week, and then it enforces nothing at all. Overreach and absence look identical in the logs.
 
-No hook in either plugin makes the model continue at turn end. The claim check only counts (D31).
+No hook in either plugin makes the model continue at turn end. The claim check is a command, `bin/claim-check`, and no hook runs it (D73).
 
 ## Enforcement must travel with the plugin
 
@@ -63,7 +71,7 @@ A consumer installs `hooks/`, `skills/` and `agents/`. They never receive `.gith
 
 **The rule is about reach, not content.** A gate encoding a fact about correctness belongs in the plugin, where it travels. A gate encoding one operator's preference belongs in that operator's harness, however well it would travel — shipping a taste to everyone who installs the plugin is the failure this rule invites when read too far. The split test is whether the threshold is a fact or a preference: an unbacked-claim lint is the first, a reply-length ceiling the second. D18 holds the worked example, where one wave built both and sent them to different homes.
 
-Skill and agent bodies reach bundled files through `${CLAUDE_PLUGIN_ROOT}`, braced: Claude Code substitutes that form when it loads the text, and the Bash tool's environment carries no plugin variable, so the bare `$CLAUDE_PLUGIN_ROOT` reads as empty (F38). `tests/test_manifest.ts` fails on the bare form and on a repo-relative `plugins/dossier/` or `plugins/whetstone/` path, since neither exists at the install path.
+Skill and agent bodies reach bundled files through `${CLAUDE_PLUGIN_ROOT}`, braced: Claude Code substitutes that form when it loads the text, and the Bash tool's environment carries no plugin variable, so the bare `$CLAUDE_PLUGIN_ROOT` reads as empty (F38). A repo-relative `plugins/dossier/` or `plugins/whetstone/` path fails the same way, since neither exists at the install path.
 
 `${CLAUDE_PLUGIN_DATA}` follows the same rule, so a skill passes it to its script on the command line: `html-report` keeps its renderer there, and falls back to `${XDG_CACHE_HOME:-~/.cache}/whetstone/html-report` when the variable is empty (D49).
 
@@ -76,12 +84,12 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | surface             | signal                                                                                        | enforced by                                                                  |
 | ------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
 | `whetstone-doubter` | `DOUBT: FAILURES` or `NO FAILURE FOUND`                                                       | model-judgment, parsed                                                       |
-| `ds record plan`, `ds record review` | `VERDICT: PASS` or `VERDICT: CHANGES` in the findings file; exit 0, 1, or 3 on a second plan CHANGES | model-judgment, parsed by code |
+| `ds record plan`, `ds record review` | `VERDICT: PASS` or `VERDICT: CHANGES` in the findings file; exit 0 on PASS, 1 on CHANGES | model-judgment, parsed by code |
+| `ds amend` | `PLAN: amended <hash>`; exit 1 on a finding with no ruling, a lint problem, a baseline that is not green, or a changed Goal or Scope | code — `cli/ds`; each ruling is model-judgment, and the branch review reads it |
 | `ds lint`, `ds check`, `ds verify`, `ds shape` | `LINT: OK`, `CHECK: OK`, `BASELINE: OK`, `VERIFY <id>: PASS`, `SHAPE: OK`; exit 1 otherwise | code — `cli/ds` |
 | subtraction pass    | `SUBTRACT: NOTHING TO CUT` or `SUBTRACT: <n> CUTS`                                            | model-judgment, parsed; it runs on the session's model family |
 | `skill-smith` lint  | `FAIL` / `WARN` lines; exit 1 if any `FAIL`                                                   | code — `lint-skill`                                                          |
 | `tdd-cycle` slice   | red, green and full-suite exit codes                                                          | code — `run_slice.sh`                                                        |
-| conflict route      | exit 0 on marker count and pass count                                                         | code — `verify-clean`                                                        |
 | flake route         | per-test rate; anything between 0 and 1 is flaky                                              | code — `flake-runner`                                                        |
 | `tiger-style` check | `TIGER: CLEAN <n> file(s)[, <m> skipped]`, `BLOCK <n>` or `NAG <n>`; exit 0/1/2               | code — `tiger-check`                                                         |
 | `html-report`       | exit 0 written, 1 a diagram did not parse, 64 usage, 69 no browser or install failed          | code — `bin/html-report`                                                     |
@@ -89,29 +97,29 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 
 ## Tenets
 
-1. **Deterministic over discretionary.** Where a number exists, use the number. A flake is a computed rate, a clean merge is a marker count of zero, a finished slice is an exit code.
-1. **Honest enforcement labels.** Every rule is tagged `code` or `model-judgment`. Parsed is not computed. `FORMAT.md` section 17 carries the ledger of these labels and is the model for the rest.
-1. **First principles, subtract first.** Before a change adds anything, ask what it is for, what breaks without it, and what can go. Take the first rung that holds: delete > simplify > optimise > automate. "It may be done" is an allowed answer: when no rung is owed, stop. New code runs a finer ladder, from ponytail.dev — skip it, reuse an existing pattern, stdlib, the native platform, an installed dependency, a one-liner, then minimal new code with one test when it has logic. The verb budget is the first instance: the default answer to a new operator verb is no. Research once proposed growing nine verbs to fourteen; the result was four. Enforcement: model-judgment, parsed — the whetstone `doubt-pass` subtraction pass returns a `SUBTRACT:` line at `ds:grill` step 5 and at `ds:new` for an ungrilled wave; nothing blocks on it.
-1. **Wire, don't merge.** Composition routes, never fusion. Absent sibling means graceful skip, never a block and never an error.
+1. **Deterministic over discretionary.** Where a number exists, use the number. A flake is a computed rate, a finished slice is an exit code.
+1. **Honest enforcement labels.** Every rule is tagged `code` or `model-judgment`. Parsed is not computed. The verdict grammar above is the ledger of these labels.
+1. **First principles, subtract first.** Before a change adds anything, ask what it is for, what breaks without it, and what can go. Take the first rung that holds: delete > simplify > optimise > automate. "It may be done" is an allowed answer: when no rung is owed, stop. New code runs a finer ladder, from ponytail.dev — skip it, reuse an existing pattern, stdlib, the native platform, an installed dependency, a one-liner, then minimal new code with one test when it has logic. The verb budget is the first instance: the default answer to a new operator verb is no. Research once proposed growing nine verbs to fourteen; the result was four. Enforcement: model-judgment, parsed — the whetstone `doubt-pass` subtraction pass returns a `SUBTRACT:` line beside the plan check of `/dossier:plan`, and the operator picks the cuts.
+1. **Wire, don't merge.** Composition routes, never fusion. whetstone runs with no sibling; dossier names the whetstone agent at each step that needs one.
 1. **Assert the negative space.** Prove a gate fails when it should, not only that it passes when it should. `run_slice.sh` fails a slice whose test passes on the first run — a test that was never red proves nothing.
-1. **Bound every loop.** Doubt-pass caps at three cycles. `ds:build --auto` stops when `ds next` exits 3 (a row waits on the operator) or 4 (none left), and a row that fails `ds verify` twice waits on the operator. Any new loop states its bound.
+1. **Bound every loop.** A plan gets one plan check. Doubt-pass caps at three cycles. `ds:build --auto` stops when `ds next` exits 3 (a row waits on the operator) or 4 (none left), and a row that fails `ds verify` twice waits on the operator. Any new loop states its bound.
 1. **Zero technical debt.** A caught bug becomes an enforced invariant, not a comment promising a fix — `ds:backprop` is the mechanism. Denying debt markers at write time is a coding standard, so it lives in the operator's harness rather than here; a plugin should not ship one person's style opinion to everyone who installs it.
 1. **A built-in is the first rung.** Claude Code ships `/review`, `/security-review` and `/simplify`. Use or gate a built-in first. The suite rebuilds one only when a probe or the operator shows that it falls short, and a §D row records the reason (D72). Enforcement: model-judgment; no check compares a new file with the built-ins.
-1. **Recommend from probes.** A recommendation cites the file:line or command that backs it, for every file it moves, renames or depends on. When a premise changes, re-derive every decision that rested on it. Audit a decision set against its own constraints before the operator confirms it. `ds:grill` checks the shape in code — `ds grill-add` exits 64 on a DECISION with no `probe=` — and leaves coverage to model-judgment, since `probe=—` declares a taste call (D48).
+1. **Recommend from probes.** A recommendation cites the file:line or command that backs it, for every file it moves, renames or depends on. When a premise changes, re-derive every decision that rested on it. Audit a decision set against its own constraints before the operator confirms it. No recommendation comes before the goal is known. Enforcement: model-judgment — the `whetstone:grill` format puts the backing beside each recommendation, and no code reads it.
 
 ## Testing standard
 
 Tests here guard hard-won invariants. They do not assert that prose says what prose says.
 
 - **Every gate needs both a positive and a negative test.** One proving it fires, one proving it does not false-positive. TIGER_STYLE's golden rule of assertions — assert the positive space you expect, and the negative space you do not — applied to hooks.
-- **Prefer one algorithm to two that agree on fixtures.** Where a predicate must exist twice, make the second a transcription of the first, not an independent implementation that happens to match. A shared fixture set only proves agreement on the cases someone thought of: the `§S` pairing predicate passed four such fixtures while still diverging on a fifth, because one side decided by set membership at the end and the other by deleting as it walked. Aligning the algorithms closed the whole class; adding fixtures would only have closed the case that was found.
+- **Prefer one algorithm to two that agree on fixtures.** Where a predicate must exist twice, make the second a transcription of the first, not an independent implementation that happens to match. A shared fixture set only proves agreement on the cases someone thought of: one pairing predicate, since removed, passed four such fixtures while still diverging on a fifth, because one side decided by set membership at the end and the other by deleting as it walked. Aligning the algorithms closed the whole class; adding fixtures would only have closed the case that was found.
 - **Cross-check load-bearing predicates in two places.** Where two subsystems must agree on what a value means, test the agreement from both sides on a shared fixture. A parity claim that runs against one implementation is not a cross-check, and a failure message naming a property the test never verifies hands the next reader a false belief about coverage.
 - **A false positive becomes a permanent regression test.** Each gate has a test that it fires and a test that it does not fire on the case that once fooled it.
-- **A test drives the unit it names, at the cheapest layer that proves it.** The pre-push hook test once ran the linters, the type checker and the test suite nine times to prove that the hook stops a push: 103 s of a 170 s run. It now pushes through the hook with only `rails`, `format`, `lint` and `types` selected, in three files that run as parallel steps (`tools/test_pre_push*.sh`); the longest takes about 3.2 s alone. A `ds` spawn costs about 150 ms (mean of 10 `sh cli/ds root` runs, 2026-11-12), so a check that can run in-process belongs in the bun suite, not in a shell script that calls `ds` in a loop.
-- **`tools/ci.sh` runs its steps in parallel.** After `pnpm install` it keeps up to one step per core running (`CI_JOBS` sets the number), in CI as on a laptop, and prints the results in step order. 31 steps use about 60 CPU-seconds, and on 10 cores `bash tools/ci.sh all` took 10.1 to 11.3 s at load averages of 10 to 48 on 2026-11-12, against about 25 s before `c3396fd` moved `node-tests` to CI, folded coverage into the suites and split the hook test. A test writes only inside its own temp directory, or two steps collide; a dossier test that runs `ds` in-process goes through `plugins/dossier/tests/inproc.ts`, which restores the working directory and the ledger variables after each run.
+- **A test drives the unit it names, at the cheapest layer that proves it.** The pre-push hook test once ran the linters, the type checker and the test suite nine times to prove that the hook stops a push: 103 s of a 170 s run. It now pushes through the hook with only `rails`, `format`, `lint` and `types` selected, in three files that run as parallel steps (`tools/test_pre_push*.sh`); the longest takes about 3.2 s alone. A `ds` spawn costs about 150 ms (mean of 10 runs of one `ds` verb, 2026-11-12), so a check that can run in-process belongs in the bun suite, not in a shell script that calls `ds` in a loop.
+- **`tools/ci.sh` runs its steps in parallel.** After `pnpm install` it keeps up to one step per core running (`CI_JOBS` sets the number), in CI as on a laptop, and prints the results in step order. 31 steps use about 60 CPU-seconds, and on 10 cores `bash tools/ci.sh all` took 10.1 to 11.3 s at load averages of 10 to 48 on 2026-11-12, against about 25 s before `c3396fd` moved `node-tests` to CI, folded coverage into the suites and split the hook test. A test writes only inside its own temp directory, or two steps collide; a dossier test runs `ds` in-process through `ds()` in `plugins/dossier/tests/kit.ts`, in a temp repo that `repo()` makes with its own ledger variables.
 - **Under `set -o pipefail`, do not pipe into `grep -q`.** `grep -q` exits on the first match, the writer can die of SIGPIPE (status 141), and the pipeline fails. Under load this made a dossier shell test fail 5 runs in 16; use `grep -q <pattern> <<<"$text"`. The `pipe-grep` step (`tools/pipe_grep.sh`) exits 1 on a pipe into a quiet `grep` (`-q`, `--quiet`, `--silent`) on one line of a tracked shell file; it skips a line that starts with `#`. It is a text scan: it misses a pipe continued onto the next line and a `-q` after a flag argument or the pattern (`grep -m 1 -q`), and it flags the same text inside a string or a heredoc.
 - **Never test documentation.** A grep asserting a README contains a phrase catches nothing and breaks on every edit.
-- **A recorded number is a claim, and decays like one.** Counts written into a finding are rarely re-probed, so a stale one quietly becomes evidence for a conclusion it never supported — `F20` carries the worked example, where both the count and the inference it drove were wrong. Record the command beside the count, and re-run it before the count justifies a change.
+- **A recorded number is a claim, and decays like one.** Counts written into a finding are rarely re-probed, so a stale one quietly becomes evidence for a conclusion it never supported. Record the command beside the count, and re-run it before the count justifies a change.
 
 ## How this improves
 
@@ -129,7 +137,7 @@ A decision is finished when a later session, holding none of the context, stops 
 
 **The counterweight matters as much: durable is not accumulated.** That rule keeps refusals, not history. A ledger that grows a row every time someone changes their mind stops being read, and an unread ledger prevents no re-proposal at all — the same failure, reached the opposite way. A position that reverses is rewritten in place, carrying every alternative still worth refusing and dropping the ones we merely passed through. **Optimise these files to be read by someone with no memory of writing them.** Git holds the route; these files hold the destination and the roads deliberately not taken.
 
-The ledger format has the same gap: a wave's constraints and rejected options go quiet when it is archived — readable if you go looking, invisible if you do not. **The plugins do not yet close this.** It is an open stride in `RESEARCH.md`, labelled unimplemented rather than described as though it works. The shape it wants: decisions survive their wave, surface at session start beside the sit-rep, and — where a rejected alternative is mechanically detectable — a re-adoption attempt is caught at write time, the way the dossier invariant guard catches registered invariants.
+The ledger format has the same gap: a wave's constraints and rejected options go quiet when it is archived — readable if you go looking, invisible if you do not. **The plugins do not yet close this.** It is an open stride in `RESEARCH.md`, labelled unimplemented rather than described as though it works. The shape it wants: decisions survive their wave, surface at session start beside the sit-rep, and — where a rejected alternative is mechanically detectable — a re-adoption attempt is caught by a run, the way a guard check catches a broken invariant at `ds verify`.
 
 ## Lineage
 
@@ -138,8 +146,8 @@ The ledger format has the same gap: a wave's constraints and rejected options go
 ## Non-goals
 
 - **No fusion.** The two plugins stay separable.
-- **No required adapters.** Every host-environment integration detects and skips. Nothing is a dependency.
-- **No new operator verbs by default.** A verb must earn its place against the three that exist. The budget counts what an operator must remember; lifecycle verbs (`ds:build`, `ds:ship`) ride a stage of the wave and sit outside it — D3 holds the taxonomy.
+- **No required adapters in whetstone.** It needs nothing from the operator's rig. What dossier expects from the rig is one list, `plugins/dossier/ADAPTERS.md`.
+- **No new operator verbs by default.** A skill must earn its place against the six that dossier has, one per stage: `plan`, `build`, `ship`, `close`, `backprop`, `verify` (D3).
 - **No cross-agent portability.** Claude Code only. Deferred deliberately, recorded as an open stride.
 - **No third-party plugin dependencies.** See adoption order.
 - **No version pinning.** The commit SHA is the version. See `RESEARCH.md`.

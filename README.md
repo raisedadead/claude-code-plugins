@@ -1,15 +1,15 @@
 # claude-code-plugins
 
-> Two Claude Code plugins for building software you can prove is done. Built and used daily by [@raisedadead](https://github.com/raisedadead); opinionated, and usable in any repo.
+> Two Claude Code plugins for building software you can prove is done. Built and used daily by [@raisedadead](https://github.com/raisedadead); opinionated.
 
-An agent will happily report success it cannot demonstrate. These two plugins make "done" a checkable fact: a wave of work lives in one resumable ledger, and every gate ends in an exit code, a computed number, or a verdict line honestly labelled as a judgment.
+An agent will happily report success it cannot demonstrate. These two plugins make "done" a checkable fact: a piece of work lives in one plan file that a session can pick up again, and every step ends in an exit code, a computed number, or a verdict line honestly labelled as a judgment.
 
 | Plugin        | What it does                                                                                                                                              |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **dossier**   | Wave-scoped workflow. One resumable `DOSSIER.md` drives a wave — tasks, bugs, invariants, cross-repo state — with in-session quality gates.               |
-| **whetstone** | Per-task craft — red-green TDD, a flaky-test rate, diagnosis, doubt review, grilling, a merge check, research and HTML reports, skill lint, column budget. TDD, the merge check, skill lint, column budget and HTML report end in a script's exit code; the flaky-test rate is computed and printed, and sets no exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment. |
+| **dossier**   | One plan file per piece of work, and a `ds` command for every step that gives the same result each time: the lint, the baseline, the checks, the commits, the hand-off. A model does the judgement. |
+| **whetstone** | Per-task craft — red-green TDD, a flaky-test rate, diagnosis, doubt review, grilling, research and HTML reports, skill lint, column budget. TDD, skill lint, column budget and HTML report end in a script's exit code; the flaky-test rate is computed and printed, and sets no exit code; doubt review, grilling, diagnosis and the research verdicts are model-judgment. |
 
-dossier drives the wave; whetstone is the craft at each gate. Designed to be used together, independent by invariant — either works alone, and every composition route skips silently when its sibling is absent.
+whetstone works alone, in any repo. dossier is built for the author's own rig: it names whetstone's agents and the rig's tools, and does not fall back when one is missing ([ADAPTERS.md](./plugins/dossier/ADAPTERS.md)).
 
 **Why it is built this way:** [ARCHITECTURE.md](./ARCHITECTURE.md) · **What we decided and rejected:** [RESEARCH.md](./RESEARCH.md)
 
@@ -21,35 +21,28 @@ dossier drives the wave; whetstone is the craft at each gate. Designed to be use
 /plugin install whetstone@raisedadead-plugins
 ```
 
-Needs Claude Code 2.1.311 or later ([mods](https://code.claude.com/docs/en/plugins/mods/overview) arrived in 2.1.287; 2.1.311 fires `SubagentStop` once per subagent, which the verdict log needs), `git`, `bash` and Node.js 22.18+ on `PATH`. Neither plugin needs Python. whetstone ships commands in `bin/`, which limits it to Claude Code — claude.ai and Cowork do not install a plugin with a `bin/` directory.
+Needs Claude Code 2.1.311 or later ([mods](https://code.claude.com/docs/en/plugins/mods/overview) arrived in 2.1.287; CI runs 2.1.311), `git`, `bash` and Node.js 22.18+ on `PATH`. Neither plugin needs Python. whetstone ships commands in `bin/`, which limits it to Claude Code — claude.ai and Cowork do not install a plugin with a `bin/` directory.
 
-dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globally, or per clone with `echo .scratchpad/ >> .git/info/exclude`. `/dossier:new` says so when it finds the directory unignored, and leaves the choice to you.
+dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globally, or per clone with `echo .scratchpad/ >> .git/info/exclude`.
 
-**Updating.** No `version` field, so Claude Code versions each plugin by this repo's commit SHA and `claude plugin update dossier@raisedadead-plugins` picks up every commit ([how versions are computed](https://code.claude.com/docs/en/plugins/loading#versions-and-updates); [D1](./RESEARCH.md)). Releases are semver per plugin, tagged `dossier-vX.Y.Z` and `whetstone-vX.Y.Z`, with notes in each plugin's `CHANGELOG.md`.
+**Updating.** No `version` field, so Claude Code versions each plugin by this repo's commit SHA and `claude plugin update dossier@raisedadead-plugins` picks up every commit ([how versions are computed](https://code.claude.com/docs/en/plugins/loading#versions-and-updates); [D1](./RESEARCH.md)). No release is cut now (D46); each plugin's `CHANGELOG.md` holds the history up to its last tag.
 
 ## Commands
 
-**dossier — the three you type:**
+**dossier — one skill per stage:**
 
-| Command                                    | What it does                                                                                 |
-| ------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| `/dossier:status` (or "ds", "what's next") | Session-open driver. Decision-first sit-rep. `--full` for tables, `--recover` after a crash, `--drift` for a read-only drift audit across every repo the wave touches. |
-| `/dossier:new "<goal>"`                    | Start a wave. Grills the goal first, then prompts scope and repos; pins library versions.    |
-| `/dossier:close`                           | `--complete` · `--successor <slug>` · `--abandon "<why>"`. Shows the plan, then closes.      |
+| Command             | What it does                                                                                                                         |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `/dossier:plan`     | Opens a dossier and writes its plan with you: goal, scope, decisions, rows, checks, commits. One fresh agent checks the plan, and the author rules on each finding. |
+| `/dossier:build`    | Builds the rows of a checked plan, one row at a time, each in its planned commit. `--auto` goes on until a row waits on you.          |
+| `/dossier:ship`     | One review of the branch, the fixup commits folded into the planned commits, the landing, then the CI watch.                         |
+| `/dossier:close`    | Closes the dossier, moves the rows that wait to the register, and archives the folder.                                               |
+| `/dossier:backprop` | Turns a bug into a row and a check that fails until the bug is fixed.                                                                 |
+| `/dossier:verify`   | Checks a freshness claim — a version, an EOL date, a SHA — against its primary source. Runs anywhere, with or without a dossier.     |
 
-`/dossier-tasks` opens the task pane: the needs tree under the progress line. The status line shows that line too, and ends with `/dossier-tasks`. In the pane, `enter` on an open agent row puts `/dossier:build T<n>` in an empty prompt box; on any other row it shows the full task.
+`ds help` lists the commands under the skills. [FORMAT.md](./plugins/dossier/FORMAT.md) has the file shapes. At session start, `ds triage --start` shows the deferred rows that are due, the rows out of shape and the dossiers whose plan changed after its check.
 
-**When to start a wave:** the work spans more than one session, touches more than 5 files, or needs a step only you can do. Smaller work runs without a dossier.
-
-Lifecycle verbs ride the wave rather than your memory: `/dossier:build` executes tasks (`--auto` loops hands-off), `/dossier:converge` runs the wave contract's done-when criteria ("are we done"), and `backprop` (bug → invariant), `grill` and `verify` fire at their moments. In a live wave the `UserPromptSubmit` hook prints the contract's state beside every prompt, naming `ds:converge` for the verdict.
-
-### Wave contracts
-
-A `§T` list says what to do and never what done means. A contract says it in commands: a `consumer`, and a `## done-when` table whose every row is a command with an expected result. `ds:converge` runs them and answers `MET` / `UNMET` / `PARSE` (exit 0/1/2); `ds:close` runs the same check before it archives.
-
-The home is the repo's choice. `mkdir .dossier` opts into tracked contracts at `.dossier/<date>-<slug>.md` — citable as evidence, archived to `.dossier/_archive/` at close. Without that directory, `ds:new` writes `<wave-dir>/CONTRACT.md` instead and says what the weaker home costs: untracked wherever `.scratchpad/` is gitignored, and its criteria run as shell from a file no diff ever showed a reviewer. The plugin never creates `.dossier/` for you.
-
-**A wave opened before contracts existed** keeps working — `ds:close` records `converge=absent` and archives it. The per-prompt line will read `no contract` until you write one: hand-author `.dossier/<date>-<slug>.md` (or `<wave-dir>/CONTRACT.md`) with a `consumer` row and a `done-when` table, and commit it — the budget count starts at that commit.
+**When to start a dossier:** the work needs more than one commit, spans more than one session, or has a step only you can do. Smaller work runs without one.
 
 **whetstone — invoke directly, or let dossier compose them:**
 
@@ -64,58 +57,41 @@ The home is the repo's choice. `mkdir .dossier` opts into tracked contracts at `
 
 The other whetstone skills are methods with no computed gate: `grill`, `diagnose`, `prototype`, `domain-modeling` and `codebase-design`. They are adapted from [mattpocock/skills](https://github.com/mattpocock/skills) under its MIT licence; [THIRD_PARTY_NOTICES.md](./plugins/whetstone/THIRD_PARTY_NOTICES.md) lists each file. whetstone also ships the `verify-claims` workflow and the `gatherer`, `plan-checker`, `reviewer`, `security-reviewer`, `whetstone-scout`, `whetstone-grounder` and `whetstone-doubter` agents. The operator's rig holds each of them to a read-only shell and scratch-only writes. The verdicts are model-judgment.
 
-whetstone also ships its scripts as commands on the Bash tool's `PATH` while it is enabled, which is how dossier's composed routes reach them in any project: `run-slice`, `lint-skill`, `flake-runner <N> <results.json> <cmd...>` (reruns a test and prints its flakiness rate), `verify-clean <root> <baseline|-> <count-command...>` (zero conflict markers, pass count at or above the baseline), `tiger-check <repo>` (column budget of the lines a commit adds), `claim-check <path>...` (prose asserting enforcement that names nothing checkable) and `html-report <report.md> <report.html>`.
+whetstone also ships its scripts as commands on the Bash tool's `PATH` while it is enabled: `run-slice`, `lint-skill`, `flake-runner <N> <results.json> <cmd...>` (reruns a test and prints its flakiness rate), `tiger-check <repo>` (column budget of the lines a commit adds), `claim-check <path>...` (prose asserting enforcement that names nothing checkable) and `html-report <report.md> <report.html>`.
 
 ## Quickstart
 
 ```
-/dossier:new "Cache auth tokens in Valkey with a TTL clamp"
-/goal Keep running ds:build --auto until it prints DONE or PAUSE. Stop on PAUSE.
-/dossier:status
-/dossier:close --successor auth-rollout
+/dossier:plan auth-token-cache "Cache auth tokens in Valkey with a TTL clamp"
+/dossier:build --auto
+/dossier:ship
+/dossier:close "auth tokens cached with a clamped TTL"
 ```
 
-`--auto` pauses on a real decision — blocked, ambiguous, destructive, push, retries, stale state, budget — and logs the reason. Pushing and closing stay yours: the loop stops at the last `x`-flip.
+`--auto` stops when a row waits on you. The prompt of the landing is yours.
 
-## Quality gates
+## Hooks
 
-In-session hooks. The four write-time gates — the header and marker guards (one row and one switch below), the invariant guard and freshness verify — scope themselves to projects that opted in — with no `.scratchpad/dossier/` directory they do nothing — and inside such a repo they cover ad-hoc edits too, not just work driven by a command. The fake-impl backstop is the exception on both counts: it runs at Stop rather than at write time, and it is keyed to its env var alone, so once you set that it applies in any repo. Gate strength matches signal strength — see [ARCHITECTURE.md](./ARCHITECTURE.md).
+Each plugin ships one hook, and neither stops a tool call or a turn.
 
-Under managed settings, `managed-mcp.json` or a Team or Enterprise `/login`, Claude Code's built-in guard `sec-default` does not run a user-installed mod's `classic.*` hooks, so no gate in either plugin runs. `/plugin` shows a note on the plugin. See RESEARCH.md F46.
+| Hook                     | Plugin    | What it does                                                                                                                      |
+| ------------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| session-start triage     | dossier   | Adds the output of `ds triage --start` as context at start, after `/clear` and on resume; nothing when no row is due. It skips a compaction. |
+| skill lint reminder      | whetstone | After an Edit or Write of `skills/<name>/SKILL.md`, adds the `lint-skill` findings for that file as context.                       |
 
-| Gate                   | Default | Toggle                               | What it catches                                                                                                                                                     |
-| ---------------------- | ------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **marker guard**       | on      | `DOSSIER_MARKER_GUARD=off`           | Phase and audit-id markers leaking into source; bad state tokens in a ledger.                                                                                       |
-| **invariant guard**    | on      | `DOSSIER_INVARIANT_GUARD=off`        | Edits matching a project-registered pattern. Fail-open with no registry, an unreadable payload, a spawn error, or any `ds invariant-check` result but exit 1 with output.                                                                                      |
-| **freshness verify**   | on      | `# verify-skip: <rule>` on the line  | Stale version, EOL, SHA and deprecated-model claims. Advisory; never blocks.                                                                                        |
-| **fake-impl backstop** | off     | `DOSSIER_FAKEIMPL_CMD='<fast test>'` | On stop with a dirty tree — untracked files included — runs your test command; a non-zero exit or a `DOSSIER_FAKEIMPL_TIMEOUT` timeout blocks, and a run past the hook's 180-second limit, a `git status` error or a spawn error lets the stop through. Its first block in each turn asks for the whole reply again, because focus mode shows only the last message. |
-| **claim gate**         | on      | disable whetstone                    | whetstone. A final reply that claims enforcement with no exit code, citation or honesty label. Sends the flagged lines back as context once per turn and asks for the whole reply again with the fix, because focus mode shows only the last message; never blocks. |
+Under managed settings, `managed-mcp.json` or a Team or Enterprise `/login`, Claude Code's built-in guard `sec-default` does not run a user-installed mod's `classic.*` hooks, so neither hook runs. `/plugin` shows a note on the plugin. See RESEARCH.md F46.
 
-The invariant guard is where the ratchet lands: for a recurring bug class with a regex shape, `ds:backprop` offers to register the pattern, and the guard then denies a matching edit (PreToolUse `deny`; the offer is model-judgment). Registry is a JSON list at `.scratchpad/dossier/.invariant-guards.json` — gitignored by design, so the suite leaves no artifact in a project that did not ask for one:
-
-```json
-[{ "id": "no-raw-sql", "pattern": "execute\\(f?\"SELECT", "message": "parameterize", "paths": ["src/*.py"] }]
-```
-
-A `paths` glob is relative to the project root, and `*` also matches `/`. The guard checks only files inside the project root, or in the root's git repo and its linked worktrees; a file in any other repo is never checked, whatever the glob. When git fails, a file outside the root is not checked. An edit is in scope when any of these forms of the edited path matches a glob: the absolute path as sent, the absolute path with symlinks resolved, and the path relative to the root. For an edit in a linked worktree, the path relative to the top of that worktree is also used. Thus `src/*.py` covers `src/` in every worktree, `**/*.py` also covers `.py` files at the top level, and a glob that starts with `/` matches the absolute path as sent or as resolved.
-
-In a dossier repo, when a doubter or reviewer subagent stops (`whetstone-doubter`, `dossier-reviewer`, `whetstone-reviewer`, or an agent named `reviewer`), its verdict line and its findings (at most 20) are appended to `.scratchpad/dossier/.verdicts.jsonl`. An agent named `reviewer` logs its verdict only. Under `lens-review`, the logged findings are those of the review pass, before the refute pass. `python3 tools/census/census.py verdict-log` counts the verdicts and lists the findings that 2 or more stops logged. It is a log, not a gate: it never blocks.
-
-Freshness authorities live in `plugins/dossier/engine/verify-authorities.ts` — adding a product is one data row, no code change.
-
-Other knobs: `DOSSIER_FAKEIMPL_TIMEOUT` (120), `DOSSIER_LIVE_NUDGE` (1) and `DOSSIER_SESSION_TITLE` (0) are read by hook code. `DOSSIER_LIVE_NUDGE=0` silences the one-line toast that the session start raises when exactly one dossier is live; the model still receives the same fact through `additionalContext`. `DOSSIER_SESSION_TITLE=1` restores the session rename that shipped default-on until 2026-08-25 — read the CHANGELOG entry for that date before setting it, since no hook can see a sibling hook's title. `DS_HEALTH_CMD`, `DS_LIGHT_LOG` (5) and `DS_RECOVER_DAYS` (3) are honoured by the `status` skill, not by any hook — they steer a model-run step, so treat them as strong defaults rather than enforcement.
+The checks that stop a step are `ds` commands, which exit 1 when the step before them has not passed; [ARCHITECTURE.md](./ARCHITECTURE.md) has the verdict grammar.
 
 ## Docs
 
 | Doc                                          | What is in it                                                                    |
 | -------------------------------------------- | -------------------------------------------------------------------------------- |
-| [ARCHITECTURE.md](./ARCHITECTURE.md)         | Priorities, tenets, enforcement map, testing standard, how this evolves, lineage |
+| [ARCHITECTURE.md](./ARCHITECTURE.md)         | The tenet, priorities, enforcement map, testing standard, how this evolves, lineage |
 | [RESEARCH.md](./RESEARCH.md)                 | Decisions with rejected alternatives, facts with a recheck trigger, open strides |
 | [INSPIRATIONS.md](./INSPIRATIONS.md)         | Sources we borrow from, what we refused from each, and when we last looked       |
-| [FORMAT.md](./plugins/dossier/FORMAT.md)     | Ledger encoding spec                                                             |
-| [ADAPTERS.md](./plugins/dossier/ADAPTERS.md) | Host-environment detection and composition routes                                |
-
-Skill routing has a live-model eval suite: `claude plugin eval plugins/dossier --ablation none` ([evals/README.md](./plugins/dossier/evals/README.md)).
+| [FORMAT.md](./plugins/dossier/FORMAT.md)     | The dossier file shapes                                                          |
+| [ADAPTERS.md](./plugins/dossier/ADAPTERS.md) | What dossier expects from the author's rig                                       |
 
 ## Contributing
 
