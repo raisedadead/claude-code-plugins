@@ -8,12 +8,21 @@ argument-hint: <slug> [goal sentence]
 
 You are the Chief of Staff. You ask the questions and write the plan text. The `ds` commands do every step that gives the same result each time. Do not copy lines, count, rename or move rows by hand.
 
+## Discovery
+
+Discovery is the long part of the work, and it comes before the plan text. A surprise that the plan check or a review finds later is a gap in this step.
+
+- Read each file the plan changes, and each file or command that consumes it.
+- Each fact in the plan carries its probe: the command and its result, or a `path:line`. A fact with no probe stays out of the plan.
+- Run each command the plan hands out, a check or a step of a row, before it goes in: with `--help`, as a dry run, or on a sample.
+- The row list is the build order. `ds next` hands out the agent rows from the top, and does not wait for an operator row above them. Put each row after the rows it needs. An agent row that needs an operator row is `wait`, and its tail names that row; `ds set <id> next` releases it when that row is done.
+
 ## Steps
 
 1. `ds new <slug> --branch <branch>` prints the plan file. The branch is the name the kernel's worktree rule gives this session and topic; the build makes its worktree under that name. Fill the file in this order. `FORMAT.md` in this plugin has the exact shape.
    - **Goal**: the operator's words, quoted.
    - **Scope**: one `- in:` line and one `- out:` line.
-   - **Decisions**: grill the operator with the `whetstone:grill` method: decision blocks, the recommendation first, a later round for an answer that adds or removes questions, and a fresh ask when an answer changes a premise. Look up each fact with a `whetstone:gatherer` agent. Write one numbered line per decision, `<question> — <answer> · <date>`.
+   - **Decisions**: grill the operator with the `whetstone:grill` method: the goal first, then one section at a time, each a decision block with the recommendation first. Ask only what the session cannot settle, and ask a settled decision again only when an answer changes its premise. Look up each fact with a `whetstone:gatherer` agent. Write one numbered line per decision, `<question> — <answer> · <date>`.
      - "Discuss more" on a decision: answer it `split into <n>, <m>` and ask the parts as new numbered decisions.
      - A decision only someone outside the room can answer: write the `whetstone:grill` questionnaire to `questionnaire-<n>.md` in the dossier folder (`ds path`), answer the decision `waits on <who>: <questionnaire path>`, and add a row for it with `ds add "<title>" --who H --state wait`.
      - Then add `confirmed: "<the operator's words>"`.
@@ -34,5 +43,3 @@ You are the Chief of Staff. You ask the questions and write the plan text. The `
 6. The subtraction pass: show its cuts to the operator in one decision block, and take only the cuts the operator picks. Then `ds log "subtract: <its first line>; took <cut numbers or none>"`; without Whetstone, `ds log "subtract: skipped, no Whetstone"`. Until that line is in the worklog, `ds handoff` asks for the cuts. A taken cut changes the plan: run `ds lint`, `ds check --baseline` and `ds amend <notes file>`, where the notes file names the cuts taken.
 
 End the turn with the lines `ds handoff` prints. Put the `operator:` lines on one card that says what the operator does.
-
-Discovery is the long part of the work. Leave no guess in the plan: a surprise that a review finds later is a gap in this step.

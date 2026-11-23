@@ -38,6 +38,7 @@ The ledger lives in the main checkout. A `ds` command run in a linked worktree r
 - The fields are the ID, the state, who (`A` agent, `H` operator), the title, then a tail after ` · `.
 - States: `now`, `next`, `wait` (waits on the operator), `later` (deferred), `done` (the tail is the commit or the decision), `drop` (the tail is the reason).
 - A title is at most 80 characters, with no bold, no code marks, no ` · ` and no other IDs. Detail goes under `## Notes` as `### O<N>`.
+- The order of the rows in a plan is the build order. `ds next` gives the first open agent row, and does not wait for an operator row above it. An agent row that needs an operator row is `wait`, and its tail names that row; `ds set <id> next` releases it when that row is done.
 - A `later` tail is one of `until <YYYY-MM-DD>`, `after <dossier-slug>` or `after pr <owner>/<repo>#<n>`.
 - `ds add` gives each row its number from `~/.local/state/ds/next-id`, under a lock, and never at or below the highest O number in the repo's ledger files.
 

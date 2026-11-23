@@ -215,6 +215,20 @@ test('after a PASS, an edit of the plan is amended with a note of what changed',
   assert.equal(ds(cwd, 'anchors').code, 0)
 })
 
+test('an agent row in wait is held back until ds set releases it', () => {
+  const cwd = repo()
+  checkedPlan(cwd)
+  ds(cwd, 'anchors')
+  ds(cwd, 'set', 'O1', 'wait', 'after O9')
+  assert.match(ds(cwd, 'next').out, /^- O2 next A /)
+  ds(cwd, 'set', 'O2', 'wait', 'after O9')
+  const held = ds(cwd, 'next')
+  assert.equal(held.code, 3)
+  assert.match(held.err, /- O1 wait A Add the b module · after O9/)
+  ds(cwd, 'set', 'O1', 'next')
+  assert.match(ds(cwd, 'next').out, /^- O1 next A Add the b module/)
+})
+
 test('verify refuses work outside the planned paths, a stray commit and uncommitted changes', () => {
   const cwd = repo()
   checkedPlan(cwd)
