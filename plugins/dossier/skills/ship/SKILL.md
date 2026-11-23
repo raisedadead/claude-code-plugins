@@ -15,7 +15,7 @@ Run each `ds` command below in the dossier worktree, as `cd <worktree path> && d
 5. Land the branch the way the kernel names for this repo. `ds ship-args` prints the worktree path, the branch, the base and the PR title.
    - A repo that gets a pull request: pass the four values to the ship tool with no further ask. The prompt of the tool is the operator's part. The tool can rename a `cc-` branch; `ds` follows the new name.
    - Any other repo: a fast-forward merge of the branch into the base in the main checkout, then the push of the base that the kernel allows.
-6. After the push, run `ds ci` in the background. It waits for the CI runs of the branch tip, pushed on the branch or on the base.
+6. After the push, run `ds ci` in the background. It waits for the CI runs of the branch tip, pushed on the branch or on the base. For a branch on a fork, it reads the runs in the parent repository too.
    - Exit 0 (`CI: OK` or `CI: NONE`): next is `/dossier:close`.
    - Exit 1: add one row per failed run with `ds add`, plan its commit, and build it with `/dossier:build`. The fix is a new planned commit.
    - Exit 2 or 3: tell the operator what it printed.

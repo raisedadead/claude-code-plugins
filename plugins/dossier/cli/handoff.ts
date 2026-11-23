@@ -101,10 +101,17 @@ export function cmdCi(cwd: string, args: Args): string {
   const limit = seconds('DS_CI_LIMIT', 3600)
   const start = Date.now()
   log(dossier, `ci start ${sha}`)
+  const gh = (...argv: string[]): string => {
+    const done = run(['gh', ...argv], tree)
+    if (done.code !== 0) throw new Refusal(`gh failed: ${done.err.trim() || `exit ${done.code}`}`, 2)
+    return done.out
+  }
+  const { parent } = JSON.parse(gh('repo', 'view', repo, '--json', 'parent') || '{}') as { parent?: { name: string; owner: { login: string } } | null }
+  const repos = parent ? [repo, `${parent.owner.login}/${parent.name}`] : [repo]
   for (;;) {
-    const listed = run(['gh', 'run', 'list', '--repo', repo, '--commit', sha, '--json', 'databaseId,name,status,conclusion,url'], tree)
-    if (listed.code !== 0) throw new Refusal(`gh failed: ${listed.err.trim() || `exit ${listed.code}`}`, 2)
-    const runs = JSON.parse(listed.out || '[]') as Run[]
+    const runs = repos.flatMap(
+      (name) => JSON.parse(gh('run', 'list', '--repo', name, '--commit', sha, '--json', 'databaseId,name,status,conclusion,url') || '[]') as Run[],
+    )
     const waited = Date.now() - start
     if (!runs.length && waited >= appear) {
       log(dossier, `ci NONE ${sha}`)

@@ -43,15 +43,21 @@ function pushed(cwd: string): string {
 }
 
 // A fake gh: each call prints the next answer file, and the last one repeats.
-function gh(answers: string[], code = 0): string {
+function gh(answers: string[], code = 0, parent: string[] = []): string {
   const dir = mkdtempSync(join(tmpdir(), 'ds-gh-'))
   answers.forEach((answer, i) => writeFileSync(join(dir, `answer.${i}`), answer))
+  parent.forEach((answer, i) => writeFileSync(join(dir, `up.${i}`), answer))
+  writeFileSync(join(dir, 'parent'), parent.length ? '{"parent":{"name":"demo","owner":{"login":"up"}}}' : '{"parent":null}')
   const script = `#!/bin/sh
 [ "$1" = --first-run ] && exit 0
 echo "$*" >> ${dir}/calls
-n=$(cat ${dir}/n 2>/dev/null || echo 0)
-f=${dir}/answer.$n
-[ -f "$f" ] && echo $((n + 1)) > ${dir}/n || f=${dir}/answer.${answers.length - 1}
+[ "$1 $2" = "repo view" ] && cat ${dir}/parent && exit ${code}
+kind=answer
+last=${answers.length - 1}
+[ "$4" = up/demo ] && kind=up && last=${parent.length - 1}
+n=$(cat ${dir}/n.$kind 2>/dev/null || echo 0)
+f=${dir}/$kind.$n
+[ -f "$f" ] && echo $((n + 1)) > ${dir}/n.$kind || f=${dir}/$kind.$last
 cat "$f"
 exit ${code}
 `
@@ -218,8 +224,35 @@ test('ds ci waits for running runs, asks gh for the pushed commit, and names eac
   assert.equal(done.code, 1)
   assert.equal(done.err, 'ds ci: FAIL\ntest cancelled https://x/2')
   const calls = file(join(dir, 'calls')).trim().split('\n')
-  assert.ok(calls.length > 3, 'a finished list is read again until the window ends')
-  assert.equal(calls[0], `run list --repo acme/demo --commit ${sha} --json databaseId,name,status,conclusion,url`)
+  assert.ok(calls.length > 4, 'a finished list is read again until the window ends')
+  assert.deepEqual(calls.slice(0, 2), [
+    'repo view acme/demo --json parent',
+    `run list --repo acme/demo --commit ${sha} --json databaseId,name,status,conclusion,url`,
+  ])
+  assert.ok(
+    calls.slice(1).every((call) => call.startsWith('run list --repo acme/demo ')),
+    'a repository with no parent is the only one read',
+  )
+})
+
+test('ds ci on a branch pushed to a fork waits for the runs of the parent repository too', () => {
+  const cwd = repo()
+  built(cwd)
+  const sha = pushed(cwd)
+  const done = '[{"databaseId":1,"name":"proof","status":"completed","conclusion":"success","url":"https://x/1"}]'
+  const dir = gh([done], 0, [
+    '[{"databaseId":7,"name":"build","status":"in_progress","conclusion":"","url":"https://u/7"}]',
+    '[{"databaseId":7,"name":"build","status":"completed","conclusion":"failure","url":"https://u/7"}]',
+  ])
+  process.env.DS_CI_POLL = '0.05'
+  const failed = ds(cwd, 'ci')
+  assert.equal(failed.code, 1)
+  assert.equal(failed.err, 'ds ci: FAIL\nbuild failure https://u/7')
+  assert.ok(file(join(dir, 'calls')).includes(`run list --repo up/demo --commit ${sha} `))
+  gh([done], 0, ['[{"databaseId":8,"name":"build","status":"completed","conclusion":"success","url":"https://u/8"}]'])
+  assert.equal(ds(cwd, 'ci').out, `CI: OK, 2 runs for ${sha.slice(0, 7)}`)
+  gh([done], 0, ['[]'])
+  assert.equal(ds(cwd, 'ci').out, `CI: OK, 1 runs for ${sha.slice(0, 7)}`)
 })
 
 test('ds ci reports no run, a missing push, a gh failure and a run past the limit', () => {
