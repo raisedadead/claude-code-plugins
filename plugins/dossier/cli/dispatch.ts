@@ -1,6 +1,6 @@
 import { Refusal } from '../engine/sh.ts'
 import { cmdAnchors, cmdDone, cmdIntegrate, cmdLanes, cmdMission, cmdNext, cmdVerify } from './build.ts'
-import { cmdCi, cmdHandoff } from './handoff.ts'
+import { cmdCi, cmdHandoff, cmdStatus } from './handoff.ts'
 import { type Args, cmdAdd, cmdAmend, cmdCheck, cmdLint, cmdLog, cmdNew, cmdPackPlan, cmdPath, cmdRecordPlan, cmdSet, cmdTriage } from './plan.ts'
 import { cmdClose, cmdPackReview, cmdRecordReview, cmdShape, cmdShipArgs } from './ship.ts'
 
@@ -37,6 +37,10 @@ export const COMMANDS: Record<string, Command> = {
   'ship-args': { run: cmdShipArgs, usage: 'ship-args  the worktree path, branch, base and PR title as JSON' },
   close: { run: cmdClose, usage: 'close "<one line>"  close the dossier and move it to _archive' },
   handoff: { run: cmdHandoff, usage: 'handoff  the next step for this dossier, one line per step' },
+  status: {
+    run: cmdStatus,
+    usage: 'status  the dossier of this branch: state, done rows, next agent row, rows that wait on you; else a short line per live dossier; writes nothing',
+  },
   ci: { run: cmdCi, usage: 'ci  wait for the CI runs of the branch tip, pushed on the branch or on the base (exit 1: a run failed)' },
   path: { run: cmdPath, usage: 'path  the live dossier folder' },
 }

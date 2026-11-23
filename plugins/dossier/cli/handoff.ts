@@ -1,7 +1,7 @@
 import { commitsIn, fixupTarget, landedOn, REVIEWER, reviewedBy, reviews, sameBranch } from '../engine/branch.ts'
 import { header, lint, planHash } from '../engine/plan.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
-import { type Dossier, log, read, workTree, worklog } from '../engine/store.ts'
+import { currentBranch, type Dossier, ledgerRoot, liveDossiers, log, read, workTree, worklog } from '../engine/store.ts'
 import { type Args, checkedText, dossierOf, lastPlanCheck, rowsOf, scopeMoved } from './plan.ts'
 
 const GREEN = new Set(['success', 'skipped', 'neutral'])
@@ -70,6 +70,31 @@ export function cmdHandoff(cwd: string, args: Args): string {
   const step = all.some((r) => r.who === 'A' && open(r)) ? 'next: /dossier:build' : shipStep(workTree(cwd), dossier, head, all.some(open))
   if (step) out.push(step)
   return out.join('\n')
+}
+
+function statusOf(dossier: Dossier, short: boolean): string {
+  const head = `${dossier.slug} ${header(read(dossier.file)).state ?? '?'}`
+  const all = rowsOf(dossier).filter((r) => r.state !== 'drop' && r.state !== 'later')
+  if (!all.length) return `${head} · no rows`
+  const done = all.filter((r) => r.state === 'done').length
+  const next = all.find((r) => r.who === 'A' && r.state === 'now') ?? all.find((r) => r.who === 'A' && r.state === 'next')
+  const waiting = all.filter((r) => r.state === 'wait' || (r.who === 'H' && (r.state === 'now' || r.state === 'next')))
+  if (short) return [`${head} ${done}/${all.length}`, ...(waiting.length ? [`you ${waiting.length}`] : [])].join(' · ')
+  const parts = [`${head} ${Math.round((100 * done) / all.length)}% · ${done}/${all.length}`]
+  if (next) parts.push(`next ${next.id}`)
+  if (waiting.length) parts.push(`waits on you: ${waiting.map((r) => r.id).join(' ')}`)
+  return parts.join(' · ')
+}
+
+export function cmdStatus(cwd: string): string {
+  const live = liveDossiers(ledgerRoot(cwd))
+  const branch = currentBranch(cwd)
+  const own = live.filter((d) => {
+    const name = header(read(d.file)).branch
+    return name && (sameBranch(name, branch) || branch.startsWith(`${name}-lane-`))
+  })
+  const shown = own.length === 1 ? own : live
+  return shown.map((d) => statusOf(d, shown.length > 1)).join('\n')
 }
 
 function pause(ms: number): void {
