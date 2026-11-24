@@ -7,9 +7,10 @@ import { archivedNames, DATE, type Dossier, liveDossiers, read, readOr, register
 
 export type Flag = { id: string; title: string; where: string; why: string }
 export type Live = { slug: string; state: string; counts: Record<string, number>; next?: string; replan: boolean }
-export type Triage = { wait: Flag[]; due: Flag[]; stale: Flag[]; shape: Flag[]; live: Live[] }
+export type Triage = { wait: Flag[]; paused: Flag[]; due: Flag[]; stale: Flag[]; shape: Flag[]; live: Live[] }
 
 const STALE_DAYS = 3
+const PAUSED = /^paused(:|\s|$)/i
 export const LATER_HEAD = '<!-- Written by ds triage from the later rows. Edits here are lost. -->'
 
 function registerRows(root: string): { rows: (Row & { line: number })[]; bad: Bad[] } {
@@ -47,7 +48,7 @@ function lastTouch(lines: string[], id: string): string | undefined {
 }
 
 export function triage(root: string): Triage {
-  const out: Triage = { wait: [], due: [], stale: [], shape: [], live: [] }
+  const out: Triage = { wait: [], paused: [], due: [], stale: [], shape: [], live: [] }
   const sources: { where: string; rows: (Row & { line: number })[]; bad: Bad[]; dossier?: Dossier }[] = [{ where: 'OPEN-WORK.md', ...registerRows(root) }]
   for (const dossier of liveDossiers(root)) sources.push({ where: dossier.slug, ...dossierRows(read(dossier.file)), dossier })
   for (const source of sources) {
@@ -55,7 +56,7 @@ export function triage(root: string): Triage {
     for (const bad of source.bad) out.shape.push({ id: `line ${bad.line}`, title: bad.text, where: source.where, why: bad.why })
     for (const row of source.rows) {
       const flag = { id: row.id, title: row.title, where: source.where }
-      if (row.state === 'wait') out.wait.push({ ...flag, why: row.tail || 'waits on the operator' })
+      if (row.state === 'wait') (PAUSED.test(row.tail) ? out.paused : out.wait).push({ ...flag, why: row.tail || 'waits on the operator' })
       if (row.state === 'later') {
         const why = fired(row, root)
         if (why) out.due.push({ ...flag, why })
@@ -106,12 +107,8 @@ export function renderStart(view: Triage): string {
 export function render(view: Triage): string {
   const out: string[] = []
   const group = (title: string, flags: Flag[]): void => groupOf(out, title, flags)
-  const paused = (f: Flag): boolean => /^paused(:|\s|$)/i.test(f.why)
-  group(
-    'Waits on the operator',
-    view.wait.filter((f) => !paused(f)),
-  )
-  group('Paused', view.wait.filter(paused))
+  group('Waits on the operator', view.wait)
+  group('Paused', view.paused)
   group('Deferred and now due', view.due)
   group('In progress with no recent work', view.stale)
   group('Out of shape', view.shape)

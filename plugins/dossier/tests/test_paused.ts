@@ -30,14 +30,12 @@ test('triage lists paused wait rows under Paused, and only those', () => {
   assert.doesNotMatch(paused, /O8|O9/)
 })
 
-test('triage --json keeps paused rows in wait', () => {
+test('triage --json lists paused rows apart from the rows that wait on the operator', () => {
   const cwd = repo()
   file(join(cwd, '.scratchpad/OPEN-WORK.md'), REGISTER)
   const json = JSON.parse(ds(cwd, 'triage', '--json').out)
-  assert.deepEqual(
-    json.wait.map((f: { id: string }) => f.id),
-    ['O7', 'O8', 'O9', 'O10'],
-  )
-  assert.equal(json.wait[0].why, 'paused: back after the incident')
-  assert.equal(json.paused, undefined)
+  const ids = (flags: { id: string }[]): string[] => flags.map((f) => f.id)
+  assert.deepEqual(ids(json.wait), ['O8', 'O9'])
+  assert.deepEqual(ids(json.paused), ['O7', 'O10'])
+  assert.equal(json.paused[0].why, 'paused: back after the incident')
 })
