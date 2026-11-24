@@ -81,7 +81,19 @@ function seconds(name: string, fallback: number): number {
   return (Number.isFinite(value) && value >= 0 ? value : fallback) * 1000
 }
 
-type Run = { databaseId: number; name: string; status: string; conclusion: string; url: string }
+type Run = {
+  databaseId: number
+  name: string
+  status: string
+  conclusion: string
+  url: string
+  workflowName?: string
+  event?: string
+  createdAt?: string
+  repo?: string
+}
+
+const RUN_FIELDS = 'databaseId,name,status,conclusion,url,workflowName,event,createdAt'
 
 export function cmdCi(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
@@ -101,17 +113,24 @@ export function cmdCi(cwd: string, args: Args): string {
   const limit = seconds('DS_CI_LIMIT', 3600)
   const start = Date.now()
   log(dossier, `ci start ${sha}`)
-  const gh = (...argv: string[]): string => {
+  const gh = (...argv: string[]): unknown => {
     const done = run(['gh', ...argv], tree)
     if (done.code !== 0) throw new Refusal(`gh failed: ${done.err.trim() || `exit ${done.code}`}`, 2)
-    return done.out
+    try {
+      return JSON.parse(done.out || 'null')
+    } catch {
+      throw new Refusal(`gh failed: gh ${argv.slice(0, 2).join(' ')} printed no JSON`, 2)
+    }
   }
-  const { parent } = JSON.parse(gh('repo', 'view', repo, '--json', 'parent') || '{}') as { parent?: { name: string; owner: { login: string } } | null }
+  const { parent } = (gh('repo', 'view', repo, '--json', 'parent') ?? {}) as { parent?: { name: string; owner: { login: string } } | null }
   const repos = parent ? [repo, `${parent.owner.login}/${parent.name}`] : [repo]
+  const ranAgain = (old: Run, other: Run): boolean =>
+    old.repo === other.repo && old.workflowName === other.workflowName && old.event === other.event && (other.createdAt ?? '') > (old.createdAt ?? '')
   for (;;) {
-    const runs = repos.flatMap(
-      (name) => JSON.parse(gh('run', 'list', '--repo', name, '--commit', sha, '--json', 'databaseId,name,status,conclusion,url') || '[]') as Run[],
+    const listed = repos.flatMap((name) =>
+      ((gh('run', 'list', '--repo', name, '--commit', sha, '--json', RUN_FIELDS) ?? []) as Run[]).map((r) => ({ ...r, repo: name })),
     )
+    const runs = listed.filter((r) => r.conclusion !== 'cancelled' || !listed.some((other) => ranAgain(r, other)))
     const waited = Date.now() - start
     if (!runs.length && waited >= appear) {
       log(dossier, `ci NONE ${sha}`)
@@ -119,11 +138,13 @@ export function cmdCi(cwd: string, args: Args): string {
     }
     // A slower workflow can register after a fast one finishes, so a verdict waits out the same window.
     if (runs.length && runs.every((r) => r.status === 'completed') && waited >= appear) {
-      const failed = runs.filter((r) => !GREEN.has(r.conclusion))
+      const held = runs.filter((r) => r.conclusion === 'action_required')
+      const failed = runs.filter((r) => !GREEN.has(r.conclusion) && !held.includes(r))
       if (failed.length) {
         log(dossier, `ci FAIL ${sha} ${failed.map((r) => r.url).join(' ')}`)
         throw new Refusal(`FAIL\n${failed.map((r) => `${r.name} ${r.conclusion} ${r.url}`).join('\n')}`)
       }
+      if (held.length) throw new Refusal(`a run waits for approval; run ds ci again after the approval\n${held.map((r) => `${r.name} ${r.url}`).join('\n')}`, 3)
       log(dossier, `ci OK ${sha}`)
       return `CI: OK, ${runs.length} runs for ${sha.slice(0, 7)}`
     }

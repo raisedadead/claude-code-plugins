@@ -51,7 +51,7 @@ function gh(answers: string[], code = 0, parent: string[] = []): string {
   const script = `#!/bin/sh
 [ "$1" = --first-run ] && exit 0
 echo "$*" >> ${dir}/calls
-[ "$1 $2" = "repo view" ] && cat ${dir}/parent && exit ${code}
+[ "$1 $2" = "repo view" ] && cat ${dir}/parent && exit 0
 kind=answer
 last=${answers.length - 1}
 [ "$4" = up/demo ] && kind=up && last=${parent.length - 1}
@@ -227,7 +227,7 @@ test('ds ci waits for running runs, asks gh for the pushed commit, and names eac
   assert.ok(calls.length > 4, 'a finished list is read again until the window ends')
   assert.deepEqual(calls.slice(0, 2), [
     'repo view acme/demo --json parent',
-    `run list --repo acme/demo --commit ${sha} --json databaseId,name,status,conclusion,url`,
+    `run list --repo acme/demo --commit ${sha} --json databaseId,name,status,conclusion,url,workflowName,event,createdAt`,
   ])
   assert.ok(
     calls.slice(1).every((call) => call.startsWith('run list --repo acme/demo ')),
@@ -253,6 +253,36 @@ test('ds ci on a branch pushed to a fork waits for the runs of the parent reposi
   assert.equal(ds(cwd, 'ci').out, `CI: OK, 2 runs for ${sha.slice(0, 7)}`)
   gh([done], 0, ['[]'])
   assert.equal(ds(cwd, 'ci').out, `CI: OK, 1 runs for ${sha.slice(0, 7)}`)
+})
+
+test('ds ci drops a cancelled run that the same workflow ran again, and no other cancelled run', () => {
+  const cwd = repo()
+  built(cwd)
+  const sha = pushed(cwd)
+  const one = (id: number, conclusion: string, createdAt: string, event = 'pull_request'): string =>
+    `{"databaseId":${id},"name":"build","workflowName":"build","event":"${event}","status":"completed","conclusion":"${conclusion}","createdAt":"${createdAt}","url":"https://x/${id}"}`
+  gh([`[${one(2, 'success', '2026-11-20T19:35:46Z')},${one(1, 'cancelled', '2026-11-20T19:35:45Z')}]`])
+  assert.equal(ds(cwd, 'ci').out, `CI: OK, 1 runs for ${sha.slice(0, 7)}`)
+  gh([`[${one(2, 'success', '2026-11-20T19:35:45Z')},${one(1, 'cancelled', '2026-11-20T19:35:46Z')}]`])
+  assert.equal(ds(cwd, 'ci').err, 'ds ci: FAIL\nbuild cancelled https://x/1', 'the cancelled run is the newer one')
+  gh([`[${one(2, 'success', '2026-11-20T19:35:46Z', 'push')},${one(1, 'cancelled', '2026-11-20T19:35:45Z')}]`])
+  assert.equal(ds(cwd, 'ci').err, 'ds ci: FAIL\nbuild cancelled https://x/1', 'a run of another event is not a rerun')
+  gh([`[${one(2, 'failure', '2026-11-20T19:35:46Z')},${one(1, 'cancelled', '2026-11-20T19:35:45Z')}]`])
+  assert.equal(ds(cwd, 'ci').err, 'ds ci: FAIL\nbuild failure https://x/2')
+})
+
+test('ds ci names a run that waits for approval and exits 3, and reads output that is not JSON as a gh failure', () => {
+  const cwd = repo()
+  built(cwd)
+  pushed(cwd)
+  gh(['[{"databaseId":4,"name":"build","status":"completed","conclusion":"action_required","url":"https://x/4"}]'])
+  const held = ds(cwd, 'ci')
+  assert.equal(held.code, 3)
+  assert.equal(held.err, 'ds ci: a run waits for approval; run ds ci again after the approval\nbuild https://x/4')
+  gh(['<html>'])
+  const odd = ds(cwd, 'ci')
+  assert.equal(odd.code, 2)
+  assert.match(odd.err, /^ds ci: gh failed: /)
 })
 
 test('ds ci reports no run, a missing push, a gh failure and a run past the limit', () => {

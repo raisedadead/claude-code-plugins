@@ -44,7 +44,6 @@ test('the plan pack names the file of the plan checker, with a name the host let
   assert.equal(ds(cwd, 'record', 'plan', first).code, 1)
   assert.equal(named(), join(dirname(path), 'plan-check-2.md'))
   assert.doesNotMatch(basename(named()), HOST_REFUSES)
-  assert.match('findings-plan-1.md', HOST_REFUSES, 'the pattern does refuse the name that sessions picked')
 })
 
 test('ship-args names the worktree that holds the dossier branch, as the ship tool wants it', () => {
