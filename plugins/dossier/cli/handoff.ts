@@ -149,8 +149,12 @@ export function cmdCi(cwd: string, args: Args): string {
   }
   const { parent } = (gh('repo', 'view', repo, '--json', 'parent') ?? {}) as { parent?: { name: string; owner: { login: string } } | null }
   const repos = parent ? [repo, `${parent.owner.login}/${parent.name}`] : [repo]
+  const newer = (old: Run, other: Run): boolean => {
+    const [was, is] = [old.createdAt ?? '', other.createdAt ?? '']
+    return is > was || (is === was && other.databaseId > old.databaseId)
+  }
   const ranAgain = (old: Run, other: Run): boolean =>
-    old.repo === other.repo && old.workflowName === other.workflowName && old.event === other.event && (other.createdAt ?? '') > (old.createdAt ?? '')
+    Boolean(old.workflowName) && old.repo === other.repo && old.workflowName === other.workflowName && old.event === other.event && newer(old, other)
   for (;;) {
     const listed = repos.flatMap((name) =>
       ((gh('run', 'list', '--repo', name, '--commit', sha, '--json', RUN_FIELDS) ?? []) as Run[]).map((r) => ({ ...r, repo: name })),

@@ -267,6 +267,10 @@ test('ds ci drops a cancelled run that the same workflow ran again, and no other
   assert.equal(ds(cwd, 'ci').err, 'ds ci: FAIL\nbuild cancelled https://x/1', 'the cancelled run is the newer one')
   gh([`[${one(2, 'success', '2026-11-20T19:35:46Z', 'push')},${one(1, 'cancelled', '2026-11-20T19:35:45Z')}]`])
   assert.equal(ds(cwd, 'ci').err, 'ds ci: FAIL\nbuild cancelled https://x/1', 'a run of another event is not a rerun')
+  gh([`[${one(2, 'success', '2026-11-20T19:35:45Z')},${one(1, 'cancelled', '2026-11-20T19:35:45Z')}]`])
+  assert.equal(ds(cwd, 'ci').out, `CI: OK, 1 runs for ${sha.slice(0, 7)}`, 'in the same second, the higher run id is the newer run')
+  gh([`[${one(1, 'success', '2026-11-20T19:35:45Z')},${one(2, 'cancelled', '2026-11-20T19:35:45Z')}]`])
+  assert.equal(ds(cwd, 'ci').err, 'ds ci: FAIL\nbuild cancelled https://x/2')
   gh([`[${one(2, 'failure', '2026-11-20T19:35:46Z')},${one(1, 'cancelled', '2026-11-20T19:35:45Z')}]`])
   assert.equal(ds(cwd, 'ci').err, 'ds ci: FAIL\nbuild failure https://x/2')
 })
@@ -279,6 +283,12 @@ test('ds ci names a run that waits for approval and exits 3, and reads output th
   const held = ds(cwd, 'ci')
   assert.equal(held.code, 3)
   assert.equal(held.err, 'ds ci: a run waits for approval; run ds ci again after the approval\nbuild https://x/4')
+  gh([
+    '[{"databaseId":4,"name":"build","status":"completed","conclusion":"action_required","url":"https://x/4"},{"databaseId":5,"name":"lint","status":"completed","conclusion":"failure","url":"https://x/5"}]',
+  ])
+  const both = ds(cwd, 'ci')
+  assert.equal(both.code, 1)
+  assert.equal(both.err, 'ds ci: FAIL\nlint failure https://x/5', 'a failure is reported before a run that waits')
   gh(['<html>'])
   const odd = ds(cwd, 'ci')
   assert.equal(odd.code, 2)
