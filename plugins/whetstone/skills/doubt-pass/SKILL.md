@@ -30,7 +30,7 @@ A second mission for the same agent asks what can go, where the doubt asks where
 
 - **Questions** — asked against the contract: which pieces it does not need, is more complex than it needs, or rests on an unchecked assumption; which of those can go entirely; what simpler form can do the rest. Take the first rung that holds: delete > simplify > optimise > automate. "Nothing to cut" is an allowed answer, and a good artifact is left alone.
 - **Verdict** — `SUBTRACT: NOTHING TO CUT` or `SUBTRACT: <n> CUTS` (n ≥ 1) as the first line, then one line per cut: the piece, the rung, and what still holds without it.
-- **Model** — pass the session model's family as the Agent `model`. The `advisorModel` setting is for the advisor alone; this mission does not read it.
+- **Model** — pass no `model`: this mission runs on the agent's own `opus`.
 - **Reconcile** — tag each cut `actionable` or `not-actionable`, as in step 4. The operator decides a cut that removes something they asked for.
 
 ## Doubt theater

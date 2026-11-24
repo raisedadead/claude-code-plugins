@@ -87,7 +87,7 @@ Every gate ends in one of these signals. The enforcement column is the honesty t
 | `ds record plan`, `ds record review` | `VERDICT: PASS` or `VERDICT: CHANGES` in the findings file; exit 0 on PASS, 1 on CHANGES | model-judgment, parsed by code |
 | `ds amend` | `PLAN: amended <hash>`; exit 1 on a finding with no ruling, a lint problem, a baseline that is not green, or a changed Goal or Scope | code — `cli/ds`; each ruling is model-judgment, and the branch review reads it |
 | `ds lint`, `ds check`, `ds verify`, `ds shape` | `LINT: OK`, `CHECK: OK`, `BASELINE: OK`, `VERIFY <id>: PASS`, `SHAPE: OK`; exit 1 otherwise | code — `cli/ds` |
-| subtraction pass    | `SUBTRACT: NOTHING TO CUT` or `SUBTRACT: <n> CUTS`                                            | model-judgment, parsed; it runs on the session's model family |
+| subtraction pass    | `SUBTRACT: NOTHING TO CUT` or `SUBTRACT: <n> CUTS`                                            | model-judgment, parsed; it runs on the doubter's own `opus` |
 | `skill-smith` lint  | `FAIL` / `WARN` lines; exit 1 if any `FAIL`                                                   | code — `lint-skill`                                                          |
 | `tdd-cycle` slice   | red, green and full-suite exit codes                                                          | code — `run_slice.sh`                                                        |
 | flake route         | per-test rate; anything between 0 and 1 is flaky                                              | code — `flake-runner`                                                        |

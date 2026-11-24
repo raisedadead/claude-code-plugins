@@ -1,7 +1,7 @@
 ---
 name: security-reviewer
 description: Fresh-context security reviewer of a change to a guard, a secret path or a deploy. Hunts inputs that the change lets through, secrets that it leaks and reach that it widens, and returns one path:line finding per line, a REVIEW line and a VERDICT line. Read-only, apart from one findings file.
-model: fable
+model: opus
 effort: medium
 tools: Read, Grep, Glob, Bash, Write
 disallowedTools: Edit, NotebookEdit, Agent, WebFetch, WebSearch
