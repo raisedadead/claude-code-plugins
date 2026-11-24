@@ -25,12 +25,14 @@ import {
   type Dossier,
   dossierHome,
   ledgerRoot,
+  linkSession,
   log,
   now,
   read,
   readOr,
   REGISTER_HEAD,
   registerFile,
+  resolveDossier,
   scratch,
   workTree,
   worklog,
@@ -40,12 +42,18 @@ import { render, triage, writeLaterView } from '../engine/triage.ts'
 import { type Args, dossierOf, findingsOf, flag, guard, lastPlanCheck, runChecks, verdictOf } from './plan.ts'
 
 function optionalDossier(cwd: string, args: Args): Dossier | undefined {
+  let dossier: Dossier
   try {
-    return dossierOf(cwd, args)
+    dossier = resolveDossier(cwd, flag(args, 'dossier'))
   } catch (error) {
     if (flag(args, 'dossier')) throw error
     return undefined
   }
+  const own = header(read(dossier.file)).branch
+  const branch = currentBranch(cwd)
+  const picked = flag(args, 'dossier') || process.env.DS_DOSSIER || (own && (sameBranch(own, branch) || branch.startsWith(`${own}-lane-`)))
+  if (picked) linkSession(dossier)
+  return dossier
 }
 
 function baseOf(cwd: string, args: Args, dossier?: Dossier): string {

@@ -50,11 +50,18 @@ type On = Parameters<Parameters<typeof test>[1]>[1]
 type Seen = { lines: (string | undefined)[]; calls: { argv: readonly string[]; init?: { cwd?: string } }[] }
 
 const TURN = { answer: '', durationMs: 0, isAborted: false, turnId: 't1', reason: 'answer' } as const
-const ONE = 'demo plan 33% · 1/3 · next O2 · waits on you: O3'
+const ONE = 'demo · plan · 1/3 · next O2 · [H] 1'
 
-function session(on: On, run: () => ReturnType<typeof ran>, surfaces: () => readonly 'terminal'[] = () => ['terminal'], cwd: () => string = () => '/s'): Seen {
+function session(
+  on: On,
+  run: () => ReturnType<typeof ran>,
+  surfaces: () => readonly 'terminal'[] = () => ['terminal'],
+  cwd: () => string = () => '/s',
+  sid: () => string = () => 's1',
+): Seen {
   const seen: Seen = { lines: [], calls: [] }
   on('session.surfaces', async () => ({ value: surfaces() }))
+  on('session.id', async () => ({ value: sid() }))
   on('session.cwd', async () => ({ value: cwd() }))
   on('process.run', async (_, e) => {
     seen.calls.push(e)
@@ -70,24 +77,53 @@ function session(on: On, run: () => ReturnType<typeof ran>, surfaces: () => read
 }
 
 describe('dossier status line', () => {
-  test('a session start pins the line that ds status prints for the start folder', async ($, on) => {
+  test('a session start pins the line that ds status prints for this session in the start folder', async ($, on) => {
     const seen = session(on, () => ran(`${ONE}\n`))
     expect(await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/w' })).toEqual({ cwd: '/w' })
     expect(seen.lines).toEqual([ONE])
-    expect(seen.calls.map((call) => [call.argv.slice(-1), call.init?.cwd])).toEqual([[['status'], '/w']])
+    expect(seen.calls.map((call) => [call.argv.slice(-3), call.init?.cwd])).toEqual([[['status', '--session', 's1'], '/w']])
   })
 
-  test('the end of a main-loop turn pins the line for the session folder, and the turn result stays as it is', async ($, on) => {
+  test('the end of a main-loop turn pins the line for this session in its folder, and the turn result stays as it is', async ($, on) => {
     const seen = session(on, () => ran(`${ONE}\n`))
     expect(await $.turn.complete(TURN)).toEqual({ text: 'the answer' })
     expect(seen.lines).toEqual([ONE])
-    expect(seen.calls.map((call) => [call.argv.slice(-1), call.init?.cwd])).toEqual([[['status'], '/s']])
+    expect(seen.calls.map((call) => [call.argv.slice(-3), call.init?.cwd])).toEqual([[['status', '--session', 's1'], '/s']])
+  })
+
+  test('a clear pins the line of the new session at once', async ($, on) => {
+    const seen = session(
+      on,
+      () => ran(''),
+      () => ['terminal'],
+      () => '/s',
+      () => 's2',
+    )
+    on('classic.SessionStart', async () => ({}))
+    await $.classic.SessionStart({ cwd: '/w', source: 'clear' })
+    expect(seen.lines).toEqual([undefined])
+    expect(seen.calls.map((call) => call.argv.slice(2))).toEqual([
+      ['status', '--session', 's2'],
+      ['triage', '--start'],
+    ])
+  })
+
+  test('with no session id the mod runs nothing and clears the line', async ($, on) => {
+    const seen = session(
+      on,
+      () => ran(`${ONE}\n`),
+      () => ['terminal'],
+      () => '/s',
+      () => '',
+    )
+    expect(await $.turn.complete(TURN)).toEqual({ text: 'the answer' })
+    expect(seen).toEqual({ lines: [undefined], calls: [] })
   })
 
   test('two lines of output are pinned as one line', async ($, on) => {
-    const seen = session(on, () => ran('demo plan · no rows\nother build 100% · 2/2\n'))
+    const seen = session(on, () => ran('demo · plan · no rows\nother · build · 2/2\n'))
     await $.turn.complete(TURN)
-    expect(seen.lines).toEqual(['demo plan · no rows │ other build 100% · 2/2'])
+    expect(seen.lines).toEqual(['demo · plan · no rows │ other · build · 2/2'])
   })
 
   test('no live dossier, a failed run and a run that throws each clear the line and leave the turn result', async ($, on) => {

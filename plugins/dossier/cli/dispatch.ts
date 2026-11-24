@@ -39,13 +39,14 @@ export const COMMANDS: Record<string, Command> = {
   handoff: { run: cmdHandoff, usage: 'handoff  the next step for this dossier, one line per step' },
   status: {
     run: cmdStatus,
-    usage: 'status  the full line for the dossier of this branch or the only live one; else a short line per live dossier; writes nothing',
+    usage:
+      'status [--session <id>]  one line per dossier: slug · stage · done/rows · next row · [H] rows that wait on the operator. With --session, the live dossiers that session used; else the dossier of this branch, or every live one; writes nothing',
   },
   ci: { run: cmdCi, usage: 'ci  wait for the CI runs of the branch tip, pushed on the branch or on the base (exit 1: a run failed)' },
   path: { run: cmdPath, usage: 'path  the live dossier folder' },
 }
 
-const VALUE_FLAGS = new Set(['dossier', 'who', 'state', 'tail', 'branch', 'base', 'cite', 'agent'])
+const VALUE_FLAGS = new Set(['dossier', 'who', 'state', 'tail', 'branch', 'base', 'cite', 'agent', 'session'])
 
 export function parse(argv: string[]): Args {
   const args: Args = { _: [], flags: {} }

@@ -22,41 +22,81 @@ test('status prints nothing when no dossier is live', () => {
   assert.deepEqual(ds(cwd, 'status'), { code: 0, out: '', err: '' })
 })
 
-test('status prints the state, the count of done rows, the next agent row and the rows that wait on the operator', () => {
+const DEMO = 'demo · plan · 0/3 · next O1 · [H] 1'
+
+test('status prints the stage, the count of done rows, the next agent row and the count of rows that wait on the operator', () => {
   const cwd = repo()
   const path = planned(cwd)
-  assert.equal(ds(cwd, 'status').out, 'demo plan 0% · 0/3 · next O1 · waits on you: O3')
+  assert.equal(ds(cwd, 'status').out, DEMO)
   file(path, file(path).replace('- O1 next A', '- O1 done A'))
-  assert.equal(ds(cwd, 'status').out, 'demo plan 33% · 1/3 · next O2 · waits on you: O3')
+  assert.equal(ds(cwd, 'status').out, 'demo · plan · 1/3 · next O2 · [H] 1')
   file(path, file(path).replace('- O3 wait H', '- O3 next H'))
-  assert.equal(ds(cwd, 'status').out, 'demo plan 33% · 1/3 · next O2 · waits on you: O3', 'an operator row that is next waits on you')
+  assert.equal(ds(cwd, 'status').out, 'demo · plan · 1/3 · next O2 · [H] 1', 'an operator row that is next waits on the operator')
   file(path, file(path).replace('- O1 done A', '- O1 next A').replace('- O2 next A', '- O2 now A'))
-  assert.equal(ds(cwd, 'status').out, 'demo plan 0% · 0/3 · next O2 · waits on you: O3', 'a row in now comes before an earlier row in next')
+  assert.equal(ds(cwd, 'status').out, 'demo · plan · 0/3 · next O2 · [H] 1', 'a row in now comes before an earlier row in next')
   file(path, file(path).replace('- O1 next A', '- O1 later A'))
-  assert.equal(ds(cwd, 'status').out, 'demo plan 0% · 0/2 · next O2 · waits on you: O3', 'a later row is not counted')
+  assert.equal(ds(cwd, 'status').out, 'demo · plan · 0/2 · next O2 · [H] 1', 'a later row is not counted')
   file(path, file(path).replace('- O1 later A', '- O1 done A').replace('- O2 now A', '- O2 next A').replace('- O3 next H', '- O3 wait H'))
   file(path, file(path).replace('- O2 next A', '- O2 drop A').replace('- O3 wait H', '- O3 done H'))
-  assert.equal(ds(cwd, 'status').out, 'demo plan 100% · 2/2')
+  assert.equal(ds(cwd, 'status').out, 'demo · plan · 2/2')
   file(path, file(path).replace(/^- O\d+ .*\n/gm, ''))
-  assert.equal(ds(cwd, 'status').out, 'demo plan · no rows')
+  assert.equal(ds(cwd, 'status').out, 'demo · plan · no rows')
 })
 
-test('status puts the dossier of the current branch alone, and lists each live dossier on any other branch', () => {
+test('status with no session puts the dossier of the current branch alone, and lists each live dossier on any other branch', () => {
   const cwd = repo()
   const path = planned(cwd)
   ds(cwd, 'new', 'other')
-  assert.equal(ds(cwd, 'status').out, 'demo plan 0/3 · you 1\nother plan · no rows', 'several live dossiers get the short form')
-  file(path, file(path).replace('- O3 wait H', '- O3 done H'))
-  assert.equal(ds(cwd, 'status').out, 'demo plan 1/3\nother plan · no rows')
-  file(path, file(path).replace('- O3 done H', '- O3 wait H'))
+  assert.equal(ds(cwd, 'status').out, `${DEMO}\nother · plan · no rows`)
   sh(cwd, 'git checkout -q -b demo')
-  assert.equal(ds(cwd, 'status').out, 'demo plan 0% · 0/3 · next O1 · waits on you: O3')
+  assert.equal(ds(cwd, 'status').out, DEMO)
   sh(cwd, 'git checkout -q -b demo-lane-2')
-  assert.equal(ds(cwd, 'status').out, 'demo plan 0% · 0/3 · next O1 · waits on you: O3', 'a lane branch')
+  assert.equal(ds(cwd, 'status').out, DEMO, 'a lane branch')
   file(path, file(path).replace('branch: demo', 'branch: feat/cc-abc123-demo'))
-  assert.match(ds(cwd, 'status').out, /\nother plan/, 'a branch that names no dossier')
+  assert.match(ds(cwd, 'status').out, /\nother · plan/, 'a branch that names no dossier')
   sh(cwd, 'git checkout -q -b feat/demo')
-  assert.equal(ds(cwd, 'status').out, 'demo plan 0% · 0/3 · next O1 · waits on you: O3', 'the name that a ship gave the branch')
+  assert.equal(ds(cwd, 'status').out, DEMO, 'the name that a ship gave the branch')
+})
+
+test('status --session shows only the live dossiers that session used, and nothing for a session that used none', () => {
+  const cwd = repo()
+  process.env.CLAUDE_CODE_SESSION_ID = 's-one'
+  const path = planned(cwd)
+  delete process.env.CLAUDE_CODE_SESSION_ID
+  const other = ds(cwd, 'new', 'other').out
+  sh(cwd, 'git checkout -q -b demo')
+  assert.equal(ds(cwd, 'status', '--session', 's-one').out, DEMO, 'ds new links the session')
+  assert.equal(ds(cwd, 'status', '--session', 's-two').out, '', 'a session that used no dossier, also on the branch of one')
+  process.env.CLAUDE_CODE_SESSION_ID = 's-two'
+  ds(cwd, 'lint', '--dossier', 'other')
+  ds(cwd, 'lint', '--dossier', 'other')
+  assert.equal(ds(cwd, 'status', '--session', 's-two').out, 'other · plan · no rows', 'a verb that names a dossier links the session')
+  assert.equal(file(join(dirname(other), '.sessions')), 's-two\n', 'two uses give one line')
+  assert.equal(ds(cwd, 'set', 'O3', 'done', 'approved').code, 0)
+  assert.equal(ds(cwd, 'status', '--session', 's-two').out, 'demo · plan · 1/3 · next O1\nother · plan · no rows', 'ds set on a dossier row links the session')
+  assert.equal(file(join(dirname(path), '.sessions')), 's-one\ns-two\n')
+  delete process.env.CLAUDE_CODE_SESSION_ID
+})
+
+test('a review pack links the session only to a dossier it names or whose branch is checked out', () => {
+  const cwd = repo()
+  planned(cwd)
+  sh(cwd, 'git checkout -q -b unrelated')
+  process.env.CLAUDE_CODE_SESSION_ID = 's-three'
+  ds(cwd, 'pack', 'review')
+  assert.equal(ds(cwd, 'status', '--session', 's-three').out, '', 'the only live dossier is not linked to unrelated work')
+  ds(cwd, 'pack', 'review', '--dossier', 'demo')
+  assert.equal(ds(cwd, 'status', '--session', 's-three').out, DEMO, 'a pack that names the dossier')
+  process.env.CLAUDE_CODE_SESSION_ID = 's-four'
+  process.env.DS_DOSSIER = 'demo'
+  ds(cwd, 'pack', 'review')
+  delete process.env.DS_DOSSIER
+  assert.equal(ds(cwd, 'status', '--session', 's-four').out, DEMO, 'a pack with DS_DOSSIER')
+  process.env.CLAUDE_CODE_SESSION_ID = 's-five'
+  sh(cwd, 'git checkout -q -b demo')
+  ds(cwd, 'pack', 'review')
+  assert.equal(ds(cwd, 'status', '--session', 's-five').out, DEMO, 'a pack on the branch of the dossier')
+  delete process.env.CLAUDE_CODE_SESSION_ID
 })
 
 test('status writes no file, also for a branch that a ship renamed', () => {

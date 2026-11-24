@@ -10,7 +10,9 @@ async function mark($: EngineInterface, cwd: string): Promise<void> {
   if (!(await $.session.surfaces()).length) return
   let line = ''
   try {
-    const done = await $.process.run(['sh', `${$.plugin.root}/cli/ds`, 'status'], { cwd, timeoutMs: STATUS_TIMEOUT_MS })
+    const session = await $.session.id()
+    if (!session) throw new Error('no session id')
+    const done = await $.process.run(['sh', `${$.plugin.root}/cli/ds`, 'status', '--session', session], { cwd, timeoutMs: STATUS_TIMEOUT_MS })
     if (done.exitCode === 0) line = oneLine(done.stdout)
   } catch {
     line = ''
@@ -32,6 +34,7 @@ export const register: Register = (on) => {
   on('classic.SessionStart', async ($, e, next) => {
     const result = await next(e)
     if (e.source === 'compact') return result
+    if (e.source === 'clear') await mark($, e.cwd).catch(() => undefined)
     let done: { exitCode: number; stdout: string }
     try {
       done = await $.process.run(['sh', `${$.plugin.root}/cli/ds`, 'triage', '--start'], { cwd: e.cwd, timeoutMs: TRIAGE_TIMEOUT_MS })

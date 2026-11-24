@@ -8,6 +8,7 @@ import {
   type Dossier,
   dossierHome,
   ledgerRoot,
+  linkSession,
   liveDossiers,
   log,
   now,
@@ -29,7 +30,11 @@ export const flag = (args: Args, name: string): string | undefined => {
   const value = args.flags[name]
   return typeof value === 'string' ? value : undefined
 }
-export const dossierOf = (cwd: string, args: Args): Dossier => resolveDossier(cwd, flag(args, 'dossier'))
+export function dossierOf(cwd: string, args: Args): Dossier {
+  const dossier = resolveDossier(cwd, flag(args, 'dossier'))
+  linkSession(dossier)
+  return dossier
+}
 
 export function cmdNew(cwd: string, args: Args): string {
   const slug = args._[0] ?? ''
@@ -48,6 +53,7 @@ export function cmdNew(cwd: string, args: Args): string {
   )
   const dossier = { dir, name, slug, file: join(dir, 'DOSSIER.md') }
   log(dossier, `new ${slug} branch ${branch} row ${id}`)
+  linkSession(dossier)
   return `${dossier.file}`
 }
 
@@ -71,7 +77,9 @@ function checked(row: Row): Row {
 
 function logFor(root: string, file: string, line: string): void {
   const dossier = liveDossiers(root).find((d) => d.file === file)
-  if (dossier) log(dossier, line)
+  if (!dossier) return
+  log(dossier, line)
+  linkSession(dossier)
 }
 
 export function ownLine(root: string, dossier: Dossier): Row | undefined {

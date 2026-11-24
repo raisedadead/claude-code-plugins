@@ -12,6 +12,7 @@ Every shape here is read by a `ds` command. `ds lint` checks the plan file, and 
     ├── <YYYY-MM-DD>-<slug>/
     │   ├── DOSSIER.md           the plan
     │   ├── worklog.md           one line per ds command; notes through ds log
+    │   ├── .sessions            one Claude Code session id per line, of each session whose ds command used the dossier
     │   ├── missions/O<N>.md     task files, from ds mission
     │   ├── pack-plan.md         from ds pack plan
     │   ├── plan-check-<N>.md    the findings of plan check N, at the path that pack-plan.md names

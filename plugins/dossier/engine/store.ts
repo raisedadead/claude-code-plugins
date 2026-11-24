@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { shippedName } from './branch.ts'
@@ -73,6 +73,23 @@ export function write(path: string, text: string): void {
   const tmp = `${path}.${process.pid}.tmp`
   writeFileSync(tmp, text.endsWith('\n') ? text : `${text}\n`)
   renameSync(tmp, path)
+}
+
+const SESSION_ID = /^[\w-]{1,80}$/
+
+const sessionsFile = (dossier: Dossier): string => join(dossier.dir, '.sessions')
+
+export function sessionsOf(dossier: Dossier): string[] {
+  return readOr(sessionsFile(dossier))
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+}
+
+export function linkSession(dossier: Dossier): void {
+  const id = process.env.CLAUDE_CODE_SESSION_ID ?? ''
+  if (!SESSION_ID.test(id) || sessionsOf(dossier).includes(id)) return
+  appendFileSync(sessionsFile(dossier), `${id}\n`)
 }
 
 function asDossier(dir: string): Dossier {

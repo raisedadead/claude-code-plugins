@@ -21,6 +21,7 @@ export function repo(): string {
   process.env.DS_NO_NETWORK = '1'
   delete process.env.DS_DOSSIER
   delete process.env.DS_ROOT
+  delete process.env.CLAUDE_CODE_SESSION_ID
   const dir = join(root, 'repo')
   mkdirSync(join(dir, 'src'), { recursive: true })
   writeFileSync(join(dir, '.gitignore'), '.scratchpad/\n')

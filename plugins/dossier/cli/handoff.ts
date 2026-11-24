@@ -1,8 +1,8 @@
 import { commitsIn, fixupTarget, landedOn, REVIEWER, reviewedBy, reviews, sameBranch } from '../engine/branch.ts'
 import { header, lint, planHash } from '../engine/plan.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
-import { currentBranch, type Dossier, ledgerRoot, liveDossiers, log, read, workTree, worklog } from '../engine/store.ts'
-import { type Args, checkedText, dossierOf, lastPlanCheck, rowsOf, scopeMoved } from './plan.ts'
+import { currentBranch, type Dossier, ledgerRoot, liveDossiers, log, read, sessionsOf, workTree, worklog } from '../engine/store.ts'
+import { type Args, checkedText, dossierOf, flag, lastPlanCheck, rowsOf, scopeMoved } from './plan.ts'
 
 const GREEN = new Set(['success', 'skipped', 'neutral'])
 
@@ -72,29 +72,33 @@ export function cmdHandoff(cwd: string, args: Args): string {
   return out.join('\n')
 }
 
-function statusOf(dossier: Dossier, short: boolean): string {
-  const head = `${dossier.slug} ${header(read(dossier.file)).state ?? '?'}`
+function statusOf(dossier: Dossier): string {
+  const parts = [dossier.slug, header(read(dossier.file)).state ?? '?']
   const all = rowsOf(dossier).filter((r) => r.state !== 'drop' && r.state !== 'later')
-  if (!all.length) return `${head} · no rows`
+  if (!all.length) return [...parts, 'no rows'].join(' · ')
   const done = all.filter((r) => r.state === 'done').length
   const next = all.find((r) => r.who === 'A' && r.state === 'now') ?? all.find((r) => r.who === 'A' && r.state === 'next')
   const waiting = all.filter((r) => r.state === 'wait' || (r.who === 'H' && (r.state === 'now' || r.state === 'next')))
-  if (short) return [`${head} ${done}/${all.length}`, ...(waiting.length ? [`you ${waiting.length}`] : [])].join(' · ')
-  const parts = [`${head} ${Math.round((100 * done) / all.length)}% · ${done}/${all.length}`]
+  parts.push(`${done}/${all.length}`)
   if (next) parts.push(`next ${next.id}`)
-  if (waiting.length) parts.push(`waits on you: ${waiting.map((r) => r.id).join(' ')}`)
+  if (waiting.length) parts.push(`[H] ${waiting.length}`)
   return parts.join(' · ')
 }
 
-export function cmdStatus(cwd: string): string {
+export function cmdStatus(cwd: string, args: Args): string {
   const live = liveDossiers(ledgerRoot(cwd))
+  const session = flag(args, 'session')
+  if (session !== undefined)
+    return live
+      .filter((d) => sessionsOf(d).includes(session))
+      .map(statusOf)
+      .join('\n')
   const branch = currentBranch(cwd)
   const own = live.filter((d) => {
     const name = header(read(d.file)).branch
     return name && (sameBranch(name, branch) || branch.startsWith(`${name}-lane-`))
   })
-  const shown = own.length === 1 ? own : live
-  return shown.map((d) => statusOf(d, shown.length > 1)).join('\n')
+  return (own.length === 1 ? own : live).map(statusOf).join('\n')
 }
 
 function pause(ms: number): void {
