@@ -8,6 +8,4 @@ argument-hint: '[--auto]'
 
 The build runs in the main session. Read `loop.md`, which sits beside this skill file (the skill's base directory), and follow it. With `--auto`, keep going until a row waits on the operator.
 
-When no row is left, next is `/dossier:ship`.
-
-End each turn with the row, the dossier path and the lines `ds handoff` prints. Put the `operator:` lines on one card that says what the operator does.
+End each turn as `loop.md` says.

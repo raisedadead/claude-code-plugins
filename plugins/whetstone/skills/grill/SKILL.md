@@ -13,29 +13,27 @@ Map the request as a **design tree**: the goal is the root, and each decision br
 
 1. **Start from the goal.** Write the goal in the user's words, and what a good result is. When either is unknown, ask for it first, alone and with no recommendation: a recommendation serves a goal, and there is none yet.
 1. **Find the facts yourself.** A question the repository, the tools or the web can answer is a fact, not a decision. Look it up, or send a subagent for a long search. Ask only what the session cannot settle. Done when each open node is a fact with its source or a decision for the user.
-1. **Ask one section at a time.** A section is the decisions of the frontier that share their facts. Take the section that the most open decisions depend on. Ask it as one decision block, in the format below, then wait for the answers. Number the decisions across sections, so a reply reads "2b, 3c". Put the recommended option first, labelled `Recommended:`. It names what backs it: the `path:line`, the command or the URL you probed. A taste call says so. Every option states what it changes or costs.
+1. **Ask one section at a time.** A section is the decisions of the frontier that share their facts. Take the section that the most open decisions depend on. Ask it as one Decide card, in the format below, then wait for the answers. When the session's output style defines a Decide card, use that card; it outranks this one. Number the decisions across sections, so a later card starts at the next number. Put the recommended option first, as (a), labelled `Recommended:`. It names what backs it: the `path:line`, the command or the URL you probed. A taste call says so. Every option states what it changes or costs.
 1. **Recompute the frontier.** Each answer settles nodes and unblocks others. Keep the list of settled decisions, and ask none of them twice. When an answer changes a premise, re-derive each earlier recommendation that rested on it, and ask again only the ones that change, with the answer that changed them. A decision that depends on an open one in the same section rides in the block with a "Skip if" note. "Discuss more" on a decision splits it into the decisions it hides; ask them as new numbered decisions.
 1. **Audit the set.** Before the last section closes, read the decisions together against the constraints the user stated. Two decisions that conflict, or a decision that breaks a constraint, go back to the user as a new question.
-1. **Stop on an empty frontier and a confirmation.** Every branch is visited and nothing is silently assumed. Summarise the decisions, one line each, and act only after the user confirms the summary.
+1. **Stop on an empty frontier and a confirmation.** Every branch is visited and nothing is silently assumed. Summarise the decisions, one line each, and act only after the user confirms the summary in a one-question Decide card: (a) go ahead, (b) change a line.
 
 ```
 <the fact that is dangerous now, with its source; omit when none>
 
-<section topic>: the decisions, in plain English. Each has my recommendation first.
-
 <facts the section's decisions share, one bullet each, with source; omit when none>
 
+**Decide** · <section topic>
 1. <question, one sentence>
    - (a) Recommended: <option>. <what it changes or costs>, backed by <source>
    - (b) <option>. <what it changes or costs>
-2. <question> Skip if 1(b).
+2. <question> Skip if 1: b.
    - ...
-
-Answer decisions 1–2. You can reply "all recommended" and list only the ones you want differently.
+Reply one line per question, such as `1: a`.
 ```
 
 - Write each fact once, above the decisions that use it.
-- End the block on the answer line.
+- End the card on the reply line. Nothing follows it.
 
 ## A decision the user cannot answer
 

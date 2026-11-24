@@ -39,7 +39,7 @@ Render it with the `whetstone:html-report` skill to `architecture-review.html` i
 
 **ADR conflicts**: if a candidate contradicts an existing ADR, only surface it when the friction is real enough to warrant revisiting the ADR. Mark it clearly in the candidate (_"contradicts ADR-0007, but worth reopening because…"_). Don't list every theoretical refactor an ADR forbids.
 
-Do NOT propose interfaces yet. After the report is rendered, ask the user: "Which of these would you like to explore?"
+Do NOT propose interfaces yet. After the report is rendered, ask the user which candidate to explore, as one Decide card in the format of the `grill` skill.
 
 ### 3. Grilling loop
 

@@ -18,8 +18,10 @@ Run each `ds` command below in the dossier worktree, as `cd <worktree path> && d
 6. After the push, run `ds ci` in the background. It waits for the CI runs of the branch tip, pushed on the branch or on the base. For a branch on a fork, it reads the runs in the parent repository too.
    - Exit 0 (`CI: OK` or `CI: NONE`): next is `/dossier:close`.
    - Exit 1: add one row per failed run with `ds add`, plan its commit, and build it with `/dossier:build`. The fix is a new planned commit.
-   - Exit 2 or 3: tell the operator what it printed. Exit 3 is a run that has not ended or that waits for approval.
+   - Exit 2: report its error line.
+   - Exit 3, a run that waits for approval: the operator approves it at its URL, on a Do card.
+   - Exit 3, a run that has not ended: run `ds ci` again in the background.
 
-End each turn with the lines `ds handoff` prints. Put the `operator:` lines on one card that says what the operator does.
+At the end of each turn, run `ds handoff` and print none of its lines. Start each step it names that is yours, unless its helper or its background command still runs. Put its `operator:` rows on one card, last: a Run card for a command, else a Do card.
 
 Fixes after the first push become new planned commits. `ds shape` does not rewrite a pushed commit.
