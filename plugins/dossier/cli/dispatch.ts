@@ -39,7 +39,7 @@ export const COMMANDS: Record<string, Command> = {
   handoff: { run: cmdHandoff, usage: 'handoff  the next step for this dossier, one line per step' },
   status: {
     run: cmdStatus,
-    usage: 'status  the dossier of this branch: state, done rows, next agent row, rows that wait on you; else a short line per live dossier; writes nothing',
+    usage: 'status  the full line for the dossier of this branch or the only live one; else a short line per live dossier; writes nothing',
   },
   ci: { run: cmdCi, usage: 'ci  wait for the CI runs of the branch tip, pushed on the branch or on the base (exit 1: a run failed)' },
   path: { run: cmdPath, usage: 'path  the live dossier folder' },
