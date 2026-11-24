@@ -65,7 +65,7 @@ export function cmdHandoff(cwd: string, args: Args): string {
     return 'operator: pick the subtraction cuts; then ds log "subtract: ..."'
   const all = rowsOf(dossier)
   const waiting = all.filter((r) => r.state === 'wait' || (r.who === 'H' && (r.state === 'now' || r.state === 'next')))
-  const out = waiting.map((r) => `operator: ${r.id} ${r.title}`)
+  const out = waiting.map((r) => `operator: ${r.id} ${r.title}${r.state === 'wait' && r.tail ? ` · ${r.tail}` : ''}`)
   const open = (r: (typeof all)[number]) => r.state === 'now' || r.state === 'next'
   const step = all.some((r) => r.who === 'A' && open(r)) ? 'next: /dossier:build' : shipStep(workTree(cwd), dossier, head, all.some(open))
   if (step) out.push(step)
@@ -181,7 +181,10 @@ export function cmdCi(cwd: string, args: Args): string {
       log(dossier, `ci OK ${sha}`)
       return `CI: OK, ${runs.length} runs for ${sha.slice(0, 7)}`
     }
-    if (waited >= limit) throw new Refusal(`still running after ${Math.round(limit / 60000)} min; run ds ci again`, 3)
+    if (waited >= limit) {
+      const running = runs.filter((r) => r.status !== 'completed').map((r) => `${r.name} ${r.url}`)
+      throw new Refusal(`still running after ${Math.round(limit / 60000)} min; run ds ci again\n${running.join('\n')}`.trimEnd(), 3)
+    }
     pause(every)
   }
 }

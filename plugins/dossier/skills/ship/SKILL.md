@@ -16,12 +16,12 @@ Run each `ds` command below in the dossier worktree, as `cd <worktree path> && d
    - A repo that gets a pull request: pass the four values to the ship tool with no further ask. The prompt of the tool is the operator's part. The tool can rename a `cc-` branch; `ds` follows the new name.
    - Any other repo: a fast-forward merge of the branch into the base in the main checkout, then the push of the base that the kernel allows.
 6. After the push, run `ds ci` in the background. It waits for the CI runs of the branch tip, pushed on the branch or on the base. For a branch on a fork, it reads the runs in the parent repository too.
-   - Exit 0 (`CI: OK` or `CI: NONE`): next is `/dossier:close`.
+   - Exit 0 (`CI: OK` or `CI: NONE`): end the turn as `TURN.md` says.
    - Exit 1: add one row per failed run with `ds add`, plan its commit, and build it with `/dossier:build`. The fix is a new planned commit.
    - Exit 2: report its error line.
-   - Exit 3, a run that waits for approval: the operator approves it at its URL, on a Do card.
-   - Exit 3, a run that has not ended: run `ds ci` again in the background.
+   - Exit 3, a run that waits for approval: end the turn as `TURN.md` says; its Do card holds the URL. Run `ds ci` again only after the operator replies.
+   - Exit 3, a run that has not ended: run `ds ci` again in the background, once for the branch tip. A second such exit 3 ends the turn as `TURN.md` says; its Do card holds the URLs that `ds ci` printed. Run `ds ci` again only after the operator replies.
 
-At the end of each turn, run `ds handoff` and print none of its lines. Start each step it names that is yours, unless its helper or its background command still runs. Put its `operator:` rows on one card, last: a Run card for a command, else a Do card.
+Before you end each turn, read `${CLAUDE_PLUGIN_ROOT}/TURN.md`. It says how a dossier turn ends.
 
 Fixes after the first push become new planned commits. `ds shape` does not rewrite a pushed commit.

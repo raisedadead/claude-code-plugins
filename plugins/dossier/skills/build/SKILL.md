@@ -8,4 +8,4 @@ argument-hint: '[--auto]'
 
 The build runs in the main session. Read `loop.md`, which sits beside this skill file (the skill's base directory), and follow it. With `--auto`, keep going until a row waits on the operator.
 
-End each turn as `loop.md` says.
+Before you end each turn, read `${CLAUDE_PLUGIN_ROOT}/TURN.md`. It says how a dossier turn ends.

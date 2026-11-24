@@ -125,6 +125,8 @@ test('a checked plan waits for the subtraction cuts, then goes to the build with
   assert.equal(ds(cwd, 'handoff').out, 'operator: pick the subtraction cuts; then ds log "subtract: ..."')
   subtracted(cwd)
   assert.equal(ds(cwd, 'handoff').out, 'operator: O3 Approve the PR\nnext: /dossier:build')
+  ds(cwd, 'set', 'O2', 'wait', 'ds verify failed twice')
+  assert.equal(ds(cwd, 'handoff').out, 'operator: O2 Add the c module · ds verify failed twice\noperator: O3 Approve the PR\nnext: /dossier:build')
 })
 
 test('the subtraction gate holds only while the dossier is in plan', () => {
@@ -322,7 +324,7 @@ test('ds ci reports no run, a missing push, a gh failure and a run past the limi
   review(cwd, path, 'PASS')
   const slow = ds(cwd, 'ci')
   assert.equal(slow.code, 3)
-  assert.match(slow.err, /still running/)
+  assert.match(slow.err, /still running.*\nci https:\/\/x\/3$/)
   assert.match(ds(cwd, 'handoff').out, /\nnext: ds ci — started 2026-11-14 09:15 UTC; run it again if it stopped$/)
   process.env.DS_CI_LIMIT = 'soon'
   gh(['[]'])
