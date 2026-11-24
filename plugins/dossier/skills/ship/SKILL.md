@@ -7,7 +7,7 @@ description: Review the dossier branch once, fold the fixup commits into the pla
 
 Run each `ds` command below in the dossier worktree, as `cd <worktree path> && ds ...`.
 
-1. `ds check` must print `CHECK: OK`.
+1. `ds check` must print `CHECK: OK`. On `CHECK: FAIL`, end the turn as `TURN.md` says; its Do card names each failed check.
 2. `ds pack review` writes the review pack. Spawn one `whetstone:reviewer` agent with its path. It writes the findings file that the pack names, which ends `VERDICT: PASS` or `VERDICT: CHANGES`. When the kernel orders a second review agent for the change, run `ds pack review --agent <its type>` for that agent: the pack then starts from the last record of that type.
 3. `ds record review <findings>`. It logs the verdict in the worklog. On PASS it sets `state: ship`. The rig's hook writes the review record when the reviewer ends.
    - On CHANGES: add one row per accepted finding with `ds add`, plan its commit, build it with `/dossier:build`, and come back to step 1. When a review record exists, the next pack holds only the change since that review.

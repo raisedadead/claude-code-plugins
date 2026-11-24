@@ -19,7 +19,7 @@ Discovery is the long part of the work, and it comes before the plan text. A sur
 
 ## Steps
 
-1. `ds new <slug> --branch <branch>` prints the plan file. The branch is the name the kernel's worktree rule gives this session and topic; the build makes its worktree under that name. Fill the file in this order. `FORMAT.md` in this plugin has the exact shape.
+1. `ds new <slug> --branch <branch>` prints the plan file. The branch is the name the kernel's worktree rule gives this session and topic; the build makes its worktree under that name. Fill the file in this order. `${CLAUDE_PLUGIN_ROOT}/FORMAT.md` has the exact shape.
    - **Goal**: the operator's words, quoted.
    - **Scope**: one `- in:` line and one `- out:` line.
    - **Decisions**: grill the operator with the `whetstone:grill` method: the goal first, then one section at a time, each a Decide card in the grill format. Ask only what the session cannot settle, and ask a settled decision again only when an answer changes its premise. Look up each fact with a `whetstone:gatherer` agent. Write one numbered line per decision, `<question> — <answer> · <date>`.

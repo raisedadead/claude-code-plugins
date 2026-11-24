@@ -13,7 +13,7 @@ This file says how each turn of `/dossier:plan`, `/dossier:build` and `/dossier:
 4. When no step starts, end the turn on one Do card, last. It has one step for each operator step, in this order:
    - each `operator:` line, as `[H] <row id> <title>`, with the reason after its `·` when it has one;
    - the command or the URL that a `ds` exit 3 names, such as the resume command of a paused dossier, or the URL of a CI run that waits for approval or has not ended;
-   - the fix that the error line of a failed `ds` command names for the operator, such as `gh auth login`, then the command to run again;
+   - the operator's step for a failed `ds` command: `gh auth login` for `gh failed: HTTP 401`, and each failed check by name for `CHECK: FAIL`; the session runs the failed command again after the operator replies;
    - last, the skill on the `next:` or `close:` line of `ds handoff`, such as `/dossier:build`. Leave out a `next:` skill while a helper or a background command still runs, or when the last `ds` command failed.
 
    A `close:` line is always the operator's step: the session does not start `/dossier:close`.

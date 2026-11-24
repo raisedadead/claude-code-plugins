@@ -96,6 +96,20 @@ test('a review pack links the session only to a dossier it names or whose branch
   sh(cwd, 'git checkout -q -b demo')
   ds(cwd, 'pack', 'review')
   assert.equal(ds(cwd, 'status', '--session', 's-five').out, DEMO, 'a pack on the branch of the dossier')
+  process.env.CLAUDE_CODE_SESSION_ID = 's-six'
+  sh(cwd, 'git checkout -q -b demo-lane-2')
+  ds(cwd, 'pack', 'review')
+  assert.equal(ds(cwd, 'status', '--session', 's-six').out, DEMO, 'a pack on a lane branch of the dossier')
+  delete process.env.CLAUDE_CODE_SESSION_ID
+})
+
+test('triage links no session to the dossiers it lists', () => {
+  const cwd = repo()
+  planned(cwd)
+  process.env.CLAUDE_CODE_SESSION_ID = 's-seven'
+  assert.equal(ds(cwd, 'triage', '--start').code, 0)
+  assert.equal(ds(cwd, 'triage').code, 0)
+  assert.equal(ds(cwd, 'status', '--session', 's-seven').out, '')
   delete process.env.CLAUDE_CODE_SESSION_ID
 })
 
