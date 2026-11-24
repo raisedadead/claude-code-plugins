@@ -271,6 +271,10 @@ test('ds ci drops a cancelled run that the same workflow ran again, and no other
   assert.equal(ds(cwd, 'ci').out, `CI: OK, 1 runs for ${sha.slice(0, 7)}`, 'in the same second, the higher run id is the newer run')
   gh([`[${one(1, 'success', '2026-11-20T19:35:45Z')},${one(2, 'cancelled', '2026-11-20T19:35:45Z')}]`])
   assert.equal(ds(cwd, 'ci').err, 'ds ci: FAIL\nbuild cancelled https://x/2')
+  gh([
+    '[{"databaseId":2,"name":"a","status":"completed","conclusion":"success","url":"https://x/2"},{"databaseId":1,"name":"b","status":"completed","conclusion":"cancelled","url":"https://x/1"}]',
+  ])
+  assert.equal(ds(cwd, 'ci').err, 'ds ci: FAIL\nb cancelled https://x/1', 'runs with no workflow name are not reruns of each other')
   gh([`[${one(2, 'failure', '2026-11-20T19:35:46Z')},${one(1, 'cancelled', '2026-11-20T19:35:45Z')}]`])
   assert.equal(ds(cwd, 'ci').err, 'ds ci: FAIL\nbuild failure https://x/2')
 })
