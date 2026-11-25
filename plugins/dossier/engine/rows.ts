@@ -9,6 +9,11 @@ const ROW = /^- (O\d+) (now|next|wait|later|done|drop) ([AH]) (.+?)(?: · (.+))?
 const ID_LINE = /^- O\d+\b/
 const OTHER_ID = /\b[OTWVB]\d+\b/
 export const TITLE_MAX = 80
+const PAUSED = /^paused(:|\s|$)/i
+
+export function isPaused(row: Row): boolean {
+  return row.state === 'wait' && PAUSED.test(row.tail)
+}
 
 export function idNumber(id: string): number {
   return Number(id.slice(1))

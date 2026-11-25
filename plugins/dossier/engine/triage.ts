@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { header, planHash, rows as dossierRows } from './plan.ts'
-import { type Bad, type Row, scanRows, trigger } from './rows.ts'
+import { type Bad, isPaused, type Row, scanRows, trigger } from './rows.ts'
 import { run } from './sh.ts'
 import { archivedNames, DATE, type Dossier, liveDossiers, read, readOr, registerFile, scratch, today, worklog, write } from './store.ts'
 
@@ -10,7 +10,6 @@ export type Live = { slug: string; state: string; counts: Record<string, number>
 export type Triage = { wait: Flag[]; paused: Flag[]; due: Flag[]; stale: Flag[]; shape: Flag[]; live: Live[] }
 
 const STALE_DAYS = 3
-const PAUSED = /^paused(:|\s|$)/i
 export const LATER_HEAD = '<!-- Written by ds triage from the later rows. Edits here are lost. -->'
 
 function registerRows(root: string): { rows: (Row & { line: number })[]; bad: Bad[] } {
@@ -56,7 +55,7 @@ export function triage(root: string): Triage {
     for (const bad of source.bad) out.shape.push({ id: `line ${bad.line}`, title: bad.text, where: source.where, why: bad.why })
     for (const row of source.rows) {
       const flag = { id: row.id, title: row.title, where: source.where }
-      if (row.state === 'wait') (PAUSED.test(row.tail) ? out.paused : out.wait).push({ ...flag, why: row.tail || 'waits on the operator' })
+      if (row.state === 'wait') (isPaused(row) ? out.paused : out.wait).push({ ...flag, why: row.tail || 'waits on the operator' })
       if (row.state === 'later') {
         const why = fired(row, root)
         if (why) out.due.push({ ...flag, why })
