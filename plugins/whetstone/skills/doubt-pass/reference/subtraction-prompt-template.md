@@ -31,7 +31,7 @@ the author a round of work.
 Rules:
 - First line: SUBTRACT: NOTHING TO CUT, or SUBTRACT: <n> CUTS (n >= 1).
 - Then one line per cut: the piece → the rung → what still holds without it.
-- Largest cut first. Budget: <=250 words. No additions, no praise.
+- Largest cut first. No additions, no praise.
 - If nothing can go, say SUBTRACT: NOTHING TO CUT and stop.
 
 DONE: the first line is SUBTRACT: NOTHING TO CUT or SUBTRACT: <n> CUTS.

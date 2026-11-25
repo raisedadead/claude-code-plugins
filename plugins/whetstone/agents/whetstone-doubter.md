@@ -59,7 +59,7 @@ DOUBT: <FAILURES | NO FAILURE FOUND>
 - artifact pieces missing / assumptions I could not check
 ```
 
-Budget: ≤ 250 words of findings. `DOUBT: FAILURES` when you found at least one real failure mode; `DOUBT: NO FAILURE FOUND` when you genuinely found none — emit that line and stop, so a clean plan gets an honest pass instead of manufactured nits. The `DOUBT:` line comes first, on its own line: the caller reads it deterministically.
+`DOUBT: FAILURES` when you found at least one real failure mode; `DOUBT: NO FAILURE FOUND` when you genuinely found none — emit that line and stop, so a clean plan gets an honest pass instead of manufactured nits. The `DOUBT:` line comes first, on its own line: step 3 of doubt-pass reads it.
 
 ## Subtraction mission
 
@@ -71,4 +71,4 @@ SUBTRACT: <NOTHING TO CUT | <n> CUTS>
 - <piece> → <rung> → <what still holds without it>
 ```
 
-`<n>` is 1 or more; with nothing to cut, write `SUBTRACT: NOTHING TO CUT` and stop. Same budget, same read-only rules, largest cut first.
+`<n>` is 1 or more; with nothing to cut, write `SUBTRACT: NOTHING TO CUT` and stop. One line per cut, largest cut first, same read-only rules.

@@ -25,7 +25,7 @@ Rules:
 - First line: DOUBT: FAILURES, or DOUBT: NO FAILURE FOUND.
 - Then the single sharpest failure, then others in priority order.
 - Each finding: one line — the trigger, and the consequence. No fixes, no praise.
-- Budget: <=250 words total. If you genuinely find nothing, say
+- If you genuinely find nothing, say
   "DOUBT: NO FAILURE FOUND" and stop — do not manufacture nits to look thorough.
 
 DONE: the first line is DOUBT: FAILURES or DOUBT: NO FAILURE FOUND.
@@ -35,5 +35,5 @@ DONE: the first line is DOUBT: FAILURES or DOUBT: NO FAILURE FOUND.
 
 - **No rationale in the artifact** — reasoning primes the reviewer to agree.
 - **"Where it breaks," not "is it good"** — steers toward falsification, the only kind of review that catches design bugs before code.
-- **Word budget + sharpest-first** — forces prioritization over an unranked dump.
+- **One line per finding, sharpest first** — forces prioritization over an unranked dump, with no word cap that cuts a real failure.
 - **"NO FAILURE FOUND" is allowed** — without an honest escape, the reviewer invents nits, and you get doubt theater instead of signal.
