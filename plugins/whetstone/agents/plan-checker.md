@@ -23,6 +23,7 @@ Check each of these against the code, not against the plan's own words:
 - Scope: a needed change with no row or planned commit, or a planned path that the change does not need.
 - Edge cases: an input the plan does not name that the code will meet.
 - Decisions: a choice the plan makes that is the operator's and has no answer recorded.
+- Order: a row or step that needs another and does not name it (`after O<N>` in a dossier), or an operator step placed before agent steps that do not need it.
 
 ## Output
 
