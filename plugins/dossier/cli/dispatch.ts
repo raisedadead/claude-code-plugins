@@ -26,7 +26,7 @@ export const COMMANDS: Record<string, Command> = {
   amend: { run: cmdAmend, usage: 'amend <rulings>  check the plan again by code after a ruling on each finding, or after an edit' },
   anchors: { run: cmdAnchors, usage: 'anchors  one empty commit per planned commit, on the dossier branch' },
   lanes: { run: cmdLanes, usage: 'lanes [--json]  planned commits grouped by paths that do not overlap' },
-  next: { run: cmdNext, usage: 'next  the next agent row (exit 3: waits on you; exit 4: none left)' },
+  next: { run: cmdNext, usage: 'next  the next ready agent row (exit 3: none is ready; exit 4: none left)' },
   mission: { run: cmdMission, usage: 'mission <id>  the task file for a row' },
   verify: { run: cmdVerify, usage: 'verify <id>  the row checks, guard checks, commit form and planned paths' },
   done: { run: cmdDone, usage: 'done <id> [--cite "<decision>"]  mark a verified row done' },

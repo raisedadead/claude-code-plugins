@@ -1,6 +1,7 @@
 import { commitsIn, fixupTarget, landedOn, REVIEWER, reviewedBy, reviews, sameBranch } from '../engine/branch.ts'
 import { header, lint, planHash } from '../engine/plan.ts'
-import { isPaused } from '../engine/rows.ts'
+import { isOpen, isPaused, ready, type State } from '../engine/rows.ts'
+import { firstReady, rowStates } from '../engine/triage.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
 import { currentBranch, type Dossier, ledgerRoot, liveDossiers, log, read, sessionsOf, workTree, worklog } from '../engine/store.ts'
 import { type Args, checkedText, dossierOf, flag, lastPlanCheck, rowsOf, scopeMoved } from './plan.ts'
@@ -65,21 +66,24 @@ export function cmdHandoff(cwd: string, args: Args): string {
   if (head.state === 'plan' && !worklog(dossier).some((line) => line.includes(' subtract: ')))
     return 'operator: pick the subtraction cuts; then ds log "subtract: ..."'
   const all = rowsOf(dossier)
-  const waiting = all.filter((r) => (r.state === 'wait' && !isPaused(r)) || (r.who === 'H' && (r.state === 'now' || r.state === 'next')))
+  const states = rowStates(ledgerRoot(cwd))
+  const waiting = all.filter((r) => ((r.state === 'wait' && !isPaused(r)) || (r.who === 'H' && (r.state === 'now' || r.state === 'next'))) && ready(r, states))
   const out = waiting.map((r) => `operator: ${r.id} ${r.title}${r.state === 'wait' && r.tail ? ` · ${r.tail}` : ''}`)
   const open = (r: (typeof all)[number]) => r.state === 'now' || r.state === 'next'
-  const step = all.some((r) => r.who === 'A' && open(r)) ? 'next: /dossier:build' : shipStep(workTree(cwd), dossier, head, all.some(open))
+  const blocked = all.filter((r) => isOpen(r) && !ready(r, states))
+  const step = firstReady(all, states) ? 'next: /dossier:build' : blocked.length ? undefined : shipStep(workTree(cwd), dossier, head, all.some(open))
   if (step) out.push(step)
+  if (!out.length) out.push(...blocked.map((r) => `blocked: ${r.id} ${r.title} · ${r.tail}`))
   return out.join('\n')
 }
 
-function statusOf(dossier: Dossier): string {
+function statusOf(dossier: Dossier, states: ReadonlyMap<string, State>): string {
   const parts = [dossier.slug, header(read(dossier.file)).state ?? '?']
   const all = rowsOf(dossier).filter((r) => r.state !== 'drop' && r.state !== 'later')
   if (!all.length) return [...parts, 'no rows'].join(' · ')
   const done = all.filter((r) => r.state === 'done').length
-  const next = all.find((r) => r.who === 'A' && r.state === 'now') ?? all.find((r) => r.who === 'A' && r.state === 'next')
-  const waiting = all.filter((r) => r.state === 'wait' || (r.who === 'H' && (r.state === 'now' || r.state === 'next')))
+  const next = firstReady(all, states)
+  const waiting = all.filter((r) => (r.state === 'wait' || (r.who === 'H' && (r.state === 'now' || r.state === 'next'))) && ready(r, states))
   parts.push(`${done}/${all.length}`)
   if (next) parts.push(`next ${next.id}`)
   if (waiting.length) parts.push(`[H] ${waiting.length}`)
@@ -87,19 +91,22 @@ function statusOf(dossier: Dossier): string {
 }
 
 export function cmdStatus(cwd: string, args: Args): string {
-  const live = liveDossiers(ledgerRoot(cwd))
+  const root = ledgerRoot(cwd)
+  const live = liveDossiers(root)
+  const states = rowStates(root)
+  const line = (d: Dossier): string => statusOf(d, states)
   const session = flag(args, 'session')
   if (session !== undefined)
     return live
       .filter((d) => sessionsOf(d).includes(session))
-      .map(statusOf)
+      .map(line)
       .join('\n')
   const branch = currentBranch(cwd)
   const own = live.filter((d) => {
     const name = header(read(d.file)).branch
     return name && (sameBranch(name, branch) || branch.startsWith(`${name}-lane-`))
   })
-  return (own.length === 1 ? own : live).map(statusOf).join('\n')
+  return (own.length === 1 ? own : live).map(line).join('\n')
 }
 
 function pause(ms: number): void {

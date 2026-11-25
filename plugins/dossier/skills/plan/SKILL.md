@@ -15,7 +15,7 @@ Discovery is the long part of the work, and it comes before the plan text. A sur
 - Read each file the plan changes, and each file or command that consumes it.
 - Each fact in the plan carries its probe: the command and its result, or a `path:line`. A fact with no probe stays out of the plan.
 - Run each command the plan hands out, a check or a step of a row, before it goes in: with `--help`, as a dry run, or on a sample.
-- The row list is the build order. `ds next` hands out the agent rows from the top, and does not wait for an operator row above them. Put each row after the rows it needs. An agent row that needs an operator row is `wait`, and its tail names that row; `ds set <id> next` releases it when that row is done.
+- The row list is the build order. Put each row after the rows it needs, and name them in its tail as `after O<N>`: `ds next` hands out only a ready agent row (FORMAT.md, Rows). Put each operator row as late as the first row that needs it allows.
 
 ## Steps
 

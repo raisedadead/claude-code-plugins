@@ -6,6 +6,6 @@ argument-hint: '[--auto]'
 
 # ds:build
 
-The build runs in the main session. Read `loop.md`, which sits beside this skill file (the skill's base directory), and follow it. With `--auto`, keep going until a row waits on the operator.
+The build runs in the main session. Read `loop.md`, which sits beside this skill file (the skill's base directory), and follow it. With `--auto`, keep going while `ds handoff` prints `next: /dossier:build`.
 
 Before you end each turn, read `${CLAUDE_PLUGIN_ROOT}/TURN.md`. It says how a dossier turn ends.

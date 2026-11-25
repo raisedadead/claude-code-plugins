@@ -167,7 +167,7 @@ export function worklog(dossier: Dossier): string[] {
 
 const stateDir = (): string => process.env.DS_STATE_DIR ?? join(homedir(), '.local', 'state', 'ds')
 
-function ledgerFiles(root: string): string[] {
+export function ledgerFiles(root: string): string[] {
   const files = [registerFile(root)]
   const home = dossierHome(root)
   for (const base of [home, join(home, '_archive')]) {

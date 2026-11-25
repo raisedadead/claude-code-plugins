@@ -15,6 +15,21 @@ export function isPaused(row: Row): boolean {
   return row.state === 'wait' && PAUSED.test(row.tail)
 }
 
+const AFTER = /^after (O\d+(?:, O\d+)*)(?:;|$)/
+
+export function needs(row: Row): string[] | undefined {
+  if (!/^after O\d/.test(row.tail)) return []
+  return AFTER.exec(row.tail)?.[1]?.split(', ')
+}
+
+export function ready(row: Row, states: ReadonlyMap<string, State>): boolean {
+  return needs(row)?.every((id) => states.get(id) === 'done') ?? false
+}
+
+export function isOpen(row: Row): boolean {
+  return row.state === 'now' || row.state === 'next' || (row.state === 'wait' && !isPaused(row))
+}
+
 export function idNumber(id: string): number {
   return Number(id.slice(1))
 }

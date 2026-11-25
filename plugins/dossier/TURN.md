@@ -5,7 +5,7 @@ This file says how each turn of `/dossier:plan`, `/dossier:build` and `/dossier:
 1. Run `ds handoff`. Print none of its lines.
 2. A turn that ends on a Decide card ends on that card. It starts no step and prints no other card.
 3. Else start the step on the `next:` line of `ds handoff` only when each of these holds:
-   - it prints no `operator:` line;
+   - it prints no `operator:` line, unless the step is `/dossier:build` in a `--auto` turn;
    - the last `ds` command before `ds handoff` did not exit 1 or 2;
    - the last run in this turn of each `ds` command did not exit 3, except the first `ds ci` exit 3 of a branch tip for a run that has not ended;
    - the step's helper or its background command does not still run;
@@ -18,6 +18,6 @@ This file says how each turn of `/dossier:plan`, `/dossier:build` and `/dossier:
 
    A `close:` line is always the operator's step: the session does not start `/dossier:close`.
 
-   With no operator step, print no card. After a failed `ds` command, report its error line.
+   With no operator step, print no card. After a failed `ds` command, report its error line. Report each `blocked:` line of `ds handoff` the same way, with no card: its rows wait only on rows that are not done.
 
 A dossier turn prints no other card and no line after the card.

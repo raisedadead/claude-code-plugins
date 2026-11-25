@@ -34,7 +34,7 @@ dossier keeps its ledger in `.scratchpad/` at the repo root. Ignore it — globa
 | Command             | What it does                                                                                                                         |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
 | `/dossier:plan`     | Opens a dossier and writes its plan with you: goal, scope, decisions, rows, checks, commits. One fresh agent checks the plan, and the author rules on each finding. |
-| `/dossier:build`    | Builds the rows of a checked plan, one row at a time, each in its planned commit. `--auto` goes on until a row waits on you.          |
+| `/dossier:build`    | Builds the rows of a checked plan, one row at a time, each in its planned commit. `--auto` goes on until no agent row is ready.        |
 | `/dossier:ship`     | One review of the branch, the fixup commits folded into the planned commits, the landing, then the CI watch.                         |
 | `/dossier:close`    | Closes the dossier, moves the rows that wait to the register, and archives the folder.                                               |
 | `/dossier:backprop` | Turns a bug into a row and a check that fails until the bug is fixed.                                                                 |
@@ -68,7 +68,7 @@ whetstone also ships its scripts as commands on the Bash tool's `PATH` while it 
 /dossier:close "auth tokens cached with a clamped TTL"
 ```
 
-`--auto` stops when a row waits on you. The prompt of the landing is yours.
+`--auto` stops when no agent row is ready; a step of yours waits until the rows its `after O<N>` tail names are done. The prompt of the landing is yours.
 
 ## Hooks
 

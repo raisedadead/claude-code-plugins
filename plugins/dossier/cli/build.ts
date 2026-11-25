@@ -1,7 +1,8 @@
 import { join } from 'node:path'
 import { changedPaths, clean, commitsIn, conflicted, fixupTarget, globMatch, mergeBase, onRemote, overlaps, worktreeOf } from '../engine/branch.ts'
 import { checks, type Commit as Planned, commits, edges, header, lint, planHash, section, setHeader } from '../engine/plan.ts'
-import { formatRow, isPaused } from '../engine/rows.ts'
+import { formatRow, isOpen, isPaused, ready } from '../engine/rows.ts'
+import { firstReady, rowStates } from '../engine/triage.ts'
 import { git, gitTry, Refusal } from '../engine/sh.ts'
 import { currentBranch, type Dossier, ledgerRoot, log, read, workTree, worklog, write } from '../engine/store.ts'
 import { type Args, dossierOf, guard, rowsOf, runChecks, setState, startLine } from './plan.ts'
@@ -65,10 +66,16 @@ export function cmdNext(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
   guard(cwd, dossier)
   const all = rowsOf(dossier)
-  const next = all.find((r) => r.who === 'A' && r.state === 'now') ?? all.find((r) => r.who === 'A' && r.state === 'next')
+  const states = rowStates(ledgerRoot(cwd))
+  const next = firstReady(all, states)
   if (next) return formatRow(next)
-  const waiting = all.filter((r) => (r.state === 'wait' && !isPaused(r)) || (r.who === 'H' && r.state === 'next'))
-  if (waiting.length) throw new Refusal(`no agent row left; waits on the operator:\n${waiting.map(formatRow).join('\n')}`, 3)
+  const waiting = all.filter((r) => ((r.state === 'wait' && !isPaused(r)) || (r.who === 'H' && r.state === 'next')) && ready(r, states))
+  const blocked = all.filter((r) => isOpen(r) && !ready(r, states))
+  const lists = [
+    waiting.length ? `waits on the operator:\n${waiting.map(formatRow).join('\n')}` : '',
+    blocked.length ? `waits on other rows:\n${blocked.map(formatRow).join('\n')}` : '',
+  ].filter(Boolean)
+  if (lists.length) throw new Refusal(`no agent row is ready; ${lists.join('\n')}`, 3)
   throw new Refusal('no open row left; run ds check, then ds:ship', 4)
 }
 

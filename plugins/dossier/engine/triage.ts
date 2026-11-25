@@ -1,13 +1,13 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { header, planHash, rows as dossierRows } from './plan.ts'
-import { type Bad, isPaused, type Row, scanRows, trigger } from './rows.ts'
+import { type Bad, isOpen, isPaused, type Row, ready, type State, scanRows, trigger } from './rows.ts'
 import { run } from './sh.ts'
-import { archivedNames, DATE, type Dossier, liveDossiers, read, readOr, registerFile, scratch, today, worklog, write } from './store.ts'
+import { archivedNames, DATE, type Dossier, ledgerFiles, liveDossiers, read, readOr, registerFile, scratch, today, worklog, write } from './store.ts'
 
 export type Flag = { id: string; title: string; where: string; why: string }
 export type Live = { slug: string; state: string; counts: Record<string, number>; next?: string; replan: boolean }
-export type Triage = { wait: Flag[]; paused: Flag[]; due: Flag[]; stale: Flag[]; shape: Flag[]; live: Live[] }
+export type Triage = { wait: Flag[]; blocked: Flag[]; paused: Flag[]; due: Flag[]; stale: Flag[]; shape: Flag[]; live: Live[] }
 
 const STALE_DAYS = 3
 export const LATER_HEAD = '<!-- Written by ds triage from the later rows. Edits here are lost. -->'
@@ -20,6 +20,21 @@ function registerRows(root: string): { rows: (Row & { line: number })[]; bad: Ba
   let end = at + 1
   while (end < all.length && !(all[end] ?? '').startsWith('## ')) end += 1
   return scanRows(all.slice(at + 1, end).join('\n'), at + 2)
+}
+
+export function rowStates(root: string): Map<string, State> {
+  const states = new Map<string, State>()
+  const add = (rows: Row[]): void => {
+    for (const row of rows) if (states.get(row.id) !== 'done') states.set(row.id, row.state)
+  }
+  add(registerRows(root).rows)
+  for (const file of ledgerFiles(root)) if (file !== registerFile(root)) add(dossierRows(read(file)).rows)
+  return states
+}
+
+export function firstReady(rows: Row[], states: ReadonlyMap<string, State>): Row | undefined {
+  const pick = (state: State): Row | undefined => rows.find((r) => r.who === 'A' && r.state === state && ready(r, states))
+  return pick('now') ?? pick('next')
 }
 
 function daysBetween(a: string, b: string): number {
@@ -47,7 +62,8 @@ function lastTouch(lines: string[], id: string): string | undefined {
 }
 
 export function triage(root: string): Triage {
-  const out: Triage = { wait: [], paused: [], due: [], stale: [], shape: [], live: [] }
+  const out: Triage = { wait: [], blocked: [], paused: [], due: [], stale: [], shape: [], live: [] }
+  const states = rowStates(root)
   const sources: { where: string; rows: (Row & { line: number })[]; bad: Bad[]; dossier?: Dossier }[] = [{ where: 'OPEN-WORK.md', ...registerRows(root) }]
   for (const dossier of liveDossiers(root)) sources.push({ where: dossier.slug, ...dossierRows(read(dossier.file)), dossier })
   for (const source of sources) {
@@ -55,7 +71,10 @@ export function triage(root: string): Triage {
     for (const bad of source.bad) out.shape.push({ id: `line ${bad.line}`, title: bad.text, where: source.where, why: bad.why })
     for (const row of source.rows) {
       const flag = { id: row.id, title: row.title, where: source.where }
-      if (row.state === 'wait') (isPaused(row) ? out.paused : out.wait).push({ ...flag, why: row.tail || 'waits on the operator' })
+      const waits = row.state === 'wait' || row.who === 'H'
+      if (isPaused(row)) out.paused.push({ ...flag, why: row.tail })
+      else if (row.state === 'wait' && ready(row, states)) out.wait.push({ ...flag, why: row.tail || 'waits on the operator' })
+      else if (waits && isOpen(row) && !ready(row, states)) out.blocked.push({ ...flag, why: row.tail })
       if (row.state === 'later') {
         const why = fired(row, root)
         if (why) out.due.push({ ...flag, why })
@@ -71,7 +90,7 @@ export function triage(root: string): Triage {
       const head = header(text)
       const counts: Record<string, number> = {}
       for (const row of source.rows) counts[row.state] = (counts[row.state] ?? 0) + 1
-      const next = source.rows.find((r) => r.who === 'A' && r.state === 'now') ?? source.rows.find((r) => r.who === 'A' && r.state === 'next')
+      const next = firstReady(source.rows, states)
       const replan = head.state !== 'plan' && head.checked !== planHash(text)
       out.live.push({ slug: source.dossier.slug, state: head.state ?? '?', counts, ...(next ? { next: `${next.id} ${next.title}` } : {}), replan })
     }
@@ -107,6 +126,7 @@ export function render(view: Triage): string {
   const out: string[] = []
   const group = (title: string, flags: Flag[]): void => groupOf(out, title, flags)
   group('Waits on the operator', view.wait)
+  group('Yours, after other rows', view.blocked)
   group('Paused', view.paused)
   group('Deferred and now due', view.due)
   group('In progress with no recent work', view.stale)
