@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { shippedName } from './branch.ts'
 import { header, rows, setHeader } from './plan.ts'
 import { idNumber, type Row } from './rows.ts'
@@ -97,10 +97,26 @@ export function sessionsOf(dossier: Dossier): string[] {
     .filter(Boolean)
 }
 
+const rootsFile = (id: string): string => join(stateDir(), 'sessions', id)
+
+export function rootsOf(id: string): string[] {
+  if (!SESSION_ID.test(id)) return []
+  const lines = readOr(rootsFile(id))
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+  return [...new Set(lines)]
+}
+
 export function linkSession(dossier: Dossier): void {
   const id = process.env.CLAUDE_CODE_SESSION_ID ?? ''
-  if (!SESSION_ID.test(id) || sessionsOf(dossier).includes(id)) return
-  appendFileSync(sessionsFile(dossier), `${id}\n`)
+  if (!SESSION_ID.test(id)) return
+  const root = resolve(dossier.dir, '..', '..', '..')
+  if (!rootsOf(id).includes(root)) {
+    mkdirSync(dirname(rootsFile(id)), { recursive: true })
+    appendFileSync(rootsFile(id), `${root}\n`)
+  }
+  if (!sessionsOf(dossier).includes(id)) appendFileSync(sessionsFile(dossier), `${id}\n`)
 }
 
 function asDossier(dir: string): Dossier {

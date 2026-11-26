@@ -74,6 +74,13 @@ export function section(text: string, name: string): string {
   return text.split('\n').slice(range.start, range.end).join('\n').trim()
 }
 
+export function noteOf(text: string, id: string): string | undefined {
+  const block = section(text, 'Notes')
+    .split(/^### /m)
+    .find((b) => b.startsWith(`${id}\n`))
+  return block?.slice(id.length).trim() || undefined
+}
+
 export function replaceSection(text: string, name: string, body: string): string {
   const all = text.split('\n')
   const range = sectionRange(text, name)

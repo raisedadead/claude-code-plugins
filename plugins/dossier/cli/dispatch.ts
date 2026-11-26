@@ -1,6 +1,6 @@
 import { Refusal } from '../engine/sh.ts'
 import { cmdAnchors, cmdDone, cmdIntegrate, cmdLanes, cmdMission, cmdNext, cmdVerify } from './build.ts'
-import { cmdCi, cmdHandoff, cmdStatus } from './handoff.ts'
+import { cmdCi, cmdHandoff, cmdRows, cmdStatus } from './handoff.ts'
 import { type Args, cmdAdd, cmdAmend, cmdCheck, cmdLint, cmdLog, cmdNew, cmdPackPlan, cmdPath, cmdRecordPlan, cmdSet, cmdTriage } from './plan.ts'
 import { cmdClose, cmdPackReview, cmdRecordReview, cmdShape, cmdShipArgs } from './ship.ts'
 
@@ -41,6 +41,11 @@ export const COMMANDS: Record<string, Command> = {
     run: cmdStatus,
     usage:
       'status [--session <id>]  one line per dossier: slug · stage · done/rows · next row · [H] rows that wait on the operator. With --session, the live dossiers that session used; else the dossier of this branch, or every live one; writes nothing',
+  },
+  rows: {
+    run: cmdRows,
+    usage:
+      'rows --json [--session <id>]  JSON: each live dossier with its stage, counts, hold, the rows that wait on the operator and its open rows with their notes; pinned marks the dossiers that session used; writes nothing',
   },
   ci: { run: cmdCi, usage: 'ci  wait for the CI runs of the branch tip, pushed on the branch or on the base (exit 1: a run failed)' },
   path: { run: cmdPath, usage: 'path  the live dossier folder' },

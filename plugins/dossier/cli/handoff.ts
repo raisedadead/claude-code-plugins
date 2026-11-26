@@ -1,9 +1,10 @@
+import { resolve } from 'node:path'
 import { commitsIn, fixupTarget, landedOn, REVIEWER, reviewedBy, reviews, sameBranch } from '../engine/branch.ts'
-import { header, lint, planHash } from '../engine/plan.ts'
+import { header, lint, noteOf, planHash, rows } from '../engine/plan.ts'
 import { isOpen, ready, type State, waitsOnOperator } from '../engine/rows.ts'
 import { firstReady, rowStates } from '../engine/triage.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
-import { currentBranch, type Dossier, holdOf, ledgerRoot, liveDossiers, log, read, sessionsOf, workTree, worklog } from '../engine/store.ts'
+import { currentBranch, type Dossier, holdOf, ledgerRoot, liveDossiers, log, read, rootsOf, sessionsOf, workTree, worklog } from '../engine/store.ts'
 import { type Args, checkedText, dossierOf, flag, lastPlanCheck, rowsOf, scopeMoved } from './plan.ts'
 
 const GREEN = new Set(['success', 'skipped', 'neutral'])
@@ -113,6 +114,49 @@ export function cmdStatus(cwd: string, args: Args): string {
     return name && (sameBranch(name, branch) || branch.startsWith(`${name}-lane-`))
   })
   return (own.length === 1 ? own : live).map(line).join('\n')
+}
+
+function rowsEntry(root: string, dossier: Dossier, states: ReadonlyMap<string, State>, session: string | undefined): object {
+  const text = read(dossier.file)
+  const kept = rows(text).rows.filter((r) => r.state !== 'drop')
+  const hold = holdOf(root, dossier)
+  const next = hold ? undefined : firstReady(kept, states)
+  return {
+    slug: dossier.slug,
+    ...(next ? { next: `${next.id} ${next.title}` } : {}),
+    state: header(text).state ?? '?',
+    done: kept.filter((r) => r.state === 'done').length,
+    rows: kept.length,
+    pinned: session !== undefined && sessionsOf(dossier).includes(session),
+    needs: hold ? [] : kept.filter((r) => waitsOnOperator(r, states)).map((r) => r.id),
+    ...(hold ? { hold: { id: hold.id, state: hold.state, tail: hold.tail, after: !ready(hold, states) } } : {}),
+    items: kept
+      .filter((r) => r.state !== 'done')
+      .map((r) => {
+        const note = noteOf(text, r.id)
+        return { id: r.id, state: r.state, who: r.who, title: r.title, tail: r.tail, ...(note ? { note } : {}) }
+      }),
+  }
+}
+
+export function cmdRows(cwd: string, args: Args): string {
+  const root = ledgerRoot(cwd)
+  const states = rowStates(root)
+  const session = flag(args, 'session')
+  const own = liveDossiers(root).map((d) => rowsEntry(root, d, states, session))
+  const others = (session === undefined ? [] : rootsOf(session))
+    .filter((other) => other !== resolve(root))
+    .flatMap((other) => {
+      try {
+        const theirs = rowStates(other)
+        return liveDossiers(other)
+          .filter((d) => sessionsOf(d).includes(session ?? ''))
+          .map((d) => ({ ...rowsEntry(other, d, theirs, session), repo: other }))
+      } catch {
+        return []
+      }
+    })
+  return JSON.stringify({ dossiers: [...own, ...others] })
 }
 
 function pause(ms: number): void {

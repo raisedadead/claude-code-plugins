@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { changedPaths, clean, commitsIn, conflicted, fixupTarget, globMatch, mergeBase, onRemote, overlaps, worktreeOf } from '../engine/branch.ts'
-import { checks, type Commit as Planned, commits, edges, header, lint, planHash, section, setHeader } from '../engine/plan.ts'
+import { checks, type Commit as Planned, commits, edges, header, lint, noteOf, planHash, section, setHeader } from '../engine/plan.ts'
 import { formatRow, isOpen, ready, waitsOnOperator } from '../engine/rows.ts'
 import { firstReady, rowStates } from '../engine/triage.ts'
 import { git, gitTry, Refusal } from '../engine/sh.ts'
@@ -93,16 +93,14 @@ export function cmdMission(cwd: string, args: Args): string {
   const own = checks(text).checks.filter((c) => c.guard || c.rows.includes(id))
   const names = new Set(own.map((c) => c.name))
   const cases = edges(text).filter((e) => e.refs.some((ref) => ref === id || names.has(ref)))
-  const notes = section(text, 'Notes')
-    .split(/^### /m)
-    .find((block) => block.startsWith(`${id}\n`))
+  const notes = noteOf(text, id)
   const mission = [
     `# Mission ${id}: ${row.title}`,
     '',
     `Goal of the dossier: ${section(text, 'Goal').replace(/\n+/g, ' ')}`,
     '',
     `Row: ${formatRow(row)}`,
-    notes ? `\nNotes:\n${notes.slice(id.length).trim()}\n` : '',
+    notes ? `\nNotes:\n${notes}\n` : '',
     `Planned commit: ${planned.subject}`,
     `Paths you may change: ${planned.paths.join(' ')}`,
     '',

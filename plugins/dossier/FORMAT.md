@@ -42,7 +42,7 @@ The ledger lives in the main checkout. A `ds` command run in a linked worktree r
 - States: `now`, `next`, `wait` (waits on the operator, or on the rows its `after` tail names), `later` (deferred), `done` (the tail is the commit or the decision), `drop` (the tail is the reason).
 - A title is at most 80 characters, with no bold, no code marks, no ` · ` and no other IDs. Detail goes under `## Notes` as `### O<N>`.
 - The order of the rows in a plan is the build order. A row that needs other rows starts its tail with `after O<N>` (`after O601, O602` for more), naming rows of the same ledger. A reason can follow after `; `. It is ready when each named row is `done`; a tail that starts `after O` and a digit and misses this form is never ready.
-- `ds next` gives the first ready agent row, and does not wait for an operator row above it. `ds handoff`, `ds status` and `ds triage` show an operator row only when it is ready; `ds triage` lists the others under `Yours, after other rows`. Put an operator row as late as the first row that needs it allows.
+- `ds next` gives the first ready agent row, and does not wait for an operator row above it. `ds handoff`, `ds status`, `ds triage` and `ds rows` show an operator row only when it is ready; `ds triage` lists the others under `Yours, after other rows`. Put an operator row as late as the first row that needs it allows.
 - An agent row in `wait` whose tail names an operator row still works: `ds set <id> next` releases it when that row is done.
 - A paused row is a `wait` row whose tail starts with `paused`. `ds set` and `ds add` refuse a `now`, `next` or `wait` row whose tail names `paused` anywhere else, and `ds triage` lists one written by hand under `Out of shape`.
 - A `later` tail is one of `until <YYYY-MM-DD>`, `after <dossier-slug>` or `after pr <owner>/<repo>#<n>`.
@@ -70,7 +70,7 @@ checked: <plan hash, or ->
 ## Notes
 ```
 
-- **Header**: `row:` is required. It names the ID of the dossier's line in the register, as `O<N>`. When that line is not `now` or `next`, the dossier is held: it keeps its `state`, `ds triage` gives it a `hold` field and no `next`, its rows leave the wait, blocked and stale lists, `ds status` ends with `held: <id> <state>`, `ds handoff` prints one `held:` line with the resume command, and `ds next` exits 3. `ds lint` reports `header: row` when it is missing or has a different shape. `ds` sets `state` (`plan`, `build`, `ship`, `done`) and `checked`. `ds close` adds `closed:`. When the ship tool renames the branch from `<type>/cc-<session>-<topic>` to `<type>/<topic>`, the next `ds` command writes the new name to `branch:` and logs it.
+- **Header**: `row:` is required. It names the ID of the dossier's line in the register, as `O<N>`. When that line is not `now` or `next`, the dossier is held: it keeps its `state`, `ds triage` and `ds rows` give it a `hold` field and no `next` or `needs`, its rows leave the wait, blocked and stale lists, `ds status` ends with `held: <id> <state>`, `ds handoff` prints one `held:` line with the resume command, and `ds next` exits 3. `ds lint` reports `header: row` when it is missing or has a different shape. `ds` sets `state` (`plan`, `build`, `ship`, `done`) and `checked`. `ds close` adds `closed:`. When the ship tool renames the branch from `<type>/cc-<session>-<topic>` to `<type>/<topic>`, the next `ds` command writes the new name to `branch:` and logs it.
 - **Goal**: the operator's words, quoted.
 - **Scope**: `- in: <text>` and `- out: <text>`.
 - **Decisions**: `1. <question> — <answer> · <YYYY-MM-DD>`, then `confirmed: "<the operator's words>"`. An answer of `?` is open. A decision split on "discuss more" is answered `split into <n>, <m>`, and its parts are new numbered decisions. A decision that waits on someone outside the room is answered `waits on <who>: <questionnaire path>`, with a `wait` row for it.
@@ -84,6 +84,22 @@ checked: <plan hash, or ->
 The plan hash covers Goal, Scope, Decisions, Checks, Edge cases and Commits. A change to those sections after the plan check shows in `ds triage` until `ds amend` passes. A new row needs no new check.
 
 A plan gets one plan check. `ds record plan` keeps the checked text in `checked-plan.md`. When that file is absent, `ds` reads the plan in `pack-plan.md` if its hash is the hash of the last `record plan` line. After a `CHANGES` verdict, the author writes a rulings file with one line per finding, numbered in the order of the findings file: `block <n>: fixed: <what shows it>` or `block <n>: refused: <what shows it>`, and `note <n>: taken: <why>`, `note <n>: row O<id>` or `note <n>: dropped: <reason>`. A finding is a line whose first label is `block:` or `note:`; `ds record plan` prints each one with its number and refuses a `CHANGES` file with none. `ds amend <rulings file>` exits 1 unless each finding has a ruling, the lint is clean, the baseline of the current text is green, and the Goal and Scope equal the checked text. It then sets `checked` and adds the rulings to `rulings.md`. After a `PASS`, `ds amend <notes file>` does the same for a later edit, with a note of what changed. A changed Goal or Scope needs a fresh plan check.
+
+## ds rows
+
+The rig reads `ds rows --json --session <id>`. It prints `{ "dossiers": [...] }`, one entry for each live dossier of the ledger, in the order of `ds triage`:
+
+- `slug`, and `state`, the stage.
+- `rows`: the rows that are not `drop`. `done`: those in `done`.
+- `next`: the first ready agent row, as `<id> <title>`, as `ds triage` gives it; absent when none is ready or the dossier is held.
+- `pinned`: the `.sessions` file of the dossier holds the `--session` id. With no `--session`, no dossier is pinned.
+- `needs`: the IDs of the rows that wait on the operator, by the rule of `ds status`. A held dossier has none.
+- `hold`: `{ id, state, tail, after }` of the dossier's own line, only when the dossier is held. `after` is true when the line waits on rows that are not done.
+- `items`: the rows that are not `done` or `drop`, in plan order, each `{ id, state, who, title, tail }`, with `note`, the text under its `### O<N>`, when it has one.
+
+- `repo`: only on a dossier of another repo. Each `ds` command that links a session to a dossier also adds the dossier's ledger root to `~/.local/state/ds/sessions/<session id>`, once. `ds rows --session <id>` then adds the live dossiers of those other roots that the session used, pinned, with `repo` set to the root. A root that is gone or cannot be read, or a dossier that closed, is left out.
+
+`ds rows` writes nothing and links no session (`tests/test_ds_rows.ts`).
 
 ## Verdicts
 
