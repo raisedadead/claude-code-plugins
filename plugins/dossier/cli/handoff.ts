@@ -3,7 +3,7 @@ import { header, lint, planHash } from '../engine/plan.ts'
 import { isOpen, ready, type State, waitsOnOperator } from '../engine/rows.ts'
 import { firstReady, rowStates } from '../engine/triage.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
-import { currentBranch, type Dossier, ledgerRoot, liveDossiers, log, read, sessionsOf, workTree, worklog } from '../engine/store.ts'
+import { currentBranch, type Dossier, holdOf, ledgerRoot, liveDossiers, log, read, sessionsOf, workTree, worklog } from '../engine/store.ts'
 import { type Args, checkedText, dossierOf, flag, lastPlanCheck, rowsOf, scopeMoved } from './plan.ts'
 
 const GREEN = new Set(['success', 'skipped', 'neutral'])
@@ -60,6 +60,9 @@ function shipStep(cwd: string, dossier: Dossier, head: Record<string, string>, o
 
 export function cmdHandoff(cwd: string, args: Args): string {
   const dossier = dossierOf(cwd, args)
+  const hold = holdOf(ledgerRoot(cwd), dossier)
+  if (hold)
+    return `held: ${dossier.slug} waits on its line ${hold.id} (${hold.state}${hold.tail ? `: ${hold.tail}` : ''}); resume: ds set ${hold.id} next --who A`
   const text = read(dossier.file)
   const head = header(text)
   if (head.checked !== planHash(text)) return planStep(cwd, dossier, text)
@@ -77,14 +80,17 @@ export function cmdHandoff(cwd: string, args: Args): string {
   return out.join('\n')
 }
 
-function statusOf(dossier: Dossier, states: ReadonlyMap<string, State>): string {
+function statusOf(root: string, dossier: Dossier, states: ReadonlyMap<string, State>): string {
   const parts = [dossier.slug, header(read(dossier.file)).state ?? '?']
+  const hold = holdOf(root, dossier)
   const all = rowsOf(dossier).filter((r) => r.state !== 'drop' && r.state !== 'later')
-  if (!all.length) return [...parts, 'no rows'].join(' · ')
+  const held = hold ? [`held: ${hold.id} ${hold.state}`] : []
+  if (!all.length) return [...parts, 'no rows', ...held].join(' · ')
   const done = all.filter((r) => r.state === 'done').length
+  parts.push(`${done}/${all.length}`)
+  if (hold) return [...parts, ...held].join(' · ')
   const next = firstReady(all, states)
   const waiting = all.filter((r) => waitsOnOperator(r, states))
-  parts.push(`${done}/${all.length}`)
   if (next) parts.push(`next ${next.id}`)
   if (waiting.length) parts.push(`[H] ${waiting.length}`)
   return parts.join(' · ')
@@ -94,7 +100,7 @@ export function cmdStatus(cwd: string, args: Args): string {
   const root = ledgerRoot(cwd)
   const live = liveDossiers(root)
   const states = rowStates(root)
-  const line = (d: Dossier): string => statusOf(d, states)
+  const line = (d: Dossier): string => statusOf(root, d, states)
   const session = flag(args, 'session')
   if (session !== undefined)
     return live

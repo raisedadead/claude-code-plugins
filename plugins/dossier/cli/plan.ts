@@ -7,7 +7,9 @@ import { git, lines, Refusal, run } from '../engine/sh.ts'
 import {
   type Dossier,
   dossierHome,
+  holdOf,
   ledgerRoot,
+  ownLine,
   linkSession,
   liveDossiers,
   log,
@@ -82,15 +84,9 @@ function logFor(root: string, file: string, line: string): void {
   linkSession(dossier)
 }
 
-export function ownLine(root: string, dossier: Dossier): Row | undefined {
-  const own = header(read(dossier.file)).row
-  if (!own) return undefined
-  return rows(readOr(registerFile(root), REGISTER_HEAD)).rows.find((r) => r.id === own)
-}
-
 export function guard(cwd: string, dossier: Dossier): void {
-  const line = ownLine(ledgerRoot(cwd), dossier)
-  if (!line || line.state === 'now' || line.state === 'next') return
+  const line = holdOf(ledgerRoot(cwd), dossier)
+  if (!line) return
   throw new Refusal(
     `${dossier.slug} waits on the operator: its line ${line.id} is ${line.state}${line.tail ? ` (${line.tail})` : ''}. The operator resumes it with: ds set ${line.id} next --who A`,
     3,

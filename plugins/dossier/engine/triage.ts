@@ -3,10 +3,11 @@ import { join } from 'node:path'
 import { header, planHash, rows as dossierRows } from './plan.ts'
 import { type Bad, isOpen, isPaused, type Row, ready, type State, scanRows, trigger, waitsOnOperator } from './rows.ts'
 import { run } from './sh.ts'
-import { archivedNames, DATE, type Dossier, ledgerFiles, liveDossiers, read, readOr, registerFile, scratch, today, worklog, write } from './store.ts'
+import { archivedNames, DATE, type Dossier, holdOf, ledgerFiles, liveDossiers, read, readOr, registerFile, scratch, today, worklog, write } from './store.ts'
 
 export type Flag = { id: string; title: string; where: string; why: string }
-export type Live = { slug: string; state: string; counts: Record<string, number>; next?: string; replan: boolean }
+export type Hold = { id: string; state: string; tail: string }
+export type Live = { slug: string; state: string; counts: Record<string, number>; next?: string; hold?: Hold; replan: boolean }
 export type Triage = { wait: Flag[]; blocked: Flag[]; paused: Flag[]; due: Flag[]; stale: Flag[]; shape: Flag[]; live: Live[] }
 
 const STALE_DAYS = 3
@@ -68,18 +69,19 @@ export function triage(root: string): Triage {
   for (const dossier of liveDossiers(root)) sources.push({ where: dossier.slug, ...dossierRows(read(dossier.file)), dossier })
   for (const source of sources) {
     const lines = source.dossier ? worklog(source.dossier) : []
+    const hold = source.dossier ? holdOf(root, source.dossier) : undefined
     for (const bad of source.bad) out.shape.push({ id: `line ${bad.line}`, title: bad.text, where: source.where, why: bad.why })
     for (const row of source.rows) {
       const flag = { id: row.id, title: row.title, where: source.where }
       const waits = row.state === 'wait' || row.who === 'H'
       if (isPaused(row)) out.paused.push({ ...flag, why: row.tail })
-      else if (waitsOnOperator(row, states)) out.wait.push({ ...flag, why: row.tail || 'waits on the operator' })
-      else if (waits && isOpen(row) && !ready(row, states)) out.blocked.push({ ...flag, why: row.tail })
+      else if (!hold && waitsOnOperator(row, states)) out.wait.push({ ...flag, why: row.tail || 'waits on the operator' })
+      else if (!hold && waits && isOpen(row) && !ready(row, states)) out.blocked.push({ ...flag, why: row.tail })
       if (row.state === 'later') {
         const why = fired(row, root)
         if (why) out.due.push({ ...flag, why })
       }
-      if (row.state === 'now' && source.dossier) {
+      if (row.state === 'now' && source.dossier && !hold) {
         const touched = lastTouch(lines, row.id)
         if (!touched || daysBetween(touched, today()) >= STALE_DAYS)
           out.stale.push({ ...flag, why: touched ? `no worklog line since ${touched}` : 'no worklog line' })
@@ -90,9 +92,16 @@ export function triage(root: string): Triage {
       const head = header(text)
       const counts: Record<string, number> = {}
       for (const row of source.rows) counts[row.state] = (counts[row.state] ?? 0) + 1
-      const next = firstReady(source.rows, states)
+      const next = hold ? undefined : firstReady(source.rows, states)
       const replan = head.state !== 'plan' && head.checked !== planHash(text)
-      out.live.push({ slug: source.dossier.slug, state: head.state ?? '?', counts, ...(next ? { next: `${next.id} ${next.title}` } : {}), replan })
+      out.live.push({
+        slug: source.dossier.slug,
+        state: head.state ?? '?',
+        counts,
+        ...(next ? { next: `${next.id} ${next.title}` } : {}),
+        ...(hold ? { hold: { id: hold.id, state: hold.state, tail: hold.tail } } : {}),
+        replan,
+      })
     }
   }
   return out
@@ -137,7 +146,10 @@ export function render(view: Triage): string {
       const counts = Object.entries(d.counts)
         .map(([state, n]) => `${n} ${state}`)
         .join(', ')
-      out.push(`- ${d.slug}: ${d.state}; ${counts || 'no rows'}${d.next ? `; next ${d.next}` : ''}${d.replan ? '; the plan changed since its check' : ''}`)
+      const held = d.hold ? `held: ${d.hold.id} ${d.hold.state}${d.hold.tail ? ` (${d.hold.tail})` : ''}; ` : ''
+      out.push(
+        `- ${d.slug}: ${d.state}; ${held}${counts || 'no rows'}${d.next ? `; next ${d.next}` : ''}${d.replan ? '; the plan changed since its check' : ''}`,
+      )
     }
   }
   return out.length ? out.join('\n') : 'Nothing is hanging and no dossier is live.'

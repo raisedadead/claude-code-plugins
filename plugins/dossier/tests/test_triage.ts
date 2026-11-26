@@ -60,6 +60,60 @@ test('triage writes the later view, but never over a hand-written LATER.md', () 
   assert.equal(JSON.parse(ds(cwd, 'triage', '--json').out).wait[0].id, 'O10')
 })
 
+type Held = { slug: string; state: string; next?: string; hold?: { id: string; state: string; tail: string } }
+const liveOf = (cwd: string): Held[] => JSON.parse(ds(cwd, 'triage', '--json').out).live
+
+test('held dossier: a paused own line holds it, keeps its stage, and takes its rows out of the lists', () => {
+  const cwd = repo()
+  planned(cwd)
+  ds(cwd, 'set', 'O1', 'now')
+  ds(cwd, 'set', 'O2', 'wait', 'after O1', '--who', 'H')
+  ds(cwd, 'set', 'O100', 'wait', 'paused: after the release', '--who', 'H')
+  process.env.DS_TODAY = '2026-11-20'
+  const view = JSON.parse(ds(cwd, 'triage', '--json').out)
+  process.env.DS_TODAY = '2026-11-14'
+  assert.deepEqual(
+    view.live.map((d: Held) => [d.slug, d.state, d.next, d.hold]),
+    [['demo', 'plan', undefined, { id: 'O100', state: 'wait', tail: 'paused: after the release' }]],
+  )
+  assert.deepEqual(
+    [...view.wait, ...view.blocked, ...view.stale].filter((flag: { where: string }) => flag.where === 'demo'),
+    [],
+  )
+  assert.match(ds(cwd, 'triage').out, /Live dossiers:\n- demo: plan; held: O100 wait \(paused: after the release\); 1 now, 2 wait$/)
+  assert.equal(ds(cwd, 'status').out, 'demo · plan · 0/3 · held: O100 wait')
+  assert.equal(ds(cwd, 'handoff').out, 'held: demo waits on its line O100 (wait: paused: after the release); resume: ds set O100 next --who A')
+  assert.equal(ds(cwd, 'next').code, 3)
+})
+
+test('held dossier: a later line or a plain wait line holds it, and a now or next line does not', () => {
+  const cwd = repo()
+  planned(cwd)
+  assert.deepEqual(
+    liveOf(cwd).map((d) => [d.hold, d.next]),
+    [[undefined, 'O1 Add the b module']],
+  )
+  ds(cwd, 'set', 'O100', 'now')
+  assert.equal(liveOf(cwd)[0]?.hold, undefined)
+  ds(cwd, 'set', 'O100', 'later', 'until 2026-12-01')
+  assert.deepEqual(liveOf(cwd)[0]?.hold, { id: 'O100', state: 'later', tail: 'until 2026-12-01' })
+  ds(cwd, 'set', 'O100', 'wait', 'approve the plan first', '--who', 'H')
+  assert.deepEqual(liveOf(cwd)[0]?.hold, { id: 'O100', state: 'wait', tail: 'approve the plan first' })
+  assert.equal(liveOf(cwd)[0]?.next, undefined)
+  ds(cwd, 'set', 'O100', 'drop', 'stopped')
+  assert.deepEqual(liveOf(cwd)[0]?.hold, { id: 'O100', state: 'drop', tail: 'stopped' })
+})
+
+test('held dossier: a row field that names no register line does not hold it', () => {
+  const cwd = repo()
+  const path = planned(cwd)
+  file(path, file(path).replace('row: O100', 'row: O999'))
+  assert.deepEqual(
+    liveOf(cwd).map((d) => [d.hold, d.next]),
+    [[undefined, 'O1 Add the b module']],
+  )
+})
+
 test('a quiet repo says so', () => {
   const cwd = repo()
   assert.equal(ds(cwd, 'triage').out, 'Nothing is hanging and no dossier is live.')

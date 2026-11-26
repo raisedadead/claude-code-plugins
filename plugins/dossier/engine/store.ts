@@ -2,8 +2,8 @@ import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, renam
 import { homedir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { shippedName } from './branch.ts'
-import { header, setHeader } from './plan.ts'
-import { idNumber } from './rows.ts'
+import { header, rows, setHeader } from './plan.ts'
+import { idNumber, type Row } from './rows.ts'
 import { gitTry, Refusal } from './sh.ts'
 
 export type Dossier = { dir: string; name: string; slug: string; file: string }
@@ -78,6 +78,17 @@ export function write(path: string, text: string): void {
 const SESSION_ID = /^[\w-]{1,80}$/
 
 const sessionsFile = (dossier: Dossier): string => join(dossier.dir, '.sessions')
+
+export function ownLine(root: string, dossier: Dossier): Row | undefined {
+  const own = header(read(dossier.file)).row
+  if (!own) return undefined
+  return rows(readOr(registerFile(root), REGISTER_HEAD)).rows.find((r) => r.id === own)
+}
+
+export function holdOf(root: string, dossier: Dossier): Row | undefined {
+  const line = ownLine(root, dossier)
+  return line && line.state !== 'now' && line.state !== 'next' ? line : undefined
+}
 
 export function sessionsOf(dossier: Dossier): string[] {
   return readOr(sessionsFile(dossier))
