@@ -44,6 +44,7 @@ The ledger lives in the main checkout. A `ds` command run in a linked worktree r
 - The order of the rows in a plan is the build order. A row that needs other rows starts its tail with `after O<N>` (`after O601, O602` for more), naming rows of the same ledger. A reason can follow after `; `. It is ready when each named row is `done`; a tail that starts `after O` and a digit and misses this form is never ready.
 - `ds next` gives the first ready agent row, and does not wait for an operator row above it. `ds handoff`, `ds status` and `ds triage` show an operator row only when it is ready; `ds triage` lists the others under `Yours, after other rows`. Put an operator row as late as the first row that needs it allows.
 - An agent row in `wait` whose tail names an operator row still works: `ds set <id> next` releases it when that row is done.
+- A paused row is a `wait` row whose tail starts with `paused`. `ds set` and `ds add` refuse a `now`, `next` or `wait` row whose tail names `paused` anywhere else, and `ds triage` lists one written by hand under `Out of shape`.
 - A `later` tail is one of `until <YYYY-MM-DD>`, `after <dossier-slug>` or `after pr <owner>/<repo>#<n>`.
 - `ds add` gives each row its number from `~/.local/state/ds/next-id`, under a lock, and never at or below the highest O number in the repo's ledger files.
 

@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 import { changedPaths, clean, commitsIn, conflicted, fixupTarget, globMatch, mergeBase, onRemote, overlaps, worktreeOf } from '../engine/branch.ts'
 import { checks, type Commit as Planned, commits, edges, header, lint, planHash, section, setHeader } from '../engine/plan.ts'
-import { formatRow, isOpen, isPaused, ready } from '../engine/rows.ts'
+import { formatRow, isOpen, ready, waitsOnOperator } from '../engine/rows.ts'
 import { firstReady, rowStates } from '../engine/triage.ts'
 import { git, gitTry, Refusal } from '../engine/sh.ts'
 import { currentBranch, type Dossier, ledgerRoot, log, read, workTree, worklog, write } from '../engine/store.ts'
@@ -69,7 +69,7 @@ export function cmdNext(cwd: string, args: Args): string {
   const states = rowStates(ledgerRoot(cwd))
   const next = firstReady(all, states)
   if (next) return formatRow(next)
-  const waiting = all.filter((r) => ((r.state === 'wait' && !isPaused(r)) || (r.who === 'H' && r.state === 'next')) && ready(r, states))
+  const waiting = all.filter((r) => waitsOnOperator(r, states))
   const blocked = all.filter((r) => isOpen(r) && !ready(r, states))
   const lists = [
     waiting.length ? `waits on the operator:\n${waiting.map(formatRow).join('\n')}` : '',

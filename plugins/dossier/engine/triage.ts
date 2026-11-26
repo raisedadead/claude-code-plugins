@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { header, planHash, rows as dossierRows } from './plan.ts'
-import { type Bad, isOpen, isPaused, type Row, ready, type State, scanRows, trigger } from './rows.ts'
+import { type Bad, isOpen, isPaused, type Row, ready, type State, scanRows, trigger, waitsOnOperator } from './rows.ts'
 import { run } from './sh.ts'
 import { archivedNames, DATE, type Dossier, ledgerFiles, liveDossiers, read, readOr, registerFile, scratch, today, worklog, write } from './store.ts'
 
@@ -73,7 +73,7 @@ export function triage(root: string): Triage {
       const flag = { id: row.id, title: row.title, where: source.where }
       const waits = row.state === 'wait' || row.who === 'H'
       if (isPaused(row)) out.paused.push({ ...flag, why: row.tail })
-      else if (row.state === 'wait' && ready(row, states)) out.wait.push({ ...flag, why: row.tail || 'waits on the operator' })
+      else if (waitsOnOperator(row, states)) out.wait.push({ ...flag, why: row.tail || 'waits on the operator' })
       else if (waits && isOpen(row) && !ready(row, states)) out.blocked.push({ ...flag, why: row.tail })
       if (row.state === 'later') {
         const why = fired(row, root)

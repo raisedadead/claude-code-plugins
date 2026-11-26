@@ -1,6 +1,6 @@
 import { commitsIn, fixupTarget, landedOn, REVIEWER, reviewedBy, reviews, sameBranch } from '../engine/branch.ts'
 import { header, lint, planHash } from '../engine/plan.ts'
-import { isOpen, isPaused, ready, type State } from '../engine/rows.ts'
+import { isOpen, ready, type State, waitsOnOperator } from '../engine/rows.ts'
 import { firstReady, rowStates } from '../engine/triage.ts'
 import { git, gitTry, Refusal, run } from '../engine/sh.ts'
 import { currentBranch, type Dossier, ledgerRoot, liveDossiers, log, read, sessionsOf, workTree, worklog } from '../engine/store.ts'
@@ -67,7 +67,7 @@ export function cmdHandoff(cwd: string, args: Args): string {
     return 'operator: pick the subtraction cuts; then ds log "subtract: ..."'
   const all = rowsOf(dossier)
   const states = rowStates(ledgerRoot(cwd))
-  const waiting = all.filter((r) => ((r.state === 'wait' && !isPaused(r)) || (r.who === 'H' && (r.state === 'now' || r.state === 'next'))) && ready(r, states))
+  const waiting = all.filter((r) => waitsOnOperator(r, states))
   const out = waiting.map((r) => `operator: ${r.id} ${r.title}${r.state === 'wait' && r.tail ? ` · ${r.tail}` : ''}`)
   const open = (r: (typeof all)[number]) => r.state === 'now' || r.state === 'next'
   const blocked = all.filter((r) => isOpen(r) && !ready(r, states))
@@ -83,7 +83,7 @@ function statusOf(dossier: Dossier, states: ReadonlyMap<string, State>): string 
   if (!all.length) return [...parts, 'no rows'].join(' · ')
   const done = all.filter((r) => r.state === 'done').length
   const next = firstReady(all, states)
-  const waiting = all.filter((r) => (r.state === 'wait' || (r.who === 'H' && (r.state === 'now' || r.state === 'next'))) && ready(r, states))
+  const waiting = all.filter((r) => waitsOnOperator(r, states))
   parts.push(`${done}/${all.length}`)
   if (next) parts.push(`next ${next.id}`)
   if (waiting.length) parts.push(`[H] ${waiting.length}`)

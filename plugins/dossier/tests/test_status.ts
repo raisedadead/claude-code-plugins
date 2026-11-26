@@ -2,7 +2,45 @@ import assert from 'node:assert/strict'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { test } from 'vitest'
-import { ds, file, planned, repo, sh } from './kit.ts'
+import { checkedPlan, ds, file, planned, repo, sh } from './kit.ts'
+
+const WAITS = `- O1 done A Add the b module · 1111111
+- O2 done A Add the c module · 2222222
+- O3 wait H Approve the PR
+- O4 wait H Hold it · paused: after the release
+- O5 next H Decide the name
+- O6 now H Read the spend
+- O7 next H Sign off · after O9
+`
+
+test('one waits-on-you rule: handoff, next, status and triage name the same rows', () => {
+  const cwd = repo()
+  const path = checkedPlan(cwd)
+  file(path, file(path).replace(/^- O1 next A[\s\S]*?(?=\n## Notes)/m, WAITS))
+  ds(cwd, 'log', 'subtract: nothing to cut; took none')
+  const want = ['O3', 'O5', 'O6']
+  const handoff = ds(cwd, 'handoff').out.split('\n')
+  assert.deepEqual(
+    handoff.filter((line) => line.startsWith('operator: ')).map((line) => line.split(' ')[1]),
+    want,
+  )
+  const next = ds(cwd, 'next')
+  assert.equal(next.code, 3)
+  assert.deepEqual(
+    (next.err.split('waits on the operator:\n')[1] ?? '')
+      .split('waits on other rows:')[0]!
+      .split('\n')
+      .filter((line) => line.startsWith('- O'))
+      .map((line) => line.split(' ')[1]),
+    want,
+  )
+  assert.match(ds(cwd, 'status').out, / · \[H\] 3$/)
+  const wait = JSON.parse(ds(cwd, 'triage', '--json').out).wait as { id: string; where: string }[]
+  assert.deepEqual(
+    wait.filter((flag) => flag.where === 'demo').map((flag) => flag.id),
+    want,
+  )
+})
 
 function snapshot(dir: string): string {
   const out: string[] = []

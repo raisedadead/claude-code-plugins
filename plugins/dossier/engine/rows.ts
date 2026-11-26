@@ -10,6 +10,7 @@ const ID_LINE = /^- O\d+\b/
 const OTHER_ID = /\b[OTWVB]\d+\b/
 export const TITLE_MAX = 80
 const PAUSED = /^paused(:|\s|$)/i
+const NAMES_PAUSED = /\bpaused\b/i
 
 export function isPaused(row: Row): boolean {
   return row.state === 'wait' && PAUSED.test(row.tail)
@@ -24,6 +25,11 @@ export function needs(row: Row): string[] | undefined {
 
 export function ready(row: Row, states: ReadonlyMap<string, State>): boolean {
   return needs(row)?.every((id) => states.get(id) === 'done') ?? false
+}
+
+export function waitsOnOperator(row: Row, states: ReadonlyMap<string, State>): boolean {
+  const asks = (row.state === 'wait' && !isPaused(row)) || (row.who === 'H' && (row.state === 'now' || row.state === 'next'))
+  return asks && ready(row, states)
 }
 
 export function isOpen(row: Row): boolean {
@@ -62,6 +68,8 @@ export function shapeErrors(row: Row): string[] {
   if (OTHER_ID.test(row.title)) errors.push('title names another ID; put it in the tail or the notes')
   if (row.state === 'later' && !trigger(row.tail))
     errors.push('a later row needs a tail: until <YYYY-MM-DD>, after <dossier-slug> or after pr <owner/repo>#<n>')
+  if ((row.state === 'now' || row.state === 'next' || row.state === 'wait') && NAMES_PAUSED.test(row.tail) && !isPaused(row))
+    errors.push('the tail names paused but does not start with it: a paused row is a wait row whose tail starts with paused')
   if ((row.state === 'done' || row.state === 'drop') && !row.tail)
     errors.push(`a ${row.state} row needs a tail: the ${row.state === 'done' ? 'commit or decision' : 'reason'}`)
   return errors
