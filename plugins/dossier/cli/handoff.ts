@@ -97,17 +97,11 @@ function statusOf(root: string, dossier: Dossier, states: ReadonlyMap<string, St
   return parts.join(' · ')
 }
 
-export function cmdStatus(cwd: string, args: Args): string {
+export function cmdStatus(cwd: string, _args: Args): string {
   const root = ledgerRoot(cwd)
   const live = liveDossiers(root)
   const states = rowStates(root)
   const line = (d: Dossier): string => statusOf(root, d, states)
-  const session = flag(args, 'session')
-  if (session !== undefined)
-    return live
-      .filter((d) => sessionsOf(d).includes(session))
-      .map(line)
-      .join('\n')
   const branch = currentBranch(cwd)
   const own = live.filter((d) => {
     const name = header(read(d.file)).branch

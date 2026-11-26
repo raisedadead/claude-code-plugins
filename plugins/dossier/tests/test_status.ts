@@ -61,6 +61,11 @@ test('status prints nothing when no dossier is live', () => {
 })
 
 const DEMO = 'demo · plan · 0/3 · next O1 · [H] 1'
+const used = (cwd: string, session: string): string =>
+  (JSON.parse(ds(cwd, 'rows', '--json', '--session', session).out).dossiers as { slug: string; pinned: boolean }[])
+    .filter((d) => d.pinned)
+    .map((d) => d.slug)
+    .join('\n')
 
 test('status prints the stage, the count of done rows, the next agent row and the count of rows that wait on the operator', () => {
   const cwd = repo()
@@ -96,22 +101,22 @@ test('status with no session puts the dossier of the current branch alone, and l
   assert.equal(ds(cwd, 'status').out, DEMO, 'the name that a ship gave the branch')
 })
 
-test('status --session shows only the live dossiers that session used, and nothing for a session that used none', () => {
+test('rows --session pins only the live dossiers that session used, and none for a session that used none', () => {
   const cwd = repo()
   process.env.CLAUDE_CODE_SESSION_ID = 's-one'
   const path = planned(cwd)
   delete process.env.CLAUDE_CODE_SESSION_ID
   const other = ds(cwd, 'new', 'other').out
   sh(cwd, 'git checkout -q -b demo')
-  assert.equal(ds(cwd, 'status', '--session', 's-one').out, DEMO, 'ds new links the session')
-  assert.equal(ds(cwd, 'status', '--session', 's-two').out, '', 'a session that used no dossier, also on the branch of one')
+  assert.equal(used(cwd, 's-one'), 'demo', 'ds new links the session')
+  assert.equal(used(cwd, 's-two'), '', 'a session that used no dossier, also on the branch of one')
   process.env.CLAUDE_CODE_SESSION_ID = 's-two'
   ds(cwd, 'lint', '--dossier', 'other')
   ds(cwd, 'lint', '--dossier', 'other')
-  assert.equal(ds(cwd, 'status', '--session', 's-two').out, 'other · plan · no rows', 'a verb that names a dossier links the session')
+  assert.equal(used(cwd, 's-two'), 'other', 'a verb that names a dossier links the session')
   assert.equal(file(join(dirname(other), '.sessions')), 's-two\n', 'two uses give one line')
   assert.equal(ds(cwd, 'set', 'O3', 'done', 'approved').code, 0)
-  assert.equal(ds(cwd, 'status', '--session', 's-two').out, 'demo · plan · 1/3 · next O1\nother · plan · no rows', 'ds set on a dossier row links the session')
+  assert.equal(used(cwd, 's-two'), 'demo\nother', 'ds set on a dossier row links the session')
   assert.equal(file(join(dirname(path), '.sessions')), 's-one\ns-two\n')
   delete process.env.CLAUDE_CODE_SESSION_ID
 })
@@ -122,22 +127,22 @@ test('a review pack links the session only to a dossier it names or whose branch
   sh(cwd, 'git checkout -q -b unrelated')
   process.env.CLAUDE_CODE_SESSION_ID = 's-three'
   ds(cwd, 'pack', 'review')
-  assert.equal(ds(cwd, 'status', '--session', 's-three').out, '', 'the only live dossier is not linked to unrelated work')
+  assert.equal(used(cwd, 's-three'), '', 'the only live dossier is not linked to unrelated work')
   ds(cwd, 'pack', 'review', '--dossier', 'demo')
-  assert.equal(ds(cwd, 'status', '--session', 's-three').out, DEMO, 'a pack that names the dossier')
+  assert.equal(used(cwd, 's-three'), 'demo', 'a pack that names the dossier')
   process.env.CLAUDE_CODE_SESSION_ID = 's-four'
   process.env.DS_DOSSIER = 'demo'
   ds(cwd, 'pack', 'review')
   delete process.env.DS_DOSSIER
-  assert.equal(ds(cwd, 'status', '--session', 's-four').out, DEMO, 'a pack with DS_DOSSIER')
+  assert.equal(used(cwd, 's-four'), 'demo', 'a pack with DS_DOSSIER')
   process.env.CLAUDE_CODE_SESSION_ID = 's-five'
   sh(cwd, 'git checkout -q -b demo')
   ds(cwd, 'pack', 'review')
-  assert.equal(ds(cwd, 'status', '--session', 's-five').out, DEMO, 'a pack on the branch of the dossier')
+  assert.equal(used(cwd, 's-five'), 'demo', 'a pack on the branch of the dossier')
   process.env.CLAUDE_CODE_SESSION_ID = 's-six'
   sh(cwd, 'git checkout -q -b demo-lane-2')
   ds(cwd, 'pack', 'review')
-  assert.equal(ds(cwd, 'status', '--session', 's-six').out, DEMO, 'a pack on a lane branch of the dossier')
+  assert.equal(used(cwd, 's-six'), 'demo', 'a pack on a lane branch of the dossier')
   delete process.env.CLAUDE_CODE_SESSION_ID
 })
 
@@ -147,7 +152,7 @@ test('triage links no session to the dossiers it lists', () => {
   process.env.CLAUDE_CODE_SESSION_ID = 's-seven'
   assert.equal(ds(cwd, 'triage', '--start').code, 0)
   assert.equal(ds(cwd, 'triage').code, 0)
-  assert.equal(ds(cwd, 'status', '--session', 's-seven').out, '')
+  assert.equal(used(cwd, 's-seven'), '')
   delete process.env.CLAUDE_CODE_SESSION_ID
 })
 

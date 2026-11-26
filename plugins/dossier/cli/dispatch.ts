@@ -40,7 +40,7 @@ export const COMMANDS: Record<string, Command> = {
   status: {
     run: cmdStatus,
     usage:
-      'status [--session <id>]  one line per dossier: slug · stage · done/rows · next row · [H] rows that wait on the operator. With --session, the live dossiers that session used; else the dossier of this branch, or every live one; writes nothing',
+      'status  one line per dossier: slug · stage · done/rows · next row · [H] rows that wait on the operator, or held: and its line; the dossier of this branch, else every live one; writes nothing',
   },
   rows: {
     run: cmdRows,
